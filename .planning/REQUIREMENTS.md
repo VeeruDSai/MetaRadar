@@ -50,4 +50,30 @@
 - Native mobile applications (iOS/Android).
 
 ## Traceability Matrix
-*(Populated during roadmap creation)*
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| **INGEST-01** | Phase 2 | Pending |
+| **INGEST-02** | Phase 1 | Pending |
+| **INGEST-03** | Phase 2 | Pending |
+| **INGEST-04** | Phase 2 | Pending |
+| **INGEST-05** | Phase 2 | Pending |
+| **NLP-01** | Phase 3 | Pending |
+| **NLP-02** | Phase 3 | Pending |
+| **NLP-03** | Phase 4 | Pending |
+| **NLP-04** | Phase 4 | Pending |
+| **NLP-05** | Phase 4 | Pending |
+| **CONF-01** | Phase 5 | Pending |
+| **CONF-02** | Phase 5 | Pending |
+| **CONF-03** | Phase 5 | Pending |
+| **DATA-01** | Phase 1 | Pending |
+| **DATA-02** | Phase 6 | Pending |
+| **DATA-03** | Phase 6 | Pending |
+| **DATA-04** | Phase 1 | Pending |
+| **DATA-05** | Phase 3 | Pending |
+| **UI-01** | Phase 8 | Pending |
+| **UI-02** | Phase 9 | Pending |
+| **UI-03** | Phase 8 | Pending |
+| **UI-04** | Phase 8 | Pending |
+| **UI-05** | Phase 8 | Pending |
+| **UI-06** | Phase 7 | Pending |
