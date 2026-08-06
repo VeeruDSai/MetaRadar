@@ -728,55 +728,101 @@ Instead of just browsing a dashboard, let users ask questions in natural languag
 
 ```python
 # services/query_engine.py
+# ⚠️ NOTE: The earlier version of this file used WeaviateClient.
+# Weaviate has been REPLACED by pgvector (PostgreSQL extension).
+# This implementation uses pgvector for semantic search + pg_trgm for keyword search.
+# See: Architecture decision in PART 4 — "Replace Weaviate with pgvector"
 
-from weaviate.client import WeaviateClient
+import asyncpg
+from sentence_transformers import SentenceTransformer
+import os
+
+_embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 class AthenaQueryEngine:
     """
     Natural language query interface over signal database.
-    Uses RAG: Retrieve relevant signals → Generate answer
+    Uses RAG: Retrieve relevant signals (pgvector hybrid search) → Generate answer
     """
-    
+
+    def __init__(self, db_pool: asyncpg.Pool, llm_pipeline):
+        self.db = db_pool
+        self.llm = llm_pipeline  # model-agnostic: loaded from LOCAL_LLM_MODEL env var
+
     async def query(self, question: str, role: str) -> dict:
         """
         Question: "What is Eli Lilly doing with oral GLP-1?"
         Role: "medical_affairs"
         """
-        
-        # Step 1: Retrieve relevant signals (hybrid search)
-        relevant_signals = await weaviate_client.query.get("Signal").with_hybrid(
-            query=question,
-            alpha=0.6,  # 60% semantic, 40% keyword
-        ).with_where({
-            "path": ["roleRelevance", role],
-            "operator": "GreaterThan",
-            "valueNumber": 0.5
-        }).with_limit(5).do()
-        
-        # Step 2: Generate answer grounded in retrieved signals
-        context = "\n".join([s["summary"] for s in relevant_signals])
-        
-        answer_prompt = f"""
-        Based only on these recent signals:
-        {context}
-        
-        Answer this question for a {role} professional:
-        {question}
-        
-        If the signals don't contain enough information, say "Insufficient signals in last 7 days."
-        Be factual and cite signals.
-        """
-        
-        answer = local_llm(answer_prompt, max_length=150)
-        
+
+        # Step 1: Embed the question (local model, no API call)
+        q_embedding = _embedder.encode(question).tolist()
+
+        # Step 2: Hybrid search — pgvector (semantic) + pg_trgm (keyword)
+        # alpha=0.6 semantic + 0.4 keyword (same weighting as before)
+        relevant_signals = await self.db.fetch("""
+            WITH semantic AS (
+                SELECT id, title, summary, source, published_at,
+                       (embedding <=> $1::vector) AS semantic_dist,
+                       (role_relevance->>$2)::FLOAT AS role_score
+                FROM signals
+                WHERE status = 'active'
+                  AND (role_relevance->>$2)::FLOAT > 0.5
+                ORDER BY embedding <=> $1::vector
+                LIMIT 10
+            ),
+            keyword AS (
+                SELECT id, title, summary, source, published_at,
+                       similarity(title || ' ' || summary, $3) AS kw_score,
+                       (role_relevance->>$2)::FLOAT AS role_score
+                FROM signals
+                WHERE status = 'active'
+                  AND (title || ' ' || summary) %% $3
+                  AND (role_relevance->>$2)::FLOAT > 0.5
+                ORDER BY kw_score DESC
+                LIMIT 10
+            )
+            SELECT DISTINCT ON (s.id)
+                s.id, s.title, s.summary, s.source, s.published_at
+            FROM signals s
+            WHERE s.id IN (SELECT id FROM semantic UNION SELECT id FROM keyword)
+            ORDER BY s.id, s.published_at DESC
+            LIMIT 5
+        """, q_embedding, role, question)
+
+        # Step 3: Hallucination guard — if no signals, refuse gracefully
+        if not relevant_signals:
+            return {
+                "question": question,
+                "answer": "Insufficient signals in last 7 days to answer this question.",
+                "supporting_signals": [],
+                "signal_count_used": 0,
+                "confidence": 0.0
+            }
+
+        # Step 4: Generate answer grounded in retrieved signals (model-agnostic)
+        context = "\n".join([s["summary"] for s in relevant_signals if s["summary"]])
+        answer_prompt = (
+            f"Based only on these recent signals:\n{context}\n\n"
+            f"Answer this question for a {role} professional: {question}\n\n"
+            "If the signals don't contain enough information, say "
+            "'Insufficient signals in last 7 days.' Be factual and cite signals."
+        )
+
+        # LOCAL_LLM_MODEL env var controls which model runs here
+        # Default: facebook/bart-large-cnn | Alternatives: Gemma, Mistral, Phi-3, etc.
+        result = self.llm(answer_prompt, max_length=200, truncation=True)
+        answer_text = result[0].get("generated_text") or result[0].get("summary_text", "")
+
         return {
             "question": question,
-            "answer": answer[0]["generated_text"],
-            "supporting_signals": relevant_signals[:3],
+            "answer": answer_text,
+            "supporting_signals": [dict(s) for s in relevant_signals[:3]],
             "signal_count_used": len(relevant_signals),
             "confidence": calculate_retrieval_confidence(relevant_signals)
         }
 ```
+
 
 ---
 
@@ -795,16 +841,26 @@ BACKEND:
 └─ APScheduler (every 2 hours fetch trigger)
 
 NLP / AI:
-├─ spaCy 3.7 en_core_sci_md (entity extraction, free)
-├─ facebook/bart-large-cnn (summarization, local)
+├─ spaCy 3.7 en_core_sci_md (pharma NER, free, local)
+├─ medspacy (optional: extends spaCy for clinical text; recommended by research report Section 2)
+├─ LLM/Summarization: ANY HuggingFace-compatible model via LOCAL_LLM_MODEL env var
+│   Default: facebook/bart-large-cnn (CPU-fast, seq2seq, hackathon default)
+│   Swap-in examples (zero code change, config only):
+│   ├─ google/gemma-2b              (better quality, ~2GB VRAM or slow CPU)
+│   ├─ mistralai/Mistral-7B-Instruct (near-GPT4 quality, 4-bit quant for CPU)
+│   ├─ microsoft/phi-3-mini-4k-instruct (3.8B, best quality/size ratio)
+│   └─ TinyLlama/TinyLlama-1.1B-Chat (ultra-light, minimal hardware)
 ├─ sentence-transformers/all-MiniLM-L6-v2 (embeddings, local, 80MB)
 │   ↑ Replace Weaviate's built-in vectorizer — faster, smaller
-└─ Zero-shot classifier: facebook/bart-large-mnli (signal classification)
+├─ Zero-shot classifier: facebook/bart-large-mnli (signal classification)
+└─ HTTP resilience: tenacity + httpx.AsyncClient (exponential backoff; research report Section 2)
 
 DATA:
 ├─ PostgreSQL 16 + pgvector (primary + vector in one DB)
 │   ↑ Replace Weaviate entirely — eliminates one Docker container
-│   └─ pgvector: 768-dim vectors, native hybrid search in PostgreSQL
+│   ├─ pgvector: 768-dim vectors, native hybrid search in PostgreSQL
+│   ├─ raw_signals_bronze: raw API JSON, pre-processing (replay layer)
+│   └─ audit_log: WORM append-only compliance table (21 CFR Part 11)
 ├─ Redis 7 (cache + rate limiting + session)
 └─ Pharma Ontology JSON (local, no DB, instant lookup)
 
@@ -830,6 +886,22 @@ MONITORING:
 - pgvector is now production-grade (used by Supabase, pgai)
 - Hybrid search via `pg_trgm` (keyword) + `pgvector` (semantic) = same capability
 - Less complexity, faster setup, simpler stack
+
+**Research Report Alignment (deep-research-report.md):**
+
+| Research Report Recommendation | Implemented In |
+|---|---|
+| tenacity + httpx for retry logic (Section 2) | `api_fetcher.py` (Gap 2 in Doc 1, SDD Section 2.4) |
+| Bronze raw data table for replay (Section 2) | `raw_signals_bronze` table in PostgreSQL schema |
+| Model-agnostic LLM via env var (Section 8) | `LOCAL_LLM_MODEL` + `LOCAL_LLM_TASK` env vars |
+| medspacy for pharma NER (Section 2) | Added to NLP stack (optional, drop-in spaCy extension) |
+| pgvector replaces Weaviate (Section 3) | ✅ Done — entire Upgrade 7 (Ask Athena) re-implemented |
+| WORM audit log / 21 CFR Part 11 (Section 6) | `audit_log` table + `ComplianceAuditLogger` service |
+| PII detection before storage (Section 6) | `pii_scrubber.py` pipeline step |
+| Medical accuracy disclaimer (Section 6) | `DisclaimerBadge` UI component (non-suppressible) |
+| SLI/SLO targets (Section 5) | Documented in SRS Section 4.1 |
+
+
 
 ---
 

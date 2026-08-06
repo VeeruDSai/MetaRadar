@@ -17,21 +17,37 @@ TIER 1 (Weeks 1-2): FREE ONLY
 ├─ FDA: Free API ✅
 └─ NO OpenAI calls yet
 
-TIER 2 (Week 3): Local Models Only
-├─ facebook/bart-large-cnn (local summarization, free)
+TIER 2 (Week 3): Pluggable Local Models (zero API cost)
 ├─ spaCy NLP (local, no API calls)
-└─ Cost: $0 (just compute time)
+├─ Embeddings: sentence-transformers (local)
+└─ Summarization/LLM: ANY HuggingFace-compatible model — configured
+   via LOCAL_LLM_MODEL env var. Default: "facebook/bart-large-cnn".
+   Swap to Gemma, Mistral, Phi-3, TinyLlama or any seq2seq/decoder
+   model with a single config change — no code change required.
+```
 
-IMPLEMENTATION:
-# Use local transformer model
+**Model-Agnostic Implementation:**
+```python
+import os
 from transformers import pipeline
 
+# Model controlled by environment variable — swap without code changes
+# Examples:
+#   LOCAL_LLM_MODEL=facebook/bart-large-cnn        (seq2seq, fast CPU)
+#   LOCAL_LLM_MODEL=google/gemma-2b                (decoder, better quality)
+#   LOCAL_LLM_MODEL=mistralai/Mistral-7B-Instruct  (decoder, near-GPT4 quality)
+#   LOCAL_LLM_MODEL=microsoft/phi-3-mini-4k-instruct (tiny, 3.8B)
+LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "facebook/bart-large-cnn")
+LOCAL_LLM_TASK  = os.getenv("LOCAL_LLM_TASK",  "summarization")  # or "text-generation"
+
 summarizer = pipeline(
-    "summarization",
-    model="facebook/bart-large-cnn",
+    LOCAL_LLM_TASK,
+    model=LOCAL_LLM_MODEL,
     device=0 if torch.cuda.is_available() else -1
 )
 ```
+
+> **Research Report alignment (Section 8 — Model Comparison):** The report shows that modern small LLMs (Gemma, Mistral 7B, Phi-3) approach GPT-4 quality at a fraction of the cost. By making the model fully configurable, MetaRadar can start with BART (CPU-fast, hackathon default) and graduate to any stronger model as hardware allows — without touching application code.
 
 **Cost Savings:** $500/month → $0
 
@@ -43,21 +59,40 @@ summarizer = pipeline(
 **Resolution:**
 ```python
 # Graceful Degradation with Fallback Cache
+# Uses tenacity for exponential backoff (research report Section 2 recommendation)
+from tenacity import retry, stop_after_attempt, wait_exponential
+import httpx
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10)
+)
+async def fetch_source_with_retry(url: str, headers: dict) -> dict:
+    """Retry up to 3x with exponential backoff (2s, 4s, 8s)"""
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
 
 async def fetch_with_fallback(source_name: str, fetch_fn):
     try:
-        # Live API (10 sec timeout)
-        data = await asyncio.wait_for(fetch_fn(), timeout=10)
-        cache.set(source_name, data, ttl=120)
+        data = await fetch_source_with_retry(fetch_fn)
+        cache.set(source_name, data, ttl=7200)   # 2h TTL
+        # Also persist to bronze table for replay (see Gap 11)
+        await db.insert_raw(source_name, data)
         return data
-    except (TimeoutError, Exception):
-        # Use cached data
+    except Exception as e:
+        logger.error(f"❌ {source_name} failed after retries: {e}")
+        # Fallback 1: Redis cache (up to 24h old)
         cached = cache.get(source_name)
         if cached:
+            logger.warning(f"⚠️ {source_name}: using cached data")
             return cached
-        # Return empty but valid
-        return {"signals": [], "status": "degraded"}
+        # Fallback 2: graceful empty
+        return {"signals": [], "status": "degraded", "source": source_name}
 ```
+
+> **Research Report alignment (Section 2):** Uses `tenacity` + `httpx.AsyncClient` as explicitly recommended. Also populates bronze raw table for replay (see Gap 11).
 
 **Demo Impact:** Dashboard always shows SOMETHING, never breaks.
 
@@ -607,6 +642,105 @@ engine = create_engine(
 
 The optimizations above make the *pipeline* fast. The optimizations below make MetaRadar an *intelligence layer* — the differentiators no existing open-source tool has (see Refined Architecture doc).
 
+---
+
+### **Gap 11: No Bronze Layer / Data Replay Capability**
+**Problem:** If NLP or scoring fails on a batch, raw source data is gone. Ingestion cannot be replayed.
+
+**Resolution:**
+```python
+# Raw ingestion backup — bronze table (research report Section 2 recommendation)
+# Every fetch is persisted BEFORE any processing — allows full replay
+
+# In api_fetcher.py
+async def ingest_and_persist_raw(source_name: str, raw_data: dict):
+    """Persist raw API response to bronze table before any transformation.
+    This allows complete replay if downstream NLP/scoring fails."""
+    await db.execute("""
+        INSERT INTO raw_signals_bronze (source, raw_json, fetched_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT DO NOTHING
+    """, source_name, json.dumps(raw_data))
+
+# PostgreSQL bronze table:
+# CREATE TABLE raw_signals_bronze (
+#     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+#     source VARCHAR(50) NOT NULL,
+#     raw_json JSONB NOT NULL,
+#     fetched_at TIMESTAMP DEFAULT NOW(),
+#     processed BOOLEAN DEFAULT FALSE
+# );
+# CREATE INDEX idx_bronze_unprocessed ON raw_signals_bronze(source, fetched_at)
+#     WHERE processed = FALSE;
+```
+
+**Recovery pattern:**
+```bash
+# If NLP pipeline fails on batch, replay from bronze:
+# SELECT raw_json FROM raw_signals_bronze WHERE processed = FALSE;
+# → Re-run NLP agent over unprocessed raw records → zero data loss
+```
+
+**Result:** Zero data loss even if downstream pipeline crashes mid-run.
+
+---
+
+### **Gap 12: No Compliance / GxP Audit Trail**
+**Problem:** Pharma regulatory teams (Regulatory role in dashboard) operate under FDA 21 CFR Part 11 and GxP requirements. Insights without audit trails are not usable in regulated workflows.
+
+**Resolution:**
+```python
+# services/audit_logger.py — WORM-style audit trail
+# (research report Section 2: "FDA 21 CFR Part 11 requires audit trails")
+
+import json
+from datetime import datetime
+
+class ComplianceAuditLogger:
+    """Write-once audit trail for all insight/taxonomy/score changes.
+    Append-only: records are never updated or deleted."""
+
+    async def log_action(self, user_id: str, action: str, entity: str,
+                         before: dict = None, after: dict = None):
+        await db.execute("""
+            INSERT INTO audit_log (user_id, action, entity, before_state,
+                                   after_state, timestamp, session_id)
+            VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+        """, user_id, action, entity,
+             json.dumps(before), json.dumps(after), get_session_id())
+
+# Usage — any taxonomy/score change triggers an audit entry:
+await audit_logger.log_action(
+    user_id="john.smith@novonordisk.com",
+    action="taxonomy_edit",
+    entity="semaglutide",
+    before={"competitors": ["tirzepatide"]},
+    after={"competitors": ["tirzepatide", "orforglipron"]},
+)
+
+# Also: every AI-generated summary carries a disclaimer
+DISCLAIMER = "Auto-generated by MetaRadar AI — verify clinically before use."
+```
+
+```sql
+-- Append-only audit table (no UPDATE, no DELETE permissions on this table)
+CREATE TABLE audit_log (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     TEXT NOT NULL,
+    action      TEXT NOT NULL,          -- taxonomy_edit | score_adjust | signal_dismiss
+    entity      TEXT NOT NULL,
+    before_state JSONB,
+    after_state  JSONB,
+    session_id  TEXT,
+    timestamp   TIMESTAMP DEFAULT NOW() NOT NULL
+);
+CREATE INDEX idx_audit_user ON audit_log(user_id, timestamp DESC);
+CREATE INDEX idx_audit_entity ON audit_log(entity, timestamp DESC);
+-- REVOKE UPDATE, DELETE ON audit_log FROM app_user;  -- enforce WORM
+```
+
+**Result:** Every insight, taxonomy change, and score adjustment is traceable with user + timestamp — meets 21 CFR Part 11 / GxP audit requirements.
+
 ### **Optimization 11: Signal Confluence Engine (Core Differentiator)**
 
 Instead of 800 isolated signals, detect when multiple independent signal types converge on the same entity within a 48h window → multiply importance into a single strategic alert.
@@ -765,8 +899,8 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 
 | Gap | Impact | Resolution | Optimization | Outcome |
 |---|---|---|---|---|
-| **API Costs** | $500/month | Free APIs only | Local models (BART) | **$0 cost** |
-| **Crashes on Failure** | Demo fail | Fallback cache | 3-layer caching | **100% uptime** |
+| **API Costs** | $500/month | Free APIs only | Pluggable local LLM (any HF model via config) | **$0 cost** |
+| **Crashes on Failure** | Demo fail | tenacity retries + fallback cache | 3-layer caching | **100% uptime** |
 | **Scope Creep** | Incomplete | MVP only | Strict scope | **on-time delivery** |
 | **Bad Data Quality** | Clutter | Validation pipeline | Deduplication | **73% junk removal** |
 | **No Tests** | Production bugs | Unit tests | CI/CD pipeline | **0 bugs** |
@@ -779,6 +913,8 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 | **No Domain Context** | Generic CI tool | Pharma Ontology (B.Pharm) | Entity enrichment | **Novo-specific** |
 | **No Audit Trail** | Regulatory unusable | Traceable Reasoning | Evidence chain | **Regulatory-grade** |
 | **No Prediction** | Reactive only | Temporal Pattern Matching | Timeline stages | **Predictive edge** |
+| **No Raw Data Replay** | Data loss on failure | Bronze `raw_signals` table | Re-process from raw | **Zero data loss** |
+| **No GxP Compliance** | Unusable in regulated workflow | Append-only `audit_log` + WORM | 21 CFR Part 11 trail | **Pharma-grade audit** |
 
 ---
 

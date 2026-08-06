@@ -95,11 +95,16 @@
 | **Task Queue** | Celery + Redis + APScheduler | Background ingestion, 2-hour fetch trigger |
 | **Primary DB** | PostgreSQL 16 + pgvector | ACID, JSONB, vector search in one DB (replaces Weaviate) |
 | **Cache** | Redis 7 | Sub-millisecond access, rate limiting |
-| **NLP** | spaCy 3.7 (en_core_sci_md) + Transformers | Entity extraction, BART summarization, zero-shot classification |
-| **Embeddings** | sentence-transformers/all-MiniLM-L6-v2 | 768-dim local embeddings, 80MB |
+| **NLP/NER** | spaCy 3.7 (`en_core_sci_md`) + medspacy | Entity extraction, pharma-grade NER; medspacy extends coverage |
+| **LLM/Summarization** | Any HuggingFace model via `LOCAL_LLM_MODEL` env var | Configurable: BART (default/CPU), Gemma, Mistral, Phi-3, etc. — swapped without code changes |
+| **Classification** | `facebook/bart-large-mnli` (zero-shot) | Signal type classification without labelled training data |
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | 768-dim local embeddings, 80MB |
+| **HTTP Resilience** | `tenacity` + `httpx.AsyncClient` | Exponential backoff retry + async HTTP (research report recommendation) |
 | **Containerization** | Docker + Docker Compose | Reproducible environments |
 | **Deployment** | Vercel (frontend) + Render (backend) | Serverless, auto-scaling, free tier |
 | **Logging** | Loguru + /metrics endpoint | Structured logging, performance telemetry |
+| **Compliance** | `audit_log` (WORM) + PII detection pipeline | 21 CFR Part 11 / GxP audit trail |
+
 
 ---
 
@@ -413,9 +418,12 @@ class SignalConfluenceEngine:
 
 **Temporal Pattern Recognition** (`services/temporal_patterns.py`) — matches current signal sets against B.Pharm-defined timeline patterns (pre-approval surge, access crisis) and reports current stage + predicted next stage.
 
-**Narrative Synthesis** (`services/narrative_synthesizer.py`) — LLM layer (local BART or optional GPT call) that converts all signals about a competitor/topic into a 3-part executive brief (WHAT HAPPENED / WHY IT MATTERS / RECOMMENDED ACTION), role-specific.
+**Narrative Synthesis** (`services/narrative_synthesizer.py`) — configurable LLM layer that converts all signals about a competitor/topic into a 3-part executive brief (WHAT HAPPENED / WHY IT MATTERS / RECOMMENDED ACTION), role-specific. The model is loaded from the `LOCAL_LLM_MODEL` environment variable — default `facebook/bart-large-cnn` for CPU/hackathon, but any HuggingFace-compatible seq2seq or instruction-tuned model (Gemma 2B, Mistral 7B, Phi-3 Mini, TinyLlama, etc.) can be swapped in with a single config change. No code changes required — the pipeline is model-agnostic by design.
 
 **Ask Athena Query Engine** (`services/query_engine.py`) — RAG over pgvector: hybrid search (alpha=0.6 semantic / 0.4 keyword) → grounded answer with supporting signals + confidence.
+
+**Ingestion with Resilience** (`services/api_fetcher.py`) — uses `tenacity` + `httpx.AsyncClient` for exponential backoff retries (3 attempts, 2s/4s/8s waits) on all external API calls. Every raw response is persisted to `raw_signals_bronze` before transformation, enabling full pipeline replay on failure.
+
 
 ### 2.5 Database Design (PostgreSQL 16 + pgvector)
 
@@ -571,6 +579,42 @@ LIMIT 500;
 -- Refresh view daily at 2 AM
 -- CRON JOB: SELECT cron.schedule('refresh-medical-affairs', '0 2 * * *',
 --   'REFRESH MATERIALIZED VIEW signals_medical_affairs_high_priority');
+
+-- ─────────────────────────────────────────────────────────────────────
+-- BRONZE LAYER: raw API responses stored before any transformation
+-- Purpose: full pipeline replay if NLP/scoring fails mid-run
+-- (research report Section 2 recommendation)
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE raw_signals_bronze (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source      VARCHAR(50) NOT NULL,   -- 'newsapi', 'pubmed', etc.
+    raw_json    JSONB NOT NULL,         -- verbatim API response
+    fetched_at  TIMESTAMP DEFAULT NOW() NOT NULL,
+    processed   BOOLEAN DEFAULT FALSE
+);
+CREATE INDEX idx_bronze_unprocessed
+    ON raw_signals_bronze(source, fetched_at)
+    WHERE processed = FALSE;
+
+-- ─────────────────────────────────────────────────────────────────────
+-- COMPLIANCE AUDIT LOG: WORM-enforced append-only audit trail
+-- Meets FDA 21 CFR Part 11 / GxP requirements
+-- (research report Section 2 & 6 recommendation)
+-- IMPORTANT: REVOKE UPDATE, DELETE ON audit_log FROM app_user;
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE audit_log (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      TEXT NOT NULL,
+    action       TEXT NOT NULL,       -- taxonomy_edit | score_adjust | signal_dismiss | role_change
+    entity       TEXT NOT NULL,
+    before_state JSONB,               -- snapshot before change
+    after_state  JSONB,               -- snapshot after change
+    session_id   TEXT,
+    timestamp    TIMESTAMP DEFAULT NOW() NOT NULL
+);
+CREATE INDEX idx_audit_user   ON audit_log(user_id, timestamp DESC);
+CREATE INDEX idx_audit_entity ON audit_log(entity, timestamp DESC);
+-- REVOKE UPDATE, DELETE ON audit_log FROM app_user;  -- enforce WORM at DB level
 ```
 
 ### 2.6 Vector Search Design (pgvector)
@@ -689,6 +733,83 @@ class CacheInvalidator:
         await redis.flushdb()
         logger.info("✅ Cache fully refreshed")
 ```
+
+---
+
+### 2.9 Compliance & Security Design
+
+**Research report alignment: Sections 2 & 6**
+
+This section covers three compliance requirements identified in the deep research report:
+
+#### 2.9.1 PII Detection Pipeline
+
+```python
+# services/pii_scrubber.py
+# Runs as the FIRST step after raw API fetch, BEFORE any storage
+import spacy
+
+_nlp = spacy.load("en_core_web_sm")  # lightweight, fast
+
+PII_LABELS = {"PERSON", "ORG", "EMAIL", "PHONE", "ID"}
+
+def scrub_pii(text: str) -> str:
+    """Detect and redact PII/PHI from scraped content before storage.
+    Unexpected PII (e.g., a patient name in a clinical report) is replaced
+    with [REDACTED:<LABEL>] and the event is logged for audit."""
+    doc = _nlp(text)
+    scrubbed = text
+    for ent in reversed(doc.ents):
+        if ent.label_ in PII_LABELS:
+            scrubbed = scrubbed[:ent.start_char] + \
+                       f"[REDACTED:{ent.label_}]" + \
+                       scrubbed[ent.end_char:]
+    return scrubbed
+```
+
+#### 2.9.2 WORM Audit Logger
+
+```python
+# services/audit_logger.py
+# Append-only, never updates or deletes — WORM enforcement
+# Meets FDA 21 CFR Part 11 / GxP requirements
+
+class ComplianceAuditLogger:
+    """Write-once audit trail. DB-level WORM enforced via REVOKE."""
+
+    async def log(self, user_id: str, action: str, entity: str,
+                  before: dict = None, after: dict = None,
+                  session_id: str = None):
+        await db.execute("""
+            INSERT INTO audit_log
+                (user_id, action, entity, before_state, after_state, session_id, timestamp)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        """, user_id, action, entity,
+             json.dumps(before or {}),
+             json.dumps(after or {}),
+             session_id)
+
+audit_logger = ComplianceAuditLogger()
+```
+
+Action types logged:
+- `taxonomy_edit` — B.Pharm ontology changes
+- `score_adjust` — Manual relevance override
+- `signal_dismiss` — User hides a signal
+- `role_change` — User switches view role
+
+#### 2.9.3 Medical Accuracy Disclaimer
+
+Every AI-generated output (summary, confluence story, narrative brief) MUST carry the disclaimer below. It is injected by `narrative_synthesizer.py` and rendered by the frontend — suppression is not permitted.
+
+```python
+MEDICAL_DISCLAIMER = (
+    "Auto-generated by MetaRadar AI — verify clinically before use. "
+    "Not a substitute for professional medical judgment."
+)
+```
+
+Displayed as a muted label on every signal card summary, confluence alert, and narrative brief.
 
 ---
 
