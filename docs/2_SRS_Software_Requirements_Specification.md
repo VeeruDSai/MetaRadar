@@ -24,8 +24,8 @@ MetaRadar detects early market signals and paradigm shifts in the **haemophilia 
 - Therapy Area: **Haemophilia within Rare Disease (Haemophilia A + Haemophilia B)**
 - Scope includes: current and emerging treatment approaches, competitor activity, regulatory changes, trial milestones, congress updates, publications, patient/access narratives, future pipeline developments (emerging competitor assets)
 - Multi-Source Public Ingestion: PubMed Central, NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, Congress Abstract archives (ASH, ISTH, WFH, EHA), 500-signal synthetic demo fallback
-- 7-Agent LangGraph Pipeline: Ingestion Agent → Validation Agent → NLP Agent → Signal Confluence Agent → Narrative Synthesis Agent → Brief Agent → **Stakeholder Calibration Agent**
-- Core Features: Entity extraction, B.Pharm Haemophilia ontology, Signal Confluence Detection, Four-Question UX, **Stakeholder Calibration Loop (HITL)**, Ask Athena RAG conversational search
+- 10-Agent LangGraph Pipeline: Ingestion → Validation → NLP → Signal Confluence → **Signal Lifecycle Tracking → Red-Team Contradiction → Missing-Signal Detection** → Narrative Synthesis → Brief → **Stakeholder Calibration Agent**
+- Core Features: Entity extraction, B.Pharm Haemophilia ontology, **the Five Advanced Analyses** (Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, Stakeholder Learning Loop), Four-Question UX, Ask Athena RAG conversational search
 
 ### 1.3 Definitions & Acronyms
 - **Signal:** Any piece of public information (article, clinical trial result, regulatory filing, patient forum post) relevant to haemophilia CI
@@ -34,6 +34,9 @@ MetaRadar detects early market signals and paradigm shifts in the **haemophilia 
 - **Four-Question Framework:** Panel 1 (What changed?), Panel 2 (Why does it matter?), Panel 3 (Which function?), Panel 4 (What action may be required?)
 - **Stakeholder Calibration Loop:** HITL feedback process recalibrating function scoring weights based on simulated or real persona ratings
 - **Confluence:** Detection that multiple independent signal types converge on the same haemophilia entity within 48h → elevated alert
+- **Signal Lifecycle:** Chronological state machine per development (Announced → In Trial → Results In → Under Review → Approved → Post-Market / Discontinued); the timeline that links isolated signals into one story
+- **Red-Team / Contradiction Analysis:** NLI entailment scan (local `facebook/bart-large-mnli`) flagging contradicting claims about the same entity in a rolling window, plus a devil's-advocate AI review
+- **Missing-Signal Detection:** Event-progression state machine flagging expected-but-absent milestones (silent readouts, stalled submissions); confidence grows with silence
 - **Pharma Ontology:** Domain knowledge graph (Hemlibra → emicizumab → Roche → Haemophilia A competitor) maintained by B.Pharm team
 - **Traceable Insight:** Intelligence output with a complete evidence chain (source URL, date, excerpt, credibility)
 - **RAG:** Retrieval-Augmented Generation (pgvector + local LLM for "Ask Athena")
@@ -302,13 +305,71 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
   - Follow-up signals (phase 1 → 2 → 3 progression)
   - Gap detection (no signals for a tracked entity for 14+ days)
 
+### 2.3A Signal Lifecycle Tracking (Analysis 2 of the Five)
+
+**FR-2.3A.1: Lifecycle State Machine**
+- System SHALL maintain a lifecycle state machine per tracked development (entity + modality + indication): `announced → in_trial → results_in → under_review → approved → post_market | discontinued`
+- System SHALL assign each new signal to the matching lifecycle chain and advance the current state
+- System SHALL order chain events chronologically and link them by entity (temporal linking)
+
+**FR-2.3A.2: Expected Next Event**
+- System SHALL compute the expected next event from the current state (e.g., `results_in → submission announced`)
+- System SHALL expose `GET /api/v1/lifecycles` and `GET /api/v1/lifecycles/{entity}` returning the full timeline + current state + expected next event
+
+**Haemophilia lifecycle example (mim8):**
+```
+mim8 (Novo Nordisk · bispecific · Haemophilia A)
+├─ 2024-05 announced → Phase 3 initiation
+├─ 2026-01 results_in → Phase 3 primary endpoint met
+├─ 2026-03 under_review → FDA/EMA submission expected
+└─ NEXT EXPECTED: submission announced
+```
+
+### 2.3B Red-Team Contradiction Analysis (Analysis 3 of the Five)
+
+**FR-2.3B.1: Contradiction Detection (NLI Entailment)**
+- System SHALL run pairwise entailment checks between signals about the same entity within a rolling window (default 90 days) using the local zero-shot NLI model (`facebook/bart-large-mnli`)
+- System SHALL flag a contradiction when entailment label = `contradiction` with score > 0.6
+- System SHALL NOT make additional API or model-download calls — NLI reuses the same model as signal classification
+
+**FR-2.3B.2: Red-Team Review**
+- System SHALL attach a devil's-advocate AI note to every contradiction listing how the evidence could be misleading/incomplete
+- System SHALL show BOTH evidence chains (claim A + claim B with source, URL, date) with a `requires_human_review` flag
+
+**FR-2.3B.3: Contradiction Endpoint**
+- System SHALL expose `GET /api/v1/contradictions` (filter by entity, role, date range)
+
+**Haemophilia example:**
+```
+⚔ CONTRADICTION — "sustained 3-yr Factor IX efficacy" (ASH 2026)
+                 vs "declining Factor IX expression in subset" (real-world cohort)
+Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
+```
+
+### 2.3C Missing-Signal Detection (Analysis 4 of the Five)
+
+**FR-2.3C.1: Expected-Event State Machine**
+- System SHALL derive expected next events from lifecycle state + B.Pharm-authored rules (`MISSING_SIGNAL_RULES`)
+- System SHALL flag a missing signal when no event has appeared for the tracked entity beyond the configured `max_lag_days`
+
+**FR-2.3C.2: Confidence-by-Silence + False-Positive Discipline**
+- System SHALL compute missing-signal confidence that grows with days of silence (e.g., `0.4 + days_since_last_signal * 0.02`, capped at 0.95)
+- System SHALL require configurable minimum windows before alerting to avoid over-warning
+- System SHALL expose `GET /api/v1/missing-signals` (filter by entity, role, confidence threshold)
+
+**Haemophilia example:**
+```
+🕳 MISSING SIGNAL — mim8 regulatory submission expected (max lag 180d)
+   Last signal: Jan 2026 (Phase 3 readout) · Silence: 95 days · Confidence: 0.66
+```
+
 ### 2.4 Four-Question Dashboard
 
 **FR-2.4.1: Four-Question UI Layout**
 - System SHALL present intelligence in 4 panels:
-  - **Q1 WHAT CHANGED?** — Signal Feed (real-time, signal type badges, entity tags)
-  - **Q2 WHY DOES IT MATTER?** — Relevance breakdown, AI explanation, confluence alert, competitive context
-  - **Q3 WHICH FUNCTION SHOULD REVIEW IT?** — Role-routing badges with confidence scores
+  - **Q1 WHAT CHANGED?** — Signal Feed (real-time, signal type badges, entity tags, lifecycle state, contradiction/missing-signal flags)
+  - **Q2 WHY DOES IT MATTER?** — Relevance breakdown, AI explanation, confluence alert, lifecycle stage, contradiction flags, competitive context
+  - **Q3 WHICH FUNCTION SHOULD REVIEW IT?** — Role-routing badges with confidence scores (calibration-informed)
   - **Q4 WHAT ACTION MAY BE REQUIRED?** — AI-suggested action bullets prefaced *"Suggested — requires human review"*
 
 **FR-2.4.2: Role-Specific Views**
@@ -426,6 +487,10 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
 | GET | `/api/v1/signals/{id}` | Signal detail with evidence chain |
 | GET | `/api/v1/entities` | Tracked entities + tag counts |
 | GET | `/api/v1/confluences` | Active confluence alerts |
+| GET | `/api/v1/lifecycles` | Lifecycle timelines per entity (FR-2.3A.2) |
+| GET | `/api/v1/lifecycles/{entity}` | Single entity timeline + expected next (FR-2.3A.2) |
+| GET | `/api/v1/contradictions` | Red-team contradiction alerts (FR-2.3B.3) |
+| GET | `/api/v1/missing-signals` | Missing-signal warnings (FR-2.3C.2) |
 | GET | `/api/v1/trends` | Signal volume/trend over time |
 | GET | `/api/v1/dashboard` | Four-panel summary payload |
 | GET | `/api/v1/search` | Keyword/semantic search (Ask Athena) |
@@ -444,6 +509,9 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
 | `REDDIT_CLIENT_ID/SECRET` | Reddit API creds | (empty) |
 | `SPACY_MODEL` | spaCy NER model | en_core_sci_md |
 | `LOCAL_LLM_MODEL` | Local summarization/QA model | facebook/bart-large-cnn |
+| `NLI_MODEL` | Zero-shot NLI for classification + red-team contradiction | facebook/bart-large-mnli |
+| `CONTRADICTION_WINDOW_DAYS` | Red-team rolling entailment window | 90 |
+| `MISSING_SIGNAL_MIN_LAG` | Minimum silence before missing-signal alert | 120 |
 | `EMBEDDING_MODEL` | Embedding model | sentence-transformers/all-MiniLM-L6-v2 |
 | `CORS_ORIGINS` | CORS allowlist | http://localhost:3000 |
 
@@ -456,6 +524,11 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
 - `scoring_weights` — role, signal_type, weight, version, updated_by, updated_at
 - `calibration_history` — id, role, old_weights, new_weights, trigger_reason, created_at
 - `confluences` — id, entities, pattern_name, signals, created_at, severity
+- `lifecycle_chains` — id, entity, modality, indication, current_state, expected_next, created_at, updated_at
+- `lifecycle_events` — id, chain_id, signal_id, state, ordered_date, created_at
+- `contradictions` — id, entity, claim_a, claim_b, contradiction_score, red_team_note, status, detected_at
+- `missing_signal_rules` — id, pattern, expected_sequence JSONB, max_lag_days, alert_message (B.Pharm-authored)
+- `missing_signal_alerts` — id, entity, missing_event, days_since_last_signal, confidence, status, created_at
 - `audit_log` — append-only (WORM)
 
 ---
@@ -475,8 +548,24 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
 1. NewsAPI: "Novo Nordisk mim8 Phase 3 in haemophilia A meets primary endpoint"
 2. NER extracts: `mim8`, `Novo Nordisk`, `Haemophilia A`, `Phase 3`
 3. Classified: `competitive_pipeline_move`
-4. Role routing: Commercial 85%, R&D 88%, Medical Affairs 80%
-5. Q4 action: *"Suggested — Commercial to assess emicizumab response and update positioning documents"*
+4. Lifecycle: `results_in` state advanced; expected next = regulatory submission
+5. Role routing: Commercial 85%, R&D 88%, Medical Affairs 80%
+6. Q4 action: *"Suggested — Commercial to assess emicizumab response and update positioning documents"*
+
+### 5.3 Scenario: Contradiction on Hemgenix Durability
+1. ASH abstract claims "sustained 3-year Factor IX efficacy" (PubMed, Dec)
+2. Real-world cohort paper reports "declining Factor IX expression in subset" (PubMed, Jan)
+3. NLI entailment scan scores the pair `contradiction = 0.81`
+4. Red-team note attached: "newest evidence may overturn earlier durability claim — human review required"
+5. Q3 routing: Medical Affairs 90% (contradiction flag on signal card)
+6. Q4 action: *"Suggested — Medical Affairs to reconcile durability claims before next HTA engagement"*
+
+### 5.4 Scenario: Missing-Signal on Roctavian Submission
+1. Roctavian label update signal lands in July (regulatory_milestone)
+2. Lifecycle expects next = "next-generation data publication" within 365d
+3. No signal for 150 days → missing-signal alert (confidence 0.7)
+4. Q3 routing: Regulatory 88%, Commercial 75%
+5. Q4 action: *"Suggested — Regulatory to check for silent label/safety developments on Roctavian"*
 
 ---
 
@@ -491,6 +580,9 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
 | AC-4 | Four-Question dashboard renders (Q1-Q4) with live data within 3s cold |
 | AC-5 | Role routing shows badges + confidence for ≥ 90% of signals |
 | AC-6 | Confluence alert fires on ≥ 3 converging signals within 48h (synthetic seeded) |
+| AC-6A | Lifecycle tracker chains ≥ 3 mim8 signals into one timeline with correct state transitions |
+| AC-6B | Red-Team engine flags a seeded contradiction (efficacy vs waning) with both evidence chains |
+| AC-6C | Missing-Signal detector flags an expected-but-silent readout with growing confidence |
 | AC-7 | Stakeholder calibration: persona submits feedback → weights recalibrate → confidence updates |
 | AC-8 | Ask Athena answers ≥ 2 demo queries with cited evidence |
 
@@ -501,6 +593,9 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
 4. Show Q4 suggested actions ("Suggested — requires human review")
 5. "Ask Athena": "Summarise mim8 latest data" → cited answer
 6. Stakeholder calibration demo: submit Regulatory persona feedback → weights update → confidence changes visible
+7. Lifecycle demo: open mim8 timeline → current state `results_in`, expected next event shown
+8. Red-Team demo: show seeded contradiction (ASH durability vs real-world waning) with both evidence chains
+9. Missing-Signal demo: show flagged silence on a tracked entity with growing confidence
 
 ---
 

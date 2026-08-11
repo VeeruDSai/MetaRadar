@@ -1,9 +1,9 @@
 # MetaRadar: Software Design Document (SDD)
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 2.0  
+**Version:** 2.1  
 **Date:** August 2026  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged.
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged.
 
 ---
 
@@ -46,10 +46,13 @@
    │ ├─ Session     │      │  ├─ Validation agent        │
    │ └─ Rate limits │      │  ├─ NLP agent (spaCy+BART)  │
    └────┬───────────┘      │  ├─ Confluence agent        │
-        │                  │  ├─ Synthesis agent         │
-        │      ┌───────────┤  ├─ Brief agent             │
+        │                  │  ├─ Lifecycle agent  ← NEW  │
+        │      ┌───────────┤  ├─ Red-Team agent  ← NEW   │
+        │      │           │  ├─ Missing-Signal agent ←NEW│
+        │      │           │  ├─ Synthesis agent         │
+        │      │           │  ├─ Brief agent             │
         │      │           │  └─ Stakeholder Calibration │
-        │      │           │     agent (HITL) ← NEW      │
+        │      │           │     agent (HITL)            │
         │      │           └────────────┬───────────────┘
    ┌────▼──────▼────────────────────────────────────┐
    │         DATA LAYER                              │
@@ -61,10 +64,15 @@
    │  │ ├─ role_relevance table                  │  │
    │  │ ├─ signal_embeddings (pgvector 768-dim)  │  │
    │  │ ├─ confluence_events table               │  │
+   │  │ ├─ lifecycle_chains table        ← NEW   │  │
+   │  │ ├─ lifecycle_events table        ← NEW   │  │
+   │  │ ├─ contradictions table          ← NEW   │  │
+   │  │ ├─ missing_signal_rules table    ← NEW   │  │
+   │  │ ├─ missing_signal_alerts table   ← NEW   │  │
    │  │ ├─ briefs table                          │  │
-   │  │ ├─ stakeholder_feedback table   ← NEW    │  │
-   │  │ ├─ scoring_weights table       ← NEW    │  │
-   │  │ ├─ calibration_history table   ← NEW    │  │
+   │  │ ├─ stakeholder_feedback table            │  │
+   │  │ ├─ scoring_weights table                 │  │
+   │  │ ├─ calibration_history table             │  │
    │  │ └─ [Indexes + Materialized Views]        │  │
    │  └──────────────────────────────────────────┘  │
    │  └─ Hybrid search: pgvector (semantic) +       │
@@ -101,13 +109,13 @@
 | **State Mgmt** | TanStack Query v5 | Server-state mgmt, auto caching/sync |
 | **Styling** | TailwindCSS 4 + shadcn/ui | Fast development, pre-built components |
 | **Backend API** | FastAPI + Python 3.11 | Async-first, auto OpenAPI docs, ML-friendly |
-| **Agent Orchestration** | LangGraph | Stateful multi-agent pipeline (ingest → validate → NLP → confluence → synthesize → brief → **stakeholder calibration**) |
+| **Agent Orchestration** | LangGraph | Stateful multi-agent pipeline (ingest → validate → NLP → confluence → lifecycle → red-team → missing-signal → synthesize → brief → **stakeholder calibration**) |
 | **Task Queue** | Celery + Redis + APScheduler | Background ingestion, 2-hour fetch trigger |
 | **Primary DB** | PostgreSQL 16 + pgvector | ACID, JSONB, vector search in one DB (replaces Weaviate) |
 | **Cache** | Redis 7 | Sub-millisecond access, rate limiting |
 | **NLP/NER** | spaCy 3.7 (`en_core_sci_md`) + medspacy | Entity extraction, pharma-grade NER; medspacy extends coverage |
 | **LLM/Summarization** | Any HuggingFace model via `LOCAL_LLM_MODEL` env var | Configurable: BART (default/CPU), Gemma, Mistral, Phi-3, etc. — swapped without code changes |
-| **Classification** | `facebook/bart-large-mnli` (zero-shot) | Signal type classification without labelled training data |
+| **Classification** | `facebook/bart-large-mnli` (zero-shot) | Signal type classification AND Red-Team contradiction entailment (one local model, two jobs) |
 | **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | 768-dim local embeddings, 80MB |
 | **HTTP Resilience** | `tenacity` + `httpx.AsyncClient` | Exponential backoff retry + async HTTP (research report recommendation) |
 | **Containerization** | Docker + Docker Compose | Reproducible environments |
@@ -210,6 +218,9 @@ backend/
 │   │   │   ├── signals.py       # GET /api/v1/signals
 │   │   │   ├── trends.py        # GET /api/v1/trends
 │   │   │   ├── confluence.py    # GET /api/v1/confluence
+│   │   │   ├── lifecycles.py    # GET /api/v1/lifecycles (lifecycle tracking)
+│   │   │   ├── contradictions.py# GET /api/v1/contradictions (red-team)
+│   │   │   ├── missing_signals.py # GET /api/v1/missing-signals
 │   │   │   ├── query.py         # POST /api/v1/query (Ask Athena)
 │   │   │   ├── briefs.py        # GET /api/v1/briefs (narrative)
 │   │   │   ├── search.py        # POST /api/v1/search
@@ -223,23 +234,29 @@ backend/
 │   ├── ingestion_agent.py       # LangGraph node: parallel fetch + dedup
 │   ├── validation_agent.py      # LangGraph node: quality scoring
 │   ├── nlp_agent.py             # LangGraph node: spaCy NER + BART
-│   ├── confluence_agent.py      # LangGraph node: cross-source convergence
+│   ├── confluence_agent.py      # LangGraph node: cross-source convergence (Analysis 1)
+│   ├── lifecycle_agent.py       # LangGraph node: lifecycle state machine + event chains (Analysis 2)
+│   ├── red_team_agent.py        # LangGraph node: NLI contradiction scan + devil's-advocate review (Analysis 3)
+│   ├── missing_signal_agent.py  # LangGraph node: expected-event detector (Analysis 4)
 │   ├── synthesis_agent.py       # LangGraph node: narrative briefs
 │   ├── brief_agent.py           # LangGraph node: role formatting
-│   └── calibration_agent.py     # LangGraph node: stakeholder feedback → weight recalibration (HITL)
+│   └── calibration_agent.py     # LangGraph node: stakeholder feedback → weight recalibration (Analysis 5, HITL)
 ├── graph/
 │   └── intelligence_graph.py    # StateGraph wiring of agents
 ├── services/
 │   ├── signal_processor.py      # Main orchestration
 │   ├── nlp_service.py           # Entity extraction, summarization
 │   ├── scoring_service.py       # Relevance scoring
-│   ├── confluence_engine.py     # Signal Confluence Engine
+│   ├── confluence_engine.py     # Signal Confluence Engine (Analysis 1)
+│   ├── lifecycle_tracker.py     # Lifecycle state machine + timelines (Analysis 2)
+│   ├── red_team_engine.py       # NLI contradiction detection + red-team review (Analysis 3)
+│   ├── missing_signal_detector.py # Expected-event state machine + confidence-by-silence (Analysis 4)
 │   ├── ontology_service.py      # Pharma ontology enrichment/validation
 │   ├── narrative_synthesizer.py # Executive brief generation
 │   ├── temporal_patterns.py     # Competitive timeline matching
 │   ├── traceability.py          # Evidence chain / audit trail
 │   ├── query_engine.py          # RAG "Ask Athena" over pgvector
-│   ├── calibration_service.py   # StakeholderCalibrationService.recalibrate(role) (HITL)
+│   ├── calibration_service.py   # StakeholderCalibrationService.recalibrate(role) (Analysis 5, HITL)
 │   ├── api_fetcher.py           # Multi-source data fetch
 │   ├── cache_service.py         # Redis operations
 │   └── db_service.py            # PostgreSQL operations
@@ -251,6 +268,9 @@ backend/
 │   ├── signal_ingestion.py      # Celery task for fetching
 │   ├── signal_processing.py     # Celery task for NLP
 │   ├── confluence_detection.py  # Celery task for confluence scan
+│   ├── lifecycle_detection.py   # Celery task for lifecycle advance
+│   ├── red_team_scan.py         # Celery task for NLI contradiction scan
+│   ├── missing_signal_scan.py   # Celery task for expected-event scan
 │   ├── trends_aggregation.py    # Celery task for aggregates
 │   └── calibration_worker.py    # Celery task for async weight recalibration
 ├── entities/
@@ -264,6 +284,9 @@ backend/
     ├── test_signal_processor.py
     ├── test_nlp_service.py
     ├── test_confluence_engine.py
+    ├── test_lifecycle_tracker.py
+    ├── test_red_team_engine.py
+    ├── test_missing_signal_detector.py
     ├── test_ontology_service.py
     ├── test_stakeholder_calibration.py  # HITL weight recalibration tests
     ├── test_api_endpoints.py
@@ -375,22 +398,31 @@ class IntelligenceState(TypedDict):
     extracted_entities: list[dict]
     scored_signals: list[dict]
     confluent_stories: list[dict]
+    lifecycle_chains: list[dict]        # Analysis 2 (lifecycle state machine)
+    contradictions: list[dict]          # Analysis 3 (red-team NLI)
+    missing_signal_alerts: list[dict]   # Analysis 4 (expected-event detector)
     role_briefs: dict[str, list]
-    calibration_weights: dict[str, float]   # from stakeholder_feedback (HITL)
+    calibration_weights: dict[str, float]   # from stakeholder_feedback (Analysis 5, HITL)
 
 graph = StateGraph(IntelligenceState)
 graph.add_node("ingest", ingestion_agent)        # 6 APIs parallel + dedup
 graph.add_node("validate", validation_agent)     # quality score > 0.5
 graph.add_node("nlp", nlp_agent)                 # spaCy NER + BART (batch)
-graph.add_node("confluence", confluence_agent)   # cross-source convergence
+graph.add_node("confluence", confluence_agent)   # cross-source convergence (Analysis 1)
+graph.add_node("lifecycle", lifecycle_agent)     # lifecycle state machine (Analysis 2)
+graph.add_node("red_team", red_team_agent)       # NLI contradiction scan (Analysis 3)
+graph.add_node("missing_signal", missing_signal_agent)  # expected-event detector (Analysis 4)
 graph.add_node("synthesize", synthesis_agent)    # narrative briefs
 graph.add_node("brief", brief_agent)             # role-specific formatting
-graph.add_node("calibrate", calibration_agent)   # HITL: feedback → weight update
+graph.add_node("calibrate", calibration_agent)   # HITL: feedback → weight update (Analysis 5)
 
 graph.add_edge("ingest", "validate")
 graph.add_edge("validate", "nlp")
 graph.add_edge("nlp", "confluence")
-graph.add_edge("confluence", "synthesize")
+graph.add_edge("confluence", "lifecycle")
+graph.add_edge("lifecycle", "red_team")
+graph.add_edge("red_team", "missing_signal")
+graph.add_edge("missing_signal", "synthesize")
 graph.add_edge("synthesize", "brief")
 graph.add_edge("brief", "calibrate")             # calibration reads briefs + feedback
 graph.set_entry_point("ingest")
@@ -463,6 +495,74 @@ class StakeholderCalibrationService:
 ```
 
 Calibration affects scoring for the *next* ingestion cycle: `scoring_service` loads `scoring_weights` fresh each batch, so a recalibration is visible in the next Q3 role-routing confidence scores. Every recalibration is written to `audit_log` (WORM).
+
+**Signal Lifecycle Tracker** (`services/lifecycle_tracker.py` + `agents/lifecycle_agent.py`) — Analysis 2 of the Five. Maintains a chronological state machine per tracked development (entity + modality + indication): `announced → in_trial → results_in → under_review → approved → post_market | discontinued`. Each signal is assigned to a lifecycle chain; the agent advances the current state and computes the expected next event:
+
+```python
+# services/lifecycle_tracker.py
+class SignalLifecycleTracker:
+    LIFECYCLE_STATES = [
+        "announced", "in_trial", "results_in",
+        "under_review", "approved", "post_market", "discontinued",
+    ]
+
+    async def advance(self, signal, entity) -> dict:
+        chain = await self.get_or_create_chain(entity)
+        chain.events.append(signal)
+        chain.current_state = self._infer_state(signal)          # rule-based, B.Pharm-validated
+        chain.expected_next = self._expected_next(chain)
+        await self.db.insert_lifecycle_event(chain, signal)
+        return {"chain": chain, "state": chain.current_state,
+                "expected_next": chain.expected_next}
+
+    def timeline(self, entity) -> list[dict]:
+        """Chronological, temporally-linked events for the entity."""
+        return sorted(self.chains[entity].events, key=lambda e: e["published_at"])
+```
+
+**Red-Team Contradiction Engine** (`services/red_team_engine.py` + `agents/red_team_agent.py`) — Analysis 3 of the Five. Runs pairwise NLI entailment over signals about the same entity in a rolling window (default 90 days) using the *same* local `facebook/bart-large-mnli` model already used for signal classification (zero extra model download). Flags `contradiction` labels above 0.6 and attaches a devil's-advocate note:
+
+```python
+# services/red_team_engine.py
+_nli = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+async def detect_contradictions(signals, entity, window_days=90) -> list[dict]:
+    entity_signals = [s for s in signals if entity in s.get("entities", {}).get("all", [])]
+    out = []
+    for a, b in combinations(entity_signals, 2):
+        if (b["published_at"] - a["published_at"]).days > window_days:
+            continue
+        r = _nli(a["summary"], candidate_labels=["entailment", "contradiction", "neutral"])
+        if r["labels"][0] == "contradiction" and r["scores"][0] > 0.6:
+            out.append({
+                "entity": entity,
+                "claim_a": {"text": a["summary"], "source": a["source"], "url": a["url"], "date": a["published_at"]},
+                "claim_b": {"text": b["summary"], "source": b["source"], "url": b["url"], "date": b["published_at"]},
+                "contradiction_score": r["scores"][0],
+                "red_team_note": "Devil's-advocate: newest evidence may overturn earlier claim — human review required",
+            })
+    return out
+```
+
+**Missing-Signal Detector** (`services/missing_signal_detector.py` + `agents/missing_signal_agent.py`) — Analysis 4 of the Five. Uses the lifecycle state + B.Pharm-authored `MISSING_SIGNAL_RULES` (expected-event sequences with `max_lag_days`) to flag expected-but-absent milestones. Confidence grows with silence; configurable windows prevent over-warning:
+
+```python
+# services/missing_signal_detector.py
+async def detect_missing_signals(lifecycles: list[dict]) -> list[dict]:
+    for lc in lifecycles:
+        rule = MISSING_SIGNAL_RULES.get(lc["pattern"])
+        expected = rule["expected_sequence"][lc["stage_index"]]
+        days = (now - lc["last_event_date"]).days
+        if days > expected["max_lag_days"]:
+            yield {
+                "entity": lc["entity"],
+                "missing_event": expected["event"],
+                "days_since_last_signal": days,
+                "max_lag_days": expected["max_lag_days"],
+                "confidence": min(0.95, 0.4 + days * 0.02),   # confidence-by-silence
+                "alert": rule["alert"],
+            }
+```
 
 **Traceable Reasoning** (`services/traceability.py`) — every insight carries an evidence chain (source → URL → timestamp → excerpt → entities). Confidence computed from source count + platform diversity. Regulatory-grade audit trail.
 
@@ -563,6 +663,78 @@ CREATE TABLE confluence_events (
 
 CREATE INDEX idx_confluence_entity ON confluence_events(entity, detected_at DESC);
 CREATE INDEX idx_confluence_level ON confluence_events(alert_level);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SIGNAL LIFECYCLE TRACKING (Analysis 2 of the Five) — NEW v2.1
+-- ─────────────────────────────────────────────────────────────────────
+-- Per-development state machine: announced → in_trial → results_in →
+-- under_review → approved → post_market | discontinued
+CREATE TABLE lifecycle_chains (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity VARCHAR(255) NOT NULL,           -- 'mim8', 'Hemgenix', ...
+    modality VARCHAR(50),                   -- 'bispecific', 'gene_therapy', 'anti_tfpi', 'rnai'
+    indication VARCHAR(50),                 -- 'haemophilia_a', 'haemophilia_b'
+    current_state VARCHAR(30) NOT NULL,     -- lifecycle state
+    expected_next JSONB,                    -- [{event, max_lag_days}]
+    pattern VARCHAR(50),                    -- matching MISSING_SIGNAL_RULES pattern
+    last_event_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(entity, modality, indication)
+);
+CREATE INDEX idx_lifecycle_entity ON lifecycle_chains(entity, current_state);
+
+-- Individual events in each chain (temporal links)
+CREATE TABLE lifecycle_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chain_id UUID REFERENCES lifecycle_chains(id) ON DELETE CASCADE,
+    signal_id UUID REFERENCES signals(id) ON DELETE CASCADE,
+    state VARCHAR(30) NOT NULL,
+    ordered_date TIMESTAMP NOT NULL,        -- published_at of the signal
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_lifecycle_events_chain ON lifecycle_events(chain_id, ordered_date);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- RED-TEAM CONTRADICTION ANALYSIS (Analysis 3 of the Five) — NEW v2.1
+-- ─────────────────────────────────────────────────────────────────────
+-- Pairwise NLI entailment contradictions between signals on same entity
+CREATE TABLE contradictions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity VARCHAR(255) NOT NULL,
+    claim_a JSONB NOT NULL,                 -- {text, source, url, date}
+    claim_b JSONB NOT NULL,                 -- {text, source, url, date}
+    contradiction_score FLOAT NOT NULL,     -- NLI score > 0.6 threshold
+    red_team_note TEXT,
+    status VARCHAR(20) DEFAULT 'open',      -- open | resolved | dismissed
+    requires_human_review BOOLEAN DEFAULT TRUE,
+    detected_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_contradictions_entity ON contradictions(entity, detected_at DESC);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- MISSING-SIGNAL DETECTION (Analysis 4 of the Five) — NEW v2.1
+-- ─────────────────────────────────────────────────────────────────────
+-- B.Pharm-authored expected-event sequences (rules) + alerts
+CREATE TABLE missing_signal_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pattern VARCHAR(50) NOT NULL UNIQUE,    -- 'gene_therapy_durability', 'phase3_readout_followup'
+    expected_sequence JSONB NOT NULL,       -- [{event, max_lag_days}, ...]
+    alert_message TEXT NOT NULL
+);
+
+CREATE TABLE missing_signal_alerts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity VARCHAR(255) NOT NULL,
+    chain_id UUID REFERENCES lifecycle_chains(id) ON DELETE CASCADE,
+    missing_event TEXT NOT NULL,
+    days_since_last_signal INT NOT NULL,
+    max_lag_days INT NOT NULL,
+    confidence FLOAT NOT NULL,              -- confidence-by-silence (0.4 + days*0.02, capped 0.95)
+    status VARCHAR(20) DEFAULT 'open',      -- open | resolved (new signal arrived)
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_missing_alerts_entity ON missing_signal_alerts(entity, status);
 
 -- ─────────────────────────────────────────────────────────────────────
 -- STAKEHOLDER CALIBRATION LOOP (HITL) — NEW in v2.0
@@ -965,37 +1137,61 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
    ├─ title + summary → 768-dim vector (all-MiniLM-L6-v2, local)
    └─ Store in pgvector column (same PostgreSQL DB)
 
-10. DETECT CONFLUENCE (LangGraph confluence agent)
+10. DETECT CONFLUENCE (LangGraph confluence agent — Analysis 1)
     ├─ Group signals by entity within 48h window
     ├─ ≥ 2 signal types on same entity → confluence event
     ├─ Apply matrix → CRITICAL / HIGH / MEDIUM / LOW alert
     └─ Store consolidated alert in confluence_events table
 
+10A. TRACK LIFECYCLES (LangGraph lifecycle agent — Analysis 2)
+    ├─ Assign each signal to its lifecycle chain (entity + modality + indication)
+    ├─ Advance state: announced → in_trial → results_in → under_review → ...
+    ├─ Compute expected next event + temporal links
+    └─ Store in lifecycle_chains + lifecycle_events
+
+10B. RED-TEAM CONTRADICTION SCAN (LangGraph red_team agent — Analysis 3)
+    ├─ Pairwise NLI entailment on same-entity signals (rolling 90d window)
+    ├─ bart-large-mnli labels contradiction > 0.6 → flag
+    ├─ Attach devil's-advocate red-team note
+    └─ Store in contradictions table (both evidence chains shown)
+
+10C. MISSING-SIGNAL SCAN (LangGraph missing_signal agent — Analysis 4)
+    ├─ For each lifecycle: expected-next-event overdue (> max_lag_days)?
+    ├─ Confidence grows with silence (0.4 + days*0.02, capped 0.95)
+    ├─ Configurable windows prevent over-warning
+    └─ Store in missing_signal_alerts table
+
 11. SYNTHESIZE NARRATIVES (LangGraph synthesis agent)
     ├─ Confluence alert → 2-sentence executive alert
     ├─ Weekly per-entity → WHAT / WHY / ACTION brief (Four-Question wiring)
+    ├─ Red-team contradiction + missing-signal flags folded into Q2/Q4
     └─ Grounded in traceable evidence chain (never speculative)
 
 12. STORE (Persist to databases)
     ├─ Insert into PostgreSQL signals table
     ├─ Insert entities into entities table
     ├─ Create signal-entity relationships
-    └─ Vector stored in signals.embedding (pgvector)
+    ├─ Vector stored in signals.embedding (pgvector)
+    ├─ Lifecycle chains/events, contradictions, missing-signal alerts
+    └─ Everything mirrored into audit_log (WORM) as applicable
 
 13. CACHE (Invalidate old, populate new)
     ├─ Invalidate role dashboards
     ├─ Invalidate confluence alerts cache
+    ├─ Invalidate lifecycle/contradiction/missing-signal caches
     ├─ Refresh trend aggregations
     └─ Update materialized views
 
-14. CALIBRATE (LangGraph calibration agent — HITL, NEW v2.0)
+14. CALIBRATE (LangGraph calibration agent — Analysis 5, HITL)
     ├─ Load stakeholder_feedback for this role batch
     ├─ StakeholderCalibrationService.recalibrate(role)
     ├─ Update scoring_weights + calibration_history + audit_log (WORM)
     └─ Next ingestion cycle uses the recalibrated weights
 
 15. DONE
-    ✅ 800 signals + confluence alerts + narrative briefs + calibrated weights ready
+    ✅ 800 signals + confluence alerts + lifecycle chains + contradiction flags
+       + missing-signal alerts + narrative briefs + calibrated weights ready
+    ✅ Every insight passed all FIVE advanced analyses before reaching the brief
 ```
 
 ### 3.2 Dashboard Request Flow
@@ -1064,6 +1260,9 @@ USER BROWSER
 | **State Graph Pattern** | LangGraph multi-agent orchestration | Automatic state flow between agents |
 | **Evidence Chain Pattern** | Traceable Insight service | Regulatory-grade audit trail |
 | **Confluence Pattern** | Signal Confluence Engine | Cross-source convergence → strategic alerts |
+| **Lifecycle State-Machine Pattern** | Signal Lifecycle Tracker (v2.1) | Chronological chains per development, expected-next computation |
+| **Red-Team / Devil's-Advocate Pattern** | Red-Team Contradiction Engine (v2.1) | NLI entailment flags contradicting claims, human review required |
+| **Expected-Event Pattern** | Missing-Signal Detector (v2.1) | Absence of a signal is itself a signal (confidence-by-silence) |
 | **Human-in-the-Loop (HITL) Pattern** | Stakeholder Calibration Loop (v2.0) | Persona feedback recalibrates role-scoring weights; AI suggests, humans review |
 
 ### 4.2 SOLID Principles
@@ -1101,6 +1300,9 @@ Infrastructure Layer (DB, cache, APIs)
 | **Embedding model fail** | No semantic search | Fall back to pg_trgm keyword search (same DB) |
 | **LangGraph node fails** | Pipeline stalls | Retry node, fall back to cached partial state |
 | **Confluence engine error** | No confluence alerts | Log, serve signals normally (alerts skip, not crash) |
+| **Lifecycle tracker error** | No state transitions | Log, serve signals without lifecycle stage (timeline empty, not crash) |
+| **Red-Team NLI error** | No contradiction flags | Log, serve signals without flags (skip, not crash); flags never block signal delivery |
+| **Missing-Signal scan error** | No missing alerts | Log, serve signals normally (missing-signal is advisory only) |
 | **All fail** | Complete outage | Return empty set gracefully |
 
 ### 5.2 Retry Logic
@@ -1232,7 +1434,7 @@ async def test_process_signal_end_to_end():
     assert result[0]['relevance_score'] > 0
     assert result[0]['id'] in db
 
-# Unit test: Confluence detection (core differentiator, haemophilia)
+# Unit test: Confluence detection (Analysis 1, core differentiator, haemophilia)
 @pytest.mark.asyncio
 async def test_confluence_detection():
     signals = generate_signals(entity="Hemgenix",
@@ -1240,6 +1442,34 @@ async def test_confluence_detection():
     event = await confluence_engine.detect_confluence(signals, "Hemgenix")
     assert event["alert_level"] == "CRITICAL"
     assert event["signal_count"] == 3
+
+# Unit test: Lifecycle tracking (Analysis 2)
+@pytest.mark.asyncio
+async def test_lifecycle_advance():
+    tracker = SignalLifecycleTracker(db)
+    for signal, expected in [("phase3_readout", "results_in"),
+                             ("submission_press", "under_review")]:
+        chain = await tracker.advance(signal, entity="mim8")
+        assert chain["state"] == expected
+    timeline = tracker.timeline("mim8")
+    assert timeline == sorted(timeline, key=lambda e: e["published_at"])
+
+# Unit test: Red-Team contradiction detection (Analysis 3)
+@pytest.mark.asyncio
+async def test_red_team_contradiction():
+    a = signal("sustained 3-year Factor IX efficacy", entity="Hemgenix", date="2026-01-10")
+    b = signal("declining Factor IX expression in subset", entity="Hemgenix", date="2026-01-25")
+    found = await red_team_engine.detect_contradictions([a, b], "Hemgenix")
+    assert any(c["contradiction_score"] > 0.6 for c in found)
+    assert all(c["claim_a"]["url"] and c["claim_b"]["url"] for c in found)
+
+# Unit test: Missing-signal detection (Analysis 4)
+@pytest.mark.asyncio
+async def test_missing_signal_detector():
+    lc = lifecycle(entity="mim8", last_event_date=now - timedelta(days=200))
+    alerts = list(await missing_signal_detector.detect_missing_signals([lc]))
+    assert alerts and alerts[0]["days_since_last_signal"] == 200
+    assert alerts[0]["confidence"] > 0.4     # confidence grows with silence
 
 # Unit test: Ontology enrichment resolves brand → molecule → company (haemophilia)
 def test_ontology_enrichment():
@@ -1394,6 +1624,9 @@ volumes:
 - Signals ingested/day
 - Entity extraction accuracy (B.Pharm QA-validated)
 - Confluence events/day + alert-level distribution
+- Lifecycle chains tracked + state transition accuracy (B.Pharm-validated)
+- Contradiction flags/day + precision (human-confirmed false positive rate)
+- Missing-signal alerts/day + timeliness vs false-positive rate (confidence thresholds)
 - Relevance score distribution
 - Data freshness (age of oldest signal)
 
@@ -1475,11 +1708,11 @@ This design is explicitly engineered against the Novo Nordisk judging criteria (
 
 | Criterion (Weight) | Design Element |
 |---|---|
-| **Innovation (25%)** | Signal Confluence Engine (2.4), Pharma Ontology enrichment (2.4), Stakeholder Calibration Loop / HITL (2.4, new v2.0), Traceable Reasoning (2.4) — no open-source tool combines these |
-| **Technical (25%)** | LangGraph multi-agent orchestration incl. calibration agent (2.3), pgvector hybrid search (2.6), Docker Compose 1-command deploy (8.2), graceful failure modes (5.1) |
-| **Business Impact (20%)** | Detects haemophilia paradigm shift (IV factor → subcutaneous non-factor → single-dose gene therapy); confluence alerts give Medical Affairs/Commercial a head start on mim8 positioning vs emicizumab and on Hemgenix/Roctavian gene-therapy disruption (see SRS 6.4) |
-| **Feasibility (15%)** | Free APIs + local CPU-only models, pgvector (one less container), public data sources (CDA-compliant), MVP → production path (10) |
-| **Presentation (15%)** | B.Pharm owns haemophilia ontology + confluence clinical validation; CSE owns architecture; demo = `docker-compose up` + live Four-Question dashboard + live calibration demo |
+| **Innovation (25%)** | The **Five Advanced Analyses** — Confluence Engine (2.4), Signal Lifecycle Tracker (2.4), Red-Team Contradiction Engine (2.4), Missing-Signal Detector (2.4), Stakeholder Calibration Loop / HITL (2.4) — plus Pharma Ontology enrichment (2.4) and Traceable Reasoning (2.4). No open-source tool combines these |
+| **Technical (25%)** | LangGraph 10-agent orchestration incl. lifecycle/red-team/missing-signal/calibration agents (2.3), pgvector hybrid search (2.6), Docker Compose 1-command deploy (8.2), graceful failure modes (5.1) |
+| **Business Impact (20%)** | Detects haemophilia paradigm shift (IV factor → subcutaneous non-factor → single-dose gene therapy); confluence alerts give Medical Affairs/Commercial a head start on mim8 positioning vs emicizumab and on Hemgenix/Roctavian gene-therapy disruption; missing-signal detection catches silent readouts and stalled submissions (see SRS 6.4) |
+| **Feasibility (15%)** | Free APIs + local CPU-only models (NLI reuses BART-MNLI — zero extra download), pgvector (one less container), public data sources (CDA-compliant), MVP → production path (10) |
+| **Presentation (15%)** | B.Pharm owns haemophilia ontology + confluence/lifecycle clinical validation; CSE owns architecture; demo = `docker-compose up` + live Four-Question dashboard + live calibration / contradiction / missing-signal demos |
 
 **Key differentiators over existing open-source tools (Refined Architecture doc):**
 1. Confluence detection (not aggregation)
@@ -1488,5 +1721,8 @@ This design is explicitly engineered against the Novo Nordisk judging criteria (
 4. Temporal pattern recognition (gene therapy milestone parade / regulatory filing surge)
 5. Role-specific narratives (not one report for everyone)
 6. Free stack, zero vendor lock-in
-7. **Stakeholder Calibration Loop (HITL)** — routing weights improve with persona feedback (new v2.0)
+7. **Stakeholder Calibration Loop (HITL)** — routing weights improve with persona feedback
+8. **Signal Lifecycle Tracking** — every development has a chronological state machine with an expected next event
+9. **Red-Team Contradiction Analysis** — contradicting claims on the same entity are flagged with both evidence chains
+10. **Missing-Signal Detection** — absence of an expected signal becomes an early-warning alert
 

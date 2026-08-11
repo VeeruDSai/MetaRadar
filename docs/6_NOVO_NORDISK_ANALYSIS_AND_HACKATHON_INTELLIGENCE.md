@@ -4,6 +4,8 @@
 
 > **v2.0 (Aug 12, 2026 kickoff):** Added haemophilia-specific context (concizumab/Alhemo, mim8 Phase 3, gene-therapy disruption), the **Stakeholder Calibration / "Stakeholder Learning Plan"** judging angle, and haemophilia-themed presentation lines. The metabolic-disease examples remain below as historical context on Novo Nordisk, but MetaRadar's target domain for this hackathon is **Haemophilia within Rare Disease**.
 
+> **v2.1 (Aug 12, 2026):** Extended the pitch to the **Five Advanced Analyses** (Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, Stakeholder Learning Loop) — the "learning system" differentiator now includes lifecycle timelines, contradiction flags, and missing-signal early-warning. Judge Q&A expanded accordingly.
+
 ---
 
 ## **PART 1: COMPANY OVERVIEW**
@@ -73,7 +75,7 @@ The haemophilia treatment landscape is in its most significant transition in dec
 - Signals about these shifts are scattered across ASH/ISTH/WFH/EHA congress abstracts, PubMed, FDA/EMA filings, HTA appraisals (NICE/G-BA), and patient forums (r/Hemophilia)
 
 **Why this matters for MetaRadar:**
-> MetaRadar's Confluence Engine would track a "gene therapy milestone parade" — ASH abstract + CSL Behring press release + r/Hemophilia discussion converging in 48h — and alert Novo Nordisk's Medical Affairs/Commercial/R&D teams to re-brief on mim8/concizumab positioning vs durability narratives, before analysts make the case publicly.
+> MetaRadar's Five Advanced Analyses would track a "gene therapy milestone parade" — ASH abstract + CSL Behring press release + r/Hemophilia discussion converging in 48h (Confluence) — link them into one Hemgenix timeline with the expected next event (Lifecycle Tracking), flag the ASH "sustained durability" vs real-world "waning expression" contradiction (Red-Team), and warn when a promised durability follow-up silently doesn't arrive (Missing-Signal) — so Novo Nordisk's Medical Affairs/Commercial/R&D teams can re-brief on mim8/concizumab positioning before analysts make the case publicly.
 
 ---
 
@@ -239,7 +241,19 @@ Low score:
 - 15 slides of architecture diagrams with no demo
 - Presenting to pharma judges as if they understand NLP
 
-**NEW v2.0 — "Stakeholder Learning Plan" (the calibration angle judges will probe):**
+**NEW v2.1 — "The Five Advanced Analyses" (the judging angle judges will probe):**
+
+Beyond a news feed, MetaRadar's value is five analyses that no competing tool will have. Judges are likely to probe how these work and why they matter:
+
+| Analysis | What It Answers | Demo Hook |
+|---|---|---|
+| **1. Confluence Detection** | "Is this a one-off or a converging story?" | ASH abstract + CSL PR + r/Hemophilia = 1 CRITICAL alert |
+| **2. Signal Lifecycle Tracking** | "Where is this development, what's next?" | mim8: results_in → NEXT: submission announced |
+| **3. Red-Team Contradiction** | "Does the evidence contradict itself?" | ASH "sustained durability" vs real-world "waning expression" |
+| **4. Missing-Signal Detection** | "What *should* have happened but didn't?" | Roctavian durability follow-up silent for 150 days |
+| **5. Stakeholder Learning Loop (HITL)** | "Does the system get smarter with use?" | persona rating recalibrates routing weights live |
+
+**NEW v2.0 — "Stakeholder Learning Plan" (the calibration angle):**
 
 Given the kickoff focus on the Stakeholder Calibration Loop, judges are likely to evaluate how the system *improves with use*. Prepare to show:
 
@@ -317,7 +331,7 @@ Deployment:      Streamlit Cloud (live demo link included)
 | **No AI pipeline** | pandas + plotly = data dashboard, not AI. MetaRadar has NLP, LLM summarization, scoring. |
 | **No persistence** | Refresh loses session state. MetaRadar has PostgreSQL + Redis. |
 | **Single user** | One person views one dashboard. MetaRadar supports multiple roles simultaneously. |
-| **No learning loop** | Static analysis. MetaRadar's Stakeholder Calibration Loop (HITL) recalibrates routing from persona feedback (NEW v2.0). |
+| **No learning loop** | Static analysis. MetaRadar's Stakeholder Learning Loop (HITL) recalibrates routing from persona feedback (NEW v2.0), plus lifecycle tracking, red-team contradiction checks, and missing-signal early-warning (NEW v2.1) — none of which the 2025 winner or its peers have. |
 
 ---
 
@@ -342,8 +356,8 @@ The 2025 winning project was:
 | **Scope** | 1 drug, 1 market | Entire haemophilia rare disease competitive landscape (A + B, inhibitors, gene therapy) |
 | **Update frequency** | Manual (run script) | Automated (every 2 hours) |
 | **Production readiness** | Streamlit Cloud | Docker Compose + Vercel + Railway |
-| **Innovation** | Market analysis dashboard | Confluence detection, pharma ontology, traceable intelligence, **Stakeholder Calibration Loop (HITL, NEW v2.0)** |
-| **Compliance/Audit** | None | WORM audit log (21 CFR Part 11), PII detection, medical disclaimer, calibration_history audit |
+| **Innovation** | Market analysis dashboard | **The Five Advanced Analyses** (confluence, lifecycle, red-team contradiction, missing-signal, stakeholder learning) + pharma ontology + traceable intelligence |
+| **Compliance/Audit** | None | WORM audit log (21 CFR Part 11), PII detection, medical disclaimer, calibration_history audit, contradiction + missing-signal audit |
 | **AI Model Flexibility** | Hardcoded pandas | Model-agnostic: any HuggingFace model via config (BART → Gemma → Mistral, zero code change) |
 
 
@@ -356,12 +370,15 @@ The 2025 winning project was:
 These are statements directly tied to their current business reality that will show you've done your homework:
 
 **Opening statement (Innovation criterion):**
-> "Haemophilia is undergoing its most significant paradigm shift in decades—from IV factor replacement to subcutaneous bispecific antibodies and single-administration gene therapies like Hemgenix and Roctavian. Critical signals about this shift are scattered across congress abstracts, PubMed publications, FDA/EMA filings, patient forums, and competitor announcements. MetaRadar exists to make Novo Nordisk's response instant and coordinated across all functions."
+> "Haemophilia is undergoing its most significant paradigm shift in decades—from IV factor replacement to subcutaneous bispecific antibodies and single-administration gene therapies like Hemgenix and Roctavian. Critical signals about this shift are scattered across congress abstracts, PubMed publications, FDA/EMA filings, patient forums, and competitor announcements. MetaRadar runs **five advanced analyses** on that noise — confluence detection, lifecycle tracking, red-team contradiction checks, missing-signal early-warning, and a stakeholder learning loop — so Novo Nordisk's response is instant, coordinated, and learning from its users."
 
 **On business impact (NEW v2.0 — mim8 vs emicizumab + gene therapy):**
 > "Roche's Hemlibra (emicizumab) established non-factor prophylaxis in Haemophilia A, and gene-therapy durability data (Hemgenix 3-year, Roctavian) is now challenging the lifelong-prophylaxis model itself. MetaRadar flags when clinical data, HTA decisions, and patient sentiment converge — giving Novo Nordisk's Medical Affairs and Commercial teams early clarity on how to position mim8 and concizumab against both, before analysts make the case publicly."
 
-**On the Stakeholder Calibration Loop (NEW v2.0):**
+**On the Five Advanced Analyses (NEW v2.1):**
+> "Four things make MetaRadar an intelligence layer, not a feed. First, it *confluences* — three independent signal types in 48h become one strategic alert. Second, it *tracks lifecycles* — an analyst always knows mim8 is 'results_in, submission expected next.' Third, it *red-teams the evidence* — when a real-world cohort contradicts an ASH abstract, both claims are shown with their sources and flagged for human review. Fourth, it *listens for silence* — a readout that was promised but never appeared becomes an early-warning, because in competitive intelligence, absence is a signal."
+
+**On the Stakeholder Learning Loop (NEW v2.0):**
 > "MetaRadar doesn't just route intelligence to the right function — it learns whether the routing was right. Stakeholders rate each signal 1-5; the calibration service recalibrates scoring weights; Q3 role-routing confidence visibly improves. Our demo shows a Regulatory persona teaching the system, live."
 
 **On feasibility:**
@@ -379,7 +396,15 @@ These are statements directly tied to their current business reality that will s
 
 **Q: "How is this different from just subscribing to Contify or SinglePoint?"**
 
-A: "Contify and SinglePoint are generic competitive intelligence platforms. They don't know that 'Hemlibra' and 'emicizumab' are the same molecule, or that 'mim8' is Novo Nordisk's bispecific candidate. They don't detect confluence—they don't know when a safety signal on Reddit and an FDA advisory are part of the same emerging story. And they don't learn: nothing they deliver to Medical Affairs ever changes how they route to Medical Affairs. MetaRadar is domain-specific to haemophilia rare disease, framed in a Four-Question model, and gets smarter via stakeholder calibration."
+A: "Contify and SinglePoint are generic competitive intelligence platforms. They don't know that 'Hemlibra' and 'emicizumab' are the same molecule, or that 'mim8' is Novo Nordisk's bispecific candidate. They don't detect confluence—they don't know when a safety signal on Reddit and an FDA advisory are part of the same emerging story. They don't track lifecycles—an analyst can't ask 'where is mim8 and what's next.' They don't red-team the evidence—a real-world cohort contradicting an ASH abstract is treated as two equal claims. They don't listen for missing signals—a silent readout is invisible. And they don't learn: nothing they deliver to Medical Affairs ever changes how they route to Medical Affairs. MetaRadar is domain-specific to haemophilia rare disease, framed in a Four-Question model, runs five advanced analyses on every signal, and gets smarter via stakeholder learning."
+
+**Q: "Why would I care that a signal did NOT appear?"**
+
+A: "Because in competitive intelligence, silence is often the first signal. If a Phase 3 readout was promised for Q1 and nothing has appeared in three months, the most likely explanations are a missed endpoint or a stalled submission — exactly what a Medical Affairs or Regulatory team wants to know before the competitor controls the narrative. MetaRadar's Missing-Signal Detector runs an event-progression state machine: given a development's lifecycle state, it knows what event should come next and how long that step normally takes. When the window passes in silence, it raises an early-warning whose confidence grows with every day of silence — so the system gets *more* confident, not less, the longer nothing happens. We gate alerts behind a configurable window precisely so we don't cry wolf."
+
+**Q: "How do you handle contradicting claims — the system just reports both sides?"**
+
+A: "Reporting both sides is what a feed does; MetaRadar instead runs a Red-Team Contradiction Engine. For signals about the same entity in a rolling 90-day window, a local NLI model (the same `facebook/bart-large-mnli` we already use for classification — no extra hardware) checks entailment between claim pairs. When it labels a pair 'contradiction' above 0.6, we surface both evidence chains — source, URL, date — side by side, attach a devil's-advocate note on how the evidence could be misleading, and mark it 'requires human review.' A Medical Affairs analyst can never unknowingly quote a disputed result. This is the difference between aggregation and intelligence."
 
 **Q: "How does the stakeholder calibration loop actually work? (NEW v2.0)"**
 
@@ -448,10 +473,10 @@ Other college teams (especially from pharmacy backgrounds) tackling Problem Stat
 
 **Why you beat this:**
 - Next.js vs Streamlit (production vs prototype)
-- LangGraph multi-agent vs single script (architecture vs code)
-- Confluence Engine (no one else will have this concept)
+- LangGraph 10-agent pipeline vs single script (architecture vs code)
+- The Five Advanced Analyses: Confluence Engine + Lifecycle Tracking + Red-Team Contradiction + Missing-Signal Detection (no one else will have any of these)
 - Haemophilia ontology built by domain experts (not just keyword matching)
-- Stakeholder Calibration Loop (no one else will have a learning system)
+- Stakeholder Learning Loop (no one else will have a learning system)
 - Live data with fallback cache vs static or demo-only data
 
 **Second most common approach (from CSE-heavy teams):**
@@ -464,7 +489,7 @@ Other college teams (especially from pharmacy backgrounds) tackling Problem Stat
 - Domain-validated by B.Pharm team (accuracy + credibility)
 - Scoped to MVP that works reliably (not over-built)
 - Business framing is stronger (you know the haemophilia paradigm shift, the mim8 vs emicizumab fight, gene-therapy disruption)
-- A learning system (calibration loop) instead of a static dashboard
+- Five advanced analyses (confluence, lifecycle, red-team, missing-signal, learning loop) instead of a static dashboard
 
 ---
 
@@ -473,8 +498,8 @@ Other college teams (especially from pharmacy backgrounds) tackling Problem Stat
 ```
 WHAT NOVO NORDISK IS LOOKING FOR:
 ✓ Working prototype (not wireframe) — MetaRadar has this
-✓ Genuine innovation, not incremental improvement — Confluence Engine + Pharma Ontology + Stakeholder Calibration Loop
-✓ Business impact tied to their actual problems — Haemophilia paradigm shift, mim8 vs emicizumab, gene-therapy disruption, AI mandate
+✓ Genuine innovation, not incremental improvement — The Five Advanced Analyses (Confluence + Lifecycle + Red-Team + Missing-Signal + Stakeholder Learning) + Pharma Ontology
+✓ Business impact tied to their actual problems — Haemophilia paradigm shift, mim8 vs emicizumab, gene-therapy disruption, silent readouts/stalled submissions, AI mandate
 ✓ Multi-disciplinary team — 2 CSE + 3 B.Pharm = perfect composition for this problem
 ✓ Scalable architecture — Next.js + FastAPI + PostgreSQL + Docker (enterprise-grade)
 ✓ Talent they want to hire — AI-led roles, data science, digital innovation
@@ -490,12 +515,12 @@ WHAT THE 2025 WINNER MISSED THAT YOU WILL NAIL:
 ✓ AI pipeline (vs pandas + plotly)
 ✓ Multi-role access (vs single-user dashboard)
 ✓ Production architecture (vs Streamlit)
-✓ Confluence detection (novel concept, doesn't exist elsewhere)
-✓ A learning loop — the Stakeholder Calibration Loop proves the system improves with use (NEW v2.0)
+✓ Five advanced analyses (novel concepts, don't exist elsewhere)
+✓ A learning system — the Stakeholder Learning Loop proves the system improves with use
 
 YOUR SINGLE BIGGEST DIFFERENTIATOR:
-The B.Pharm team + CSE team building ONE system that learns.
-No other team will have domain-validated, self-calibrating pharmaceutical intelligence.
+The B.Pharm team + CSE team building ONE system that runs five advanced analyses and learns from use.
+No other team will have domain-validated, self-correcting pharmaceutical intelligence.
 That's not a technical feature—it's a moat.
 ```
 

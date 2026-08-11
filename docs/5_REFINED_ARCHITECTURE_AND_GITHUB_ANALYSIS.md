@@ -4,6 +4,8 @@
 
 > **v2.0 (Aug 12, 2026 kickoff):** Therapy-area pivot to **Haemophilia within Rare Disease**, added the **Stakeholder Calibration Loop (HITL)** as a 7th agent and differentiator, and replaced GLP-1/obesity examples with haemophilia (emicizumab, mim8, concizumab, Hemgenix, Roctavian) throughout.
 
+> **v2.1 (Aug 12, 2026):** Extended to the **Five Advanced Analyses** per the kickoff Executive Summary — Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, Stakeholder Learning Loop. The LangGraph pipeline grows from 7 to **10 agents** (lifecycle, red-team, missing-signal added). Every insight passes all five analyses before reaching the brief.
+
 ---
 
 ## **PART 1: EXISTING GITHUB SOLUTIONS & THEIR GAPS**
@@ -256,6 +258,15 @@ No mechanism for Novo Nordisk functions to tell the system whether routing was r
 Current plan: Signal appears with a score. User doesn't know *why* it's important.
 Regulatory teams especially need: "This FDA guideline change matters because it affects X, Y, Z."
 
+**7. No Signal Lifecycle View**
+Signals are isolated readouts. No one can answer "where is mim8 in its lifecycle, and what is the expected next event?" Each readout, submission, and label update floats separately.
+
+**8. No Contradiction / Red-Team Check**
+The system repeats claims as facts. A congress abstract reporting durable efficacy and a real-world cohort reporting waning effect both appear as equal-weight signals — no mechanism flags that they contradict each other, so an analyst can quote a now-disputed result.
+
+**9. No Missing-Signal Detection**
+The system only reacts to what appears. It never flags what *should* have appeared: a Phase 3 readout promised for Q1 with 3 months of silence is invisible — yet that silence is exactly the early-warning a Medical Affairs or Regulatory team needs.
+
 ---
 
 ## **PART 3: THE REFINED ARCHITECTURE**
@@ -273,16 +284,25 @@ NEW MENTAL MODEL:
   Entity Relationship Graph
   (Hemlibra → emicizumab → bispecific antibody → Roche → Haemophilia A competitor)
          ↓
-  Signal Confluence Engine
-  (When ASH abstract + CSL press release + r/Hemophilia fire on same entity = converging story)
+  THE FIVE ADVANCED ANALYSES
+  1. Signal Confluence Engine
+     (When ASH abstract + CSL press release + r/Hemophilia fire on same entity = converging story)
+  2. Signal Lifecycle Tracker
+     (Where is this development? announced → in_trial → results_in → under_review → ... what is NEXT?)
+  3. Red-Team Contradiction Engine
+     (Does a newer signal CONTRADICT an older claim? Both evidence chains shown, human review required)
+  4. Missing-Signal Detector
+     (What SHOULD have happened but didn't? Silence = stalled submission / missed endpoint)
+  5. Stakeholder Learning Loop (HITL)
+     (Persona feedback recalibrates role-scoring weights → routing confidence improves)
          ↓
   Narrative Synthesis Agent
-  ("Hemgenix 3-year durability strengthening: 3 convergent signals in 48h")
+  ("Hemgenix 3-year durability strengthening: 3 convergent signals in 48h, one contradiction flagged")
          ↓
   Role-Specific Intelligence Brief
   (Medical Affairs: clinical durability implications / Regulatory: labeling & HTA impact)
          ↓
-  Stakeholder Calibration Agent (HITL — NEW v2.0)
+  Stakeholder Calibration Agent (HITL)
   (Persona feedback recalibrates role-scoring weights → routing confidence improves)
 ```
 
@@ -309,8 +329,11 @@ class IntelligenceState(TypedDict):
     extracted_entities: list[dict]
     scored_signals: list[dict]
     confluent_stories: list[dict]
+    lifecycle_chains: list[dict]          # Analysis 2
+    contradictions: list[dict]            # Analysis 3
+    missing_signal_alerts: list[dict]     # Analysis 4
     role_briefs: dict[str, list]
-    calibration_weights: dict[str, float]   # HITL (NEW v2.0)
+    calibration_weights: dict[str, float]   # Analysis 5 (HITL)
 
 # Define agents
 def ingestion_agent(state: IntelligenceState):
@@ -336,7 +359,19 @@ def nlp_agent(state: IntelligenceState):
     ...
 
 def confluence_agent(state: IntelligenceState):
-    """Detects when multiple signal types converge on same entity"""
+    """Detects when multiple signal types converge on same entity (Analysis 1)"""
+    ...
+
+def lifecycle_agent(state: IntelligenceState):        # NEW v2.1
+    """Assigns signals to lifecycle chains + advances state machine (Analysis 2)"""
+    ...
+
+def red_team_agent(state: IntelligenceState):         # NEW v2.1
+    """NLI entailment contradiction scan + devil's-advocate review (Analysis 3)"""
+    ...
+
+def missing_signal_agent(state: IntelligenceState):   # NEW v2.1
+    """Expected-event detector; silence = early-warning (Analysis 4)"""
     ...
 
 def synthesis_agent(state: IntelligenceState):
@@ -347,8 +382,8 @@ def brief_agent(state: IntelligenceState):
     """Formats role-specific dashboard content (Four-Question)"""
     ...
 
-def calibration_agent(state: IntelligenceState):   # NEW v2.0
-    """HITL: applies stakeholder_feedback → recalibrates role weights"""
+def calibration_agent(state: IntelligenceState):
+    """HITL: applies stakeholder_feedback → recalibrates role weights (Analysis 5)"""
     ...
 
 # Wire agents into graph
@@ -357,16 +392,22 @@ graph.add_node("ingest", ingestion_agent)
 graph.add_node("validate", validation_agent)
 graph.add_node("nlp", nlp_agent)
 graph.add_node("confluence", confluence_agent)
+graph.add_node("lifecycle", lifecycle_agent)          # NEW v2.1
+graph.add_node("red_team", red_team_agent)            # NEW v2.1
+graph.add_node("missing_signal", missing_signal_agent)  # NEW v2.1
 graph.add_node("synthesize", synthesis_agent)
 graph.add_node("brief", brief_agent)
-graph.add_node("calibrate", calibration_agent)      # NEW v2.0
+graph.add_node("calibrate", calibration_agent)
 
 graph.add_edge("ingest", "validate")
 graph.add_edge("validate", "nlp")
 graph.add_edge("nlp", "confluence")
-graph.add_edge("confluence", "synthesize")
+graph.add_edge("confluence", "lifecycle")
+graph.add_edge("lifecycle", "red_team")
+graph.add_edge("red_team", "missing_signal")
+graph.add_edge("missing_signal", "synthesize")
 graph.add_edge("synthesize", "brief")
-graph.add_edge("brief", "calibrate")                # NEW v2.0
+graph.add_edge("brief", "calibrate")
 
 graph.set_entry_point("ingest")
 runner = graph.compile()
@@ -884,6 +925,132 @@ class AthenaQueryEngine:
 
 ---
 
+### **Upgrade 8: Signal Lifecycle Tracker (Analysis 2 of the Five) — NEW v2.1**
+
+Signals are stitched into chronological state machines per development, so an analyst always knows where a development is and what happens next.
+
+```python
+# services/lifecycle_tracker.py
+LIFECYCLE_STATES = [
+    "announced", "in_trial", "results_in",
+    "under_review", "approved", "post_market", "discontinued",
+]
+
+class SignalLifecycleTracker:
+    """Stitch isolated signals into one timeline per development.
+
+    Example (mim8):
+      2024-05 announced → Phase 3 initiation
+      2026-01 results_in → Phase 3 primary endpoint met
+      2026-03 under_review → FDA/EMA submission expected
+      NEXT EXPECTED: submission announced
+    """
+
+    def advance(self, signal, entity) -> dict:
+        chain = self.get_or_create_chain(entity)     # entity + modality + indication
+        chain.events.append(signal)
+        chain.current_state = self._infer_state(signal)   # B.Pharm-validated rules
+        chain.expected_next = self._expected_next(chain)
+        return {"chain": chain, "state": chain.current_state,
+                "expected_next": chain.expected_next}
+
+    def timeline(self, entity) -> list[dict]:
+        """Chronological, temporally-linked events for the entity."""
+        return sorted(self.chains[entity].events, key=lambda e: e["published_at"])
+```
+
+**Why this matters:** "Results are in" is only useful if you also know "submission is expected next" and can detect when that next step silently doesn't arrive.
+
+---
+
+### **Upgrade 9: Red-Team Contradiction Engine (Analysis 3 of the Five) — NEW v2.1**
+
+A devil's-advocate layer that flags when a newer signal contradicts an older claim about the same entity. Uses the *same* local zero-shot NLI model (`facebook/bart-large-mnli`) already used for signal classification — zero extra model download, still free and local.
+
+```python
+# services/red_team_engine.py
+from transformers import pipeline
+from itertools import combinations
+
+_nli = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+async def detect_contradictions(signals, entity, window_days=90) -> list[dict]:
+    entity_signals = [s for s in signals if entity in s.get("entities", {}).get("all", [])]
+    out = []
+    for a, b in combinations(entity_signals, 2):
+        if (b["published_at"] - a["published_at"]).days > window_days:
+            continue
+        result = _nli(a["summary"], candidate_labels=["entailment", "contradiction", "neutral"])
+        if result["labels"][0] == "contradiction" and result["scores"][0] > 0.6:
+            out.append({
+                "entity": entity,
+                "claim_a": {"text": a["summary"], "source": a["source"], "url": a["url"], "date": a["published_at"]},
+                "claim_b": {"text": b["summary"], "source": b["source"], "url": b["url"], "date": b["published_at"]},
+                "contradiction_score": result["scores"][0],
+                "red_team_note": "Devil's-advocate: newest evidence may overturn earlier claim — human review required",
+            })
+    return out
+```
+
+**Red-team review prompt (narrative layer):**
+```
+"You are a red-team reviewer for a pharma CI team. Given the evidence for {entity},
+list every point where the evidence could be misleading, incomplete, or contested.
+Flag any source whose claim is not corroborated by a second independent source."
+```
+
+**Demo:** MetaRadar surfaces `⚔ CONTRADICTION — "sustained efficacy" (ASH) vs "waning effect" (real-world cohort)` with both evidence chains shown and a red-team note requiring human review.
+
+---
+
+### **Upgrade 10: Missing-Signal Detector (Analysis 4 of the Five) — NEW v2.1**
+
+Absence of a signal is itself a signal. Event-progression state machines flag expected-but-absent milestones with confidence that grows with silence.
+
+```python
+# services/missing_signal_detector.py
+MISSING_SIGNAL_RULES = {
+    "gene_therapy_durability": {
+        "expected_sequence": [
+            {"event": "Phase 3 primary endpoint met", "max_lag_days": 120},
+            {"event": "FDA/EMA submission announced", "max_lag_days": 270},
+            {"event": "PDUFA/CHMP decision", "max_lag_days": 180},
+        ],
+        "alert": "gene-therapy approval trajectory has stalled — expected next event overdue",
+    },
+    "phase3_readout_followup": {
+        "expected_sequence": [
+            {"event": "Phase 3 readout published", "max_lag_days": 0},
+            {"event": "regulatory submission announced", "max_lag_days": 180},
+            {"event": "congress data presentation", "max_lag_days": 365},
+        ],
+        "alert": "readout published but no submission/congress follow-up in expected window",
+    },
+}
+
+async def detect_missing_signals(lifecycles: list[dict]) -> list[dict]:
+    for lc in lifecycles:
+        rule = MISSING_SIGNAL_RULES.get(lc["pattern"])
+        expected = rule["expected_sequence"][lc["stage_index"]]
+        days = (now - lc["last_event_date"]).days
+        if days > expected["max_lag_days"]:
+            yield {
+                "entity": lc["entity"],
+                "missing_event": expected["event"],
+                "days_since_last_signal": days,
+                "max_lag_days": expected["max_lag_days"],
+                "confidence": min(0.95, 0.4 + days * 0.02),   # confidence-by-silence
+                "alert": rule["alert"],
+            }
+```
+
+**Guardrail:** Missing-signal alerts only fire after the configured `max_lag_days` window, and confidence grows with silence — the false-positive discipline that judges score on Feasibility.
+
+**Demo:** `🕳 MISSING SIGNAL — mim8 submission announced expected 90d ago (last signal: Jan 2026)` — MetaRadar flags the silence.
+
+
+---
+
 ## **PART 4: REFINED TECH STACK (FINAL VERSION)**
 
 ```
@@ -910,7 +1077,7 @@ NLP / AI:
 │   └─ TinyLlama/TinyLlama-1.1B-Chat (ultra-light, minimal hardware)
 ├─ sentence-transformers/all-MiniLM-L6-v2 (embeddings, local, 80MB)
 │   ↑ Replace Weaviate's built-in vectorizer — faster, smaller
-├─ Zero-shot classifier: facebook/bart-large-mnli (signal classification)
+├─ Zero-shot classifier: facebook/bart-large-mnli (signal classification + RED-TEAM contradiction entailment)
 └─ HTTP resilience: tenacity + httpx.AsyncClient (exponential backoff; research report Section 2)
 
 DATA:
@@ -919,15 +1086,26 @@ DATA:
 │   ├─ pgvector: 768-dim vectors, native hybrid search in PostgreSQL
 │   ├─ raw_signals_bronze: raw API JSON, pre-processing (replay layer)
 │   ├─ audit_log: WORM append-only compliance table (21 CFR Part 11)
-│   ├─ stakeholder_feedback: append-only routing ratings (HITL, NEW v2.0)
-│   └─ scoring_weights + calibration_history: calibrated role weights (NEW v2.0)
+│   ├─ stakeholder_feedback: append-only routing ratings (Analysis 5, HITL)
+│   ├─ scoring_weights + calibration_history: calibrated role weights (HITL)
+│   ├─ lifecycle_chains + lifecycle_events: state machines + event links (Analysis 2)
+│   ├─ contradictions: NLI-flagged claim pairs (Analysis 3)
+│   ├─ missing_signal_rules + missing_signal_alerts: expected-event detectors (Analysis 4)
+│   └─ confluence_events: cross-source alerts (Analysis 1)
 ├─ Redis 7 (cache + rate limiting + session)
 └─ Pharma Ontology JSON (local, no DB, instant lookup) — haemophilia ontology
 
-CALIBRATION (NEW v2.0):
+THE FIVE ADVANCED ANALYSES (v2.1):
+├─ 1. Confluence Engine      → confluence_engine.py + confluence_agent.py
+├─ 2. Lifecycle Tracker      → lifecycle_tracker.py + lifecycle_agent.py
+├─ 3. Red-Team Engine        → red_team_engine.py + red_team_agent.py (bart-large-mnli NLI)
+├─ 4. Missing-Signal Detector→ missing_signal_detector.py + missing_signal_agent.py
+└─ 5. Stakeholder Learning   → calibration_service.py + calibration_agent.py (HITL)
+
+CALIBRATION (Analysis 5, HITL):
 ├─ StakeholderCalibrationService (services/calibration_service.py)
 │   └─ recalibrate(role): stakeholder_feedback → scoring_weights update
-├─ calibration_agent.py (7th LangGraph node, between brief and END)
+├─ calibration_agent.py (10th LangGraph node, between brief and END)
 ├─ Endpoints: POST /api/v1/feedback · GET /api/v1/feedback/summary · POST /api/v1/calibrate
 └─ Simulated personas for demo: Medical Affairs Lead, Regulatory Specialist, Market Access Manager
 
@@ -1037,6 +1215,15 @@ This is the section that judges will find most impressive — domain-expert coll
 - Are role assignments sensible?
 - Catch false positives (e.g., "gene therapy" in a cardiac surgery article, "mim8" in an engineering context)
 
+**4A. Lifecycle + Missing-Signal Rules (Week 3)**
+- B.Pharm team authors `MISSING_SIGNAL_RULES` (expected-event sequences + `max_lag_days` per haemophilia pattern: gene therapy durability, Phase 3 readout follow-up, inhibitor safety follow-up)
+- B.Pharm team validates lifecycle state transitions (does `results_in → under_review → approved` make clinical sense per drug?)
+- B.Pharm team seeds expected "next event" for mim8, Hemgenix, Roctavian, fitusiran
+
+**4B. Contradiction QA (Week 3-4)**
+- B.Pharm team reviews seeded contradiction pairs (e.g., ASH "sustained durability" vs real-world "waning expression") and confirms NLI flags are clinically meaningful
+- B.Pharm team defines which contradiction types are actionable for Medical Affairs vs Regulatory
+
 **5. Demo Script Domain Narration (Week 4)**
 - B.Pharm team presents the domain slides
 - CSE team presents the technical architecture
@@ -1055,7 +1242,7 @@ This is the section that judges will find most impressive — domain-expert coll
 - "MetaRadar: Real-Time Haemophilia Intelligence for Every Novo Nordisk Function"
 
 **Positioning Statement (for judges):**
-> "MetaRadar is not a news aggregator. It's a pharmaceutical intelligence layer that detects when multiple independent signals converge into a strategic story—before your competitors respond—and keeps its routing sharp through a stakeholder calibration loop that learns from the functions it serves."
+> "MetaRadar is not a news aggregator. It's a pharmaceutical intelligence layer that runs **five advanced analyses** on every signal — confluence detection, signal lifecycle tracking, red-team contradiction checks, missing-signal early-warning, and a stakeholder learning loop — so Novo Nordisk functions see not just *what changed*, but *where a development sits*, *whether the evidence contradicts itself*, *what should have happened but didn't*, and *which routing the people who use it have taught the system*."
 
 ---
 
@@ -1097,38 +1284,44 @@ Milestone: NLP pipeline working — signals have entities, summaries, role score
 
 ---
 
-WEEK 3: Confluence Engine + Dashboard Polish
+WEEK 3: Five Advanced Analyses + Dashboard Polish
 CSE:
-├─ Signal Confluence Engine (core differentiator)
+├─ Signal Confluence Engine (Analysis 1, core differentiator)
+├─ Signal Lifecycle Tracker (Analysis 2: state machine + event chains)
+├─ Red-Team Contradiction Engine (Analysis 3: NLI entailment on bart-large-mnli)
+├─ Missing-Signal Detector (Analysis 4: expected-event state machine)
 ├─ pgvector embeddings + hybrid search
 ├─ "Ask Athena" lite (RAG query interface)
-├─ Dashboard: Four-Question panels (Q1-Q4) + Role filter
-├─ Signal cards: Expandable, traceable sources
+├─ Dashboard: Four-Question panels (Q1-Q4) + Role filter + analysis flags
+├─ Signal cards: Expandable, traceable sources, lifecycle/contradiction/missing badges
 ├─ Framer Motion animations (subtle entrance effects)
 └─ Virtual scrolling (react-window)
 
 B.Pharm:
 ├─ Confluence rule validation (do the patterns make clinical sense?)
+├─ Lifecycle + missing-signal rules authorship (expected-event sequences, max_lag_days)
+├─ Contradiction pair QA (seeded ASH vs real-world examples)
 ├─ Signal taxonomy v2 (refined from Week 2 QA)
 └─ Prepare domain explanation slides (2-3 slides)
 
-Milestone: Full MVP: Dashboard + Confluence alerts + Ask Athena working
+Milestone: Full MVP — Dashboard + Five Advanced Analyses + Ask Athena working
 
 ---
 
-WEEK 4: Narrative Synthesis + Stakeholder Calibration + Demo Hardening
+WEEK 4: Narrative Synthesis + Stakeholder Learning + Demo Hardening
 CSE:
 ├─ Narrative Synthesis Agent (LLM-generated intelligence briefs)
 ├─ Temporal pattern matching (gene therapy milestone, regulatory filing patterns)
-├─ Stakeholder Calibration Loop (HITL): feedback endpoints + recalibrate service
+├─ Stakeholder Learning Loop (Analysis 5, HITL): feedback endpoints + recalibrate service
 ├─ Simulated persona feedback seeding for demo
 ├─ Error handling hardening (all fallback paths tested)
 ├─ Performance optimization (< 500ms cached dashboard)
-├─ Unit + integration tests (60% coverage minimum, incl. test_stakeholder_calibration)
+├─ Unit + integration tests (60% coverage minimum, incl. lifecycle/red-team/missing-signal/calibration)
 └─ Demo recording (backup if live internet fails)
 
 B.Pharm:
 ├─ Validate narrative synthesis output (does it make clinical sense?)
+├─ Validate contradiction flags + missing-signal alerts in the demo dataset
 ├─ Finalize demo script (domain narration)
 └─ Prepare competitive landscape comparison slide (haemophilia)
 
@@ -1149,36 +1342,42 @@ What existing tools do:
 ✓ Summarize individual articles
 ✓ Show a news feed
 
-What MetaRadar does DIFFERENTLY:
+What MetaRadar does DIFFERENTLY — THE FIVE ADVANCED ANALYSES:
 
 1. CONFLUENCE DETECTION
    Detects when multiple independent signal types (ASH + Press Release + Patient Forum)
    converge on the same entity in 48h → single strategic alert
-   
-2. PHARMA ONTOLOGY
+
+2. SIGNAL LIFECYCLE TRACKING
+   Stitches isolated signals into a chronological state machine per development:
+   "mim8: results_in (Jan 2026) → NEXT: submission announced."
+   Answers "where is this, what's next?"
+
+3. RED-TEAM CONTRADICTION ANALYSIS
+   NLI entailment (local bart-large-mnli) flags when a newer signal contradicts an older
+   claim on the same entity. Both evidence chains shown; devil's-advocate note; human
+   review required. MetaRadar surfaces uncertainty instead of hiding it.
+
+4. MISSING-SIGNAL DETECTION
+   Absence is a signal. Expected-but-absent milestones (silent readouts, stalled
+   submissions) fire early-warning alerts with confidence that grows with silence.
+
+5. STAKEHOLDER LEARNING LOOP (HITL)
+   Novo Nordisk functions rate routing accuracy inline (⭐ 1-5); weights recalibrate via
+   StakeholderCalibrationService; Q3 confidence badges visibly improve. Simulated
+   personas prove it live in the demo.
+
+PLUS — the supporting intelligence layer:
+6. PHARMA ONTOLOGY
    Built by B.Pharm domain experts. Knows "Hemlibra" = "emicizumab" = Roche competitor;
    "mim8" = "concizumab" = Novo Nordisk assets. Tracks competitor relationships, not just keywords.
-   
-3. TRACEABLE INTELLIGENCE
+
+7. TRACEABLE INTELLIGENCE
    Every insight shows source chain (which signals → why it matters).
    Regulatory-grade audit trail.
-   
-4. TEMPORAL PATTERN RECOGNITION
-   Detects which historical competitive pattern current signals match.
-   "This looks like a gene-therapy milestone parade trajectory for Hemgenix."
-   
-5. ROLE-SPECIFIC NARRATIVES
-   Medical Affairs sees clinical durability implications.
-   Regulatory sees labeling and HTA impact.
-   Not a single report for everyone.
-   
-6. FREE STACK, ZERO VENDOR LOCK-IN
+
+8. FREE STACK, ZERO VENDOR LOCK-IN
    Unlike Contify ($$$) or SinglePoint ($$$):
    MetaRadar runs on free APIs + local ML models + open-source stack.
-
-7. STAKEHOLDER CALIBRATION LOOP (HITL) — NEW v2.0
-   Novo Nordisk functions rate routing accuracy inline (⭐ 1-5);
-   weights recalibrate via StakeholderCalibrationService;
-   Q3 confidence badges visibly improve. Simulated personas prove it live in the demo.
 ```
 

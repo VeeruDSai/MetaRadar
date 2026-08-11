@@ -1,10 +1,10 @@
 # MetaRadar: UI Design Document
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 2.0  
+**Version:** 2.1  
 **Date:** August 2026  
 **Design Framework:** shadcn/ui + TailwindCSS 4  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples.
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1).
 
 ---
 
@@ -23,6 +23,9 @@
 9. **Grounded Answers:** Ask Athena never invents; insufficient signals produce a clear "insufficient" response
 10. **Four-Question Clarity:** Every signal card answers Q1→Q4 (What changed / Why it matters / Which function / What action) with role-routing confidence badges
 11. **Human-in-the-Loop:** Stakeholders rate routing accuracy inline; weights recalibrate and confidence badges update (HITL calibration loop)
+12. **Lifecycle Awareness (v2.1):** Every development shows its place in a chronological state machine (results_in → next: submission) — an analyst always knows "where is this, what's next"
+13. **Devil's-Advocate Transparency (v2.1):** Contradicting claims are surfaced with both evidence chains and a red-team note — MetaRadar shows uncertainty, never hides it
+14. **Silence Is a Signal (v2.1):** Expected-but-absent milestones render as missing-signal warnings with growing confidence — the dashboard surfaces what did *not* happen
 
 ### 1.2 Color Palette
 
@@ -137,24 +140,30 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │ • Q2 Panel  │ │  ASH abstract + CSL press release + patient      │ │
 │ • Confluence│ │  forum → 3 signals in 48h                        │ │
 │   Alerts    │ │  [View Evidence] [Dismiss]                       │ │ Confluence
-│ • Ask Athena│ ├──────────────────────────────────────────────────┤ │  Alerts
-│ • Medical   │ │  🟠 HIGH — mim8 Phase 3 readout (5 sigs)         │ │  Panel
-│   Affairs   │ └──────────────────────────────────────────────────┘ │
-│ • Regulatory│                                                       │
-│ • Market Acc│ ┌──────────────────────────────────────────────────┐ │
-│ • Commercial│ │  Q1  WHAT CHANGED?      Q3  WHICH FUNCTION?      │ │
-│ • R&D       │ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
-│             │ │  │ Signal Feed        │ │ Role Routing         │ │ │
+│ • Lifecycles│ ├──────────────────────────────────────────────────┤ │  Alerts
+│ • Red-Team  │ │  🟠 HIGH — mim8 Phase 3 readout (5 sigs)         │ │  Panel
+│ • Missing   │ ├──────────────────────────────────────────────────┤ │
+│   Signals   │ │  ⚔ CONTRADICTION — Hemgenix efficacy vs waning   │ │ Red-Team
+│ • Ask Athena│ │  🕳 MISSING — mim8 submission expected 90d ago    │ │ + Missing
+│ • Medical   │ └──────────────────────────────────────────────────┘ │  Alerts
+│   Affairs   │                                                       │
+│ • Regulatory│ ┌──────────────────────────────────────────────────┐ │
+│ • Market Acc│ │  Q1  WHAT CHANGED?      Q3  WHICH FUNCTION?      │ │
+│ • Commercial│ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
+│ • R&D       │ │  │ Signal Feed        │ │ Role Routing         │ │ │
 │             │ │  │ [haemophilia tags] │ │ MedAff 92% · Reg 84% │ │ │ Four-
-│  Settings   │ │  │ …                  │ │ Commercial 65%       │ │ │ Question
-│  Logout     │ │  └────────────────────┘ │ [feedback ⭐ widget] │ │ │ Panels
-│             │ ├──────────────────────────┴──────────────────────┤ │ │ (Q1-Q4)
+│             │ │  │ [⏱ lifecycle]     │ │ Commercial 65%       │ │ │ Question
+│  Settings   │ │  │ [⚔ contradiction] │ │ [feedback ⭐ widget] │ │ │ Panels
+│  Logout     │ │  │ [🕳 missing]       │ │                      │ │ │ (Q1-Q4)
+│             │ ├──────────────────────────┴──────────────────────┤ │ │
 │             │ │ Q2  WHY DOES IT MATTER?   Q4  WHAT ACTION?      │ │ │
 │             │ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
 │             │ │  │ Relevance breakdown│ │ AI-suggested actions │ │ │
 │             │ │  │ AI explanation     │ │ "Suggested — requires│ │ │
 │             │ │  │ Confluence alert   │ │  human review"       │ │ │
-│             │ │  │ Competitive context│ │ …                    │ │ │
+│             │ │  │ Lifecycle stage    │ │  (incl. missing-     │ │ │
+│             │ │  │ Contradiction flags│ │  signal / red-team   │ │ │
+│             │ │  │ Competitive context│ │  follow-up actions)  │ │ │
 │             │ │  └────────────────────┘ └──────────────────────┘ │ │
 │             │ └──────────────────────────────────────────────────┘ │
 │             │                                                       │
@@ -193,6 +202,11 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │  the curative narrative vs lifelong prophylaxis — impacts  │
 │  mim8/concizumab positioning and HTA arguments."           │
 │ ⚡ CONFLUENCE: gene_therapy_milestone_parade (3 signals/48h)│
+│ ⏱ LIFECYCLE: Hemgenix · results_in → NEXT: durability      │
+│   follow-up publication                                    │
+│ ⚔ CONTRADICTION (v2.1): "sustained 3-yr efficacy" (ASH)    │
+│   vs "waning expression in subset" (real-world) · score 0.81│
+│   [View evidence A] [View evidence B] · Human review req.  │
 ├────────────────────────────────────────────────────────────┤
 │ Q3 · WHICH FUNCTION SHOULD REVIEW IT?  (panel tint #F0FFF4)│
 │ Medical Affairs  ██████████ 0.92  (Very Relevant)          │
@@ -214,6 +228,9 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │      durability evidence                                   │
 │  [ ] R&D to assess Hemgenix effect on mim8 trial           │
 │      endpoints/durability expectations                     │
+│  [ ] Medical Affairs to reconcile contradiction:           │
+│      sustained vs waning durability before HTA engagement  │
+│      (v2.1 · ⚔ flagged above)                              │
 ├────────────────────────────────────────────────────────────┤
 │ ⛓ Evidence Chain (traceable reasoning):                    │
 │ [1] ASH 2026 Abstract · Dec → "Hemgenix 3-yr data"         │
@@ -291,7 +308,7 @@ export const DisclaimerBadge = () => (
 
 2. **Sidebar** (fixed, collapsible on mobile)
    - Role switcher (if user has multiple roles)
-   - Navigation: Overview, Confluence Alerts, Ask Athena, Briefs, Dashboard, Settings, Help
+   - Navigation: Overview, Confluence Alerts, Lifecycles, Red-Team Contradictions, Missing Signals, Ask Athena, Briefs, Dashboard, Settings, Help
    - Account section (user name, avatar)
 
 3. **Main Content — Four-Question Panels**
@@ -307,11 +324,16 @@ export const DisclaimerBadge = () => (
      - Each alert: entity + signal count + expandable evidence chain
      - See §3.2 for full page
 
+   - **Analysis Panels (v2.1)** — collapsible strip between Confluence and the Q-grid:
+     - **Lifecycle (⏱):** active development timelines — entity, current state, expected next event
+     - **Red-Team (⚔):** contradiction alerts with both evidence chains + red-team note
+     - **Missing Signals (🕳):** expected-but-absent milestones with confidence-by-silence
+
    - **Four-Question Panel Grid** (2×2)
-     - **Q1 WHAT CHANGED?** (#F0F4FF) — Signal feed with signal-type badges and haemophilia entity tags
-     - **Q2 WHY DOES IT MATTER?** (#FFF4E6) — Relevance breakdown, AI explanation, confluence alert, competitive context
+     - **Q1 WHAT CHANGED?** (#F0F4FF) — Signal feed with signal-type badges, haemophilia entity tags, and analysis flags (⏱ lifecycle · ⚔ contradiction · 🕳 missing)
+     - **Q2 WHY DOES IT MATTER?** (#FFF4E6) — Relevance breakdown, AI explanation, confluence alert, lifecycle stage, contradiction flags, competitive context
      - **Q3 WHICH FUNCTION SHOULD REVIEW IT?** (#F0FFF4) — Role-routing badges with confidence scores + inline stakeholder feedback widget (★ 1-5)
-     - **Q4 WHAT ACTION MAY BE REQUIRED?** (#FFF0F0) — AI-suggested action bullets prefaced "Suggested — requires human review"
+     - **Q4 WHAT ACTION MAY BE REQUIRED?** (#FFF0F0) — AI-suggested action bullets prefaced "Suggested — requires human review" (incl. red-team reconciliation + missing-signal follow-ups)
    - **Haemophilia Signal Volume (7d)** line chart
      - X-axis: Date, Y-axis: Signal count, grouped by signal type
      - Note: "Haemophilia gene therapy signal volume (7d)" chart label
@@ -389,6 +411,97 @@ The Signal Confluence Engine output — MetaRadar's core differentiator. Instead
 - Temporal pattern tag shows current + predicted stage (e.g., "PRE-APPROVAL SURGE, stage 3/5")
 - **`[Export Audit Trail]` button is required on every confluence alert** (research report Section 2 / FR-2.7.3): exports the full source chain + evidence + user actions as a structured JSON or CSV for regulatory review
 - **`<DisclaimerBadge />`** rendered below every AI-generated story summary: *"Auto-generated by MetaRadar AI — verify clinically before use"*
+
+### 3.2A Lifecycle Timelines Page (`/lifecycles`)
+
+Analysis 2 (Signal Lifecycle Tracking) output. Each tracked development renders as a chronological state machine — the answer to "where is this development, and what's next?"
+
+**URL:** `/lifecycles?role=medical_affairs`
+
+**Wireframe:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ⏱ Development Lifecycles (haemophilia)                         │
+├─────────────────────────────────────────────────────────────────┤
+│ Filters: [Entity ▼] [State: All ▼] [Modality ▼]                │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌───────────────────────────────────────────────────────────┐ │
+│ │ mim8 · Novo Nordisk · Bispecific · Haemophilia A          │ │
+│ │ ┌──────┬──────────┬──────────────┬─────────────┐         │ │
+│ │ │ 2024 │  2025    │  2026-01     │  NEXT ▶     │         │ │
+│ │ │announced        │results_in    │ submission  │         │ │
+│ │ │Phase 3          │endpoint met  │ announced   │         │ │
+│ │ └──────┴──────────┴──────────────┴─────────────┘         │ │
+│ │ State: RESULTS_IN (validated by 4 signals)                │ │
+│ │ Expected next: regulatory submission announced            │ │
+│ │ [View full timeline] [Export audit trail]                 │ │
+│ └───────────────────────────────────────────────────────────┘ │
+│ ┌───────────────────────────────────────────────────────────┐ │
+│ │ Hemgenix · CSL Behring · Gene therapy · Haemophilia B    │ │
+│ │ ⚔ Contradiction attached: sustained vs waning durability │ │
+│ │ State: RESULTS_IN · Next: durability follow-up           │ │
+│ └───────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2B Red-Team Contradictions Page (`/red-team`)
+
+Analysis 3 (Red-Team Contradiction Analysis) output. Contradicting claims surface with BOTH evidence chains and a devil's-advocate note.
+
+**URL:** `/red-team?role=medical_affairs`
+
+**Wireframe:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ⚔ Red-Team Contradiction Analysis (rolling 90d window)        │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌───────────────────────────────────────────────────────────┐ │
+│ │ ⚔ CONTRADICTION — Hemgenix durability (score 0.81)        │ │
+│ │ ┌─ CLAIM A ─────────────────┐ ┌─ CLAIM B ──────────────┐ │ │
+│ │ │ "Sustained 3-year Factor  │ │ "Declining Factor IX   │ │ │
+│ │ │  IX expression"           │ │  expression in subset" │ │ │
+│ │ │ ASH 2026 abstract         │ │ Real-world cohort,     │ │ │
+│ │ │ Dec 2025 · [url]          │ │ Jan 2026 · [url]       │ │ │
+│ │ └───────────────────────────┘ └────────────────────────┘ │ │
+│ │ 🧠 Red-team note: "Newest evidence may overturn earlier  │ │
+│ │   durability claim. Requires human review before use in  │ │
+│ │   HTA engagement."                                       │ │
+│ │ [Reconcile] [Dismiss] [Export both evidence chains]      │ │
+│ └───────────────────────────────────────────────────────────┘ │
+│ ┌───────────────────────────────────────────────────────────┐ │
+│ │ ⚔ CONTRADICTION — fitusiran thrombosis (score 0.72)      │ │
+│ │  ...                                                     │ │
+│ └───────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2C Missing Signals Page (`/missing-signals`)
+
+Analysis 4 (Missing-Signal Detection) output. Silence is surfaced as intelligence — with confidence that grows the longer the silence lasts.
+
+**URL:** `/missing-signals?role=regulatory`
+
+**Wireframe:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  🕳 Missing-Signal Detection (expected-but-absent events)       │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌───────────────────────────────────────────────────────────┐ │
+│ │ 🕳 MISSING — Roctavian next-generation data publication   │ │
+│ │ Last signal: Jul 2026 (label update) · Silence: 150 days  │ │
+│ │ Expected within: 180 days · Confidence: 0.70 (growing)    │ │
+│ │ ████████████████░░░░░░  confidence-by-silence meter       │ │
+│ │ [Verify against other sources] [Dismiss as expected]      │ │
+│ └───────────────────────────────────────────────────────────┘ │
+│ ┌───────────────────────────────────────────────────────────┐ │
+│ │ 🕳 MISSING — mim8 regulatory submission announcement      │ │
+│ │ Last signal: Jan 2026 (readout) · Silence: 95 days        │ │
+│ │ Expected within: 180 days · Confidence: 0.66              │ │
+│ └───────────────────────────────────────────────────────────┘ │
+│ Note: false-positive discipline — alerts only after the       │
+│ configured max_lag window; confidence grows with silence.     │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 
 ### 3.3 Ask Athena Page (`/athena`)
@@ -557,6 +670,23 @@ Date Range: [Last 7d ▼]
 ⏱ GENE_THERAPY_MILESTONE_PARADE · Stage 3/4    (shows current position in competitive timeline)
 ⏱ COMPETITIVE_REGULATORY_FILING · Stage 2/4
 ⏱ INHIBITOR_SAFETY_WAVE · Stage 1/3
+```
+
+**Lifecycle State Indicator (v2.1)**
+```
+⏱ RESULTS_IN → NEXT: submission announced    (green pulse = active development)
+⏱ UNDER_REVIEW · 4 signals · mim8
+⏱ DISCONTINUED · greyed out
+```
+
+**Red-Team Contradiction Badge (v2.1)**
+```
+⚔ CONTRADICTION · score 0.81    (purple #7C3AED, two evidence chains shown)
+```
+
+**Missing-Signal Badge (v2.1)**
+```
+🕳 MISSING · expected 150d ago · conf 0.70   (amber, with confidence-by-silence meter)
 ```
 
 **Evidence Chain Indicator**
@@ -973,6 +1103,10 @@ Modal fade:    0.2s opacity transition
 - `OntologyTag` — resolves brand → molecule → company (Hemlibra → emicizumab → Roche)
 - `StakeholderFeedbackWidget` (NEW v2.0) — inline ★ 1-5 rating on Q3 role badges; posts to `POST /api/v1/feedback`, shows "routing confidence updated after calibration"
 - `QuestionPanel` (NEW v2.0) — the four-question wrapper with panel tint (`#F0F4FF`/`#FFF4E6`/`#F0FFF4`/`#FFF0F0`) and Q1-Q4 headers
+- `LifecycleTimeline` (NEW v2.1) — chronological state machine per development (entity, current state, expected next); renders `GET /api/v1/lifecycles`
+- `ContradictionPanel` (NEW v2.1) — dual evidence chain display (claim A vs claim B) + red-team note; renders `GET /api/v1/contradictions`
+- `MissingSignalCard` (NEW v2.1) — expected-but-absent event + confidence-by-silence meter; renders `GET /api/v1/missing-signals`
+- `ConfidenceBySilenceMeter` (NEW v2.1) — visual meter that grows with days of silence (0.4 → 0.95)
 
 **Installation:**
 ```bash
@@ -1019,6 +1153,7 @@ module.exports = {
 | 1.0 | 2026-07-26 | Initial MVP wireframes |
 | 1.1 | 2026-07-28 | Aligned with Refined Architecture: added Confluence Alerts page (§3.2), Ask Athena page (§3.3), Narrative Briefs view (§3.4), traceable evidence chain on signal cards (§2.2), confluence diagram viz (§5.2), confluence/pattern/evidence badges (§4.3), custom intelligence components (§11) |
 | 2.0 | 2026-08-12 | Novo Nordisk kickoff revision: Four-Question panel layout (Q1–Q4) replaces Signal Feed + Trend (§2.1, §3.1, §15); stakeholder review widget on Q3 role badges (HITL calibration); haemophilia entity filters + signal types (§2.3); "Haemophilia gene therapy signal volume (7d)" chart; haemophilia-themed examples throughout |
+| 2.1 | 2026-08-12 | Five Advanced Analyses UI: lifecycle timeline page (§3.2A) + state badges; red-team contradiction page (§3.2B) + dual-evidence panel; missing-signal page (§3.2C) + confidence-by-silence meter; analysis strip on dashboard (§3.1); analysis flags on Q1 feed and Q2/Q4 panels (§2.2, §15); design principles 12-14 |
 
 ---
 
@@ -1046,6 +1181,11 @@ Before handoff to development:
 - [ ] Stakeholder feedback widget renders on Q3 panel and posts to `/api/v1/feedback` (NEW v2.0)
 - [ ] Q4 action bullets prefaced "Suggested — requires human review" (NEW v2.0)
 - [ ] Calibration status visible in footer (e.g., "Weights recalibrated 3x this month") (NEW v2.0)
+- [ ] Lifecycle timeline page renders state machines + expected next events (NEW v2.1)
+- [ ] Red-team contradiction panel shows BOTH evidence chains + red-team note (NEW v2.1)
+- [ ] Missing-signal cards show confidence-by-silence meter + expected window (NEW v2.1)
+- [ ] Analysis flags (⏱ ⚔ 🕳) render on Q1 signal feed and Q2/Q4 panels (NEW v2.1)
+- [ ] Empty states for Lifecycles / Red-Team / Missing Signals pages (NEW v2.1)
 
 ---
 
@@ -1110,4 +1250,40 @@ Every Q4 bullet is prefaced by the fixed label *"Suggested — requires human re
 - Desktop (>1024px): 2×2 grid — Q1+Q3 left column, Q2+Q4 right column
 - Tablet (768–1024px): single column, panels stacked Q1→Q4
 - Mobile (<768px): panels collapse; Q1 feed first, others behind a "Why it matters / Action" expander
+
+---
+
+## **16. FIVE ADVANCED ANALYSES DISPLAY SPECIFICATIONS (NEW v2.1)**
+
+The Four-Question paradigm stays primary; the three new analyses (lifecycle, red-team, missing-signal) render as *flags on the signal cards* + *dedicated pages* (Confluence remains its own page from v1.1). Stakeholder Learning stays embedded in Q3.
+
+### 16.1 Where Each Analysis Appears
+
+| Analysis | On Signal Card | Dedicated Page | API |
+|---|---|---|---|
+| 1. Confluence | ⚡ badge in Q2 | `/confluence` (§3.2) | `/api/v1/confluences` |
+| 2. Lifecycle | ⏱ state + expected-next in Q1/Q2 | `/lifecycles` (§3.2A) | `/api/v1/lifecycles` |
+| 3. Red-Team | ⚔ badge + dual evidence in Q2 | `/red-team` (§3.2B) | `/api/v1/contradictions` |
+| 4. Missing-Signal | 🕳 badge + silence meter in Q1/Q2 | `/missing-signals` (§3.2C) | `/api/v1/missing-signals` |
+| 5. Stakeholder Learning | ★ widget in Q3 | dashboard footer (§3.1) | `/api/v1/feedback` |
+
+### 16.2 Lifecycle State Badge
+
+```tsx
+// components/LifecycleBadge.tsx — Q1/Q2 panels
+export const LifecycleBadge = ({ entity, state, expectedNext }: LifecycleBadgeProps) => (
+  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-blue-200">
+    ⏱ {entity} · {stateLabel[state]}
+    {expectedNext && <span className="text-blue-600">→ NEXT: {expectedNext}</span>}
+  </span>
+);
+```
+
+### 16.3 Contradiction Panel (Q2 expandable)
+
+Every ⚔ badge expands to a two-column comparison: **Claim A** (older source, url, date) vs **Claim B** (newer source, url, date), the NLI `contradiction_score`, and the red-team note. A `Reconcile` / `Dismiss` action requires human confirmation and writes to `audit_log` (WORM).
+
+### 16.4 Missing-Signal Card
+
+Renders `missing_event`, `days_since_last_signal`, `max_lag_days`, and a `ConfidenceBySilenceMeter` (`0.4 + days*0.02`, capped 0.95) so analysts see *why* the alert fired. Dismissing requires a reason (audited).
 
