@@ -276,7 +276,7 @@ Deployment:      Streamlit Cloud (live demo link included)
 |---|---|
 | **Streamlit UI** | Not production-grade. Next.js dashboard is enterprise-ready. |
 | **Hardcoded data** | "Some data are hardcoded to preserve reproducibility" — looks like a student project. MetaRadar pulls live APIs. |
-| **Single-problem scope** | Commercial strategy for 1 drug. MetaRadar serves ALL roles for the WHOLE metabolic disease landscape. |
+| **Single-problem scope** | Commercial strategy for 1 drug. MetaRadar serves ALL roles for the WHOLE haemophilia competitive landscape. |
 | **No real-time updates** | Static dashboard. MetaRadar updates every 2 hours automatically. |
 | **Batch analysis** | Requires user to run analysis manually. MetaRadar is always-on. |
 | **No AI pipeline** | pandas + plotly = data dashboard, not AI. MetaRadar has NLP, LLM summarization, scoring. |
@@ -303,7 +303,7 @@ The 2025 winning project was:
 | **AI** | None (pandas + plotly) | NLP, LLM summarization, ML scoring, vector search |
 | **Architecture** | Single Streamlit app | Multi-agent LangGraph + FastAPI + Next.js + PostgreSQL + Redis |
 | **Users** | Single user | Multi-role (Medical Affairs, Regulatory, Commercial) |
-| **Scope** | 1 drug, 1 market | Entire metabolic disease competitive landscape |
+| **Scope** | 1 drug, 1 market | Entire haemophilia rare disease competitive landscape |
 | **Update frequency** | Manual (run script) | Automated (every 2 hours) |
 | **Production readiness** | Streamlit Cloud | Docker Compose + Vercel + Railway |
 | **Innovation** | Market analysis dashboard | Confluence detection, pharma ontology, traceable intelligence |
@@ -320,16 +320,16 @@ The 2025 winning project was:
 These are statements directly tied to their current business reality that will show you've done your homework:
 
 **Opening statement (Innovation criterion):**
-> "In March 2026, semaglutide's patent expired in India, triggering 12+ generic competitors overnight. Novo Nordisk's teams needed to respond—but intelligence about pricing, patient sentiment, and formulary decisions was scattered across dozens of sources. MetaRadar exists to make that response instant."
+> "Haemophilia is undergoing its most significant paradigm shift in decades—from IV factor replacement to subcutaneous bispecific antibodies and single-administration gene therapies like Hemgenix and Roctavian. Critical signals about this shift are scattered across congress abstracts, PubMed publications, FDA/EMA filings, patient forums, and competitor announcements. MetaRadar exists to make Novo Nordisk's response instant and coordinated across all functions."
 
 **On business impact:**
-> "Eli Lilly's tirzepatide gained market share in Q1 2026 based on a head-to-head clinical trial published in 2024. MetaRadar would have flagged that trial when it was first registered on ClinicalTrials.gov in 2022—two years before it impacted Novo Nordisk's commercial position."
+> "Roche's Hemlibra (emicizumab) established non-factor prophylaxis, while competitors advance next-gen anti-TFPI and gene therapy readouts. MetaRadar flags when clinical data, HTA decisions, and patient sentiment converge—giving Novo Nordisk teams early strategic clarity."
 
 **On feasibility:**
 > "Novo Nordisk GBS already handles clinical data analysis, regulatory submissions, and commercial planning for global launches. MetaRadar integrates directly into that workflow—same cloud infrastructure, same role-based access structure, zero additional hardware."
 
 **On the team composition:**
-> "Competitive intelligence in pharma is not a technology problem—it's a domain + technology problem. Our B.Pharm team built the pharmaceutical ontology that makes MetaRadar understand 'Wegovy' = 'semaglutide' = 'Novo Nordisk product at risk.' Our CSE team built the system that makes it real-time. Neither team alone could have built this."
+> "Competitive intelligence in pharma is not a technology problem—it's a domain + technology problem. Our B.Pharm team built the pharmaceutical ontology that makes MetaRadar understand 'Hemlibra' = 'emicizumab' = 'Roche Haemophilia A competitor.' Our CSE team built the system that makes it real-time. Neither team alone could have built this."
 
 **Closing (talent pipeline):**
 > "Novo Nordisk GBS is targeting a two-thirds reduction in drug launch timelines using AI. MetaRadar is a proof-of-concept for what that intelligence infrastructure looks like—built by a team that wants to build it at scale."
@@ -340,7 +340,7 @@ These are statements directly tied to their current business reality that will s
 
 **Q: "How is this different from just subscribing to Contify or SinglePoint?"**
 
-A: "Contify and SinglePoint are generic competitive intelligence platforms. They don't know that 'Wegovy' and 'semaglutide' are the same molecule, or that 'tirzepatide' is a competitor. They don't detect confluence—they don't know when a safety signal on Reddit and an FDA advisory are part of the same emerging story. MetaRadar is domain-specific to metabolic disease and detects patterns, not just content."
+A: "Contify and SinglePoint are generic competitive intelligence platforms. They don't know that 'Hemlibra' and 'emicizumab' are the same molecule, or that 'mim8' is Novo Nordisk's bispecific candidate. They don't detect confluence—they don't know when a safety signal on Reddit and an FDA advisory are part of the same emerging story. MetaRadar is domain-specific to haemophilia rare disease, framed in a Four-Question model, and gets smarter via stakeholder calibration."
 
 **Q: "What happens when an API goes down?"**
 

@@ -1,8 +1,8 @@
 # MetaRadar: Software Design Document (SDD)
 
-**Project:** MetaRadar - Real-Time Metabolic Disease Competitive Intelligence  
+**Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
 **Version:** 1.0  
-**Date:** July 26, 2026
+**Date:** August 2026
 
 ---
 

@@ -1,52 +1,42 @@
 # MetaRadar: Software Requirements Specification (SRS)
 
-**Project:** MetaRadar - Real-Time Metabolic Disease Competitive Intelligence Platform  
+**Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
 **Version:** 1.0  
-**Date:** July 26, 2026  
+**Date:** August 2026  
 **Organization:** MS Ramaiah Institute of Technology (MSRIT)  
 **Hackathon:** Novo Nordisk GBS Hackathon 2026  
-**Problem Statement:** #3 - From Inbox Noise to Strategic Signal: AI-Powered Competitive Intelligence & Market Evolution Radar for Metabolic Disease
+**Problem Statement:** #3 - From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease
 
 ---
 
 ## **1. INTRODUCTION**
 
 ### 1.1 Purpose
-MetaRadar detects early market signals in obesity, diabetes, and GLP-1 therapies by converting fragmented external information (news, clinical literature, social media, regulatory filings) into role-specific, actionable intelligence for Novo Nordisk teams.
+MetaRadar detects early market signals and paradigm shifts in the haemophilia treatment landscape (IV factor replacement → subcutaneous bispecific antibodies → gene therapies) by converting fragmented public signals into role-specific intelligence for Novo Nordisk teams formatted in a Four-Question Framework.
 
 ### 1.2 Scope
-**MVP Scope (Weeks 1-3):**
-- Primary role: Medical Affairs
-- Two data sources: NewsAPI, PubMed
-- Core features: Signal fetch, entity extraction, pharma ontology enrichment, signal confluence detection, role-relevance scoring, traceable reasoning, dashboarding
-- Agent orchestration: LangGraph multi-agent pipeline (ingest → validate → NLP → confluence → synthesize → brief)
-
-**Extended Scope (Week 4):**
-- One additional business role (Regulatory OR Commercial)
-- OR one additional data source (Reddit sentiment analysis OR ClinicalTrials.gov)
-- OR conversational search ("Ask Athena" RAG)
-- OR narrative synthesis intelligence briefs
+**MVP Scope (Weeks 1-4):**
+- 5 Business Roles: Medical Affairs, Regulatory, Market Access, Commercial, R&D
+- Multi-Source Public Ingestion: PubMed Central, NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, Congress Abstract archives (ASH, ISTH, WFH, EHA), 500-signal synthetic demo fallback
+- 6-Agent LangGraph Pipeline: Ingestion Agent → Validation Agent → NLP Agent → Signal Confluence Agent → Narrative Synthesis Agent → Brief Agent
+- Core Features: Entity extraction, B.Pharm Haemophilia ontology, Signal Confluence Detection, Four-Question UX, Stakeholder Calibration Loop (HITL), Ask Athena RAG conversational search
 
 ### 1.3 Definitions & Acronyms
-- **Signal:** Any piece of information (article, social post, clinical trial result) relevant to competitive intelligence
-- **Entity:** Named item (drug name, company name, clinical condition)
-- **Role:** Functional team (Medical Affairs, Regulatory, Commercial, Market Access)
-- **Velocity:** Rate of change (e.g., signal mentions increasing over time)
-- **Relevance Score:** ML-generated importance metric (0.0 to 1.0)
-- **Confluence:** Detection that multiple independent signal types converge on the same entity within a time window → elevated alert
-- **Pharma Ontology:** Domain knowledge graph (drug → brand → mechanism → manufacturer → competitor) maintained by B.Pharm team
-- **Traceable Insight:** Intelligence output with a complete evidence chain (which source → which signal → why it matters)
-- **Narrative Synthesis:** LLM-generated executive brief that summarizes what happened, why it matters, and a recommended action
-- **Temporal Pattern:** Recognition of which stage of a competitive timeline (e.g., pre-approval surge) current signals match
-- **RAG:** Retrieval-Augmented Generation (LLM + vector database)
-- **NLP:** Natural Language Processing (entity extraction, sentiment)
+- **Signal:** Any piece of public information (article, clinical trial result, regulatory filing, patient forum post) relevant to haemophilia CI
+- **Entity:** Named drug, company, trial phase, mechanism, or indication (e.g., emicizumab, mim8, concizumab, Hemgenix, Roctavian)
+- **Role:** Functional team (Medical Affairs, Regulatory, Market Access, Commercial, R&D)
+- **Four-Question Framework:** Panel 1 (What changed?), Panel 2 (Why does it matter?), Panel 3 (Which function?), Panel 4 (What action may be required?)
+- **Stakeholder Calibration Loop:** HITL feedback process recalibrating function scoring weights based on simulated or real persona ratings
+- **Confluence:** Detection that multiple independent signal types converge on the same haemophilia entity within 48h → elevated alert
+- **Pharma Ontology:** Domain knowledge graph (Hemlibra → emicizumab → Roche → Haemophilia A competitor) maintained by B.Pharm team
+- **Traceable Insight:** Intelligence output with a complete evidence chain (source URL, date, excerpt, credibility)
+- **RAG:** Retrieval-Augmented Generation (pgvector + local LLM for "Ask Athena")
 
 ### 1.4 References
-- Novo Nordisk GBS Hackathon 2026 Problem Statements
+- Novo Nordisk GBS Hackathon 2026 Problem Statement #3 & Pilot Guidelines
 - Confidentiality Agreement between MS Ramaiah and Novo Nordisk
 - Refined Architecture & GitHub Landscape Analysis (doc 5)
 - Novo Nordisk Company Analysis & Hackathon Intelligence (doc 6)
-- Architecture documents (Docker, Next.js 15, FastAPI, LangGraph, PostgreSQL + pgvector)
 
 ---
 
@@ -55,48 +45,44 @@ MetaRadar detects early market signals in obesity, diabetes, and GLP-1 therapies
 ### 2.1 Signal Ingestion & Aggregation
 
 **FR-2.1.1: Multi-Source Data Fetch**
-- System SHALL fetch signals from at least 2 data sources (NewsAPI, PubMed)
-- System SHALL support async parallel fetching (not sequential)
+- System SHALL fetch signals from PubMed, NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, and Congress abstract repositories using haemophilia query terms
+- System SHALL support async parallel fetching
 - System SHALL implement rate limiting per source (500/day for NewsAPI)
 - System SHALL cache fetched data for 2 hours minimum
+- System SHALL maintain a 500-signal synthetic dataset for offline demo fallback
 
 **FR-2.1.2: Error Handling & Fallback**
 - If any source fails, system SHALL NOT crash
-- System SHALL fall back to cached data (up to 24 hours old)
-- System SHALL return empty set gracefully if no cache available
+- System SHALL fall back to cached data or synthetic demo dataset
 - System SHALL log all failures with timestamp and error details
 
 **FR-2.1.3: Data Deduplication**
 - System SHALL identify and remove duplicate signals across sources
 - Duplicates identified by > 80% semantic similarity in titles
-- When duplicate found, keep signal with highest relevance score
 
 **FR-2.1.4: Data Validation**
-- System SHALL reject signals with:
-  - Missing required fields (source, text, timestamp)
-  - Text < 50 characters (likely clickbait)
-  - Detected language ≠ English
-  - Semantic duplicate of recent signal
+- System SHALL reject signals with text < 50 characters, non-English text, or non-haemophilia scope
 - System SHALL assign quality score (0.0-1.0) to each signal
 
 ### 2.2 NLP & Entity Extraction
 
 **FR-2.2.1: Named Entity Recognition (NER)**
 - System SHALL extract:
-  - Drug names (e.g., "semaglutide", "GLP-1")
-  - Company names (e.g., "Novo Nordisk", "Eli Lilly")
-  - Indications (e.g., "obesity", "type 2 diabetes")
-  - Clinical phases (e.g., "Phase 2b", "FDA approval")
-- Extraction SHALL use local spaCy model (no API calls)
+  - Drug names (e.g., "emicizumab", "mim8", "concizumab", "fitusiran", "Hemgenix", "Roctavian")
+  - Company names (e.g., "Novo Nordisk", "Roche", "Sanofi", "Pfizer", "BioMarin", "CSL Behring")
+  - Indications & Mechanisms (e.g., "Haemophilia A", "Haemophilia B", "bispecific antibody", "gene therapy", "inhibitor")
+  - Clinical phases (e.g., "Phase 3", "FDA approval", "NICE HTA")
+- Extraction SHALL use local spaCy model (`en_core_sci_md`)
 - Extraction accuracy target: > 90%
 
 **FR-2.2.2: Signal Classification**
-- System SHALL classify each signal as one of:
-  - Clinical success (new trial results, efficacy data)
-  - Safety concern (adverse events, post-market surveillance)
-  - Competitive move (product launches, pricing changes)
-  - Regulatory change (FDA approval, guideline update)
-  - Access issue (reimbursement decision, supply constraint)
+- System SHALL classify each signal into one of:
+  - `gene_therapy_milestone`
+  - `regulatory_decision`
+  - `congress_publication`
+  - `patient_access`
+  - `competitor_pipeline`
+  - `inhibitor_signal`
 
 **FR-2.2.3: Text Summarization (Model-Agnostic)**
 - System SHALL generate 1-line (< 50 character) summary of each signal

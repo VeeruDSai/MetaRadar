@@ -4,7 +4,7 @@
 
 ## **PART 1: EXISTING GITHUB SOLUTIONS & THEIR GAPS**
 
-The following are the closest open-source equivalents to MetaRadar currently on GitHub. Each has been analyzed for what they do well and where they fall short—specifically for the pharma/metabolic disease CI use case.
+The following are the closest open-source equivalents to MetaRadar currently on GitHub. Each has been analyzed for what they do well and where they fall short—specifically for the pharma/haemophilia rare disease CI use case.
 
 ---
 
@@ -28,7 +28,7 @@ Researcher Agent → Analyst Agent → Writer Agent
 | Gap | Why It Matters for MetaRadar |
 |---|---|
 | **On-demand only** | User triggers one-off analysis. No real-time monitoring, no trend detection. MetaRadar needs *continuous* signal tracking. |
-| **General purpose** | No pharma/metabolic disease domain awareness. Treats "Eli Lilly" the same as "Slack." |
+| **General purpose** | No pharma/haemophilia domain awareness. Treats "Roche" the same as "Slack." |
 | **Single competitor focus** | One URL in → one report out. Can't track 10 competitors simultaneously across 5 signal types. |
 | **No velocity/trend detection** | Doesn't care if a signal is accelerating. Just answers "what is happening now." |
 | **No role-based filtering** | Report goes to everyone. No Medical Affairs vs Regulatory vs Commercial lens. |
@@ -194,7 +194,7 @@ Formatter Agent:   Creates Plotly visualizations + exports
 
 **What we do better:**
 - Cross-source signal confluence (ClinicalTrials + News + Social = multiplied alert)
-- Metabolic disease specific taxonomy
+- Haemophilia rare disease specific taxonomy
 - Multi-role operational dashboard
 
 ---
@@ -205,7 +205,7 @@ Formatter Agent:   Creates Plotly visualizations + exports
 |---|---|---|---|---|---|---|
 | Real-time dashboard | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Multi-source ingestion | ✓ (scraping) | ✓ (3 sources) | ✓ (papers/OSS) | ❌ | ❌ (1 source) | ✅ (6 sources) |
-| Pharma/metabolic domain | ❌ | ❌ | ❌ | ❌ | Partial | ✅ |
+| Pharma/haemophilia domain | ❌ | ❌ | ❌ | ❌ | Partial | ✅ |
 | Velocity/trend detection | ❌ | ❌ | ❌ | ✓ (academic) | ❌ | ✅ |
 | Role-based access | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Signal deduplication | ❌ | ❌ | ✓ | ✓ | ❌ | ✅ |
@@ -214,9 +214,9 @@ Formatter Agent:   Creates Plotly visualizations + exports
 | Free API stack | ❌ | ❌ | ✓ | ✓ | ✓ | ✅ |
 | Multi-user support | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Entity ontology/taxonomy | ❌ | ❌ | ❌ | ❌ | Partial | ✅ |
-| Conversational query | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Week 4) |
+| Conversational query | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Ask Athena) |
 
-**Conclusion: No existing open-source tool addresses the metabolic disease pharma CI use case with real-time monitoring, multi-role access, velocity detection, and cross-signal confluence. MetaRadar is not a marginal improvement—it's a category that doesn't exist in open source yet.**
+**Conclusion: No existing open-source tool addresses the haemophilia rare disease pharma CI use case with real-time monitoring, multi-role access, Four-Question framing, and cross-signal confluence. MetaRadar is not a marginal improvement—it's a category that doesn't exist in open source yet.**
 
 ---
 
@@ -962,9 +962,9 @@ This is the section that judges will find most impressive — domain-expert coll
 **MetaRadar** is good. But consider positioning it more precisely:
 
 **Tagline Options:**
-- "MetaRadar: Where Metabolic Disease Signals Converge into Strategy"
-- "MetaRadar: From Signal Noise to Strategic Clarity for Pharma Teams"
-- "MetaRadar: Real-Time Metabolic Intelligence for Every Novo Nordisk Function"
+- "MetaRadar: Where Haemophilia Signals Converge into Strategy"
+- "MetaRadar: From Inbox Noise to Strategic Signal in Rare Disease"
+- "MetaRadar: Real-Time Haemophilia Intelligence for Every Novo Nordisk Function"
 
 **Positioning Statement (for judges):**
 > "MetaRadar is not a news aggregator. It's a pharmaceutical intelligence layer that detects when multiple independent signals converge into a strategic story—before your competitors respond."

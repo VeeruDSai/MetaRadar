@@ -1,11 +1,19 @@
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**MetaRadar** is a real-time metabolic disease competitive intelligence platform built for the **Novo Nordisk GBS Hackathon 2026** (Problem Statement #3: "From Inbox Noise to Strategic Signal").
+**MetaRadar** is an AI-powered Haemophilia competitive intelligence radar built for the **Novo Nordisk GBS Hackathon 2026** (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease").
 
-It converts fragmented external signals — news, clinical literature, social media, regulatory filings — into role-specific, actionable intelligence for Novo Nordisk's Medical Affairs, Regulatory, and Commercial teams. The system detects early market signals in obesity, diabetes, and GLP-1 therapies by running a multi-agent LangGraph pipeline that ingests, enriches, confluences, and synthesizes intelligence automatically every 2 hours.
+It converts scattered public signals — clinical trials, regulatory decisions, congress abstracts, competitor pipeline moves, and patient access narratives — into role-specific, actionable intelligence for Novo Nordisk's Medical Affairs, Regulatory, Market Access, Commercial, and R&D teams.
 
-**Core Value:** A Novo Nordisk Medical Affairs analyst opens MetaRadar and immediately sees *"tirzepatide just got a regulatory win in Europe — here are 12 converging signals across clinical + regulatory + social channels, and here's what you should do next"* — with every claim traceable to its source, no hallucinations, no manual work.
+The system detects early market shifts in the haemophilia treatment landscape (from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian). It runs a 6-agent LangGraph pipeline that ingests, validates, enriches, confluences, synthesizes, and formats intelligence into a **Four-Question Framework**:
+1. **What changed?** (Real-time signal feed, signal types, entity tags)
+2. **Why does it matter?** (Relevance breakdown, AI explanation, confluence alert, competitive context)
+3. **Which Novo Nordisk function should review it?** (Role-routing badges with confidence scores)
+4. **What action may be required?** (AI-suggested action bullets prefaced "Suggested — requires human review")
+
+MetaRadar includes a **Stakeholder Calibration Loop (HITL)** that uses feedback from simulated Novo Nordisk stakeholder personas (Medical Affairs, Regulatory, Market Access) to dynamically recalibrate function scoring weights.
+
+**Core Value:** A Novo Nordisk Medical Affairs analyst opens MetaRadar and immediately sees *"Hemgenix 3-year gene therapy durability data just dropped at ASH — 5 converging signals across clinical + regulatory + patient channels, affecting mim8 positioning — here is why it matters and what action to take next"* — with every claim traceable to public sources, no hallucinations, and zero manual searching.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:research/STACK.md -->
@@ -15,29 +23,40 @@ It converts fragmented external signals — news, clinical literature, social me
 ### Backend API
 - **FastAPI 0.110+ (Python 3.11)**: Async-first, automatic OpenAPI documentation, high-throughput ASGI server (uvicorn/gunicorn).
 ### Agent Orchestration
-- **LangGraph 0.1+**: Stateful multi-agent graph coordination (ingest → validate → nlp → confluence → synthesize → brief).
+- **LangGraph 0.1+**: Stateful 6-agent coordination graph (Ingestion → Validation → NLP → Confluence → Synthesis → Brief).
 ### Database & Vector Storage
-- **PostgreSQL 16 + pgvector**: Unified relational (ACID) and 768-dimensional vector similarity search in a single database. Eliminates vector DB overhead.
+- **PostgreSQL 16 + pgvector**: Unified relational (ACID) and 384-dimensional vector similarity search (`sentence-transformers/all-MiniLM-L6-v2`) in a single database.
 ### Cache & Task Queue
 - **Redis 7**: Key-value caching for hot signals (2h TTL), rate limiting, user session storage.
-- **Celery 5.3 + APScheduler**: Distributed task queue for asynchronous ingestion and periodic (2-hour) fetch triggers.
-### NLP & AI Models
-- **spaCy 3.7 (en_core_sci_md) + medspacy**: Local Named Entity Recognition (NER) for pharmaceutical entity extraction (drugs, companies, indications).
-- **Sentence-Transformers (sentence-transformers/all-MiniLM-L6-v2)**: Local 768-dim embeddings generation (80MB).
-- **Summarization/LLM (LOCAL_LLM_MODEL)**: Model-agnostic HuggingFace pipeline configured via environment variables. Default: acebook/bart-large-cnn. Swappable to Gemma 2B, Mistral 7B, Phi-3, TinyLlama without code changes.
-- **Classification**: acebook/bart-large-mnli (zero-shot classification for signal types).
-### Resilience & Compliance
+- **Celery 5.3 + APScheduler**: Asynchronous ingestion pipeline and 2-hour periodic fetch scheduler.
+### NLP & AI Models (All Local, Free)
+- **spaCy 3.7 (en_core_sci_md)**: Local Named Entity Recognition (NER) for pharmaceutical entity extraction (drugs, companies, trial phases, indications).
+- **DistilBART (sshleifer/distilbart-cnn-12-6)**: Local signal summarization (310MB).
+- **BART MNLI (cross-encoder/nli-MiniLM2-L6-H768)**: Zero-shot classification for haemophilia signal types (120MB).
+- **Sentence-Transformers (sentence-transformers/all-MiniLM-L6-v2)**: Local 384-dim vector embeddings (80MB).
+- **RAG Interface**: "Ask Athena" semantic search over saved signals via pgvector + local LLM.
+### Data Sources (All Public)
+- **PubMed Central API**: Clinical literature & Phase 2/3 trial readouts.
+- **NewsAPI**: Industry news & competitor press releases (500 free/day).
+- **ClinicalTrials.gov API**: Trial status changes & new registrations.
+- **FDA OpenFDA API**: Approvals & adverse event communications.
+- **EMA RSS**: European approval decisions & CHMP opinions.
+- **Reddit PRAW**: Patient & HCP community sentiment (r/hemophilia, r/raredisease).
+- **Congress Abstract Repositories**: ASH, ISTH, WFH, EHA public abstracts.
+- **Synthetic/Mock Fallback**: 500 pre-curated haemophilia signals for stable offline demo fallback.
+### Resilience & Calibration
+- **StakeholderCalibrationService**: HITL learning loop adjusting function relevance scoring weights based on stakeholder feedback ratings.
 - **tenacity + httpx**: Exponential backoff retry logic (3 retries: 2s, 4s, 8s) for external APIs.
-- **WORM Audit Trail**: Append-only udit_log PostgreSQL table compliant with FDA 21 CFR Part 11 and GxP standards.
-- **PII Scrubber**: spaCy-based PII/PHI detection and redaction before database persistence.
+- **WORM Audit Trail**: Append-only `audit_log` PostgreSQL table compliant with GxP & 21 CFR Part 11 standards.
+- **PII Scrubber**: spaCy-based PII/PHI detection and redaction before persistence.
 ### Frontend Dashboard
-- **Next.js 15 (React 19, TypeScript)**: App Router with Server Components and dynamic streaming.
+- **Next.js 15 (React 19, TypeScript)**: App Router with Server Components, streaming, and Four-Question Panel layout.
 - **TailwindCSS 4 + shadcn/ui**: Modern component design system.
 - **TanStack Query v5**: Server state management, auto-caching, and background revalidation.
 - **Recharts + Framer Motion**: Interactive trend visualizations and smooth signal card animations.
 ## What NOT to Use
-- **Weaviate**: Replaced by pgvector to reduce container complexity and unified database maintenance.
-- **OpenAI / Commercial API keys**:  budget requirement — all models must run locally or via open-source free tiers.
+- **Weaviate**: Replaced by pgvector to simplify Docker Compose and database administration.
+- **Commercial LLM API keys (OpenAI / Claude)**: All inference runs locally (zero API cost).
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
@@ -49,7 +68,7 @@ Conventions not yet established. Will populate as patterns emerge during develop
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
 ## Architecture
 
-Architecture not yet mapped. Follow existing patterns found in the codebase.
+Architecture mapped in `.planning/PROJECT.md` and `docs/3_SOFTWARE_DESIGN_DOCUMENT.md`.
 <!-- GSD:architecture-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
@@ -64,8 +83,6 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
-
-
 
 <!-- GSD:profile-start -->
 ## Developer Profile
