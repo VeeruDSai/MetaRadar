@@ -9,7 +9,33 @@
 
 ## **1. ARCHITECTURE OVERVIEW**
 
-### 1.1 High-Level System Architecture
+### 1.0 Conceptual Architecture (Non-Technical / B.Pharm Presentation View)
+
+```
+META RADAR
+│
+├── UNDERSTAND
+│   ├── Entity extraction
+│   └── Haemophilia ontology
+│
+├── CONNECT
+│   ├── Confluence
+│   └── Lifecycle
+│
+├── CHALLENGE
+│   └── Red-Team contradiction analysis
+│
+├── DETECT
+│   └── Missing signals
+│
+├── LEARN
+│   └── Stakeholder calibration
+│
+└── FOUR QUESTIONS
+    └── Role-specific intelligence
+```
+
+### 1.1 Technical System Architecture (Implementation & Engineering View)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐

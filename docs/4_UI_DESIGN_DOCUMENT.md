@@ -26,6 +26,7 @@
 12. **Lifecycle Awareness (v2.1):** Every development shows its place in a chronological state machine (results_in → next: submission) — an analyst always knows "where is this, what's next"
 13. **Devil's-Advocate Transparency (v2.1):** Contradicting claims are surfaced with both evidence chains and a red-team note — MetaRadar shows uncertainty, never hides it
 14. **Silence Is a Signal (v2.1):** Expected-but-absent milestones render as missing-signal warnings with growing confidence — the dashboard surfaces what did *not* happen
+15. **Five-to-Four Visual Convergence:** The UI visually presents five underlying intelligence mechanisms (Confluence, Lifecycle, Red-Team Contradiction, Missing-Signal, Stakeholder HITL) feeding directly into the four decision panels (Q1-Q4).
 
 ### 1.2 Color Palette
 
@@ -1181,11 +1182,6 @@ Before handoff to development:
 - [ ] Stakeholder feedback widget renders on Q3 panel and posts to `/api/v1/feedback` (NEW v2.0)
 - [ ] Q4 action bullets prefaced "Suggested — requires human review" (NEW v2.0)
 - [ ] Calibration status visible in footer (e.g., "Weights recalibrated 3x this month") (NEW v2.0)
-- [ ] Lifecycle timeline page renders state machines + expected next events (NEW v2.1)
-- [ ] Red-team contradiction panel shows BOTH evidence chains + red-team note (NEW v2.1)
-- [ ] Missing-signal cards show confidence-by-silence meter + expected window (NEW v2.1)
-- [ ] Analysis flags (⏱ ⚔ 🕳) render on Q1 signal feed and Q2/Q4 panels (NEW v2.1)
-- [ ] Empty states for Lifecycles / Red-Team / Missing Signals pages (NEW v2.1)
 
 ---
 
@@ -1250,40 +1246,4 @@ Every Q4 bullet is prefaced by the fixed label *"Suggested — requires human re
 - Desktop (>1024px): 2×2 grid — Q1+Q3 left column, Q2+Q4 right column
 - Tablet (768–1024px): single column, panels stacked Q1→Q4
 - Mobile (<768px): panels collapse; Q1 feed first, others behind a "Why it matters / Action" expander
-
----
-
-## **16. FIVE ADVANCED ANALYSES DISPLAY SPECIFICATIONS (NEW v2.1)**
-
-The Four-Question paradigm stays primary; the three new analyses (lifecycle, red-team, missing-signal) render as *flags on the signal cards* + *dedicated pages* (Confluence remains its own page from v1.1). Stakeholder Learning stays embedded in Q3.
-
-### 16.1 Where Each Analysis Appears
-
-| Analysis | On Signal Card | Dedicated Page | API |
-|---|---|---|---|
-| 1. Confluence | ⚡ badge in Q2 | `/confluence` (§3.2) | `/api/v1/confluences` |
-| 2. Lifecycle | ⏱ state + expected-next in Q1/Q2 | `/lifecycles` (§3.2A) | `/api/v1/lifecycles` |
-| 3. Red-Team | ⚔ badge + dual evidence in Q2 | `/red-team` (§3.2B) | `/api/v1/contradictions` |
-| 4. Missing-Signal | 🕳 badge + silence meter in Q1/Q2 | `/missing-signals` (§3.2C) | `/api/v1/missing-signals` |
-| 5. Stakeholder Learning | ★ widget in Q3 | dashboard footer (§3.1) | `/api/v1/feedback` |
-
-### 16.2 Lifecycle State Badge
-
-```tsx
-// components/LifecycleBadge.tsx — Q1/Q2 panels
-export const LifecycleBadge = ({ entity, state, expectedNext }: LifecycleBadgeProps) => (
-  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-blue-200">
-    ⏱ {entity} · {stateLabel[state]}
-    {expectedNext && <span className="text-blue-600">→ NEXT: {expectedNext}</span>}
-  </span>
-);
-```
-
-### 16.3 Contradiction Panel (Q2 expandable)
-
-Every ⚔ badge expands to a two-column comparison: **Claim A** (older source, url, date) vs **Claim B** (newer source, url, date), the NLI `contradiction_score`, and the red-team note. A `Reconcile` / `Dismiss` action requires human confirmation and writes to `audit_log` (WORM).
-
-### 16.4 Missing-Signal Card
-
-Renders `missing_event`, `days_since_last_signal`, `max_lag_days`, and a `ConfidenceBySilenceMeter` (`0.4 + days*0.02`, capped 0.95) so analysts see *why* the alert fired. Dismissing requires a reason (audited).
 

@@ -139,7 +139,7 @@ MVP (Weeks 1-3):
 ├─ Intelligence Core:
 │  ├─ LangGraph multi-agent orchestration (ingest → validate → NLP → confluence → lifecycle → red-team → missing-signal → synthesize → brief → calibrate)
 │  ├─ Pharma Ontology enrichment (B.Pharm-built: haemophilia drugs → company → indication → competitor)
-│  ├─ THE FIVE ADVANCED ANALYSES (core differentiators — no open-source tool combines them):
+│  ├─ THE FIVE ADVANCED ANALYSES (In our comparison of open-source solutions evaluated, we did not find one combining these five analyses):
 │  │  ├─ 1. Confluence Detection — cross-source convergence alerts (≥3 independent signal types on one entity in 48h)
 │  │  ├─ 2. Signal Lifecycle Tracking — chronological timeline per development (Announced → In Trial → Results In → Under Review), event chains
 │  │  ├─ 3. Red-Team Contradiction Analysis — NLI entailment detects contradicting signals (devil's-advocate AI review)

@@ -12,11 +12,13 @@
 ## **1. INTRODUCTION**
 
 ### 1.1 Purpose
-MetaRadar detects early market signals and paradigm shifts in the **haemophilia treatment landscape within Rare Disease** (Haemophilia A and Haemophilia B — from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian) by converting fragmented public signals into role-specific intelligence for Novo Nordisk teams, formatted in a **Four-Question Framework**:
-- **Q1 WHAT CHANGED?** — Signal detection (new trial results, regulatory decisions, competitor announcements, congress presentations, publication releases, patient access changes)
-- **Q2 WHY DOES IT MATTER?** — Clinical/commercial significance scoring for Novo Nordisk's Haemophilia portfolio (concizumab, mim8)
-- **Q3 WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?** — Role-based routing (Medical Affairs / Regulatory / Market Access / Commercial / R&D)
-- **Q4 WHAT INTERNAL ACTION MAY BE REQUIRED?** — AI-suggested actions (human review required)
+MetaRadar is an intelligence radar that converts fragmented public signals into evidence-backed developments and role-specific actions in the **haemophilia treatment landscape within Rare Disease** (Haemophilia A and Haemophilia B — from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian).
+
+Unlike conventional AI systems that merely summarize documents, MetaRadar builds an evidence story around every key development, formatting intelligence into a **Four-Question Framework**:
+- **Q1 WHAT CHANGED?** — Signal detection and event understanding, supported by multi-source confluence
+- **Q2 WHY DOES IT MATTER?** — Clinical/commercial significance, lifecycle stage, competitive context, and contradiction analysis
+- **Q3 WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?** — Role relevance and stakeholder-calibrated routing (Medical Affairs / Regulatory / Market Access / Commercial / R&D)
+- **Q4 WHAT INTERNAL ACTION MAY BE REQUIRED?** — AI-suggested actions based on evidence, lifecycle, and missing-signal context (human review required)
 
 ### 1.2 Scope
 **MVP Scope (Weeks 1-4):**

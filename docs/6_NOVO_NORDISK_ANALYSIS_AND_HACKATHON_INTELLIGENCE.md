@@ -392,57 +392,73 @@ These are statements directly tied to their current business reality that will s
 
 ---
 
-### 5.2 Questions Judges Will Ask + How to Answer Them
+### 5.2 Questions Judges Will Ask + How to Answer Them (16 Technical Defense Q&As)
 
-**Q: "How is this different from just subscribing to Contify or SinglePoint?"**
+*Note: Every technical answer below is structured in 2 parts: (1) A one-sentence non-technical answer for the B.Pharm team lead to state clearly, followed by (2) The technical implementation details for CS/IT judges. Full detailed specifications are anchored in `docs/7_PITCH_AND_PRESENTATION_NARRATIVE.md` Section 8.*
 
-A: "Contify and SinglePoint are generic competitive intelligence platforms. They don't know that 'Hemlibra' and 'emicizumab' are the same molecule, or that 'mim8' is Novo Nordisk's bispecific candidate. They don't detect confluence—they don't know when a safety signal on Reddit and an FDA advisory are part of the same emerging story. They don't track lifecycles—an analyst can't ask 'where is mim8 and what's next.' They don't red-team the evidence—a real-world cohort contradicting an ASH abstract is treated as two equal claims. They don't listen for missing signals—a silent readout is invisible. And they don't learn: nothing they deliver to Medical Affairs ever changes how they route to Medical Affairs. MetaRadar is domain-specific to haemophilia rare disease, framed in a Four-Question model, runs five advanced analyses on every signal, and gets smarter via stakeholder learning."
+1. **Why LangGraph?**
+   - *Non-Technical:* LangGraph acts as a strict step-by-step manager that ensures all ten intelligence steps run in exact order without losing track of evidence.
+   - *Technical:* Uses `langgraph 0.1+` for stateful, cyclic multi-agent graph execution with `TypedDict` state schema, explicit node branching, conditional edges, and checkpoint persistence across 10 specialized agents.
 
-**Q: "Why would I care that a signal did NOT appear?"**
+2. **Why PostgreSQL + pgvector?**
+   - *Non-Technical:* It stores both structured tables and AI text memory in one single database, keeping our system fast, reliable, and zero-cost.
+   - *Technical:* Enables 384-dim vector similarity search (`sentence-transformers/all-MiniLM-L6-v2`) alongside relational SQL queries in a single ACID-compliant database, eliminating dual-write sync issues and vector DB overhead.
 
-A: "Because in competitive intelligence, silence is often the first signal. If a Phase 3 readout was promised for Q1 and nothing has appeared in three months, the most likely explanations are a missed endpoint or a stalled submission — exactly what a Medical Affairs or Regulatory team wants to know before the competitor controls the narrative. MetaRadar's Missing-Signal Detector runs an event-progression state machine: given a development's lifecycle state, it knows what event should come next and how long that step normally takes. When the window passes in silence, it raises an early-warning whose confidence grows with every day of silence — so the system gets *more* confident, not less, the longer nothing happens. We gate alerts behind a configurable window precisely so we don't cry wolf."
+3. **Why Redis?**
+   - *Non-Technical:* Redis provides ultra-fast memory storage so repeated user views load instantly without re-processing data.
+   - *Technical:* Redis 7 provides an in-memory key-value cache (2h TTL), API rate-limiting counter (500 req/day cap), and pub/sub broker for Celery async tasks.
 
-**Q: "How do you handle contradicting claims — the system just reports both sides?"**
+4. **How does confluence work?**
+   - *Non-Technical:* It checks if three or more independent sources — like a publication, a trial registry, and a news report — mention the same drug within 48 hours.
+   - *Technical:* Scans rolling 48h window for entity IDs. When $\ge 3$ distinct `signal_type` categories intersect on an entity, a `confluence_event` is created with an aggregated severity score.
 
-A: "Reporting both sides is what a feed does; MetaRadar instead runs a Red-Team Contradiction Engine. For signals about the same entity in a rolling 90-day window, a local NLI model (the same `facebook/bart-large-mnli` we already use for classification — no extra hardware) checks entailment between claim pairs. When it labels a pair 'contradiction' above 0.6, we surface both evidence chains — source, URL, date — side by side, attach a devil's-advocate note on how the evidence could be misleading, and mark it 'requires human review.' A Medical Affairs analyst can never unknowingly quote a disputed result. This is the difference between aggregation and intelligence."
+5. **How does lifecycle tracking work?**
+   - *Non-Technical:* It places every new update on a chronological step-by-step timeline that tracks a drug from its first announcement to final approval.
+   - *Technical:* Uses a deterministic finite-state machine (`announced → in_trial → results_in → under_review → approved → post_market | discontinued`), tracking transitions in `lifecycle_chains` and computing `expected_next_event`.
 
-**Q: "How does the stakeholder calibration loop actually work? (NEW v2.0)"**
+6. **How does contradiction detection work?**
+   - *Non-Technical:* It uses a specialized AI model that compares two claims about the same drug to see if they conflict with each other.
+   - *Technical:* Runs zero-shot NLI via local `facebook/bart-large-mnli`. Pairwise premise-hypothesis checks scoring `contradiction` $> 0.60$ trigger `contradictions` entries with linked evidence chains.
 
-A: "On every signal card, Q3 shows the routing with confidence — e.g., Regulatory 92%. The reviewer rates it 1-5 stars with a reason. That feedback lands in an append-only `stakeholder_feedback` table. Our `StakeholderCalibrationService.recalibrate(role)` recomputes that role's scoring weights across the seven haemophilia signal types and writes a `calibration_history` row for audit. Next ingestion cycle routes with the new weights, and the confidence badge shows the uplift. For the hackathon we seed three simulated personas — a Medical Affairs Lead, a Regulatory Specialist, and a Market Access Manager — so the loop is demonstrable live in minutes, not weeks."
+7. **How does missing-signal detection work?**
+   - *Non-Technical:* It calculates when a follow-up step should have happened and alerts us if an expected milestone stays silent for too long.
+   - *Technical:* Evaluates `lifecycle_chains` against rules (`missing_signal_rules`). If $\Delta t_{\text{last\_signal}} > t_{\text{max\_lag}}$, an alert is triggered with confidence $C_{missing} = \min(0.40 + 0.002 \times \Delta t_{\text{silence}}, 0.95)$, requiring human review.
 
-**Q: "Is the calibration auditable? What stops someone gaming the weights?"**
+8. **How does stakeholder calibration work?**
+   - *Non-Technical:* When experts rate how relevant a signal was, MetaRadar adjusts its scoring formulas so future signals match expert judgment.
+   - *Technical:* `StakeholderCalibrationService` receives ratings via `POST /api/v1/feedback`, executes online gradient updates on scoring weights in `scoring_weights`, and logs audit rows in `calibration_history`.
 
-A: "Feedback rows are WORM — UPDATE and DELETE are revoked at the database level, consistent with our 21 CFR Part 11 audit trail. Every recalibration writes `old_weights → new_weights` plus trigger reason and feedback count to `calibration_history`. We also gate recalibration on a minimum feedback count per role, so a single star rating can't move the system."
+9. **How is hallucination controlled?**
+   - *Non-Technical:* Every single claim in MetaRadar must link directly to a verified public source quote, and AI never generates facts on its own.
+   - *Technical:* All synthesis is anchored in retrieved context (pgvector cosine search). Every output text span maps to `source_id`, `source_url`, and verbatim text `excerpt`. Temperature is set to 0.0 with strict system instruction fallbacks.
 
-**Q: "What happens when an API goes down?"**
+10. **How are sources made traceable?**
+    - *Non-Technical:* Every card on the dashboard has a clickable proof box showing the original article link, publication date, and exact quote.
+    - *Technical:* Every database row maintains an immutable `evidence_chain` JSONB object containing `source_name`, `source_url`, `published_at`, `extracted_quote`, credibility score, and SHA-256 hash.
 
-A: "Three-layer fallback: Redis cache (2-hour TTL) → PostgreSQL historical data → empty but graceful response. The dashboard never crashes. We tested this explicitly."
+11. **What happens when an API fails?**
+    - *Non-Technical:* If a public data source breaks or goes offline, MetaRadar retries automatically, uses recent cached data, or switches to a backup dataset so the app never crashes.
+    - *Technical:* Uses `tenacity` exponential backoff (3 attempts: 2s, 4s, 8s). Fallback cascade: Redis cache (TTL 24h) $\rightarrow$ PostgreSQL `raw_signals_bronze` $\rightarrow$ 500-signal synthetic demo fallback dataset.
 
-**Q: "You're pulling scraped web data. What about pharmaceutical compliance and audit trails?"**
+12. **How does the architecture scale?**
+    - *Non-Technical:* Because our components are lightweight and decoupled, we can process thousands of signals simultaneously across multiple background workers.
+    - *Technical:* Decouples API serving (FastAPI ASGI under Uvicorn) from async ingestion (Celery queue backed by Redis). Read operations utilize indexed PostgreSQL views and Redis cache.
 
-A: "MetaRadar maintains an append-only audit log (WORM-enforced at the PostgreSQL level) for every user-initiated action — taxonomy changes, signal dismissals, score overrides. This meets the traceability requirements of FDA 21 CFR Part 11 and GxP standards. Every AI-generated insight also displays a mandatory disclaimer: 'Auto-generated — verify clinically before use.' We strip any unexpected PII from scraped content before storage using a spaCy detection pipeline."
+13. **Why is this different from a normal RAG chatbot?**
+    - *Non-Technical:* A RAG chatbot only answers questions when you ask it; MetaRadar actively monitors, connects, flags contradictions, and routes signals to the right team automatically.
+    - *Technical:* Standard RAG is passive (User Query $\rightarrow$ Embed $\rightarrow$ Retrieve $\rightarrow$ Generate). MetaRadar is an autonomous 10-agent graph pipeline executing continuous multi-source monitoring, lifecycle state tracking, confluence detection, and silence alerting.
 
-**Q: "How do you handle data quality when signals come from unverified sources like Reddit?"**
+14. **Why is this different from a news dashboard?**
+    - *Non-Technical:* A news dashboard shows a list of individual headlines; MetaRadar turns scattered headlines into an evidence story with clear next steps for Novo Nordisk.
+    - *Technical:* News dashboards display flat, unlinked feeds. MetaRadar applies NER + ontology mapping, 48h confluence clustering, FSM lifecycle tracking, NLI contradiction detection, and HITL weight calibration.
 
-A: "Every signal is scored for quality before storage: we check language, minimum text length, duplicate detection using pg_trgm fuzzy matching, and source credibility weighting (PubMed = 0.95, Reddit = 0.40). The pharma ontology then cross-validates extracted entities — if an entity can't be resolved in our B.Pharm-built ontology, it's flagged as unverified. We reject roughly 17% of raw signals before NLP even runs. The result is that Reddit signals surface only when they have enough corroboration from clinical or regulatory sources — that's exactly what the Confluence Engine enforces."
+15. **Why is this different from ChatGPT/Claude simply summarizing articles?**
+    - *Non-Technical:* Summarizing five articles gives you five separate summaries; MetaRadar combines them, checks if they contradict, tracks where the drug is on its timeline, and tells each function what to do.
+    - *Technical:* Document summarization operates on individual isolated texts. MetaRadar performs multi-document entity normalization against a Haemophilia ontology, tracks temporal state, runs pairwise NLI contradiction checks, and applies role-routing matrices calibrated by stakeholder feedback.
 
-**Q: "What if we want to switch the AI model later?"**
-
-A: "We designed for that from day one. The summarization and Q&A model is fully configurable via a `LOCAL_LLM_MODEL` environment variable — no code changes required. Today we default to `facebook/bart-large-cnn` because it runs on CPU with no hardware cost. Tomorrow you could swap in Gemma, Mistral 7B, Phi-3 Mini, or any other HuggingFace-compatible model by changing a single config value. The architecture is model-agnostic by design — the model is an operational decision, not an engineering constraint."
-
-
-
-**Q: "How do you ensure pharmaceutical accuracy? What if NLP extracts the wrong drug name?"**
-
-A: "Our B.Pharm team built a validation layer—a pharma ontology that cross-references every extracted entity against a curated dictionary of 50+ drugs, 20+ companies, and their relationships. Signals that pass NER extraction are validated against the ontology before being stored."
-
-**Q: "The judging criteria says you worked with dummy datasets. You're using real APIs—is that compliant?"**
-
-A: "All our data sources are publicly available—NewsAPI, PubMed, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit, and congress abstract repositories (ASH, ISTH, WFH, EHA). These are the same sources Novo Nordisk's teams already read manually. We're not accessing proprietary Novo Nordisk data. The CDA covers the problem statements and mentorship discussions, not public internet data. However, we'd recommend consulting with your compliance team before deploying in a production context."
-
-**Q: "What does the Bangalore team actually do with this on Monday morning?"**
-
-A: "Medical Affairs opens their role-specific dashboard — top 20 signals from the last 24h, pre-prioritized by clinical relevance, with AI summaries and Q1-Q4 framing. Instead of spending 3 hours reading industry newsletters and congress digests, they spend 15 minutes reviewing pre-synthesized intelligence, acting on high-confluence alerts, and their star ratings keep the routing accurate for the next day."
+16. **Why is this feasible within a one-month hackathon?**
+    - *Non-Technical:* We use lightweight, free, local open-source AI components with pre-curated fallback data so we don't waste time on complex cloud setups.
+    - *Technical:* Relies on local CPU-executable models (spaCy `en_core_sci_md`, BART MNLI, MiniLM embeddings) in Docker Compose. Using PostgreSQL + pgvector and standard Python frameworks (FastAPI + LangGraph) eliminates cloud API dependencies, key management overhead, and deployment friction.
 
 ---
 

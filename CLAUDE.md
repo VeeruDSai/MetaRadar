@@ -1,19 +1,17 @@
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**MetaRadar** is an AI-powered Haemophilia competitive intelligence radar built for the **Novo Nordisk GBS Hackathon 2026** (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease").
+**MetaRadar** is an intelligence radar that converts fragmented public signals into evidence-backed developments and role-specific actions, built for the **Novo Nordisk GBS Hackathon 2026** (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease").
 
-It converts scattered public signals — clinical trials, regulatory decisions, congress abstracts, competitor pipeline moves, and patient access narratives — into role-specific, actionable intelligence for Novo Nordisk's Medical Affairs, Regulatory, Market Access, Commercial, and R&D teams.
-
-The system detects early market shifts in the haemophilia treatment landscape (from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian). It runs a 6-agent LangGraph pipeline that ingests, validates, enriches, confluences, synthesizes, and formats intelligence into a **Four-Question Framework**:
-1. **What changed?** (Real-time signal feed, signal types, entity tags)
-2. **Why does it matter?** (Relevance breakdown, AI explanation, confluence alert, competitive context)
-3. **Which Novo Nordisk function should review it?** (Role-routing badges with confidence scores)
-4. **What action may be required?** (AI-suggested action bullets prefaced "Suggested — requires human review")
+While conventional AI systems summarize documents, MetaRadar builds an evidence story around every key development in the haemophilia treatment landscape (from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian). It runs a **10-agent LangGraph pipeline** (Ingestion → Validation → NLP → Confluence → Lifecycle → Red-Team → Missing-Signal → Synthesis → Brief → Stakeholder Calibration) that feeds five intelligence mechanisms into a **Four-Question Framework**:
+1. **What changed?** (Real-time signal feed, entity tags, multi-source confluence alerts)
+2. **Why does it matter?** (Relevance breakdown, lifecycle position, red-team contradiction analysis, competitive context)
+3. **Which Novo Nordisk function should review it?** (Calibrated role-routing badges with confidence scores)
+4. **What action may be required?** (AI-suggested actions based on evidence, lifecycle, and missing-signal context, prefaced "Suggested — requires human review")
 
 MetaRadar includes a **Stakeholder Calibration Loop (HITL)** that uses feedback from simulated Novo Nordisk stakeholder personas (Medical Affairs, Regulatory, Market Access) to dynamically recalibrate function scoring weights.
 
-**Core Value:** A Novo Nordisk Medical Affairs analyst opens MetaRadar and immediately sees *"Hemgenix 3-year gene therapy durability data just dropped at ASH — 5 converging signals across clinical + regulatory + patient channels, affecting mim8 positioning — here is why it matters and what action to take next"* — with every claim traceable to public sources, no hallucinations, and zero manual searching.
+**Core Value:** A Novo Nordisk Medical Affairs analyst opens MetaRadar and sees an evidence-backed development story (*"Hemgenix 3-year gene therapy durability data just dropped at ASH — 3 converging signals across clinical + regulatory + patient channels, with real-world contradiction flags, lifecycle positioning, and missing submission warnings — here is why it matters and what action to take next"*) — with every claim traceable to public sources, zero hallucinations, and clear role-specific implications.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:research/STACK.md -->
@@ -23,7 +21,7 @@ MetaRadar includes a **Stakeholder Calibration Loop (HITL)** that uses feedback 
 ### Backend API
 - **FastAPI 0.110+ (Python 3.11)**: Async-first, automatic OpenAPI documentation, high-throughput ASGI server (uvicorn/gunicorn).
 ### Agent Orchestration
-- **LangGraph 0.1+**: Stateful 6-agent coordination graph (Ingestion → Validation → NLP → Confluence → Synthesis → Brief).
+- **LangGraph 0.1+**: Stateful 10-agent coordination graph (Ingestion → Validation → NLP → Confluence → Lifecycle → Red-Team → Missing-Signal → Synthesis → Brief → Stakeholder Calibration).
 ### Database & Vector Storage
 - **PostgreSQL 16 + pgvector**: Unified relational (ACID) and 384-dimensional vector similarity search (`sentence-transformers/all-MiniLM-L6-v2`) in a single database.
 ### Cache & Task Queue
