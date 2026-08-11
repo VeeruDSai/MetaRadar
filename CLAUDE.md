@@ -1,15 +1,17 @@
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**MetaRadar** is an intelligence radar that converts fragmented public signals into evidence-backed developments and role-specific actions, built for the **Novo Nordisk GBS Hackathon 2026** (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease").
+**MetaRadar** is a near-real-time competitive intelligence radar that converts fragmented public signals into evidence-backed developments and role-specific actions, built for the **Novo Nordisk GBS Hackathon 2026** (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease").
 
-While conventional AI systems summarize documents, MetaRadar builds an evidence story around every key development in the haemophilia treatment landscape (from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian). It runs a **10-agent LangGraph pipeline** (Ingestion → Validation → NLP → Confluence → Lifecycle → Red-Team → Missing-Signal → Synthesis → Brief → Stakeholder Calibration) that feeds five intelligence mechanisms into a **Four-Question Framework**:
-1. **What changed?** (Real-time signal feed, entity tags, multi-source confluence alerts)
+> **Master Specification:** The sole canonical and authoritative plan for this repository is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).
+
+While conventional AI systems summarize documents, MetaRadar builds an evidence story around every key development in the haemophilia treatment landscape (from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian). It runs a **10-node LangGraph workflow** (`INGEST → VALIDATE → UNDERSTAND → ANALYZE (Confluence, Lifecycle, Red-Team, Missing-Signal) → SYNTHESIZE → CALIBRATE → BRIEF`) that feeds five intelligence mechanisms into a **Four-Question Framework**:
+1. **What changed?** (Near-real-time signal feed, entity tags, multi-source confluence alerts)
 2. **Why does it matter?** (Relevance breakdown, lifecycle position, red-team contradiction analysis, competitive context)
-3. **Which Novo Nordisk function should review it?** (Calibrated role-routing badges with confidence scores)
+3. **Which Novo Nordisk function should review it?** (Calibrated role-routing badges with confidence scores for Medical Affairs)
 4. **What action may be required?** (AI-suggested actions based on evidence, lifecycle, and missing-signal context, prefaced "Suggested — requires human review")
 
-MetaRadar includes a **Stakeholder Calibration Loop (HITL)** that uses feedback from simulated Novo Nordisk stakeholder personas (Medical Affairs, Regulatory, Market Access) to dynamically recalibrate function scoring weights.
+MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feedback from simulated Novo Nordisk stakeholder personas (Medical Affairs, Regulatory, Market Access) to dynamically recalibrate function scoring weights.
 
 **Core Value:** A Novo Nordisk Medical Affairs analyst opens MetaRadar and sees an evidence-backed development story (*"Hemgenix 3-year gene therapy durability data just dropped at ASH — 3 converging signals across clinical + regulatory + patient channels, with real-world contradiction flags, lifecycle positioning, and missing submission warnings — here is why it matters and what action to take next"*) — with every claim traceable to public sources, zero hallucinations, and clear role-specific implications.
 <!-- GSD:project-end -->
@@ -20,8 +22,8 @@ MetaRadar includes a **Stakeholder Calibration Loop (HITL)** that uses feedback 
 ## Prescriptive Technology Stack
 ### Backend API
 - **FastAPI 0.110+ (Python 3.11)**: Async-first, automatic OpenAPI documentation, high-throughput ASGI server (uvicorn/gunicorn).
-### Agent Orchestration
-- **LangGraph 0.1+**: Stateful 10-agent coordination graph (Ingestion → Validation → NLP → Confluence → Lifecycle → Red-Team → Missing-Signal → Synthesis → Brief → Stakeholder Calibration).
+### Workflow Orchestration
+- **LangGraph 0.1+**: Stateful 10-node coordination workflow (`node_ingest → node_validate → node_nlp_extract → node_ontology_enrich → node_confluence → node_lifecycle → node_redteam → node_missing_signal → node_synthesize → node_calibrate`).
 ### Database & Vector Storage
 - **PostgreSQL 16 + pgvector**: Unified relational (ACID) and 384-dimensional vector similarity search (`sentence-transformers/all-MiniLM-L6-v2`) in a single database.
 ### Cache & Task Queue

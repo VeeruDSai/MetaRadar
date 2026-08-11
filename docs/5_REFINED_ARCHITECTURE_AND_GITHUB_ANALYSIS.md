@@ -6,6 +6,10 @@
 
 > **v2.1 (Aug 12, 2026):** Extended to the **Five Advanced Analyses** per the kickoff Executive Summary — Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, Stakeholder Learning Loop. The LangGraph pipeline grows from 7 to **10 agents** (lifecycle, red-team, missing-signal added). Every insight passes all five analyses before reaching the brief.
 
+> [!IMPORTANT]
+> **HISTORICAL REFERENCE DOCUMENT**  
+> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+
 ---
 
 ## **PART 1: EXISTING GITHUB SOLUTIONS & THEIR GAPS**

@@ -6,6 +6,10 @@
 **Target Event:** Novo Nordisk GBS Hackathon 2026 (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease")  
 **Team:** MS Ramaiah Institute of Technology (MSRIT) — Cross-Disciplinary (2 CSE + 3 B.Pharm)
 
+> [!IMPORTANT]
+> **HISTORICAL REFERENCE DOCUMENT**  
+> *Note: This document is preserved for historical presentation context. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+
 ---
 
 ## **1. EXECUTIVE SUMMARY & CORE POSITIONING**

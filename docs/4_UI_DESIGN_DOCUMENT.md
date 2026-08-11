@@ -6,6 +6,10 @@
 **Design Framework:** shadcn/ui + TailwindCSS 4  
 **Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1).
 
+> [!IMPORTANT]
+> **HISTORICAL REFERENCE DOCUMENT**  
+> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+
 ---
 
 ## **1. DESIGN SYSTEM**

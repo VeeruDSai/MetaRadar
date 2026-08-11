@@ -5,6 +5,10 @@
 **Date:** August 2026  
 **Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged.
 
+> [!IMPORTANT]
+> **HISTORICAL REFERENCE DOCUMENT**  
+> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+
 ---
 
 ## **1. ARCHITECTURE OVERVIEW**

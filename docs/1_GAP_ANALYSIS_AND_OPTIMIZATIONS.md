@@ -1,5 +1,9 @@
 # MetaRadar: Gap Analysis, Resolutions & Optimizations
 
+> [!IMPORTANT]
+> **HISTORICAL REFERENCE DOCUMENT**  
+> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+
 ---
 
 ## **CRITICAL GAPS & RESOLUTIONS**
