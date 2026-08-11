@@ -2,6 +2,10 @@
 
 ---
 
+> **v2.0 (Aug 12, 2026 kickoff):** Therapy-area pivot to **Haemophilia within Rare Disease**, added the **Stakeholder Calibration Loop (HITL)** as a 7th agent and differentiator, and replaced GLP-1/obesity examples with haemophilia (emicizumab, mim8, concizumab, Hemgenix, Roctavian) throughout.
+
+---
+
 ## **PART 1: EXISTING GITHUB SOLUTIONS & THEIR GAPS**
 
 The following are the closest open-source equivalents to MetaRadar currently on GitHub. Each has been analyzed for what they do well and where they fall short—specifically for the pharma/haemophilia rare disease CI use case.
@@ -71,7 +75,7 @@ Formatter Agent:   Creates Plotly visualizations + exports
 |---|---|
 | **Streamlit UI** | Functional but not production-grade. No real-time WebSocket updates, no role auth, no multi-user support. |
 | **Report-generation focus** | Produces PDFs/exports. Not a live operational dashboard pharma teams can keep open all day. |
-| **No domain taxonomy** | Doesn't understand GLP-1, HTA, SGLT2i. Everything is treated as equal-weight text. |
+| **No domain taxonomy** | Doesn't understand emicizumab, HTA, anti-TFPI, inhibitor development. Everything is treated as equal-weight text. |
 | **LangChain dependency** | Adds ~200MB overhead + complex debugging. Abstracts too much for a hackathon. |
 | **No caching layer** | Every question triggers new API calls. Rate limit burns immediately. |
 | **No signal deduplication** | Same Reuters story + Bloomberg story = two separate "signals." |
@@ -114,8 +118,8 @@ Formatter Agent:   Creates Plotly visualizations + exports
 | **General AI/tech focus** | Tracks arXiv, GitHub releases, AI policy. No drug names, no HTA, no clinical phases. |
 | **No role-based access** | Single user/single view. Not multi-tenant. |
 | **No velocity scoring** | Deduplicates and summarizes but doesn't detect *accelerating* signals. |
-| **No entity relationship graph** | Doesn't know that "semaglutide" = "GLP-1 agonist" = "Ozempic" = Novo Nordisk product. |
-| **Push-only** | You receive alerts. Can't query: "What happened with Eli Lilly this week?" |
+| **No entity relationship graph** | Doesn't know that "Hemlibra" = "emicizumab" = bispecific antibody = Roche product / Novo Nordisk competitor. |
+| **Push-only** | You receive alerts. Can't query: "What happened with mim8 this week?" |
 
 **What we borrow:**
 - Incremental fetch (only fetch new signals since last run = saves API quota)
@@ -186,7 +190,7 @@ Formatter Agent:   Creates Plotly visualizations + exports
 | **Single-source only** | Only ClinicalTrials.gov. No news, no social, no regulatory. Misses 80% of signal types. |
 | **Streamlit UI** | Not production-grade for multi-role deployment. |
 | **No velocity detection** | Shows trial status but not *acceleration* of enrollment/activity. |
-| **No cross-signal confluence** | Doesn't connect: "Eli Lilly trial + FDA advisory + patient forum spike = high alert." |
+| **No cross-signal confluence** | Doesn't connect: "Roche emicizumab head-to-head + FDA advisory + patient forum spike = high alert." |
 
 **What we borrow:**
 - ClinicalTrials.gov API as our 6th data source (add in Week 4)
@@ -232,20 +236,23 @@ Real competitive intelligence requires *reasoning*, not just retrieval.
 **2. No Signal Relationship Model**
 Currently, 800 signals float independently. There's no concept of:
 - "These 4 signals are all about the same competitor move"
-- "This FDA filing + this Reddit spike + this patent = one emerging story"
-- "Eli Lilly's Phase 2 result will affect Novo Nordisk's reimbursement position"
+- "This ASH abstract + this press release + this patient forum spike = one emerging story"
+- "Roche's emicizumab head-to-head data will affect mim8's positioning"
 
 **3. No Competitive Narrative Synthesis**
 Current plan delivers raw signals with summaries. It doesn't answer:
-- "What is Eli Lilly's GLP-1 strategy this month?"
-- "What changed in the obesity treatment landscape this week?"
-- "Should Novo Nordisk be worried about oral formulation competition?"
+- "What is happening with mim8 this month?"
+- "What changed in the haemophilia treatment landscape this week?"
+- "Should Novo Nordisk be worried about Hemgenix 3-year durability data vs prophylaxis?"
 
 **4. Scoring is Static**
 Current scoring: `source_credibility * 0.7 + keyword_match * 0.3`
 This is a fixed formula. No learning, no context, no adaptation.
 
-**5. No Traceable Reasoning**
+**5. No Stakeholder Feedback Loop (HITL)**
+No mechanism for Novo Nordisk functions to tell the system whether routing was right. A Regulatory Affairs analyst who constantly gets clinical-only signals has no way to fix it. Routing never improves → trust decays → analysts revert to manual inbox scanning.
+
+**6. No Traceable Reasoning**
 Current plan: Signal appears with a score. User doesn't know *why* it's important.
 Regulatory teams especially need: "This FDA guideline change matters because it affects X, Y, Z."
 
@@ -264,16 +271,19 @@ NEW MENTAL MODEL:
   Multi-source signals
          ↓
   Entity Relationship Graph
-  (semaglutide → GLP-1 agonist → Novo Nordisk → obesity indication)
+  (Hemlibra → emicizumab → bispecific antibody → Roche → Haemophilia A competitor)
          ↓
   Signal Confluence Engine
-  (When FDA + Twitter + PubMed fire on same entity = converging story)
+  (When ASH abstract + CSL press release + r/Hemophilia fire on same entity = converging story)
          ↓
   Narrative Synthesis Agent
-  ("Eli Lilly's oral GLP-1 gaining momentum: 3 convergent signals in 48h")
+  ("Hemgenix 3-year durability strengthening: 3 convergent signals in 48h")
          ↓
   Role-Specific Intelligence Brief
-  (Medical Affairs: clinical implications / Regulatory: compliance impact)
+  (Medical Affairs: clinical durability implications / Regulatory: labeling & HTA impact)
+         ↓
+  Stakeholder Calibration Agent (HITL — NEW v2.0)
+  (Persona feedback recalibrates role-scoring weights → routing confidence improves)
 ```
 
 ---
@@ -300,6 +310,7 @@ class IntelligenceState(TypedDict):
     scored_signals: list[dict]
     confluent_stories: list[dict]
     role_briefs: dict[str, list]
+    calibration_weights: dict[str, float]   # HITL (NEW v2.0)
 
 # Define agents
 def ingestion_agent(state: IntelligenceState):
@@ -307,10 +318,10 @@ def ingestion_agent(state: IntelligenceState):
     signals = asyncio.gather(
         newsapi_fetcher.run(),
         pubmed_fetcher.run(),
-        twitter_fetcher.run(),
+        clinicaltrials_fetcher.run(),
         reddit_fetcher.run(),
         fda_fetcher.run(),
-        clinicaltrials_fetcher.run()
+        congress_fetcher.run()          # ASH / ISTH / WFH / EHA abstracts
     )
     return {"raw_signals": signals}
 
@@ -333,7 +344,11 @@ def synthesis_agent(state: IntelligenceState):
     ...
 
 def brief_agent(state: IntelligenceState):
-    """Formats role-specific dashboard content"""
+    """Formats role-specific dashboard content (Four-Question)"""
+    ...
+
+def calibration_agent(state: IntelligenceState):   # NEW v2.0
+    """HITL: applies stakeholder_feedback → recalibrates role weights"""
     ...
 
 # Wire agents into graph
@@ -344,12 +359,14 @@ graph.add_node("nlp", nlp_agent)
 graph.add_node("confluence", confluence_agent)
 graph.add_node("synthesize", synthesis_agent)
 graph.add_node("brief", brief_agent)
+graph.add_node("calibrate", calibration_agent)      # NEW v2.0
 
 graph.add_edge("ingest", "validate")
 graph.add_edge("validate", "nlp")
 graph.add_edge("nlp", "confluence")
 graph.add_edge("confluence", "synthesize")
 graph.add_edge("synthesize", "brief")
+graph.add_edge("brief", "calibrate")                # NEW v2.0
 
 graph.set_entry_point("ingest")
 runner = graph.compile()
@@ -371,35 +388,66 @@ Instead of treating signals as independent text blobs, build a lightweight graph
 
 PHARMA_ONTOLOGY = {
     "drugs": {
-        "semaglutide": {
-            "brand_names": ["Ozempic", "Wegovy", "Rybelsus"],
-            "mechanism": "GLP-1 agonist",
-            "manufacturer": "Novo Nordisk",
-            "indications": ["obesity", "type2_diabetes", "cardiovascular"],
-            "formulations": ["injectable", "oral"],
-            "competitors": ["tirzepatide", "dulaglutide", "liraglutide"]
+        "emicizumab": {
+            "brand_names": ["Hemlibra"],
+            "mechanism": "Bispecific antibody (Factor IXa/X bridge)",
+            "manufacturer": "Roche/Genentech",
+            "indications": ["haemophilia_a", "haemophilia_a_with_inhibitors"],
+            "formulations": ["subcutaneous injection"],
+            "competitors": ["concizumab", "fitusiran", "mim8"]
         },
-        "tirzepatide": {
-            "brand_names": ["Mounjaro", "Zepbound"],
-            "mechanism": "GLP-1/GIP dual agonist",
-            "manufacturer": "Eli Lilly",
-            "indications": ["obesity", "type2_diabetes"],
-            "formulations": ["injectable"],
-            "competitors": ["semaglutide", "dulaglutide"]
+        "concizumab": {
+            "brand_names": ["Alhemo"],
+            "mechanism": "Anti-TFPI monoclonal antibody",
+            "manufacturer": "Novo Nordisk",
+            "indications": ["haemophilia_a", "haemophilia_b", "with/without inhibitors"],
+            "formulations": ["subcutaneous injection"],
+            "competitors": ["emicizumab", "fitusiran", "marstacimab"]
+        },
+        "mim8": {
+            "brand_names": ["Investigational"],
+            "mechanism": "Next-generation bispecific antibody",
+            "manufacturer": "Novo Nordisk",
+            "indications": ["haemophilia_a", "haemophilia_b"],
+            "formulations": ["subcutaneous injection"],
+            "competitors": ["emicizumab"],
+            "status": "Phase 3"
+        },
+        "etranacogene_dezaparvovec": {
+            "brand_names": ["Hemgenix"],
+            "mechanism": "AAV5-based gene therapy (Factor IX)",
+            "manufacturer": "CSL Behring/UniQure",
+            "indications": ["haemophilia_b"],
+            "formulations": ["single IV infusion"],
+            "competitors": ["valoctocogene_roxaparvovec"],
+            "status": "FDA approved November 2022"
+        },
+        "valoctocogene_roxaparvovec": {
+            "brand_names": ["Roctavian"],
+            "mechanism": "AAV5-based gene therapy (Factor VIII)",
+            "manufacturer": "BioMarin",
+            "indications": ["haemophilia_a_without_inhibitors"],
+            "formulations": ["single IV infusion"],
+            "competitors": ["emicizumab", "mim8"],
+            "status": "FDA approved June 2023"
         },
     },
     "companies": {
-        "Novo Nordisk": {
-            "portfolio": ["semaglutide", "liraglutide", "insulin_degludec"],
-            "pipeline_focus": ["obesity", "diabetes", "cardiovascular", "rare_blood"],
-            "key_competitors": ["Eli Lilly", "Roche", "Pfizer", "AstraZeneca"],
+        "Novo Nordisk Rare Disease": {
+            "portfolio": ["concizumab", "mim8", "esparin_egidiama"],
+            "pipeline_focus": ["haemophilia_a", "haemophilia_b", "rare bleeding disorders"],
+            "key_competitors": ["Roche", "Sanofi", "Pfizer", "BioMarin", "CSL Behring", "Takeda"],
         },
     },
     "indications": {
-        "obesity": {
-            "ICD_codes": ["E66", "Z68"],
-            "related_conditions": ["type2_diabetes", "cardiovascular", "NASH"],
-            "market_size_bn": 70,
+        "haemophilia_a": {
+            "description": "Factor VIII deficiency (~200,000 patients globally)",
+            "treatment_paradigm": "Factor replacement → EHL factors → bispecific (emicizumab/mim8) → gene therapy (Roctavian)",
+            "key_complication": "Inhibitor development in ~30% of severe cases",
+        },
+        "haemophilia_b": {
+            "description": "Factor IX deficiency (Christmas disease, ~50,000 patients)",
+            "treatment_paradigm": "Factor replacement → EHL factors → gene therapy (Hemgenix)",
         }
     }
 }
@@ -415,8 +463,9 @@ def enrich_signal(signal: dict, entities: dict) -> dict:
 ```
 
 **Why this matters:**
-- When "Wegovy" appears in a Reddit post, the system knows it's semaglutide + Novo Nordisk
-- When "tirzepatide" appears, system automatically flags as competitor signal for Novo Nordisk
+- When "Hemlibra" appears in a Reddit post, the system knows it's emicizumab + Roche + Novo competitor
+- When "mim8" or "concizumab" appears, system flags it as a Novo Nordisk own-asset signal (own-pipeline awareness)
+- When "Hemgenix" appears, system knows it's a gene-therapy competitive threat to prophylaxis
 - Zero additional API calls. Just a local dictionary lookup.
 - B.Pharm team owns and maintains this ontology (their biggest contribution)
 
@@ -435,15 +484,16 @@ class SignalConfluenceEngine:
     converge on the same pharmaceutical entity.
     
     Example:
-      - FDA: Post-marketing study required for GLP-1 combo (regulatory signal)
-      - Reddit: GLP-1 side effect complaints trending (social signal)
-      - PubMed: Adverse event study published (clinical signal)
+      - ASH 2026: Hemgenix 3-year durability abstract (congress signal)
+      - CSL Behring: press release on 3-yr Factor IX data (competitive signal)
+      - Reddit: r/Hemophilia patient discussion (patient/social signal)
       
-    Confluence: All 3 fire on GLP-1 safety in 48 hours
-    = Single high-priority "EMERGING SAFETY STORY" alert
+    Confluence: All 3 fire on Hemgenix in 48 hours
+    = Single high-priority "GENE THERAPY MILESTONE" alert
     """
     
-    SIGNAL_TYPES = ["clinical", "regulatory", "social", "competitive", "access"]
+    SIGNAL_TYPES = ["gene_therapy", "non_factor", "regulatory",
+                    "congress", "patient_access", "pipeline", "inhibitor"]
     
     CONFLUENCE_MATRIX = {
         # If these signal types converge = this alert level
@@ -505,9 +555,9 @@ class SignalConfluenceEngine:
         Uses local BART model to synthesize a narrative from 
         multiple converging signals.
         
-        Input:  3 separate signal summaries about GLP-1 safety
-        Output: "GLP-1 safety signals converging: FDA requires study,
-                 patients reporting side effects, adverse event paper published."
+        Input:  3 separate signal summaries about Hemgenix durability
+        Output: "Gene-therapy durability signals converging: ASH 3-yr data,
+                 CSL press release, patient forum discussion."
         """
         combined = " ".join([sig["summary"] for sig in signals])
         
@@ -521,11 +571,11 @@ class SignalConfluenceEngine:
 
 **Demo Power:** Instead of showing 800 signals, MetaRadar shows:
 ```
-🔴 CRITICAL - GLP-1 Safety Confluence (3 signals, 48h)
-   "FDA requires post-marketing study, patient complaints trending,
-    adverse event paper published. Potential safety narrative forming."
+🔴 CRITICAL - Hemgenix 3-year Durability Confluence (3 signals, 48h)
+   "ASH abstract + CSL press release + patient forum discussion.
+    Gene-therapy durability narrative strengthening."
    
-   Sources: FDA.gov | Reddit r/diabetes | PubMed
+   Sources: ASH 2026 | CSL Behring | Reddit r/Hemophilia
    Recommended action: Medical Affairs review within 24h
 ```
 
@@ -539,26 +589,34 @@ Rather than just showing what's happening, detect *which stage* a competitive de
 # services/temporal_patterns.py
 
 COMPETITIVE_TIMELINE_PATTERNS = {
-    "pre_approval_surge": {
-        "description": "Signal pattern that historically precedes FDA approval",
+    "gene_therapy_milestone_parade": {
+        "description": "Signal pattern preceding a gene-therapy durability/approval milestone",
         "stages": [
-            {"stage": "Phase 3 results published", "weeks_before_approval": "26-52"},
-            {"stage": "Company investor call mentions drug", "weeks_before_approval": "20-30"},
-            {"stage": "FDA advisory committee scheduled", "weeks_before_approval": "12-16"},
-            {"stage": "Priority review designation", "weeks_before_approval": "8-12"},
-            {"stage": "PDUFA date announced", "weeks_before_approval": "0-4"},
+            {"stage": "Phase 3 gene-therapy data published", "weeks_before_milestone": "12-24"},
+            {"stage": "Congress abstract accepted (ASH/ISTH/WFH)", "weeks_before_milestone": "4-8"},
+            {"stage": "Company press release + investor call", "weeks_before_milestone": "2-4"},
+            {"stage": "Patient forum activity spike", "weeks_before_milestone": "0-2"},
         ],
-        "alert_message": "Competitor drug following pre-approval signal trajectory"
+        "alert_message": "Gene-therapy milestone following converging signal trajectory"
     },
-    "access_crisis": {
-        "description": "Signal pattern preceding reimbursement restrictions",
+    "competitive_regulatory_filing": {
+        "description": "Signal pattern preceding a competitor regulatory submission",
         "stages": [
-            {"stage": "Payer cost-effectiveness concerns emerge", "weeks_before": "12-20"},
-            {"stage": "Prescribing restrictions rumored", "weeks_before": "8-12"},
-            {"stage": "HCP forums discuss access barriers", "weeks_before": "4-8"},
-            {"stage": "Formulary exclusion announced", "weeks_before": "0-2"},
+            {"stage": "Phase 3 endpoint met (press release)", "weeks_before_filing": "8-16"},
+            {"stage": "HTA/EMA/FDA meetings announced", "weeks_before_filing": "4-8"},
+            {"stage": "Congress data + analyst commentary", "weeks_before_filing": "2-4"},
+            {"stage": "Submission announced", "weeks_before_filing": "0-2"},
         ],
-        "alert_message": "Access restriction pattern detected"
+        "alert_message": "Competitor regulatory filing trajectory detected"
+    },
+    "inhibitor_safety_wave": {
+        "description": "Signal pattern preceding a safety concern on inhibitor/thrombosis",
+        "stages": [
+            {"stage": "Case reports in literature", "weeks_before": "4-8"},
+            {"stage": "Patient/HCP forum reports", "weeks_before": "2-4"},
+            {"stage": "Regulator safety communication", "weeks_before": "0-2"},
+        ],
+        "alert_message": "Inhibitor/safety pattern detected"
     }
 }
 
@@ -576,11 +634,11 @@ def match_signal_to_pattern(recent_signals: list[dict], entity: str) -> dict:
     
     for pattern_name, pattern in COMPETITIVE_TIMELINE_PATTERNS.items():
         # Simplified: check if key stage signals are present
-        if "clinical_success" in current_signal_types and "regulatory_change" in current_signal_types:
+        if "gene_therapy" in current_signal_types and "congress" in current_signal_types:
             return {
                 "pattern": pattern_name,
-                "current_stage": pattern["stages"][2],
-                "next_predicted_stage": pattern["stages"][3],
+                "current_stage": pattern["stages"][1],
+                "next_predicted_stage": pattern["stages"][2],
                 "confidence": 0.72,
                 "alert": pattern["alert_message"],
                 "entity": entity
@@ -590,7 +648,7 @@ def match_signal_to_pattern(recent_signals: list[dict], entity: str) -> dict:
 ```
 
 **B.Pharm contribution:** They define which signal patterns matter clinically.
-They know: "Phase 3 result + FDA meeting = 6-month window to approval."
+They know: "Phase 3 gene-therapy result + ASH abstract = next congress cycle is the durability moment."
 This is domain knowledge that can't come from a CS team alone.
 
 ---
@@ -643,12 +701,12 @@ class TraceableInsight:
 **Dashboard Display:**
 ```
 Insight:
-"Oral GLP-1 formulation competition intensifying—3 independent signals this week"
+"Hemgenix gene-therapy durability narrative strengthening—3 independent signals this week"
 
 Sources (click to verify):
-  [1] Reuters Jul 25 → "Eli Lilly oral GLP-1 Phase 2 results"
-  [2] FDA.gov Jul 24 → "New drug application received for..."
-  [3] PubMed Jul 23 → "Comparative efficacy oral vs injectable..."
+  [1] ASH 2026 Dec → "Hemgenix 3-yr Factor IX durability"
+  [2] CSL Behring Dec → "3-year durability results announced"
+  [3] Reddit r/Hemophilia Dec → "patient discussion on gene therapy durability"
 
 Reasoning: Derived from 3 independent sources across 3 platforms. Confidence: 84%.
 ```
@@ -671,7 +729,7 @@ Given the following signals from the past 7 days about {entity}:
 
 Write a 3-sentence executive brief that:
 1. States what happened (factual, cite source counts)
-2. Explains why it matters for a GLP-1 market leader
+2. Explains why it matters for a haemophilia treatment landscape leader
 3. Suggests one concrete action for the relevant team
 
 Format:
@@ -751,7 +809,7 @@ class AthenaQueryEngine:
 
     async def query(self, question: str, role: str) -> dict:
         """
-        Question: "What is Eli Lilly doing with oral GLP-1?"
+        Question: "What is the latest on mim8?"
         Role: "medical_affairs"
         """
 
@@ -860,9 +918,18 @@ DATA:
 │   ↑ Replace Weaviate entirely — eliminates one Docker container
 │   ├─ pgvector: 768-dim vectors, native hybrid search in PostgreSQL
 │   ├─ raw_signals_bronze: raw API JSON, pre-processing (replay layer)
-│   └─ audit_log: WORM append-only compliance table (21 CFR Part 11)
+│   ├─ audit_log: WORM append-only compliance table (21 CFR Part 11)
+│   ├─ stakeholder_feedback: append-only routing ratings (HITL, NEW v2.0)
+│   └─ scoring_weights + calibration_history: calibrated role weights (NEW v2.0)
 ├─ Redis 7 (cache + rate limiting + session)
-└─ Pharma Ontology JSON (local, no DB, instant lookup)
+└─ Pharma Ontology JSON (local, no DB, instant lookup) — haemophilia ontology
+
+CALIBRATION (NEW v2.0):
+├─ StakeholderCalibrationService (services/calibration_service.py)
+│   └─ recalibrate(role): stakeholder_feedback → scoring_weights update
+├─ calibration_agent.py (7th LangGraph node, between brief and END)
+├─ Endpoints: POST /api/v1/feedback · GET /api/v1/feedback/summary · POST /api/v1/calibrate
+└─ Simulated personas for demo: Medical Affairs Lead, Regulatory Specialist, Market Access Manager
 
 FRONTEND:
 ├─ Next.js 15 (App Router + Server Components)
@@ -911,24 +978,44 @@ This is the section that judges will find most impressive — domain-expert coll
 
 ### **Domain Knowledge Artifacts (B.Pharm Deliverables)**
 
-**1. Signal Taxonomy v1 (Week 1)**
+**1. Signal Taxonomy v1 (Week 1) — Haemophilia**
 ```json
 {
   "signal_types": {
-    "clinical_success": {
-      "description": "Positive clinical trial result, efficacy data",
-      "keywords": ["Phase 2", "Phase 3", "efficacy", "primary endpoint", "weight loss"],
-      "example": "Novo Nordisk Phase 2b oral GLP-1 shows 22% weight reduction"
+    "gene_therapy_milestone": {
+      "description": "Gene therapy results, durability data, approvals, setbacks",
+      "keywords": ["gene therapy", "AAV", "Factor IX", "durability", "Hemgenix", "Roctavian"],
+      "example": "Hemgenix 3-year Factor IX durability data presented at ASH 2026"
     },
-    "safety_concern": {
-      "description": "Adverse events, tolerability issues, regulatory safety alerts",
-      "keywords": ["adverse event", "side effect", "safety signal", "post-marketing", "FDA warning"],
-      "example": "GLP-1 associated gastroparesis cases rising in FDA FAERS"
+    "non_factor_therapy_update": {
+      "description": "Bispecific / anti-TFPI / RNAi therapy progress",
+      "keywords": ["emicizumab", "Hemlibra", "concizumab", "mim8", "fitusiran", "marstacimab"],
+      "example": "Novo Nordisk mim8 Phase 3 meets primary endpoint in Haemophilia A"
     },
-    "access_issue": {
-      "description": "Reimbursement changes, formulary decisions, payer restrictions",
-      "keywords": ["reimbursement", "formulary", "prior authorization", "coverage", "HTA"],
-      "example": "NICE rejects semaglutide for obesity—cost-effectiveness threshold not met"
+    "inhibitor_development_signal": {
+      "description": "Inhibitor development reports or thromboembolic risk",
+      "keywords": ["inhibitor", "factor VIII inhibitor", "thrombosis", "thromboembolic"],
+      "example": "Fitusiran thromboembolic event reports under review"
+    },
+    "regulatory_milestone": {
+      "description": "FDA / EMA / HTA decisions on haemophilia therapies",
+      "keywords": ["FDA approval", "CHMP", "NICE", "HTA", "reimbursement decision", "label"],
+      "example": "NICE appraises emicizumab for Haemophilia A with inhibitors"
+    },
+    "congress_publication": {
+      "description": "Data presented at ASH, ISTH, WFH, EHA",
+      "keywords": ["ASH 2026", "ISTH", "WFH", "EHA", "abstract", "congress"],
+      "example": "ISTH late-breaker: mim8 vs emicizumab comparator data"
+    },
+    "patient_access_signal": {
+      "description": "Reimbursement, access barriers, advocacy positions",
+      "keywords": ["WFH", "access", "reimbursement", "prior authorization", "treatment access"],
+      "example": "WFH calls for expanded access to non-factor therapies"
+    },
+    "competitive_pipeline_move": {
+      "description": "Competitor assets entering/advancing in development",
+      "keywords": ["Phase 1", "Phase 2", "Phase 3", "pipeline", "first-in-human"],
+      "example": "New anti-TFPI asset enters Phase 1 for Haemophilia A"
     }
   }
 }
@@ -948,7 +1035,7 @@ This is the section that judges will find most impressive — domain-expert coll
 - B.Pharm team manually reviews 50 processed signals
 - Are entity extractions correct?
 - Are role assignments sensible?
-- Catch false positives (e.g., "GLP-1" in a food science article)
+- Catch false positives (e.g., "gene therapy" in a cardiac surgery article, "mim8" in an engineering context)
 
 **5. Demo Script Domain Narration (Week 4)**
 - B.Pharm team presents the domain slides
@@ -962,12 +1049,13 @@ This is the section that judges will find most impressive — domain-expert coll
 **MetaRadar** is good. But consider positioning it more precisely:
 
 **Tagline Options:**
+- "MetaRadar: The Haemophilia Intelligence Radar — From Signal Noise to Treatment Strategy"
 - "MetaRadar: Where Haemophilia Signals Converge into Strategy"
 - "MetaRadar: From Inbox Noise to Strategic Signal in Rare Disease"
 - "MetaRadar: Real-Time Haemophilia Intelligence for Every Novo Nordisk Function"
 
 **Positioning Statement (for judges):**
-> "MetaRadar is not a news aggregator. It's a pharmaceutical intelligence layer that detects when multiple independent signals converge into a strategic story—before your competitors respond."
+> "MetaRadar is not a news aggregator. It's a pharmaceutical intelligence layer that detects when multiple independent signals converge into a strategic story—before your competitors respond—and keeps its routing sharp through a stakeholder calibration loop that learns from the functions it serves."
 
 ---
 
@@ -983,8 +1071,8 @@ CSE:
 └─ NewsAPI + PubMed integration (two working sources)
 
 B.Pharm:
-├─ Signal taxonomy document (6 signal types, keywords, examples)
-├─ Pharma ontology draft (top 10 drugs, companies, indications)
+├─ Signal taxonomy document (7 haemophilia signal types, keywords, examples)
+├─ Haemophilia ontology draft (emicizumab, concizumab, mim8, fitusiran, Hemgenix, Roctavian + companies + indications)
 └─ Role requirement interviews (faculty, if possible)
 
 Milestone: Working dashboard showing raw signals from 2 sources
@@ -1014,7 +1102,7 @@ CSE:
 ├─ Signal Confluence Engine (core differentiator)
 ├─ pgvector embeddings + hybrid search
 ├─ "Ask Athena" lite (RAG query interface)
-├─ Dashboard: Trend chart + Signal feed + Role filter
+├─ Dashboard: Four-Question panels (Q1-Q4) + Role filter
 ├─ Signal cards: Expandable, traceable sources
 ├─ Framer Motion animations (subtle entrance effects)
 └─ Virtual scrolling (react-window)
@@ -1028,19 +1116,21 @@ Milestone: Full MVP: Dashboard + Confluence alerts + Ask Athena working
 
 ---
 
-WEEK 4: Narrative Synthesis + Demo Hardening
+WEEK 4: Narrative Synthesis + Stakeholder Calibration + Demo Hardening
 CSE:
 ├─ Narrative Synthesis Agent (LLM-generated intelligence briefs)
-├─ Temporal pattern matching (pre-approval, access crisis patterns)
+├─ Temporal pattern matching (gene therapy milestone, regulatory filing patterns)
+├─ Stakeholder Calibration Loop (HITL): feedback endpoints + recalibrate service
+├─ Simulated persona feedback seeding for demo
 ├─ Error handling hardening (all fallback paths tested)
 ├─ Performance optimization (< 500ms cached dashboard)
-├─ Unit + integration tests (60% coverage minimum)
+├─ Unit + integration tests (60% coverage minimum, incl. test_stakeholder_calibration)
 └─ Demo recording (backup if live internet fails)
 
 B.Pharm:
 ├─ Validate narrative synthesis output (does it make clinical sense?)
 ├─ Finalize demo script (domain narration)
-└─ Prepare competitive landscape comparison slide
+└─ Prepare competitive landscape comparison slide (haemophilia)
 
 Final Review:
 ├─ Full end-to-end test with no internet (fallback only)
@@ -1062,12 +1152,12 @@ What existing tools do:
 What MetaRadar does DIFFERENTLY:
 
 1. CONFLUENCE DETECTION
-   Detects when multiple independent signal types (FDA + Social + Clinical)
+   Detects when multiple independent signal types (ASH + Press Release + Patient Forum)
    converge on the same entity in 48h → single strategic alert
    
 2. PHARMA ONTOLOGY
-   Built by B.Pharm domain experts. Knows "Wegovy" = "semaglutide" = Novo Nordisk product.
-   Tracks competitor relationships, not just keywords.
+   Built by B.Pharm domain experts. Knows "Hemlibra" = "emicizumab" = Roche competitor;
+   "mim8" = "concizumab" = Novo Nordisk assets. Tracks competitor relationships, not just keywords.
    
 3. TRACEABLE INTELLIGENCE
    Every insight shows source chain (which signals → why it matters).
@@ -1075,15 +1165,20 @@ What MetaRadar does DIFFERENTLY:
    
 4. TEMPORAL PATTERN RECOGNITION
    Detects which historical competitive pattern current signals match.
-   "This looks like a pre-approval surge trajectory for Eli Lilly's oral GLP-1."
+   "This looks like a gene-therapy milestone parade trajectory for Hemgenix."
    
 5. ROLE-SPECIFIC NARRATIVES
-   Medical Affairs sees clinical implications.
-   Regulatory sees compliance impact.
+   Medical Affairs sees clinical durability implications.
+   Regulatory sees labeling and HTA impact.
    Not a single report for everyone.
    
 6. FREE STACK, ZERO VENDOR LOCK-IN
    Unlike Contify ($$$) or SinglePoint ($$$):
    MetaRadar runs on free APIs + local ML models + open-source stack.
+
+7. STAKEHOLDER CALIBRATION LOOP (HITL) — NEW v2.0
+   Novo Nordisk functions rate routing accuracy inline (⭐ 1-5);
+   weights recalibrate via StakeholderCalibrationService;
+   Q3 confidence badges visibly improve. Simulated personas prove it live in the demo.
 ```
 

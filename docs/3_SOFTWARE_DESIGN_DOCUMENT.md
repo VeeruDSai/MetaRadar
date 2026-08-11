@@ -1,8 +1,9 @@
 # MetaRadar: Software Design Document (SDD)
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 1.0  
-**Date:** August 2026
+**Version:** 2.0  
+**Date:** August 2026  
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged.
 
 ---
 
@@ -13,7 +14,8 @@
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                         END USERS                                 │
-│        Medical Affairs | Regulatory | Commercial | Admin          │
+│   Medical Affairs | Regulatory | Market Access | Commercial | R&D │
+│                 (+ Simulated Stakeholder Personas)                │
 └────────────────────────┬─────────────────────────────────────────┘
                          │
         ┌────────────────┴────────────────┐
@@ -21,16 +23,19 @@
    ┌────▼────────────────┐      ┌────────▼──────────────┐
    │   FRONTEND LAYER    │      │   API GATEWAY/PROXY   │
    │  (Next.js 15)       │      │   (Vercel Edge)       │
-   │  ├─ Dashboard       │      └────────┬──────────────┘
-   │  ├─ Confluence view │               │
-   │  ├─ Ask Athena      │       ┌───────▼───────────┐
-   │  └─ Admin UI        │       │  BACKEND LAYER    │
-   └────┬────────────────┘       │  (FastAPI)        │
-        │                        │  ├─ /signals      │
-        │      ┌─────────────────┤  ├─ /trends      │
-        │      │                 │  ├─ /confluence  │
-        │      │                 │  ├─ /query       │
+   │  ├─ Four-Question   │      └────────┬──────────────┘
+   │  │  Dashboard (Q1-Q4)│              │
+   │  ├─ Confluence view │       ┌───────▼───────────┐
+   │  ├─ Ask Athena      │       │  BACKEND LAYER    │
+   │  ├─ Calibration UI  │       │  (FastAPI)        │
+   │  └─ Admin UI        │       │  ├─ /signals      │
+   └────┬────────────────┘       │  ├─ /trends      │
+        │                        │  ├─ /confluence  │
+        │      ┌─────────────────┤  ├─ /query       │
         │      │                 │  ├─ /briefs      │
+        │      │                 │  ├─ /feedback    │ ← NEW HITL
+        │      │                 │  ├─ /feedback/summary │ ← NEW
+        │      │                 │  ├─ /calibrate   │ ← NEW HITL
         │      │                 │  └─ /health      │
         │      │                 └────┬──┬──────────┘
         │      │                      │  │
@@ -42,7 +47,9 @@
    │ └─ Rate limits │      │  ├─ NLP agent (spaCy+BART)  │
    └────┬───────────┘      │  ├─ Confluence agent        │
         │                  │  ├─ Synthesis agent         │
-        │      ┌───────────┤  └─ Brief agent             │
+        │      ┌───────────┤  ├─ Brief agent             │
+        │      │           │  └─ Stakeholder Calibration │
+        │      │           │     agent (HITL) ← NEW      │
         │      │           └────────────┬───────────────┘
    ┌────▼──────▼────────────────────────────────────┐
    │         DATA LAYER                              │
@@ -55,6 +62,9 @@
    │  │ ├─ signal_embeddings (pgvector 768-dim)  │  │
    │  │ ├─ confluence_events table               │  │
    │  │ ├─ briefs table                          │  │
+   │  │ ├─ stakeholder_feedback table   ← NEW    │  │
+   │  │ ├─ scoring_weights table       ← NEW    │  │
+   │  │ ├─ calibration_history table   ← NEW    │  │
    │  │ └─ [Indexes + Materialized Views]        │  │
    │  └──────────────────────────────────────────┘  │
    │  └─ Hybrid search: pgvector (semantic) +       │
@@ -91,7 +101,7 @@
 | **State Mgmt** | TanStack Query v5 | Server-state mgmt, auto caching/sync |
 | **Styling** | TailwindCSS 4 + shadcn/ui | Fast development, pre-built components |
 | **Backend API** | FastAPI + Python 3.11 | Async-first, auto OpenAPI docs, ML-friendly |
-| **Agent Orchestration** | LangGraph | Stateful multi-agent pipeline (ingest → validate → NLP → confluence → synthesize → brief) |
+| **Agent Orchestration** | LangGraph | Stateful multi-agent pipeline (ingest → validate → NLP → confluence → synthesize → brief → **stakeholder calibration**) |
 | **Task Queue** | Celery + Redis + APScheduler | Background ingestion, 2-hour fetch trigger |
 | **Primary DB** | PostgreSQL 16 + pgvector | ACID, JSONB, vector search in one DB (replaces Weaviate) |
 | **Cache** | Redis 7 | Sub-millisecond access, rate limiting |
@@ -104,6 +114,7 @@
 | **Deployment** | Vercel (frontend) + Render (backend) | Serverless, auto-scaling, free tier |
 | **Logging** | Loguru + /metrics endpoint | Structured logging, performance telemetry |
 | **Compliance** | `audit_log` (WORM) + PII detection pipeline | 21 CFR Part 11 / GxP audit trail |
+| **Calibration** | `StakeholderCalibrationService` (HITL) | Recalibrates function-scoring weights from persona feedback (`stakeholder_feedback` → `scoring_weights`) |
 
 
 ---
@@ -203,6 +214,8 @@ backend/
 │   │   │   ├── briefs.py        # GET /api/v1/briefs (narrative)
 │   │   │   ├── search.py        # POST /api/v1/search
 │   │   │   ├── entities.py      # GET /api/v1/entities
+│   │   │   ├── feedback.py      # POST /api/v1/feedback + GET /api/v1/feedback/summary (HITL)
+│   │   │   ├── calibrate.py     # POST /api/v1/calibrate (Stakeholder Calibration)
 │   │   │   └── health.py        # GET /api/v1/health
 │   │   └── routers.py           # API router aggregation
 │   └── auth.py                   # JWT token validation
@@ -212,7 +225,8 @@ backend/
 │   ├── nlp_agent.py             # LangGraph node: spaCy NER + BART
 │   ├── confluence_agent.py      # LangGraph node: cross-source convergence
 │   ├── synthesis_agent.py       # LangGraph node: narrative briefs
-│   └── brief_agent.py           # LangGraph node: role formatting
+│   ├── brief_agent.py           # LangGraph node: role formatting
+│   └── calibration_agent.py     # LangGraph node: stakeholder feedback → weight recalibration (HITL)
 ├── graph/
 │   └── intelligence_graph.py    # StateGraph wiring of agents
 ├── services/
@@ -225,6 +239,7 @@ backend/
 │   ├── temporal_patterns.py     # Competitive timeline matching
 │   ├── traceability.py          # Evidence chain / audit trail
 │   ├── query_engine.py          # RAG "Ask Athena" over pgvector
+│   ├── calibration_service.py   # StakeholderCalibrationService.recalibrate(role) (HITL)
 │   ├── api_fetcher.py           # Multi-source data fetch
 │   ├── cache_service.py         # Redis operations
 │   └── db_service.py            # PostgreSQL operations
@@ -236,7 +251,8 @@ backend/
 │   ├── signal_ingestion.py      # Celery task for fetching
 │   ├── signal_processing.py     # Celery task for NLP
 │   ├── confluence_detection.py  # Celery task for confluence scan
-│   └── trends_aggregation.py    # Celery task for aggregates
+│   ├── trends_aggregation.py    # Celery task for aggregates
+│   └── calibration_worker.py    # Celery task for async weight recalibration
 ├── entities/
 │   └── pharma_ontology.py       # B.Pharm-authored ontology (JSON)
 ├── utils/
@@ -249,6 +265,7 @@ backend/
     ├── test_nlp_service.py
     ├── test_confluence_engine.py
     ├── test_ontology_service.py
+    ├── test_stakeholder_calibration.py  # HITL weight recalibration tests
     ├── test_api_endpoints.py
     └── test_integration.py
 ```
@@ -359,6 +376,7 @@ class IntelligenceState(TypedDict):
     scored_signals: list[dict]
     confluent_stories: list[dict]
     role_briefs: dict[str, list]
+    calibration_weights: dict[str, float]   # from stakeholder_feedback (HITL)
 
 graph = StateGraph(IntelligenceState)
 graph.add_node("ingest", ingestion_agent)        # 6 APIs parallel + dedup
@@ -367,12 +385,14 @@ graph.add_node("nlp", nlp_agent)                 # spaCy NER + BART (batch)
 graph.add_node("confluence", confluence_agent)   # cross-source convergence
 graph.add_node("synthesize", synthesis_agent)    # narrative briefs
 graph.add_node("brief", brief_agent)             # role-specific formatting
+graph.add_node("calibrate", calibration_agent)   # HITL: feedback → weight update
 
 graph.add_edge("ingest", "validate")
 graph.add_edge("validate", "nlp")
 graph.add_edge("nlp", "confluence")
 graph.add_edge("confluence", "synthesize")
 graph.add_edge("synthesize", "brief")
+graph.add_edge("brief", "calibrate")             # calibration reads briefs + feedback
 graph.set_entry_point("ingest")
 runner = graph.compile()
 
@@ -412,7 +432,37 @@ class SignalConfluenceEngine:
         return None
 ```
 
-**Pharma Ontology Enrichment** (`services/ontology_service.py`) — B.Pharm-authored JSON that enriches extracted entities and validates drug/company accuracy (see `entities/pharma_ontology.py`). Resolves "Wegovy" → semaglutide → GLP-1 agonist → Novo Nordisk, flags competitor drugs at zero API cost, and provides the validation layer that answers "how do you ensure pharma accuracy?".
+**Pharma Ontology Enrichment** (`services/ontology_service.py`) — B.Pharm-authored JSON that enriches extracted entities and validates drug/company accuracy (see `entities/pharma_ontology.py`). Resolves "Hemlibra" → emicizumab → bispecific antibody → Roche → Haemophilia A competitor, flags competitor drugs at zero API cost, and provides the validation layer that answers "how do you ensure pharma accuracy?".
+
+**Stakeholder Calibration Loop** (`services/calibration_service.py` + `agents/calibration_agent.py`) — the HITL learning loop (new in v2.0). Simulated (and real) Novo Nordisk stakeholder personas rate routing accuracy per signal (`POST /api/v1/feedback`). `StakeholderCalibrationService.recalibrate(role)` recomputes the role × signal-type weights (`scoring_weights` table) and persists a `calibration_history` row:
+
+```python
+# services/calibration_service.py
+class StakeholderCalibrationService:
+    def __init__(self, db):
+        self.db = db
+
+    async def submit_feedback(self, signal_id, role, rating, reason, user_id) -> UUID:
+        # Append-only: stored in stakeholder_feedback (WORM audit)
+        return await self.db.insert_feedback(signal_id, role, rating, reason, user_id)
+
+    async def recalibrate(self, role: str) -> dict:
+        """Recompute role scoring weights from feedback (EMA-like damped update)."""
+        feedback = await self.db.feedback_for_role(role)
+        if len(feedback) < MIN_FEEDBACK_PER_ROLE:
+            return {"status": "skipped", "reason": "insufficient_feedback"}
+        new_weights = await self._weighted_update(feedback)      # per signal_type
+        old = await self.db.get_weights(role)
+        await self.db.update_weights(role, new_weights)
+        await self.db.insert_calibration_history(role, old, new_weights)
+        return {"status": "recalibrated", "role": role, "old": old, "new": new_weights}
+
+    async def summary(self) -> dict:
+        """Per-role avg rating, n feedback, last calibration timestamp."""
+        return await self.db.feedback_summary()
+```
+
+Calibration affects scoring for the *next* ingestion cycle: `scoring_service` loads `scoring_weights` fresh each batch, so a recalibration is visible in the next Q3 role-routing confidence scores. Every recalibration is written to `audit_log` (WORM).
 
 **Traceable Reasoning** (`services/traceability.py`) — every insight carries an evidence chain (source → URL → timestamp → excerpt → entities). Confidence computed from source count + platform diversity. Regulatory-grade audit trail.
 
@@ -449,14 +499,15 @@ CREATE TABLE signals (
     quality_score FLOAT DEFAULT 0.5,  -- 0.0-1.0 validation score
     relevance_score FLOAT DEFAULT 0.5, -- Overall importance
     velocity_score FLOAT DEFAULT 0.0,  -- Change rate
-    signal_type VARCHAR(30),           -- clinical_success | safety_concern |
-                                       -- competitive_move | regulatory_change |
-                                       -- access_issue
+    signal_type VARCHAR(30),           -- gene_therapy_milestone |
+                                       -- non_factor_therapy_update | inhibitor_development_signal |
+                                       -- regulatory_milestone | congress_publication |
+                                       -- patient_access_signal | competitive_pipeline_move
     confluence_level VARCHAR(10),      -- CRITICAL | HIGH | MEDIUM | LOW (if part of confluence)
     
     -- Extracted metadata (JSONB for flexibility)
-    entities JSONB,  -- {"drugs": ["semaglutide"], "companies": [...], ...}
-    ontology_context JSONB,  -- {"semaglutide": {"drug_class": "GLP-1 agonist", "manufacturer": "Novo Nordisk"}}
+    entities JSONB,  -- {"drugs": ["emicizumab"], "companies": [...], ...}
+    ontology_context JSONB,  -- {"emicizumab": {"drug_class": "Bispecific antibody", "manufacturer": "Roche"}}
     metadata JSONB,  -- {"language": "en", "word_count": 150, ...}
     
     -- Role-specific relevance (JSONB indexed)
@@ -513,6 +564,47 @@ CREATE TABLE confluence_events (
 CREATE INDEX idx_confluence_entity ON confluence_events(entity, detected_at DESC);
 CREATE INDEX idx_confluence_level ON confluence_events(alert_level);
 
+-- ─────────────────────────────────────────────────────────────────────
+-- STAKEHOLDER CALIBRATION LOOP (HITL) — NEW in v2.0
+-- ─────────────────────────────────────────────────────────────────────
+-- Append-only stakeholder feedback (routing accuracy ratings per signal)
+CREATE TABLE stakeholder_feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    signal_id UUID REFERENCES signals(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL,          -- medical_affairs | regulatory | market_access | commercial | rd
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    reason TEXT,
+    user_id TEXT,                       -- real user OR simulated persona id (hackathon)
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
+);
+CREATE INDEX idx_feedback_role ON stakeholder_feedback(role, created_at DESC);
+CREATE INDEX idx_feedback_signal ON stakeholder_feedback(signal_id);
+-- WORM: REVOKE UPDATE, DELETE ON stakeholder_feedback FROM app_user;
+
+-- Current role × signal_type scoring weights (recalibrated by HITL)
+CREATE TABLE scoring_weights (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role VARCHAR(50) NOT NULL,
+    signal_type VARCHAR(30) NOT NULL,
+    weight FLOAT NOT NULL,
+    version INT NOT NULL DEFAULT 1,
+    updated_by TEXT,                    -- 'human:regulatory_persona' | 'system'
+    updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    UNIQUE(role, signal_type, version)
+);
+
+-- Calibration history (every recalibration is audited)
+CREATE TABLE calibration_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role VARCHAR(50) NOT NULL,
+    old_weights JSONB NOT NULL,
+    new_weights JSONB NOT NULL,
+    trigger_reason TEXT,                -- 'stakeholder_feedback_batch' | 'manual'
+    feedback_count INT,
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
+);
+CREATE INDEX idx_calib_history_role ON calibration_history(role, created_at DESC);
+
 -- Narrative briefs (executive intelligence output)
 CREATE TABLE briefs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -533,7 +625,7 @@ CREATE INDEX idx_briefs_entity_role ON briefs(entity, role, created_at DESC);
 -- Entities table (for entity-centric queries)
 CREATE TABLE entities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,        -- "semaglutide", "Novo Nordisk"
+    name VARCHAR(255) NOT NULL,        -- "emicizumab", "Novo Nordisk"
     type VARCHAR(50) NOT NULL,         -- 'drug', 'company', 'indication'
     canonical_name VARCHAR(255),       -- Standardized name
     created_at TIMESTAMP DEFAULT NOW()
@@ -669,10 +761,10 @@ SELECT id, title FROM signals
 ORDER BY embedding <=> (SELECT embedding FROM signals WHERE id = :seed)
 LIMIT 10;
 
--- Hybrid (semantic + keyword) for "oral GLP-1"
+-- Hybrid (semantic + keyword) for "mim8 latest data"
 SELECT id, title FROM signals
 WHERE status = 'active'
-ORDER BY (1 - (embedding <=> :q_emb)) * 0.6 + similarity(title, 'oral GLP-1') * 0.4 DESC
+ORDER BY (1 - (embedding <=> :q_emb)) * 0.6 + similarity(title, 'mim8 latest data') * 0.4 DESC
 LIMIT 10;
 ```
 
@@ -841,20 +933,20 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
    = 800 unique signals (47% dedup rate)
 
 4. EXTRACT ENTITIES (Batch NLP)
-   ├─ Extract drugs: "semaglutide", "GLP-1"
-   ├─ Extract companies: "Novo Nordisk", "Eli Lilly"
-   ├─ Extract indications: "obesity", "diabetes"
-   └─ Extract phases: "Phase 2b", "FDA approval"
+   ├─ Extract drugs: "emicizumab", "mim8", "concizumab", "Hemgenix"
+   ├─ Extract companies: "Roche", "Novo Nordisk", "CSL Behring", "BioMarin"
+   ├─ Extract indications: "Haemophilia A", "Haemophilia B", "inhibitor development"
+   └─ Extract phases: "Phase 3", "FDA approval", "CHMP opinion"
    = 2400 entities extracted
 
-5. CLASSIFY SIGNALS (zero-shot BART-MNLI)
-   ├─ "Novo Nordisk launches oral GLP-1" → CLINICAL_SUCCESS
-   ├─ "GLP-1 side effects reported" → SAFETY_CONCERN
-   └─ "Pfizer pricing increased 15%" → COMPETITIVE_MOVE
+5. CLASSIFY SIGNALS (zero-shot BART-MNLI, haemophilia taxonomy)
+   ├─ "Hemgenix 3-year durability data at ASH" → GENE_THERAPY_MILESTONE
+   ├─ "mim8 Phase 3 meets primary endpoint" → COMPETITIVE_PIPELINE_MOVE
+   └─ "FDA approves fitusiran" → REGULATORY_MILESTONE
 
 6. ENRICH WITH PHARMA ONTOLOGY (B.Pharm, local JSON)
-   ├─ "Wegovy" → semaglutide → GLP-1 agonist → Novo Nordisk
-   ├─ "tirzepatide" → flagged as NOVO COMPETITOR (zero API cost)
+   ├─ "Hemlibra" → emicizumab → bispecific antibody → Roche → NOVO COMPETITOR
+   ├─ "Alhemo" → concizumab → anti-TFPI → Novo Nordisk (own asset)
    └─ Validation layer: catches NER false positives before storage
 
 7. SCORE RELEVANCE
@@ -881,7 +973,7 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
 
 11. SYNTHESIZE NARRATIVES (LangGraph synthesis agent)
     ├─ Confluence alert → 2-sentence executive alert
-    ├─ Weekly per-entity → WHAT / WHY / ACTION brief
+    ├─ Weekly per-entity → WHAT / WHY / ACTION brief (Four-Question wiring)
     └─ Grounded in traceable evidence chain (never speculative)
 
 12. STORE (Persist to databases)
@@ -896,8 +988,14 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
     ├─ Refresh trend aggregations
     └─ Update materialized views
 
-14. DONE
-    ✅ 800 signals + confluence alerts + narrative briefs ready
+14. CALIBRATE (LangGraph calibration agent — HITL, NEW v2.0)
+    ├─ Load stakeholder_feedback for this role batch
+    ├─ StakeholderCalibrationService.recalibrate(role)
+    ├─ Update scoring_weights + calibration_history + audit_log (WORM)
+    └─ Next ingestion cycle uses the recalibrated weights
+
+15. DONE
+    ✅ 800 signals + confluence alerts + narrative briefs + calibrated weights ready
 ```
 
 ### 3.2 Dashboard Request Flow
@@ -966,6 +1064,7 @@ USER BROWSER
 | **State Graph Pattern** | LangGraph multi-agent orchestration | Automatic state flow between agents |
 | **Evidence Chain Pattern** | Traceable Insight service | Regulatory-grade audit trail |
 | **Confluence Pattern** | Signal Confluence Engine | Cross-source convergence → strategic alerts |
+| **Human-in-the-Loop (HITL) Pattern** | Stakeholder Calibration Loop (v2.0) | Persona feedback recalibrates role-scoring weights; AI suggests, humans review |
 
 ### 4.2 SOLID Principles
 
@@ -1114,12 +1213,14 @@ class SignalQuery(BaseModel):
 ### 7.2 Test Examples
 
 ```python
-# Unit test: Entity extraction
+# Unit test: Entity extraction (haemophilia)
 @pytest.mark.asyncio
 async def test_extract_drug_names():
-    text = "Novo Nordisk's semaglutide shows 22% weight loss"
+    text = "Roche's emicizumab (Hemlibra) shows durable bleed control in Haemophilia A"
     entities = await nlp_service.extract_entities(text)
-    assert "semaglutide" in entities['drugs']
+    assert "emicizumab" in entities['drugs']
+    assert "Hemlibra" in entities['brands']
+    assert "Roche" in entities['companies']
 
 # Integration test: Full signal processing
 @pytest.mark.asyncio
@@ -1131,20 +1232,44 @@ async def test_process_signal_end_to_end():
     assert result[0]['relevance_score'] > 0
     assert result[0]['id'] in db
 
-# Unit test: Confluence detection (core differentiator)
+# Unit test: Confluence detection (core differentiator, haemophilia)
 @pytest.mark.asyncio
 async def test_confluence_detection():
-    signals = generate_signals(entity="GLP-1", types=["regulatory", "clinical", "social"])
-    event = await confluence_engine.detect_confluence(signals, "GLP-1")
+    signals = generate_signals(entity="Hemgenix",
+                               types=["regulatory", "congress_publication", "patient_access"])
+    event = await confluence_engine.detect_confluence(signals, "Hemgenix")
     assert event["alert_level"] == "CRITICAL"
     assert event["signal_count"] == 3
 
-# Unit test: Ontology enrichment resolves brand → molecule → company
+# Unit test: Ontology enrichment resolves brand → molecule → company (haemophilia)
 def test_ontology_enrichment():
-    signal = extract_entities({"text": "Wegovy shows weight loss"})
+    signal = extract_entities({"text": "Hemlibra shows inhibitor-agnostic efficacy"})
     enriched = ontology_service.enrich_signal(signal)
-    assert enriched["context"]["drug_class"] == "GLP-1 agonist"
-    assert enriched["context"]["manufacturer"] == "Novo Nordisk"
+    assert enriched["context"]["drug_class"] == "Bispecific antibody"
+    assert enriched["context"]["manufacturer"] == "Roche/Genentech"
+    assert enriched["context"]["novo_competitor"] is True
+
+# Unit test: Stakeholder Calibration recalibrates weights (HITL, NEW v2.0)
+@pytest.mark.asyncio
+async def test_stakeholder_calibration():
+    svc = StakeholderCalibrationService(db)
+    for _ in range(MIN_FEEDBACK_PER_ROLE + 5):
+        await svc.submit_feedback(signal_id=u, role="regulatory",
+                                  rating=2, reason="wrongly routed", user_id="reg_persona")
+    result = await svc.recalibrate("regulatory")
+    assert result["status"] == "recalibrated"
+    assert result["new"]["regulatory_milestone"] > result["old"]["regulatory_milestone"]
+    # WORM: feedback rows are immutable
+    with pytest.raises(Exception):
+        await db.execute("DELETE FROM stakeholder_feedback WHERE role='regulatory'")
+
+# Unit test: Calibration summary reflects persona feedback
+@pytest.mark.asyncio
+async def test_calibration_summary():
+    summary = await svc.summary()
+    assert "regulatory" in summary
+    assert summary["regulatory"]["feedback_count"] >= MIN_FEEDBACK_PER_ROLE
+    assert summary["regulatory"]["avg_rating"] > 0
 
 # Unit test: Traceable insight includes full evidence chain
 def test_traceable_insight():
@@ -1272,6 +1397,13 @@ volumes:
 - Relevance score distribution
 - Data freshness (age of oldest signal)
 
+# Calibration metrics (HITL, NEW v2.0)
+- Feedback submissions/day + per-role distribution
+- Routing accuracy trend per role (avg rating over time)
+- Weight drift per role × signal_type after recalibration
+- Confidence-score uplift (pre- vs post-calibration) in Q3 role badges
+- Recalibration frequency + trigger reasons (audited in calibration_history)
+
 # Health metrics
 - Uptime percentage
 - Error rate (5xx responses)
@@ -1297,10 +1429,20 @@ logger.info(
 # Confluence event logging
 logger.info(
     "confluence_event_detected",
-    entity="GLP-1",
+    entity="Hemgenix",
     alert_level="CRITICAL",
     signal_count=3,
-    signal_types=["regulatory", "clinical", "social"],
+    signal_types=["regulatory", "congress_publication", "patient_access"],
+)
+
+# Calibration event logging (HITL, NEW v2.0)
+logger.info(
+    "calibration_recalibrated",
+    role="regulatory",
+    old_weight=0.62,
+    new_weight=0.84,
+    feedback_count=12,
+    trigger="stakeholder_feedback_batch",
 )
 ```
 
@@ -1333,17 +1475,18 @@ This design is explicitly engineered against the Novo Nordisk judging criteria (
 
 | Criterion (Weight) | Design Element |
 |---|---|
-| **Innovation (25%)** | Signal Confluence Engine (2.4), Pharma Ontology enrichment (2.4), Traceable Reasoning (2.4) — no open-source tool combines these |
-| **Technical (25%)** | LangGraph multi-agent orchestration (2.3), pgvector hybrid search (2.6), Docker Compose 1-command deploy (8.2), graceful failure modes (5.1) |
-| **Business Impact (20%)** | Targets semaglutide patent expiry + Eli Lilly competition; confluence alerts give Medical Affairs/Commercial a 6-month head start (see SRS 6.4) |
+| **Innovation (25%)** | Signal Confluence Engine (2.4), Pharma Ontology enrichment (2.4), Stakeholder Calibration Loop / HITL (2.4, new v2.0), Traceable Reasoning (2.4) — no open-source tool combines these |
+| **Technical (25%)** | LangGraph multi-agent orchestration incl. calibration agent (2.3), pgvector hybrid search (2.6), Docker Compose 1-command deploy (8.2), graceful failure modes (5.1) |
+| **Business Impact (20%)** | Detects haemophilia paradigm shift (IV factor → subcutaneous non-factor → single-dose gene therapy); confluence alerts give Medical Affairs/Commercial a head start on mim8 positioning vs emicizumab and on Hemgenix/Roctavian gene-therapy disruption (see SRS 6.4) |
 | **Feasibility (15%)** | Free APIs + local CPU-only models, pgvector (one less container), public data sources (CDA-compliant), MVP → production path (10) |
-| **Presentation (15%)** | B.Pharm owns ontology + confluence clinical validation; CSE owns architecture; demo = `docker-compose up` + live dashboard |
+| **Presentation (15%)** | B.Pharm owns haemophilia ontology + confluence clinical validation; CSE owns architecture; demo = `docker-compose up` + live Four-Question dashboard + live calibration demo |
 
 **Key differentiators over existing open-source tools (Refined Architecture doc):**
 1. Confluence detection (not aggregation)
-2. Pharma ontology (B.Pharm-built, knows Wegovy = semaglutide = Novo Nordisk)
+2. Pharma ontology (B.Pharm-built, knows Hemlibra = emicizumab = Roche competitor; Alhemo = concizumab = Novo Nordisk asset)
 3. Traceable intelligence (regulatory-grade audit trail)
-4. Temporal pattern recognition (pre-approval surge / access crisis)
+4. Temporal pattern recognition (gene therapy milestone parade / regulatory filing surge)
 5. Role-specific narratives (not one report for everyone)
 6. Free stack, zero vendor lock-in
+7. **Stakeholder Calibration Loop (HITL)** — routing weights improve with persona feedback (new v2.0)
 

@@ -1,9 +1,10 @@
 # MetaRadar: UI Design Document
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 1.0  
+**Version:** 2.0  
 **Date:** August 2026  
-**Design Framework:** shadcn/ui + TailwindCSS 4
+**Design Framework:** shadcn/ui + TailwindCSS 4  
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples.
 
 ---
 
@@ -20,6 +21,8 @@
 7. **Confluence First:** Strategic alerts (converging stories) surface above raw signal feeds
 8. **Total Traceability:** Every insight shows its evidence chain — source → URL → excerpt (regulatory-grade)
 9. **Grounded Answers:** Ask Athena never invents; insufficient signals produce a clear "insufficient" response
+10. **Four-Question Clarity:** Every signal card answers Q1→Q4 (What changed / Why it matters / Which function / What action) with role-routing confidence badges
+11. **Human-in-the-Loop:** Stakeholders rate routing accuracy inline; weights recalibrate and confidence badges update (HITL calibration loop)
 
 ### 1.2 Color Palette
 
@@ -119,42 +122,40 @@ Usage:
 
 ## **2. LAYOUT WIREFRAMES**
 
-### 2.1 Main Dashboard Layout
+### 2.1 Main Dashboard Layout — Four-Question Panels
+
+The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each panel answers one question; a single signal card in Q1 unfolds across Q2→Q4. Background tints per panel: Q1 `#F0F4FF` (blue) · Q2 `#FFF4E6` (orange) · Q3 `#F0FFF4` (green) · Q4 `#FFF0F0` (red).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ MetaRadar  ≡  Medical Affairs    👤 John Smith  🔔 ⚙️           │  Header
 ├─────────────┬─────────────────────────────────────────────────────┤
-│             │                                                       │
-│  SIDEBAR    │ [Date Range] [Entity Filter] [Search] [Ask Athena]  │  Controls
-│  ─────────  │                                                       │
-│ • Overview  │ ┌──────────────────────────────────────────────────┐ │
-│ • Confluence│ │  🔴 CRITICAL — GLP-1 Safety Confluence (3 sigs)  │ │
-│   Alerts    │ │  FDA study + Reddit spike + PubMed AE paper      │ │
-│ • Ask Athena│ │  [View Evidence] [Dismiss]                       │ │ Confluence
-│ • Medical   │ ├──────────────────────────────────────────────────┤ │  Alerts
-│   Affairs   │ │  🟠 HIGH — Eli Lilly oral GLP-1 momentum (5 sigs)│ │  Panel
-│ • Regulatory│ └──────────────────────────────────────────────────┘ │
-│ • Commercial│                                                       │
-│             │ ┌──────────────────────────────────────────────────┐ │
-│             │ │  GLP-1 Signal Volume (7d)                        │ │
-│  Settings   │ │  [Trend Line Chart]        ▲▼                     │ │  Trend
-│  Logout     │ │  Peak: 127 signals on Jul 25                      │ │  Chart
-│             │ └──────────────────────────────────────────────────┘ │
-│             │                                                       │
-│             │ ┌──────────────────────────────────────────────────┐ │
-│             │ │ HIGH PRIORITY                                     │ │
-│             │ │                                                   │ │
-│             │ │ [High] Novo Nordisk Phase 2b oral GLP-1          │ │
-│             │ │ Source: Reuters | 2h ago | Score: 0.92           │ │ Signal
-│             │ │ ▼ Entities: semaglutide, Novo Nordisk, obesity   │ │  Card
-│             │ │ Summary: "Novo's oral formulation shows 22% loss" │ │
-│             │ │ [⛓ Evidence: 3 sources]                          │ │
-│             │ │                                                   │ │
-│             │ ├──────────────────────────────────────────────────┤ │
-│             │ │ [Med] FDA: Post-marketing study required         │ │
-│             │ │ Source: FDA Official | 4h ago | Score: 0.85     │ │
-│             │ │ [Regulatory importance highlighted]              │ │
+│             │ [Date Range] [Entity Filter] [Search] [Ask Athena]  │  Controls
+│  SIDEBAR    │                                                       │
+│  ─────────  │ ┌──────────────────────────────────────────────────┐ │
+│ • Overview  │ │  🔴 CRITICAL — Hemgenix 3yr Durability @ ASH     │ │
+│ • Q2 Panel  │ │  ASH abstract + CSL press release + patient      │ │
+│ • Confluence│ │  forum → 3 signals in 48h                        │ │
+│   Alerts    │ │  [View Evidence] [Dismiss]                       │ │ Confluence
+│ • Ask Athena│ ├──────────────────────────────────────────────────┤ │  Alerts
+│ • Medical   │ │  🟠 HIGH — mim8 Phase 3 readout (5 sigs)         │ │  Panel
+│   Affairs   │ └──────────────────────────────────────────────────┘ │
+│ • Regulatory│                                                       │
+│ • Market Acc│ ┌──────────────────────────────────────────────────┐ │
+│ • Commercial│ │  Q1  WHAT CHANGED?      Q3  WHICH FUNCTION?      │ │
+│ • R&D       │ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
+│             │ │  │ Signal Feed        │ │ Role Routing         │ │ │
+│             │ │  │ [haemophilia tags] │ │ MedAff 92% · Reg 84% │ │ │ Four-
+│  Settings   │ │  │ …                  │ │ Commercial 65%       │ │ │ Question
+│  Logout     │ │  └────────────────────┘ │ [feedback ⭐ widget] │ │ │ Panels
+│             │ ├──────────────────────────┴──────────────────────┤ │ │ (Q1-Q4)
+│             │ │ Q2  WHY DOES IT MATTER?   Q4  WHAT ACTION?      │ │ │
+│             │ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
+│             │ │  │ Relevance breakdown│ │ AI-suggested actions │ │ │
+│             │ │  │ AI explanation     │ │ "Suggested — requires│ │ │
+│             │ │  │ Confluence alert   │ │  human review"       │ │ │
+│             │ │  │ Competitive context│ │ …                    │ │ │
+│             │ │  └────────────────────┘ └──────────────────────┘ │ │
 │             │ └──────────────────────────────────────────────────┘ │
 │             │                                                       │
 │             │ [Show More Signals] → Load next 20                  │
@@ -167,45 +168,66 @@ Usage:
 **Collapsed:**
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ [▶] [High] Novo Nordisk Phase 2b oral GLP-1               │
-│     Source: Reuters | 2h ago | Score: 0.92                │
+│ [▶] [High] Hemgenix 3-year Factor IX durability @ ASH      │
+│     Source: CSL Behring | 2h ago | Score: 0.92            │
 └────────────────────────────────────────────────────────────┘
 ```
 
-**Expanded:**
+**Expanded (Four-Question layout):**
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ [▼] [High] Novo Nordisk Phase 2b oral GLP-1               │
-│     Source: Reuters | 2h ago | Score: 0.92                │
+│ [▼] [High] Hemgenix 3-year Factor IX expression data shows │
+│     sustained efficacy at ASH 2026                        │
+│     Source: CSL Behring | 2h ago | Score: 0.92            │
 ├────────────────────────────────────────────────────────────┤
-│ Summary (AI-generated):                                    │
-│ "Novo Nordisk's oral semaglutide achieves 22% weight loss │
-│  in Phase 2b, positioning for Q2 2027 submission."        │
+│ Q1 · WHAT CHANGED?  (panel tint #F0F4FF)                   │
+│ "CSL Behring/UniQure present 3-year durability for         │
+│  etranacogene dezaparvovec (Hemgenix) in Haemophilia B —   │
+│  sustained Factor IX expression, no new safety signals."   │
+│ Entities: 🔬 gene therapy · 🏢 CSL Behring, UniQure       │
+│           📋 Haemophilia B · 📊 FDA-approved (2022)        │
 ├────────────────────────────────────────────────────────────┤
-│ Entities:                                                  │
-│ 🔬 Drug: semaglutide (GLP-1 agonist)                      │
-│ 🏢 Company: Novo Nordisk                                   │
-│ 📋 Indication: Obesity, Type 2 Diabetes                   │
-│ 📊 Clinical Phase: Phase 2b                                │
+│ Q2 · WHY DOES IT MATTER?  (panel tint #FFF4E6)             │
+│ Relevance: Medical Affairs 0.92 · R&D 0.78 · Commercial 0.65│
+│ AI: "Sustained 3-year gene-therapy durability strengthens  │
+│  the curative narrative vs lifelong prophylaxis — impacts  │
+│  mim8/concizumab positioning and HTA arguments."           │
+│ ⚡ CONFLUENCE: gene_therapy_milestone_parade (3 signals/48h)│
 ├────────────────────────────────────────────────────────────┤
-│ Role Relevance:                                            │
-│ Medical Affairs:  ████████░░ 0.92  (Very Relevant)        │
-│ Regulatory:       ██████░░░░ 0.68  (Somewhat Relevant)   │
-│ Commercial:       ███░░░░░░░ 0.35  (Not Relevant)         │
+│ Q3 · WHICH FUNCTION SHOULD REVIEW IT?  (panel tint #F0FFF4)│
+│ Medical Affairs  ██████████ 0.92  (Very Relevant)          │
+│ R&D              ████████░░ 0.78  (Relevant)               │
+│ Commercial       ██████░░░░ 0.65  (Somewhat Relevant)      │
+│ Regulatory       ████░░░░░░ 0.42  (Low)                    │
+│ ┌────────────────────────────────────────────────────────┐ │
+│ │ ⭐ Stakeholder Review (HITL calibration):              │ │
+│ │ Was this routing correct?  ★★★★★ (1-5)               │ │
+│ │ [Submit] — recalibrates scoring_weights, confidence   │ │
+│ │ badges update next cycle                              │ │
+│ └────────────────────────────────────────────────────────┘ │
+├────────────────────────────────────────────────────────────┤
+│ Q4 · WHAT ACTION MAY BE REQUIRED?  (panel tint #FFF0F0)    │
+│ Suggested — requires human review:                         │
+│  [ ] Medical Affairs to brief Haemophilia team on          │
+│      gene-therapy durability vs prophylaxis positioning    │
+│  [ ] Commercial to re-run budget impact with 3-yr          │
+│      durability evidence                                   │
+│  [ ] R&D to assess Hemgenix effect on mim8 trial           │
+│      endpoints/durability expectations                     │
 ├────────────────────────────────────────────────────────────┤
 │ ⛓ Evidence Chain (traceable reasoning):                    │
-│ [1] Reuters · Jul 25 → "Novo oral GLP-1 Phase 2b results"  │
-│     https://reuters.com/...  (excerpt preview)             │
-│ [2] ClinicalTrials.gov · Jul 24 → trial NCT-registration   │
-│     https://clinicaltrials.gov/...  (excerpt preview)      │
-│ [3] PubMed · Jul 23 → "Comparative efficacy oral GLP-1..."  │
-│     https://pubmed.ncbi.nlm.nih.gov/...  (excerpt preview) │
+│ [1] ASH 2026 Abstract · Dec → "Hemgenix 3-yr data"         │
+│     https://ash.confex.com/...  (excerpt preview)          │
+│ [2] CSL Behring PR · Dec → "3-year durability results"     │
+│     https://cslbehring.com/...  (excerpt preview)          │
+│ [3] Reddit r/Hemophilia · Dec → patient discussion         │
+│     https://reddit.com/...  (excerpt preview)              │
 │ Confidence: 84% (3 independent sources, 3 platforms)       │
 ├────────────────────────────────────────────────────────────┤
 │ Original Source:                                           │
-│ "Novo Nordisk's oral semaglutide showed sustained weight  │
-│  loss with favorable safety profile in Phase 2b trial.    │
-│  The company plans pivotal studies for late 2026..."      │
+│ "Etranacogene dezaparvovec (Hemgenix) demonstrated         │
+│  sustained Factor IX activity and low bleeding rates       │
+│  through 3 years follow-up in Haemophilia B..."            │
 │                                                            │
 │ [Read Full Article →]                                     │
 └────────────────────────────────────────────────────────────┘
@@ -236,14 +258,16 @@ export const DisclaimerBadge = () => (
 │ [Last 24h] [Last 7d] [Last 30d] [Custom ▼]              │
 │                                                            │
 │ Entity Filter:                                            │
-│ ☑ Drugs: semaglutide, tirzepatide, dulaglutide          │
-│ ☐ Companies: Novo Nordisk, Eli Lilly, Pfizer            │
-│ ☐ Indications: Obesity, Diabetes, CVD                   │
+│ ☑ Drugs: emicizumab, mim8, concizumab, fitusiran          │
+│ ☐ Companies: Roche, Novo Nordisk, Sanofi, Pfizer, CSL     │
+│ ☐ Indications: Haemophilia A, Haemophilia B, Inhibitors   │
+│ ☐ Modalities: Gene therapy, Bispecific, Anti-TFPI, RNAi   │
 │                                                            │
 │ Signal Type:                                              │
-│ ☑ Clinical Success  ☑ Safety  ☑ Competitive  ☑ Access  │
+│ ☑ Gene Therapy  ☑ Non-Factor  ☑ Inhibitor  ☑ Regulatory  │
+│ ☑ Congress/Publication  ☑ Patient Access  ☑ Pipeline     │
 │                                                            │
-│ Search:  [🔍 "oral formulation" ]  [Clear All]           │
+│ Search:  [🔍 "gene therapy durability" ]  [Clear All]     │
 │                                                            │
 │ [Apply] [Reset]                                           │
 │                                                            │
@@ -270,10 +294,10 @@ export const DisclaimerBadge = () => (
    - Navigation: Overview, Confluence Alerts, Ask Athena, Briefs, Dashboard, Settings, Help
    - Account section (user name, avatar)
 
-3. **Main Content**
+3. **Main Content — Four-Question Panels**
    - **Controls Bar** (fixed below header)
      - Date range selector
-     - Entity filters (multi-select)
+     - Entity filters (multi-select, haemophilia ontology)
      - Search box (keyword + semantic)
      - "Ask Athena" quick-launch input
      - Apply/Reset buttons
@@ -283,22 +307,20 @@ export const DisclaimerBadge = () => (
      - Each alert: entity + signal count + expandable evidence chain
      - See §3.2 for full page
 
-   - **Trend Visualization**
-     - Line chart: Signal volume over 7 days
-     - X-axis: Date
-     - Y-axis: Signal count
+   - **Four-Question Panel Grid** (2×2)
+     - **Q1 WHAT CHANGED?** (#F0F4FF) — Signal feed with signal-type badges and haemophilia entity tags
+     - **Q2 WHY DOES IT MATTER?** (#FFF4E6) — Relevance breakdown, AI explanation, confluence alert, competitive context
+     - **Q3 WHICH FUNCTION SHOULD REVIEW IT?** (#F0FFF4) — Role-routing badges with confidence scores + inline stakeholder feedback widget (★ 1-5)
+     - **Q4 WHAT ACTION MAY BE REQUIRED?** (#FFF0F0) — AI-suggested action bullets prefaced "Suggested — requires human review"
+   - **Haemophilia Signal Volume (7d)** line chart
+     - X-axis: Date, Y-axis: Signal count, grouped by signal type
+     - Note: "Haemophilia gene therapy signal volume (7d)" chart label
      - Interactive: Hover shows exact values
-     - Note: "Last refreshed 15 minutes ago"
-
-   - **Signal Feed**
-     - Paginated list (20 signals per page)
-     - Virtual scrolling (infinite scroll)
-     - Each signal shows: priority badge, title, source, time, score
-     - Clickable to expand full details
 
 4. **Footer**
    - Data freshness: "Last updated 2:15 PM • Cached"
-   - API status indicators: ✓ NewsAPI, ✓ PubMed, ⚠ Twitter
+   - API status indicators: ✓ NewsAPI, ✓ PubMed, ⚠ Reddit
+   - Calibration status: "Weights recalibrated 3x this month — latest by Regulatory persona"
    - Help link
 
 **Performance Targets:**
@@ -333,28 +355,29 @@ The Signal Confluence Engine output — MetaRadar's core differentiator. Instead
 **Wireframe:**
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  ⚡ Signal Confluence — GLP-1 Ecosystem (last 48h)             │
+│  ⚡ Signal Confluence — Haemophilia Gene Therapy (last 48h)     │
 ├─────────────────────────────────────────────────────────────────┤
 │ Filters: [Entity ▼] [Time Window: 48h ▼] [Alert: All ▼]        │
 ├─────────────────────────────────────────────────────────────────┤
 │ 🔴 CRITICAL                                                    │
 │ ┌───────────────────────────────────────────────────────────┐ │
-│ │ GLP-1 Safety Confluence — 3 signals, 48h                 │ │
-│ │ "FDA requires post-marketing study, patient complaints   │ │
-│ │  trending, adverse event paper published. Potential      │ │
-│ │  safety narrative forming."                              │ │
-│ │ Sources: FDA.gov · Reddit r/diabetes · PubMed            │ │
+│ │ Hemgenix 3-year Durability — 3 signals, 48h              │ │
+│ │ "ASH abstract + CSL Behring press release + r/Hemophilia│ │
+│ │  patient discussion all fire on sustained FIX expression.│ │
+│ │  Gene-therapy durability narrative strengthening."       │ │
+│ │ Pattern: GENE_THERAPY_MILESTONE_PARADE · stage 3/4       │ │
+│ │ Sources: ASH 2026 · CSL Behring · Reddit r/Hemophilia    │ │
 │ │ Recommended action: Medical Affairs review within 24h    │ │
 │ │ [View full evidence chain] [Export audit trail]          │ │
 │ └───────────────────────────────────────────────────────────┘ │
 │ 🟠 HIGH                                                       │
-│  Eli Lilly oral GLP-1 momentum (5 signals · 48h)             │
-│  Pattern: PRE-APPROVAL SURGE · stage 3/5 (FDA advisory)      │
-│  Predicted next: Priority review designation                  │
+│  mim8 Phase 3 readout (5 signals · 48h)                      │
+│  Pattern: COMPETITIVE_REGULATORY_FILING · stage 2/4          │
+│  Predicted next: sBLA filing vs emicizumab                   │
 │  [View full evidence chain]                                  │
 │ 🟠 HIGH                                                       │
-│  Semaglutide India market access (4 signals · 48h)           │
-│  Generics pricing + formulary signals converging              │
+│  Fitusiran inhibitor safety wave (2 signals · 24h)           │
+│  Pattern: INHIBITOR_SAFETY_WAVE                             │
 ├─────────────────────────────────────────────────────────────────┤
 │ [Refresh] — confluence rescan runs every 2h with ingestion    │
 └─────────────────────────────────────────────────────────────────┘
@@ -376,21 +399,22 @@ Natural-language query interface (Week 4 RAG feature). Judging hook: "we don't j
 ┌─────────────────────────────────────────────────────────────────┐
 │  Ask Athena                                                        │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 🔍 What is Eli Lilly doing with oral GLP-1?              │  │
+│  │ 🔍 What is the latest on mim8?                           │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │  [Ask]  (role-scoped: Medical Affairs)                          │
 ├─────────────────────────────────────────────────────────────────┤
 │  Answer (grounded in 4 signals, last 7 days):                    │
-│  "Eli Lilly's oral GLP-1 program is advancing: Phase 3        │
-│   registration filed (ClinicalTrials.gov), orforglipron       │
-│   expected FDA approval 2027, HCP forum discussion rising.    │
-│   No comparative efficacy data published this week."          │
+│  "Novo Nordisk's mim8 Phase 3 programme in Haemophilia A       │
+│   met its primary endpoint; analysts expect submission vs      │
+│   emicizumab positioning. No new safety signals reported.      │
+│   Durability beyond 12 months not yet published."              │
 │  Confidence: 82% · based on 4 supporting signals                │
 ├─────────────────────────────────────────────────────────────────┤
 │  Supporting signals:                                             │
-│  [1] ClinicalTrials.gov — orforglipron Phase 3 registered       │
-│  [2] Reuters — Lilly investor call mentions oral timeline       │
-│  [3] PubMed — comparator oral vs injectable GLP-1              │
+│  [1] ClinicalTrials.gov — mim8 Phase 3 (HA) registered         │
+│  [2] Reuters — Novo Nordisk press release on readout           │
+│  [3] PubMed — mim8 vs emicizumab comparator data               │
+│  [4] Reddit r/Hemophilia — HCP/patient reaction                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -403,14 +427,14 @@ Natural-language query interface (Week 4 RAG feature). Judging hook: "we don't j
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Weekly Intelligence Brief — Eli Lilly (Medical Affairs)  [Export]│
+│  Weekly Intelligence Brief — Hemgenix (Medical Affairs)  [Export]│
 ├─────────────────────────────────────────────────────────────────┤
 │ 🟠 WHAT HAPPENED: 5 independent signals this week (2 clinical, │
-│    1 regulatory, 2 social) detail Lilly's oral GLP-1 momentum │
-│ 🎯 WHY IT MATTERS: oral formulation directly threatens Novo's │
-│    oral semaglutide share; historically Lilly wins head-to-head│
-│ ✅ RECOMMENDED ACTION: Medical Affairs should review the Phase │
-│    3 registration package before the August advisory committee │
+│    1 regulatory, 2 patient_access) detail Hemgenix 3-yr data  │
+│ 🎯 WHY IT MATTERS: sustained gene-therapy durability threatens │
+│    lifelong prophylaxis model; affects mim8/concizumab messaging│
+│ ✅ RECOMMENDED ACTION: Medical Affairs should review the 3-yr  │
+│    durability evidence before the next HTA engagement          │
 ├─────────────────────────────────────────────────────────────────┤
 │ Source counts: 5 · Confidence: 84% · Full evidence chain ↓      │
 └─────────────────────────────────────────────────────────────────┘
@@ -488,10 +512,12 @@ Password: [__________________]    Type: password (masked)
 ```
 Entity Filter: ▼
 ┌─────────────────────────────────┐
-│ ☑ Semaglutide                   │  Searchable
-│ ☑ GLP-1                         │  Checkboxes
-│ ☐ Tirzepatide                   │  Scrollable
-│ ☐ Dulaglutide                   │  
+│ ☑ Emicizumab                    │  Searchable
+│ ☑ Mim8                          │  Checkboxes
+│ ☐ Concizumab (Alhemo)           │  Scrollable
+│ ☐ Fitusiran                    │  
+│ ☐ Hemgenix                     │  
+│ ☐ Roctavian                    │  
 │ [Search entities...]            │
 └─────────────────────────────────┘
 ```
@@ -528,8 +554,9 @@ Date Range: [Last 7d ▼]
 
 **Temporal Pattern Indicator**
 ```
-⏱ PRE-APPROVAL SURGE · Stage 3/5    (shows current position in competitive timeline)
-⏱ ACCESS CRISIS · Stage 2/3
+⏱ GENE_THERAPY_MILESTONE_PARADE · Stage 3/4    (shows current position in competitive timeline)
+⏱ COMPETITIVE_REGULATORY_FILING · Stage 2/4
+⏱ INHIBITOR_SAFETY_WAVE · Stage 1/3
 ```
 
 **Evidence Chain Indicator**
@@ -548,8 +575,8 @@ Date Range: [Last 7d ▼]
 **API Status (Footer)**
 ```
 ✓ NewsAPI      Green indicator, "Connected"
-⚠ Twitter      Yellow warning, "Slow (last: 5m ago)"
-✗ Reddit       Red error, "Connection failed"
+⚠ Reddit       Yellow warning, "Slow (last: 5m ago)"
+✗ ClinicalTrials.gov   Red error, "Connection failed"
 ```
 
 ### 4.4 Modals & Dialogs
@@ -617,10 +644,10 @@ Signal Count
 
 ```
                            48h window
-   FDA.gov      ──▶ ● ──────────────────┐
-   Reddit       ──▶ ● ──▶ ● ────────────┤
-   PubMed       ──────────────────── ▶  ●  ← CONVERGENCE
-   NewsAPI      ──▶ ● ──────────────────┘        (GLP-1 safety)
+   ASH 2026       ──▶ ● ──────────────────┐
+   Reddit         ──▶ ● ──▶ ● ────────────┤
+   CSL Behring    ──────────────────── ▶  ●  ← CONVERGENCE
+   ClinicalTrials ──▶ ● ──────────────────┘        (Hemgenix 3-yr)
                                         │
                               🔴 CRITICAL alert
 ```
@@ -655,11 +682,11 @@ Color Scale:
 **Most Mentioned Terms**
 
 ```
-          semaglutide
-      GLP-1       Eli Lilly
-    obesity               Novo Nordisk
-  Phase2b      diabetes        efficacy
-     clinical        weight-loss
+          emicizumab
+      mim8       Hemgenix
+    concizumab           Roche
+  gene-therapy      inhibitor     bispecific
+     factor-IX        bleeding-rate
 ```
 
 ---
@@ -828,14 +855,14 @@ Skeleton loaders for card list:
 │ ☰ MetaRadar    🔔 👤│  Hamburger menu
 ├─────────────────────┤
 │ Date: [Last 7d ▼]   │
-│ Entity: [semaglutide │
+│ Entity: [emicizumab │
 │         ▼]          │
 │ [Search...]         │
 ├─────────────────────┤
 │ ┌─────────────────┐ │
-│ │ Trend Chart     │ │
-│ │ (smaller, full  │ │
-│ │  width)         │ │
+│ │ Q1-Q4 Panels    │ │
+│ │ (2×2 stack,     │ │
+│ │  full width)    │ │
 │ └─────────────────┘ │
 ├─────────────────────┤
 │ ┌─────────────────┐ │
@@ -856,11 +883,17 @@ Skeleton loaders for card list:
 │ MetaRadar    [Medical Affairs]    🔔 👤     │
 ├──────────────────────────────────────────────┤
 │                                              │
-│ Date: [▼] Entity: [semaglutide ▼] Search:[▼]│
+│ Date: [▼] Entity: [emicizumab ▼] Search:[▼]                │
 │                                              │
 │ ┌────────────────────────────────────────┐   │
-│ │   Trend Chart (70% width)              │   │
-│ │   ▲ 150 signals                        │   │
+│ │   Q1-Q4 Panels (2×2)                   │   │
+│ │   Q1 Feed │ Q3 Role badges             │   │
+│ │   Q2 Why  │ Q4 Actions                 │   │
+│ └────────────────────────────────────────┘   │
+│                                              │
+│ ┌────────────────────────────────────────┐   │
+│ │   Haemophilia Signal Volume (7d)       │   │
+│ │   ▲ 150 signals (gene therapy ↑)      │   │
 │ │   │      ╱╲                            │   │
 │ │   │     ╱  ╲                           │   │
 │ │   └─────────────────────────────────   │   │
@@ -935,9 +968,11 @@ Modal fade:    0.2s opacity transition
 - `ConfluenceAlertCard` — alert level badge + entity + signal count + evidence chain
 - `EvidenceChain` — collapsible source → URL → excerpt audit trail
 - `AthenaQueryBar` — natural-language input + grounded answer + supporting signals
-- `TemporalPatternTag` — "PRE-APPROVAL SURGE · Stage 3/5" indicator
+- `TemporalPatternTag` — "GENE_THERAPY_MILESTONE_PARADE · Stage 3/4" indicator
 - `NarrativeBriefCard` — WHAT / WHY / ACTION executive brief
-- `OntologyTag` — resolves brand → molecule → company (Wegovy → semaglutide → Novo Nordisk)
+- `OntologyTag` — resolves brand → molecule → company (Hemlibra → emicizumab → Roche)
+- `StakeholderFeedbackWidget` (NEW v2.0) — inline ★ 1-5 rating on Q3 role badges; posts to `POST /api/v1/feedback`, shows "routing confidence updated after calibration"
+- `QuestionPanel` (NEW v2.0) — the four-question wrapper with panel tint (`#F0F4FF`/`#FFF4E6`/`#F0FFF4`/`#FFF0F0`) and Q1-Q4 headers
 
 **Installation:**
 ```bash
@@ -983,6 +1018,7 @@ module.exports = {
 |---|---|---|
 | 1.0 | 2026-07-26 | Initial MVP wireframes |
 | 1.1 | 2026-07-28 | Aligned with Refined Architecture: added Confluence Alerts page (§3.2), Ask Athena page (§3.3), Narrative Briefs view (§3.4), traceable evidence chain on signal cards (§2.2), confluence diagram viz (§5.2), confluence/pattern/evidence badges (§4.3), custom intelligence components (§11) |
+| 2.0 | 2026-08-12 | Novo Nordisk kickoff revision: Four-Question panel layout (Q1–Q4) replaces Signal Feed + Trend (§2.1, §3.1, §15); stakeholder review widget on Q3 role badges (HITL calibration); haemophilia entity filters + signal types (§2.3); "Haemophilia gene therapy signal volume (7d)" chart; haemophilia-themed examples throughout |
 
 ---
 
@@ -1006,4 +1042,72 @@ Before handoff to development:
 - [ ] Evidence chain accessible from every insight (traceable reasoning)
 - [ ] Temporal pattern stages rendered as visual timeline
 - [ ] "Ask Athena" hallucination guard state tested ("Insufficient signals in last 7 days")
+- [ ] Four-Question panels (Q1–Q4) color-coded (#F0F4FF/#FFF4E6/#F0FFF4/#FFF0F0) and distinguishable (NEW v2.0)
+- [ ] Stakeholder feedback widget renders on Q3 panel and posts to `/api/v1/feedback` (NEW v2.0)
+- [ ] Q4 action bullets prefaced "Suggested — requires human review" (NEW v2.0)
+- [ ] Calibration status visible in footer (e.g., "Weights recalibrated 3x this month") (NEW v2.0)
+
+---
+
+## **15. FOUR-QUESTION DISPLAY SPECIFICATIONS (NEW v2.0)**
+
+The Four-Question Framework is the primary dashboard paradigm. Every signal card renders the four questions as a horizontal stepper / stacked panels. Panel background tints visually separate the questions.
+
+### 15.1 Panel Colors (per question)
+
+| Panel | Question | Hex | Purpose |
+|---|---|---|---|
+| Q1 | WHAT CHANGED? | `#F0F4FF` | Blue — live signal feed, signal-type badges, entity tags |
+| Q2 | WHY DOES IT MATTER? | `#FFF4E6` | Orange — relevance breakdown, AI explanation, confluence alert, competitive context |
+| Q3 | WHICH FUNCTION SHOULD REVIEW IT? | `#F0FFF4` | Green — role-routing badges with confidence scores + stakeholder feedback widget |
+| Q4 | WHAT ACTION MAY BE REQUIRED? | `#FFF0F0` | Red — AI-suggested action bullets prefaced *"Suggested — requires human review"* |
+
+### 15.2 Q3 Role Badge Component
+
+```tsx
+// components/RoleBadge.tsx — Q3 panel
+export const RoleBadge = ({ role, confidence }: { role: Role; confidence: number }) => (
+  <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-800 ring-1 ring-green-200">
+    {roleLabel[role]}
+    <span className="text-green-600">{Math.round(confidence * 100)}%</span>
+    {/* post-calibration uplift indicator, e.g. "▲ +4 after calibration" */}
+  </span>
+);
+```
+
+### 15.3 Stakeholder Feedback Widget (Q3)
+
+Inline on the Q3 panel of every signal card. Posted to `POST /api/v1/feedback` (`{signal_id, role, rating, reason, user_id}`). After N feedback rows for a role, `POST /api/v1/calibrate` is triggered; confidence badges show the updated score on the next dashboard load.
+
+```tsx
+// components/StakeholderFeedbackWidget.tsx
+export const StakeholderFeedbackWidget = ({ signalId, role }) => {
+  const [rating, setRating] = useState(0);
+  const [reason, setReason] = useState("");
+  return (
+    <div className="rounded-lg border border-green-200 bg-green-50 p-2 text-xs">
+      <p className="font-medium text-green-800">⭐ Stakeholder review — was this routing correct?</p>
+      <div className="flex gap-1 py-1">{Array.from({ length: 5 }, (_, i) => (
+        <button key={i} onClick={() => setRating(i + 1)} aria-label={`${i + 1} star`} className="text-lg">
+          {i < rating ? "★" : "☆"}
+        </button>
+      ))}</div>
+      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional: why?" className="w-full rounded border border-green-300 p-1" />
+      <button onClick={() => submitFeedback(signalId, role, rating, reason)} className="mt-1 rounded bg-green-600 px-2 py-0.5 text-white">
+        Submit (recalibrates weights)
+      </button>
+    </div>
+  );
+};
+```
+
+### 15.4 Q4 Action Suggestion Component
+
+Every Q4 bullet is prefaced by the fixed label *"Suggested — requires human review"*. Actions are non-committal (checkboxes, no implied approval). Grouped by target function.
+
+### 15.5 Responsive Behavior
+
+- Desktop (>1024px): 2×2 grid — Q1+Q3 left column, Q2+Q4 right column
+- Tablet (768–1024px): single column, panels stacked Q1→Q4
+- Mobile (<768px): panels collapse; Q1 feed first, others behind a "Why it matters / Action" expander
 

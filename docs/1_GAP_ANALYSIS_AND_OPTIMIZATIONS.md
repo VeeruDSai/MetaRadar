@@ -10,7 +10,7 @@
 **Resolution:**
 ```
 TIER 1 (Weeks 1-2): FREE ONLY
-├─ NewsAPI: 500 free requests/day ✅
+├─ NewsAPI: 500 free requests/day ✅  (haemophilia query terms)
 ├─ PubMed: Free API ✅
 ├─ Twitter: Academic research tier (free) ✅
 ├─ Reddit: Free PRAW library ✅
@@ -24,6 +24,35 @@ TIER 2 (Week 3): Pluggable Local Models (zero API cost)
    via LOCAL_LLM_MODEL env var. Default: "facebook/bart-large-cnn".
    Swap to Gemma, Mistral, Phi-3, TinyLlama or any seq2seq/decoder
    model with a single config change — no code change required.
+```
+
+**Query Terms (haemophilia domain, B.Pharm-authored):**
+```python
+HAEMOPHILIA_QUERY_TERMS = {
+    "primary": [
+        "haemophilia", "hemophilia", "factor VIII", "factor IX",
+        "haemophilia A", "haemophilia B", "bleeding disorder"
+    ],
+    "drugs": [
+        "emicizumab", "Hemlibra", "concizumab", "Alhemo", "fitusiran",
+        "mim8", "marstacimab", "Hemgenix", "Roctavian", "gene therapy haemophilia"
+    ],
+    "clinical": [
+        "inhibitor development", "prophylaxis haemophilia", "factor replacement",
+        "extended half-life factor", "AAV gene therapy", "antithrombin"
+    ],
+    "regulatory": [
+        "haemophilia FDA approval", "haemophilia EMA", "rare disease designation",
+        "orphan drug haemophilia", "NICE haemophilia", "haemophilia HTA"
+    ],
+    "congress": [
+        "ASH 2026 haemophilia", "ISTH haemophilia", "WFH congress", "EHA haemophilia"
+    ],
+    "patient_access": [
+        "haemophilia treatment access", "haemophilia reimbursement",
+        "haemophilia patient advocacy", "WFH", "NHF hemophilia"
+    ]
+}
 ```
 
 **Model-Agnostic Implementation:**
@@ -105,15 +134,17 @@ async def fetch_with_fallback(source_name: str, fetch_fn):
 ```
 MVP (Weeks 1-3):
 ├─ Primary Role: Medical Affairs
+├─ Therapy Area: Haemophilia within Rare Disease (Haemophilia A + Haemophilia B)
 ├─ Data Sources: NewsAPI + PubMed (+ parallel ingestion agents ready for more)
 ├─ Intelligence Core:
-│  ├─ LangGraph multi-agent orchestration (ingest → validate → NLP → confluence → synthesize → brief)
-│  ├─ Pharma Ontology enrichment (B.Pharm-built: drug → company → indication → competitor)
+│  ├─ LangGraph multi-agent orchestration (ingest → validate → NLP → confluence → synthesize → brief → calibrate)
+│  ├─ Pharma Ontology enrichment (B.Pharm-built: haemophilia drugs → company → indication → competitor)
 │  ├─ Signal Confluence Engine (core differentiator: cross-source convergence alerts)
 │  ├─ Signal fetch ✅
 │  ├─ Entity extraction (drugs, companies) ✅
 │  ├─ Role-relevance scoring + traceable reasoning ✅
 │  ├─ Medical Affairs dashboard ✅
+│  ├─ Four-Question Framework UI (What Changed / Why It Matters / Which Function / What Action) ✅
 │  └─ Trend visualization ✅
 │
 Week 4: Add ONE Bonus Feature
@@ -150,8 +181,9 @@ async def validate_signal(signal: dict) -> tuple[bool, float]:
         "reddit": 0.40,
     }
     
-    # Check 4: Pharma relevance keywords
-    pharma_keywords = ['drug', 'glp', 'obesity', 'trial']
+    # Check 4: Haemophilia relevance keywords
+    pharma_keywords = ['haemophilia', 'hemophilia', 'factor', 'emicizumab',
+                       'inhibitor', 'gene therapy']
     relevance = sum(1 for kw in pharma_keywords if kw in signal['text'].lower())
     
     final_score = (source_scores.get(signal['source'], 0.6) * 0.7 + 
@@ -173,9 +205,9 @@ async def validate_signal(signal: dict) -> tuple[bool, float]:
 
 @pytest.mark.asyncio
 async def test_entity_extraction():
-    signal = {"text": "Novo Nordisk launches oral semaglutide"}
+    signal = {"text": "Roche's Hemlibra (emicizumab) shows real-world efficacy in Haemophilia A"}
     result = await process_signal(signal)
-    assert "semaglutide" in result['entities']['drugs']
+    assert "emicizumab" in result['entities']['drugs']
 
 @pytest.mark.asyncio
 async def test_api_fallback():
@@ -188,6 +220,19 @@ async def test_dashboard_role_filter():
     signals = generate_test_data(5)
     filtered = await filter_by_role(signals, "medical_affairs")
     assert all(s['relevance']['medical_affairs'] > 0.5 for s in filtered)
+
+@pytest.mark.asyncio
+async def test_stakeholder_calibration():
+    # Submit 10 feedback items for medical_affairs role
+    for i in range(10):
+        await submit_feedback(role="medical_affairs", signal_id=signals[i], relevance=2, urgency=1)
+    
+    # Trigger recalibration
+    result = await calibration_service.recalibrate("medical_affairs")
+    
+    # Weights should have shifted from clinical_keyword_weight after low ratings
+    assert result["weight_updates"]["clinical_keyword_weight"] < 0.5  # decreased
+    assert result["calibration_confidence"] > 0.6
 
 # Run before demo
 pytest tests/ -v --cov=services
@@ -379,6 +424,87 @@ async def get_dashboard(role: str):
 ```
 
 **Target:** Dashboard < 500ms (cached), < 3s (cold)
+
+---
+
+### **Gap 13: Stakeholder Calibration Loop Not Yet Implemented**
+**Problem:** AI scoring is a static baseline. The system learns nothing from the Novo Nordisk stakeholders who actually use it — relevance weights never adapt to real preferences. No Human-in-the-Loop (HITL) mechanism exists anywhere in the pipeline.
+
+**Resolution: Stakeholder Calibration Loop (HITL)**
+```sql
+-- New table: stakeholder_feedback
+CREATE TABLE stakeholder_feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    signal_id UUID REFERENCES signals(id),
+    stakeholder_role VARCHAR(50),      -- 'medical_affairs', 'regulatory', etc.
+    relevance_rating INT CHECK (relevance_rating BETWEEN 1 AND 5),
+    urgency_rating INT CHECK (urgency_rating BETWEEN 1 AND 5),
+    is_actionable BOOLEAN,
+    feedback_notes TEXT,               -- Free text: "Not relevant, this is Hem C not Hem A"
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+```python
+# services/calibration_service.py
+class StakeholderCalibrationService:
+    """
+    After stakeholders review signals, recalibrate the ML scoring model.
+    
+    Example: If 10 signals tagged as HIGH by AI are rated low by Medical Affairs,
+    reduce weight of keyword_density in favor of clinical_phase_weight.
+    
+    For hackathon: Simple weight adjustment from aggregate ratings.
+    For production: Online learning / preference learning.
+    """
+    
+    async def recalibrate(self, role: str) -> dict:
+        feedback = await db.get_feedback_for_role(role)
+        
+        # Compare AI score vs human rating
+        # Adjust weights where systematic divergence exists
+        weight_updates = self._compute_weight_delta(feedback)
+        
+        await db.update_scoring_weights(role, weight_updates)
+        
+        return {
+            "role": role,
+            "signals_reviewed": len(feedback),
+            "weight_updates": weight_updates,
+            "calibration_confidence": self._compute_confidence(feedback)
+        }
+```
+
+**Hackathon architecture note:** Use **simulated stakeholder personas** (Medical Affairs, Regulatory, Market Access) with pre-defined feedback patterns to demonstrate the calibration loop working. Real stakeholder input is not feasible in 4 weeks but the mechanism must exist.
+
+---
+
+### **Gap 14: Four-Question Framework Not Mapped to UI Components**
+**Problem:** MetaRadar's core intelligence objective — answering four practical questions for Novo Nordisk — is not explicitly represented in the UI. Every dashboard component, signal card, and API endpoint must map to at least one of Q1–Q4.
+
+**Resolution: Four-Question Framework UI Mapping**
+```
+Q1 WHAT CHANGED?     → Panel 1: Signal Feed
+  Signal detection: new trial results, regulatory decisions, competitor
+  announcements, congress presentations, publication releases, patient access changes
+  UI: Real-time signal feed, sorted by recency + relevance, tagged by signal type
+
+Q2 WHY DOES IT MATTER?  → Panel 2: Impact Analysis
+  Clinical/commercial significance: impact on Novo Nordisk's Haemophilia portfolio
+  (concizumab, mim8), patient population affected, competitive threat, regulatory implications
+  UI: Relevance score + breakdown, confluence events, "This matters because..." 2-sentence AI explanation
+
+Q3 WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?  → Panel 3: Routing
+  Medical Affairs (clinical) / Regulatory (filings) / Market Access (reimbursement/HTA) /
+  Commercial (competitor moves) / R&D (pipeline)
+  UI: Function badges with confidence scores + stakeholder review prompt
+
+Q4 WHAT INTERNAL ACTION MAY BE REQUIRED?  → Panel 4: Action Suggestions
+  AI-generated suggestions only — all final actions require human review
+  UI: 3 AI-suggested bullets prefaced "Suggested — requires human review", confirm/reject/modify
+```
+
+**Implementation hook:** Each API response carries `four_question` metadata; each signal card renders the four panels. The UI displays the framework explicitly (never buried in settings).
 
 ---
 
@@ -713,9 +839,9 @@ class ComplianceAuditLogger:
 await audit_logger.log_action(
     user_id="john.smith@novonordisk.com",
     action="taxonomy_edit",
-    entity="semaglutide",
-    before={"competitors": ["tirzepatide"]},
-    after={"competitors": ["tirzepatide", "orforglipron"]},
+    entity="emicizumab",
+    before={"competitors": ["concizumab", "mim8"]},
+    after={"competitors": ["concizumab", "mim8", "marstacimab"]},
 )
 
 # Also: every AI-generated summary carries a disclaimer
@@ -770,22 +896,77 @@ async def detect_confluence(signals: list[dict], entity: str, window_hours: int 
     return None
 ```
 
-**Demo Power:** Instead of showing 800 signals, MetaRadar shows `🔴 CRITICAL - GLP-1 Safety Confluence (3 signals, 48h)`.
+**Haemophilia Confluence Patterns (B.Pharm-validated):**
+```python
+HAEMOPHILIA_CONFLUENCE_PATTERNS = {
+    "gene_therapy_disruption": {
+        "signal_types": ["gene_therapy_milestone", "patient_access_signal", "regulatory_milestone"],
+        "description": "Gene therapy efficacy + access data + regulatory decision converging",
+        "alert_level": "CRITICAL",
+        "alert_message": "Gene therapy paradigm shift signal detected — could impact prophylaxis market"
+    },
+    "competitor_approval_surge": {
+        "signal_types": ["regulatory_milestone", "congress_publication", "competitive_pipeline_move"],
+        "description": "Competitor asset approaching approval: regulatory + congress data + pipeline move",
+        "alert_level": "HIGH",
+        "alert_message": "Competitor approval trajectory detected — Commercial and Market Access to review"
+    },
+    "safety_signal_emergence": {
+        "signal_types": ["inhibitor_development_signal", "regulatory_milestone", "patient_access_signal"],
+        "description": "Safety signal (inhibitors/AEs) + regulatory attention + patient community response",
+        "alert_level": "CRITICAL",
+        "alert_message": "Emerging safety narrative — Regulatory and Medical Affairs immediate review required"
+    },
+    "access_barrier_forming": {
+        "signal_types": ["patient_access_signal", "regulatory_milestone", "congress_publication"],
+        "description": "HTA negative guidance + regulatory delays + HCP/patient community signals",
+        "alert_level": "HIGH",
+        "alert_message": "Reimbursement risk detected — Market Access and Commercial to prepare response"
+    }
+}
+```
+
+**Demo Power:** Instead of showing 800 signals, MetaRadar shows `🔴 CRITICAL - Gene Therapy Disruption (3 signals, 48h)`.
 
 ### **Optimization 12: Pharma Ontology Enrichment (Zero API Cost)**
 
-A local JSON dictionary (built by the B.Pharm team) that knows `"Wegovy" = "semaglutide" = "GLP-1 agonist" = Novo Nordisk product`. Enriches every extracted entity without a single extra API call.
+A local JSON dictionary (built by the B.Pharm team) that knows `"Hemlibra" = "emicizumab" = "bispecific antibody" = Roche product`. Enriches every extracted entity without a single extra API call.
 
 ```python
 # entities/pharma_ontology.py
 PHARMA_ONTOLOGY = {
     "drugs": {
-        "semaglutide": {
-            "brand_names": ["Ozempic", "Wegovy", "Rybelsus"],
-            "mechanism": "GLP-1 agonist",
+        "emicizumab": {
+            "brand_names": ["Hemlibra"],
+            "mechanism": "Bispecific antibody (Factor IXa/Factor X bridge)",
+            "manufacturer": "Roche/Genentech",
+            "indications": ["Haemophilia A", "Haemophilia A with inhibitors"],
+            "formulations": ["subcutaneous injection"],
+            "competitors": ["concizumab", "fitusiran", "mim8"]
+        },
+        "concizumab": {
+            "brand_names": ["Alhemo"],
+            "mechanism": "Anti-TFPI monoclonal antibody",
             "manufacturer": "Novo Nordisk",
-            "indications": ["obesity", "type2_diabetes", "cardiovascular"],
-            "competitors": ["tirzepatide", "dulaglutide", "liraglutide"]
+            "indications": ["Haemophilia A", "Haemophilia B", "with/without inhibitors"],
+            "formulations": ["subcutaneous injection"],
+            "competitors": ["emicizumab", "fitusiran", "marstacimab"]
+        },
+        "mim8": {
+            "brand_names": ["Investigational"],
+            "mechanism": "Next-generation bispecific antibody (Factor IXa/Factor X bridge)",
+            "manufacturer": "Novo Nordisk",
+            "indications": ["Haemophilia A", "Haemophilia B"],
+            "formulations": ["subcutaneous injection"],
+            "competitors": ["emicizumab"]
+        },
+        "etranacogene_dezaparvovec": {
+            "brand_names": ["Hemgenix"],
+            "mechanism": "AAV5-based gene therapy (Factor IX)",
+            "manufacturer": "CSL Behring/UniQure",
+            "indications": ["Haemophilia B"],
+            "formulations": ["single IV infusion"],
+            "competitors": ["valoctocogene_roxaparvovec"]
         }
     }
 }
@@ -825,27 +1006,30 @@ class TraceableInsight:
 
 ### **Optimization 14: Temporal Pattern Recognition (Predictive Layer)**
 
-Detect which stage a competitive development is in — e.g., pre-approval surge (Phase 3 results → investor call → FDA advisory → PDUFA). Domain rules defined by the B.Pharm team.
+Detect which stage a competitive development is in — e.g., gene therapy approval trajectory (Phase 3 results → BLA/MAA → FDA advisory → PDUFA). Domain rules defined by the B.Pharm team.
 
 ```python
-COMPETITIVE_TIMELINE_PATTERNS = {
-    "pre_approval_surge": {
+HAEMOPHILIA_TIMELINE_PATTERNS = {
+    "gene_therapy_approval_trajectory": {
+        "description": "Pattern preceding gene therapy FDA/EMA approval",
         "stages": [
-            {"stage": "Phase 3 results published", "weeks_before_approval": "26-52"},
-            {"stage": "Company investor call mentions drug", "weeks_before_approval": "20-30"},
-            {"stage": "FDA advisory committee scheduled", "weeks_before_approval": "12-16"},
-            {"stage": "Priority review designation", "weeks_before_approval": "8-12"},
-            {"stage": "PDUFA date announced", "weeks_before_approval": "0-4"},
+            {"stage": "Phase 3 primary endpoint met", "timeline": "18-24 months before approval"},
+            {"stage": "BLA/MAA submission announced", "timeline": "12-18 months before approval"},
+            {"stage": "FDA/EMA acceptance of filing", "timeline": "8-12 months before approval"},
+            {"stage": "Advisory committee meeting", "timeline": "4-6 months before approval"},
+            {"stage": "PDUFA date set", "timeline": "0-3 months before approval"}
         ],
-        "alert_message": "Competitor drug following pre-approval signal trajectory",
+        "current_watch": "CSL Behring Hemgenix 3-year durability data, BioMarin Roctavian label update"
     },
-    "access_crisis": {
+    "prophylaxis_access_decline": {
+        "description": "Pattern when HTA bodies start preferring gene therapy over prophylaxis",
         "stages": [
-            {"stage": "Payer cost-effectiveness concerns emerge", "weeks_before": "12-20"},
-            {"stage": "HCP forums discuss access barriers", "weeks_before": "4-8"},
-            {"stage": "Formulary exclusion announced", "weeks_before": "0-2"},
+            {"stage": "Long-term gene therapy durability data published", "timeline": "trigger"},
+            {"stage": "HTA body issues positive guidance for gene therapy", "timeline": "+3-6 months"},
+            {"stage": "Formularies begin preference for gene therapy", "timeline": "+6-12 months"},
+            {"stage": "Prophylaxis market share decline begins", "timeline": "+12-18 months"}
         ],
-        "alert_message": "Access restriction pattern detected",
+        "current_watch": "NICE and G-BA decisions on Hemgenix and Roctavian cost-effectiveness"
     }
 }
 
@@ -864,15 +1048,20 @@ from langgraph.graph import StateGraph
 graph = StateGraph(IntelligenceState)
 for name, fn in [("ingest", ingestion_agent), ("validate", validation_agent),
                  ("nlp", nlp_agent), ("confluence", confluence_agent),
-                 ("synthesize", synthesis_agent), ("brief", brief_agent)]:
+                 ("synthesize", synthesis_agent), ("brief", brief_agent),
+                 ("calibrate", stakeholder_calibration_agent)]:
     graph.add_node(name, fn)
-# Linear state flow (extends to conditional branching later)
+# Linear state flow with calibration loop closing the learning cycle
 graph.add_edge("ingest", "validate"); graph.add_edge("validate", "nlp")
 graph.add_edge("nlp", "confluence"); graph.add_edge("confluence", "synthesize")
 graph.add_edge("synthesize", "brief")
+graph.add_edge("brief", "calibrate")
+graph.add_edge("calibrate", "brief")  # recalibrated weights feed next brief cycle
 graph.set_entry_point("ingest")
 runner = graph.compile()
 ```
+
+> **Stakeholder Calibration in the pipeline:** the `stakeholder_calibration_agent` reads stakeholder feedback from `stakeholder_feedback` table and adjusts scoring weights per role after every brief cycle — the intelligence layer learns continuously.
 
 ---
 
@@ -882,15 +1071,16 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 
 | Criterion (Weight) | What MetaRadar Delivers | Where |
 |---|---|---|
-| **Innovation (25%)** | Signal Confluence Engine, Pharma Ontology, Traceable Intelligence — concepts that don't exist in open source | Opt. 11-13 |
+| **Innovation (25%)** | Signal Confluence Engine, Haemophilia Pharma Ontology, Traceable Intelligence, Stakeholder Calibration Loop — concepts that don't exist in open source | Opt. 11-13, Gap 13 |
 | **Technical (25%)** | LangGraph multi-agent, FastAPI + Next.js, pgvector hybrid search, Docker Compose | Opt. 15, Gap 6 |
-| **Business Impact (20%)** | Addresses real Novo Nordisk pain: semaglutide patent expiry (Mar 2026), Eli Lilly tirzepatide competition, GBS AI mandate | Business Context below |
+| **Business Impact (20%)** | Addresses real Novo Nordisk pain: gene therapy disrupting the prophylaxis paradigm, Roche emicizumab dominance, HTA decisions on Hemgenix/Roctavian | Business Context below |
 | **Feasibility (15%)** | Free APIs only, local ML models (no GPU), public data sources (CDA-compliant), clear MVP→production path | Gap 1, Gap 6 |
 | **Presentation (15%)** | B.Pharm narrates domain; CSE narrates architecture; working demo + 2-page report | Team split |
 
-**Business Context (must be stated in demo):**
-- Semaglutide patent expired in India **March 20, 2026** → 12+ generic entrants (Sun Pharma, Torrent, Dr. Reddy's, Zydus). MetaRadar gives Commercial/Market Access a head start on competitive response.
-- Eli Lilly's tirzepatide (Mounjaro/Zepbound) beat semaglutide in a 2024 head-to-head trial and gained share in Q1 2026. MetaRadar's Confluence Engine would flag Lilly's oral GLP-1 (orforglipron) strategy months early.
+**Business Context (must be stated in demo) — NOVO NORDISK HAEMOPHILIA CONTEXT:**
+- **Portfolio:** Concizumab (Alhemo) — anti-TFPI, EU approved 2023, subcutaneous prophylaxis for Haemophilia A and B with and without inhibitors. Mim8 — next-generation bispecific antibody in Phase 3, potentially superior to emicizumab with broader coverage (Haemophilia A AND B). Key strategic asset for the coming 5 years.
+- **Strategic Challenge:** Roche's Hemlibra (emicizumab) is the dominant non-factor therapy in Haemophilia A. Gene therapies (Hemgenix, Roctavian) have recently reached approval — the treatment paradigm is shifting from chronic prophylaxis to potential cure. If gene therapy achieves durable (10+ year) factor expression, the market for prophylaxis drugs like concizumab and mim8 could shrink.
+- MetaRadar tracks: (a) gene therapy durability data, (b) inhibitor development in gene therapy patients, (c) competitor pipeline (Pfizer marstacimab, Sanofi fitusiran), (d) HTA decisions globally, (e) patient advocacy positions.
 - GBS Bangalore targets a **two-thirds reduction in drug launch timelines using AI** — MetaRadar is a proof-of-concept for that intelligence infrastructure.
 
 ---
@@ -899,7 +1089,7 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 
 | Gap | Impact | Resolution | Optimization | Outcome |
 |---|---|---|---|---|
-| **API Costs** | $500/month | Free APIs only | Pluggable local LLM (any HF model via config) | **$0 cost** |
+| **API Costs** | $500/month | Free APIs only + haemophilia query terms | Pluggable local LLM (any HF model via config) | **$0 cost** |
 | **Crashes on Failure** | Demo fail | tenacity retries + fallback cache | 3-layer caching | **100% uptime** |
 | **Scope Creep** | Incomplete | MVP only | Strict scope | **on-time delivery** |
 | **Bad Data Quality** | Clutter | Validation pipeline | Deduplication | **73% junk removal** |
@@ -915,6 +1105,8 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 | **No Prediction** | Reactive only | Temporal Pattern Matching | Timeline stages | **Predictive edge** |
 | **No Raw Data Replay** | Data loss on failure | Bronze `raw_signals` table | Re-process from raw | **Zero data loss** |
 | **No GxP Compliance** | Unusable in regulated workflow | Append-only `audit_log` + WORM | 21 CFR Part 11 trail | **Pharma-grade audit** |
+| **No Stakeholder Learning** | Static scoring | Stakeholder Calibration Loop (HITL) | Simulated personas + weight recalibration | **Self-improving** |
+| **Four Questions Buried** | Missed purpose | Four-Question Framework panels (Q1-Q4) | Panel mapping to signal card + API | **Framework-driven UI** |
 
 ---
 
@@ -949,6 +1141,10 @@ RELIABILITY:
 ## **4-WEEK BUILD TIMELINE WITH SAFETY NETS**
 
 ```
+CONCEPT NOTE (due within 48h of Aug 12, 2026 kickoff call):
+├─ Cover: approach, data sources, AI/analytics method, dashboard features,
+│  stakeholder learning plan, guardrails, prototype timeline
+
 WEEK 1: Foundation + Error Handling + Domain Architecture
 ├─ Docker Compose setup (avoid local chaos)
 ├─ Graceful fallback + caching
@@ -957,17 +1153,21 @@ WEEK 1: Foundation + Error Handling + Domain Architecture
 ├─ Strict MVP: Medical Affairs + NewsAPI + PubMed
 ├─ Rate limiter implemented
 ├─ LangGraph skeleton (4 agents, no NLP yet)
-├─ B.Pharm: Signal taxonomy + Pharma Ontology draft
+├─ B.Pharm: Haemophilia taxonomy + signal types for Haemophilia A and B
+│  (gene_therapy_milestone, inhibitor_signal, non_factor_therapy, etc.)
+├─ B.Pharm: Haemophilia Pharma Ontology draft (emicizumab, concizumab, mim8,
+│  Hemgenix, Roctavian + treatment paradigm evolution: factor → EHL → bispecific → gene therapy)
 └─ ✅ Have working dashboard by Friday
 
 WEEK 2: Core Features + Testing + Intelligence
-├─ NewsAPI + PubMed integration
+├─ NewsAPI + PubMed integration (haemophilia query terms)
 ├─ Entity extraction (local spaCy)
 ├─ Pharma Ontology JSON integration (enrich entities)
 ├─ Signal classification (zero-shot BART-MNLI) + BART summarization
 ├─ PostgreSQL + pgvector + Redis caching
 ├─ Medical Affairs dashboard (1st complete role)
 ├─ Signal Confluence Engine (core differentiator)
+├─ Four-Question Framework panels v1 (Q1-Q4 on signal card)
 ├─ Integration test suite + Database indexing optimization
 └─ ✅ All core features tested
 
@@ -977,6 +1177,7 @@ WEEK 3: Polish + Performance + Query
 ├─ Materialized views (L2 cache)
 ├─ pgvector embeddings + hybrid search
 ├─ "Ask Athena" lite (RAG query interface)
+├─ Stakeholder Calibration Loop (simulated personas + weight recalibration)
 ├─ Docker optimizations (layer caching)
 ├─ Performance monitoring dashboard
 ├─ B.Pharm: Confluence rule validation + signal QA
@@ -985,10 +1186,10 @@ WEEK 3: Polish + Performance + Query
 WEEK 4: Bonus + Narrative + Demo Readiness
 ├─ Add ONE bonus (Reddit sentiment OR Regulatory role)
 ├─ Narrative Synthesis Agent (intelligence briefs)
-├─ Temporal pattern matching (pre-approval / access crisis)
+├─ Temporal pattern matching (gene therapy approval trajectory / prophylaxis access decline)
 ├─ Curate demo dataset (100 high-quality signals)
 ├─ E2E testing
-├─ Demo script + walkthrough video (incl. patent-expiry business narrative)
+├─ Demo script + walkthrough video (incl. gene-therapy-disruption business narrative)
 ├─ Final performance tuning
 ├─ Security audit (role-based access)
 └─ ✅ Demo-ready, no last-minute panic
@@ -1008,8 +1209,9 @@ Technical Risks:
 ☐ Load test with 1000 concurrent requests
 ☐ Verify all 6 data sources work (incl. ClinicalTrials.gov Week 4)
 ☐ Confluence Engine: verify 3+ signals on one entity produce ONE alert (no duplicates)
-☐ Ontology enrichment: "Wegovy" resolves to semaglutide / Novo Nordisk
+☐ Ontology enrichment: "Hemlibra" resolves to emicizumab / Roche (Haemophilia A competitor)
 ☐ Traceable insight shows source chain (source → URL → excerpt)
+☐ Stakeholder Calibration: simulated Medical Affairs feedback shifts scoring weights (demo works)
 ☐ Check that demo dataset loads (backup plan)
 ☐ Test password reset on demo device
 
@@ -1019,8 +1221,8 @@ Presentation Risks:
 ☐ Memorize 3 key talking points
 ☐ Have laptop + phone as backups
 ☐ Test projector 1 hour before
-☐ Have B.Pharm team explain domain parts (ontology, confluence clinical sense)
-☐ Tie demo to Novo Nordisk pain: patent expiry + Eli Lilly competition (Business Impact criterion)
+☐ Have B.Pharm team explain domain parts (ontology, confluence clinical sense, treatment paradigm)
+☐ Tie demo to Novo Nordisk pain: gene therapy disruption + Roche emicizumab competition (Business Impact criterion)
 
 Judge Scenarios:
 ☐ "Make it pull live Twitter data" → Already can
@@ -1028,8 +1230,16 @@ Judge Scenarios:
 ☐ "How does it scale?" → Caching + indexing explanation
 ☐ "Show the code" → Well-commented, GitHub ready
 ☐ "What if API fails?" → Demo fallback cache
-☐ "How is this different from Contify/SinglePoint?" → Confluence + ontology + traceability
+☐ "How is this different from Contify/SinglePoint?" → Confluence + ontology + traceability + calibration
 ☐ "How do you ensure pharma accuracy?" → B.Pharm ontology validation layer
+☐ "How does stakeholder calibration work in 4 weeks?" → Simulated personas demonstrating the loop
 ☐ "How is this different from a Streamlit news dashboard?" → Intelligence layer, not aggregation
 ```
 
+---
+
+## **DATA GUARDRAILS & RESPONSIBLE AI**
+
+> "All data used in MetaRadar is sourced exclusively from public APIs, academic publications, and synthetic/mock records. No confidential Novo Nordisk strategy, patient-level data, internal forecasts, or non-public information is used at any point. This is compliant with the Novo Nordisk GBS Hackathon 2026 data guardrails and the signed Confidentiality Agreement."
+
+> "AI-generated action suggestions are provided for discussion and consideration only. All final decisions and actions require review and approval by qualified Novo Nordisk professionals. MetaRadar does not automate any clinical, regulatory, or commercial decisions."

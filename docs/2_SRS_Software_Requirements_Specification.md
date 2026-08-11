@@ -1,7 +1,7 @@
 # MetaRadar: Software Requirements Specification (SRS)
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 1.0  
+**Version:** 2.0  
 **Date:** August 2026  
 **Organization:** MS Ramaiah Institute of Technology (MSRIT)  
 **Hackathon:** Novo Nordisk GBS Hackathon 2026  
@@ -12,14 +12,20 @@
 ## **1. INTRODUCTION**
 
 ### 1.1 Purpose
-MetaRadar detects early market signals and paradigm shifts in the haemophilia treatment landscape (IV factor replacement → subcutaneous bispecific antibodies → gene therapies) by converting fragmented public signals into role-specific intelligence for Novo Nordisk teams formatted in a Four-Question Framework.
+MetaRadar detects early market signals and paradigm shifts in the **haemophilia treatment landscape within Rare Disease** (Haemophilia A and Haemophilia B — from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian) by converting fragmented public signals into role-specific intelligence for Novo Nordisk teams, formatted in a **Four-Question Framework**:
+- **Q1 WHAT CHANGED?** — Signal detection (new trial results, regulatory decisions, competitor announcements, congress presentations, publication releases, patient access changes)
+- **Q2 WHY DOES IT MATTER?** — Clinical/commercial significance scoring for Novo Nordisk's Haemophilia portfolio (concizumab, mim8)
+- **Q3 WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?** — Role-based routing (Medical Affairs / Regulatory / Market Access / Commercial / R&D)
+- **Q4 WHAT INTERNAL ACTION MAY BE REQUIRED?** — AI-suggested actions (human review required)
 
 ### 1.2 Scope
 **MVP Scope (Weeks 1-4):**
 - 5 Business Roles: Medical Affairs, Regulatory, Market Access, Commercial, R&D
+- Therapy Area: **Haemophilia within Rare Disease (Haemophilia A + Haemophilia B)**
+- Scope includes: current and emerging treatment approaches, competitor activity, regulatory changes, trial milestones, congress updates, publications, patient/access narratives, future pipeline developments (emerging competitor assets)
 - Multi-Source Public Ingestion: PubMed Central, NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, Congress Abstract archives (ASH, ISTH, WFH, EHA), 500-signal synthetic demo fallback
-- 6-Agent LangGraph Pipeline: Ingestion Agent → Validation Agent → NLP Agent → Signal Confluence Agent → Narrative Synthesis Agent → Brief Agent
-- Core Features: Entity extraction, B.Pharm Haemophilia ontology, Signal Confluence Detection, Four-Question UX, Stakeholder Calibration Loop (HITL), Ask Athena RAG conversational search
+- 7-Agent LangGraph Pipeline: Ingestion Agent → Validation Agent → NLP Agent → Signal Confluence Agent → Narrative Synthesis Agent → Brief Agent → **Stakeholder Calibration Agent**
+- Core Features: Entity extraction, B.Pharm Haemophilia ontology, Signal Confluence Detection, Four-Question UX, **Stakeholder Calibration Loop (HITL)**, Ask Athena RAG conversational search
 
 ### 1.3 Definitions & Acronyms
 - **Signal:** Any piece of public information (article, clinical trial result, regulatory filing, patient forum post) relevant to haemophilia CI
@@ -31,10 +37,23 @@ MetaRadar detects early market signals and paradigm shifts in the haemophilia tr
 - **Pharma Ontology:** Domain knowledge graph (Hemlibra → emicizumab → Roche → Haemophilia A competitor) maintained by B.Pharm team
 - **Traceable Insight:** Intelligence output with a complete evidence chain (source URL, date, excerpt, credibility)
 - **RAG:** Retrieval-Augmented Generation (pgvector + local LLM for "Ask Athena")
+- **HTA:** Health Technology Assessment (e.g., NICE, G-BA) — reimbursement/cost-effectiveness evaluations
+- **FVIII / FIX:** Coagulation Factor VIII / Factor IX — deficient in Haemophilia A / Haemophilia B respectively
+- **Inhibitor:** Neutralizing antibody developed against factor replacement therapy (~30% of severe Haemophilia A patients) — the key complication and differentiator for non-factor therapies
+- **Prophylaxis:** Regular preventive treatment to avoid bleeds (vs. on-demand treatment)
+- **AAV Gene Therapy:** Adeno-associated virus based single-administration therapy (e.g., Hemgenix, Roctavian)
+- **Bispecific Antibody:** Antibody bridging Factor IXa and Factor X (e.g., emicizumab, mim8)
+- **Anti-TFPI:** Antibody blocking Tissue Factor Pathway Inhibitor (e.g., concizumab, marstacimab)
+- **EHL Factor:** Extended Half-Life clotting factor (less frequent dosing)
+- **RNAi:** RNA interference therapy (e.g., fitusiran — lowers antithrombin)
+- **WFH:** World Federation of Hemophilia (patient advocacy)
+- **ISTH:** International Society on Thrombosis and Haemostasis (biennial congress)
+- **ASH:** American Society of Hematology (annual December congress)
 
 ### 1.4 References
-- Novo Nordisk GBS Hackathon 2026 Problem Statement #3 & Pilot Guidelines
+- Novo Nordisk GBS Hackathon 2026 Problem Statement #3 & Pilot Guidelines (Haemophilia within Rare Disease)
 - Confidentiality Agreement between MS Ramaiah and Novo Nordisk
+- Kickoff email scope update (August 12, 2026) — therapy area pivot to haemophilia, Four-Question Framework, Stakeholder Calibration Loop
 - Refined Architecture & GitHub Landscape Analysis (doc 5)
 - Novo Nordisk Company Analysis & Hackathon Intelligence (doc 6)
 
@@ -50,6 +69,35 @@ MetaRadar detects early market signals and paradigm shifts in the haemophilia tr
 - System SHALL implement rate limiting per source (500/day for NewsAPI)
 - System SHALL cache fetched data for 2 hours minimum
 - System SHALL maintain a 500-signal synthetic dataset for offline demo fallback
+
+**Haemophilia Query Terms:**
+```python
+HAEMOPHILIA_QUERY_TERMS = {
+    "primary": [
+        "haemophilia", "hemophilia", "factor VIII", "factor IX",
+        "haemophilia A", "haemophilia B", "bleeding disorder"
+    ],
+    "drugs": [
+        "emicizumab", "Hemlibra", "concizumab", "Alhemo", "fitusiran",
+        "mim8", "marstacimab", "Hemgenix", "Roctavian", "gene therapy haemophilia"
+    ],
+    "clinical": [
+        "inhibitor development", "prophylaxis haemophilia", "factor replacement",
+        "extended half-life factor", "AAV gene therapy", "antithrombin"
+    ],
+    "regulatory": [
+        "haemophilia FDA approval", "haemophilia EMA", "rare disease designation",
+        "orphan drug haemophilia", "NICE haemophilia", "haemophilia HTA"
+    ],
+    "congress": [
+        "ASH 2026 haemophilia", "ISTH haemophilia", "WFH congress", "EHA haemophilia"
+    ],
+    "patient_access": [
+        "haemophilia treatment access", "haemophilia reimbursement",
+        "haemophilia patient advocacy", "WFH", "NHF hemophilia"
+    ]
+}
+```
 
 **FR-2.1.2: Error Handling & Fallback**
 - If any source fails, system SHALL NOT crash
@@ -68,21 +116,22 @@ MetaRadar detects early market signals and paradigm shifts in the haemophilia tr
 
 **FR-2.2.1: Named Entity Recognition (NER)**
 - System SHALL extract:
-  - Drug names (e.g., "emicizumab", "mim8", "concizumab", "fitusiran", "Hemgenix", "Roctavian")
-  - Company names (e.g., "Novo Nordisk", "Roche", "Sanofi", "Pfizer", "BioMarin", "CSL Behring")
-  - Indications & Mechanisms (e.g., "Haemophilia A", "Haemophilia B", "bispecific antibody", "gene therapy", "inhibitor")
+  - Drug names (e.g., "emicizumab", "mim8", "concizumab", "fitusiran", "Hemgenix", "Roctavian", "marstacimab")
+  - Company names (e.g., "Novo Nordisk", "Roche", "Sanofi", "Pfizer", "BioMarin", "CSL Behring", "Takeda")
+  - Indications & Mechanisms (e.g., "Haemophilia A", "Haemophilia B", "bispecific antibody", "gene therapy", "inhibitor development", "anti-TFPI", "EHL factor")
   - Clinical phases (e.g., "Phase 3", "FDA approval", "NICE HTA")
 - Extraction SHALL use local spaCy model (`en_core_sci_md`)
 - Extraction accuracy target: > 90%
 
 **FR-2.2.2: Signal Classification**
-- System SHALL classify each signal into one of:
-  - `gene_therapy_milestone`
-  - `regulatory_decision`
-  - `congress_publication`
-  - `patient_access`
-  - `competitor_pipeline`
-  - `inhibitor_signal`
+- System SHALL classify each signal into one of the haemophilia taxonomy:
+  - `gene_therapy_milestone` — gene therapy trial results, approvals, or setbacks
+  - `non_factor_therapy_update` — bispecific antibodies, anti-TFPI, RNAi therapies (emicizumab, concizumab, fitusiran, mim8)
+  - `inhibitor_development_signal` — inhibitor development reports (critical safety/clinical signal)
+  - `regulatory_milestone` — FDA, EMA, NICE or other HTA body decisions
+  - `congress_publication` — data presentations at ASH, ISTH, WFH, EHA
+  - `patient_access_signal` — reimbursement decisions, access restrictions, advocacy positions
+  - `competitive_pipeline_move` — competitor assets entering clinical development or phase changes
 
 **FR-2.2.3: Text Summarization (Model-Agnostic)**
 - System SHALL generate 1-line (< 50 character) summary of each signal
@@ -94,507 +143,376 @@ MetaRadar detects early market signals and paradigm shifts in the haemophilia tr
 - Every AI-generated summary SHALL carry a disclaimer: *"Auto-generated — verify clinically before use"*
 
 **FR-2.2.4: Pharma Ontology Enrichment**
-- System SHALL maintain a local pharma ontology (JSON) mapping: drug → brand names → mechanism → manufacturer → indications → competitor drugs
+- System SHALL maintain a local pharma ontology (JSON) mapping: drug → brand names → mechanism → manufacturer → indications → competitor drugs (haemophilia ontology)
 - Ontology SHALL be authored and validated by the B.Pharm team
-- Every extracted entity SHALL be cross-referenced against the ontology (e.g., "Wegovy" → semaglutide → GLP-1 agonist → Novo Nordisk)
+- Every extracted entity SHALL be cross-referenced against the ontology (e.g., "Hemlibra" → emicizumab → bispecific antibody → Roche → Haemophilia A competitor)
 - When an extracted drug belongs to a competitor of Novo Nordisk, the signal SHALL be flagged as a competitive signal at zero extra API cost
 - Signals with extracted entities that fail ontology validation SHALL be flagged for B.Pharm QA review
 
-### 2.3 Signal Scoring & Ranking
+**Haemophilia Ontology (excerpt):**
+```json
+{
+  "drugs": {
+    "emicizumab": {
+      "brand_names": ["Hemlibra"],
+      "mechanism": "Bispecific antibody (Factor IXa/Factor X bridge)",
+      "manufacturer": "Roche/Genentech",
+      "indications": ["Haemophilia A", "Haemophilia A with inhibitors"],
+      "formulations": ["subcutaneous injection"],
+      "competitors": ["concizumab", "fitusiran", "mim8"],
+      "status": "Approved (FDA 2017, EMA 2018)"
+    },
+    "concizumab": {
+      "brand_names": ["Alhemo"],
+      "mechanism": "Anti-TFPI monoclonal antibody",
+      "manufacturer": "Novo Nordisk",
+      "indications": ["Haemophilia A", "Haemophilia B", "with/without inhibitors"],
+      "formulations": ["subcutaneous injection"],
+      "competitors": ["emicizumab", "fitusiran", "marstacimab"],
+      "status": "EU approved 2023, Phase 3 completion"
+    },
+    "mim8": {
+      "brand_names": ["Investigational"],
+      "mechanism": "Next-generation bispecific antibody (Factor IXa/Factor X bridge)",
+      "manufacturer": "Novo Nordisk",
+      "indications": ["Haemophilia A", "Haemophilia B"],
+      "formulations": ["subcutaneous injection"],
+      "competitors": ["emicizumab"],
+      "status": "Phase 3 (key Novo Nordisk pipeline asset)"
+    },
+    "fitusiran": {
+      "brand_names": ["Alhemo"],
+      "mechanism": "RNAi (antithrombin inhibitor, subcutaneous)",
+      "manufacturer": "Sanofi",
+      "indications": ["Haemophilia A and B", "with/without inhibitors"],
+      "formulations": ["subcutaneous injection"],
+      "competitors": ["emicizumab", "concizumab"],
+      "status": "FDA approved 2023"
+    },
+    "marstacimab": {
+      "brand_names": ["Investigational"],
+      "mechanism": "Anti-TFPI monoclonal antibody",
+      "manufacturer": "Pfizer",
+      "indications": ["Haemophilia A and B", "without inhibitors"],
+      "formulations": ["subcutaneous injection"],
+      "competitors": ["concizumab"],
+      "status": "Phase 3"
+    },
+    "etranacogene_dezaparvovec": {
+      "brand_names": ["Hemgenix"],
+      "mechanism": "AAV5-based gene therapy (Factor IX)",
+      "manufacturer": "CSL Behring/UniQure",
+      "indications": ["Haemophilia B"],
+      "formulations": ["single IV infusion"],
+      "competitors": ["valoctocogene_roxaparvovec"],
+      "status": "FDA approved November 2022"
+    },
+    "valoctocogene_roxaparvovec": {
+      "brand_names": ["Roctavian"],
+      "mechanism": "AAV5-based gene therapy (Factor VIII)",
+      "manufacturer": "BioMarin",
+      "indications": ["Haemophilia A without inhibitors"],
+      "formulations": ["single IV infusion"],
+      "competitors": ["emicizumab", "mim8"],
+      "status": "FDA approved June 2023"
+    }
+  },
+  "companies": {
+    "Novo Nordisk Rare Disease": {
+      "portfolio": ["concizumab", "mim8"],
+      "pipeline_focus": ["Haemophilia A", "Haemophilia B", "rare bleeding disorders"],
+      "key_competitors": ["Roche", "Sanofi", "Pfizer", "BioMarin", "CSL Behring", "Takeda"]
+    }
+  },
+  "indications": {
+    "haemophilia_a": {
+      "description": "Factor VIII deficiency (most common, ~80% of haemophilia cases)",
+      "global_prevalence": "~200,000 patients",
+      "genetic_basis": "X-linked recessive",
+      "treatment_paradigm": "Factor replacement → EHL factors → non-factor (emicizumab) → gene therapy"
+    },
+    "haemophilia_b": {
+      "description": "Factor IX deficiency (Christmas disease, ~20% of cases)",
+      "global_prevalence": "~50,000 patients",
+      "treatment_paradigm": "Factor replacement → EHL factors → gene therapy (Hemgenix)"
+    },
+    "inhibitor_development": {
+      "description": "Antibody development against factor replacement — major complication",
+      "prevalence": "~30% of severe Haemophilia A patients",
+      "relevance": "Key differentiator for non-factor therapies (emicizumab, concizumab, fitusiran)"
+    }
+  },
+  "treatment_categories": {
+    "factor_replacement": "Standard of care — IV infusion of missing clotting factor",
+    "extended_half_life": "EHL factors — less frequent dosing",
+    "non_factor_bypassing": "Bispecific antibodies, anti-TFPI (subcutaneous, inhibitor-agnostic)",
+    "gene_therapy": "Single-administration curative approach (Hemgenix, Roctavian)",
+    "rna_interference": "RNAi-based (fitusiran, antithrombin reduction)"
+  },
+  "key_congresses": [
+    "ASH (American Society of Hematology) — December annually",
+    "ISTH (International Society on Thrombosis and Haemostasis) — biennial",
+    "WFH World Congress — biennial",
+    "EHA (European Hematology Association) — June annually"
+  ],
+  "patient_advocacy": [
+    "World Federation of Hemophilia (WFH)",
+    "National Hemophilia Foundation (NHF, USA)",
+    "European Haemophilia Consortium (EHC)"
+  ]
+}
+```
 
-**FR-2.3.1: Relevance Scoring**
-- System SHALL compute relevance score (0.0-1.0) based on:
-  - Source credibility (PubMed=0.95, Reddit=0.40, etc.)
-  - Entity match (drug/company relevance to portfolio)
-  - Pharma keyword density
-  - Indication match (obesity/diabetes focus)
-- Score SHALL be transparent (show scoring factors to user)
+### 2.3 Signal Confluence Detection
 
-**FR-2.3.2: Micro-Trend Velocity Detection**
-- System SHALL detect signals with accelerating mention frequency
-- If mention count grows > 50% daily for 3+ days = HIGH velocity flag
-- HIGH velocity signals promoted to top of dashboard
+**FR-2.3.1: Confluence Pattern Matching**
+- System SHALL detect confluence using the configured `HAEMOPHILIA_CONFLUENCE_PATTERNS`
+- Pattern: multiple independent signals (≥ 3) mentioning the same haemophilia entity within a 48-hour window → confluence alert
 
-**FR-2.3.3: Role-Specific Relevance**
-- System SHALL compute per-role relevance (Medical Affairs, Regulatory, Commercial, etc.)
-- Medical Affairs cares about: clinical efficacy, safety, HCP sentiment
-- Regulatory cares about: FDA decisions, post-market studies, guidelines
-- Each signal shows per-role score (0.0-1.0)
+**Haemophilia Confluence Patterns (excerpt):**
+```python
+HAEMOPHILIA_CONFLUENCE_PATTERNS = [
+    {
+        "name": "gene_therapy_milestone_parade",
+        "description": "Multiple independent signals on a gene therapy (Hemgenix/Roctavian) milestone within 48h",
+        "signals_required": 3,
+        "window_hours": 48,
+        "example": "Hemgenix 3-year durability data + ASH 2026 abstract + CSL Behring press release + patient forum discussion in 48h"
+    },
+    {
+        "name": "competitive_regulatory_filing",
+        "description": "Multiple signals on a competitor regulatory filing (FDA/EMA) within 48h",
+        "signals_required": 3,
+        "window_hours": 48,
+        "example": "Roche files mim8 sBLA + ASH abstract + analyst commentary"
+    },
+    {
+        "name": "inhibitor_safety_wave",
+        "description": "Multiple signals flagging inhibitor development or thromboembolic risk",
+        "signals_required": 2,
+        "window_hours": 24,
+        "example": "Two independent patient reports of thrombosis on fitusiran"
+    }
+]
+```
 
-**FR-2.3.4: Signal Confluence Detection**
-- System SHALL detect when ≥ 2 independent signal types converge on the same entity within a 48-hour window
-- Confluence alert levels SHALL follow the matrix: {regulatory+clinical+social} → CRITICAL; {clinical+competitive} / {regulatory+competitive} → HIGH; {social+clinical} → MEDIUM; single type → LOW
-- Each confluence event SHALL produce ONE consolidated alert with constituent signals and a synthesized story summary
-- Confluence alerts SHALL be promoted to the top of the dashboard regardless of individual signal scores
-- Confluence rules SHALL be validated by the B.Pharm team for clinical sense
+**FR-2.3.2: Temporal Pattern Detection**
+- System SHALL detect temporal patterns using `HAEMOPHILIA_TIMELINE_PATTERNS`:
+  - Signal cascades (publication → congress → FDA → journal) within 1 week
+  - Follow-up signals (phase 1 → 2 → 3 progression)
+  - Gap detection (no signals for a tracked entity for 14+ days)
 
-**FR-2.3.5: Temporal Pattern Recognition**
-- System SHALL match current signal patterns against known competitive timelines (pre-approval surge, access crisis)
-- For a matched pattern, system SHALL report: pattern name, current stage, predicted next stage, confidence
-- Timeline stage definitions (e.g., Phase 3 results → FDA advisory → PDUFA) SHALL be authored by the B.Pharm team
-- Matched patterns SHALL surface as predictive alerts (e.g., "Competitor drug following pre-approval signal trajectory")
+### 2.4 Four-Question Dashboard
 
-**FR-2.3.6: Traceable Reasoning (Explainable Intelligence)**
-- Every insight/alert SHALL include a complete evidence chain: source name → original URL → publication timestamp → text excerpt → extracted entities
-- System SHALL expose the reasoning behind each score and alert (which signals, how many, which platforms)
-- Regulatory-grade audit trail SHALL be exportable per insight
-- System SHALL NOT present an insight without a traceable source chain
+**FR-2.4.1: Four-Question UI Layout**
+- System SHALL present intelligence in 4 panels:
+  - **Q1 WHAT CHANGED?** — Signal Feed (real-time, signal type badges, entity tags)
+  - **Q2 WHY DOES IT MATTER?** — Relevance breakdown, AI explanation, confluence alert, competitive context
+  - **Q3 WHICH FUNCTION SHOULD REVIEW IT?** — Role-routing badges with confidence scores
+  - **Q4 WHAT ACTION MAY BE REQUIRED?** — AI-suggested action bullets prefaced *"Suggested — requires human review"*
 
-### 2.4 Dashboard & Visualization
+**FR-2.4.2: Role-Specific Views**
+- System SHALL display a role badge for each signal (Q3)
+- System SHALL display function-specific insight panel per role:
+  - Medical Affairs: clinical evidence context, KOL opinion, congress data
+  - Regulatory: filing/review context, approval timelines, label updates
+  - Market Access: HTA/reimbursement context, access barriers, patient impact
+  - Commercial: market share context, competitor positioning, pricing signals
+  - R&D: mechanistic context, pipeline implications, trial design signals
 
-**FR-2.4.1: Role-Specific Dashboard**
-- System SHALL display signals filtered by user's assigned role
-- Medical Affairs dashboard shows:
-  - High-relevance clinical signals (score > 0.7)
-  - Competitor clinical trial announcements
-  - HCP sentiment on new therapies (if social data available)
-  - Sorted by recency and relevance
-- Signal card displays:
-  - Title (original source headline)
-  - Summary (1-line AI-generated)
-  - Source name + publication date
-  - Relevance score (with breakdown)
-  - Entity tags (drugs, companies, indications)
+**FR-2.4.3: Filtering & Search**
+- System SHALL support filtering by role, signal type, entity, date range, source, and confluence status
+- System SHALL support keyword search across signals
 
-**FR-2.4.2: Trend Visualization**
-- System SHALL show:
-  - Line chart: Signal volume over last 7 days (by entity/category)
-  - Heatmap: Signal volume by competitor + indication
-  - Word cloud: Most mentioned terms in signals
-  - Updates automatically as new signals arrive
+### 2.5 Role-Based Routing (Q3)
 
-**FR-2.4.3: Search & Filter**
-- System SHALL support filtering by:
-  - Date range (last 24h, 7d, 30d, custom)
-  - Entity (drug name, company, indication)
-  - Source type (clinical, news, regulatory)
-  - Relevance score threshold
-- Search SHALL use keyword + semantic similarity (hybrid search)
+**FR-2.5.1: Automatic Role Routing**
+- System SHALL score each signal against all 5 Novo Nordisk roles using a weighted scoring matrix
+- Weights SHALL be dynamically recalibrated by the Stakeholder Calibration Loop (FR-2.8)
+- System SHALL display role assignment with confidence score (e.g., `Regulatory 92% · Medical Affairs 84%`)
 
-**FR-2.4.4: Responsive Design**
-- Dashboard SHALL render correctly on:
-  - Desktop (1920x1080)
-  - Tablet (1024x768)
-  - Mobile (375x667)
-- Load time (cached): < 500ms
-- Load time (cold): < 3 seconds
+**Role Scoring Matrix (initial weights):**
+| Role | Clinical Trial Signal | Regulatory Signal | Congress Publication | Patient Access Signal | Pipeline Signal |
+|------|----------------------|-------------------|----------------------|----------------------|-----------------|
+| Medical Affairs | 0.9 | 0.4 | 0.8 | 0.4 | 0.6 |
+| Regulatory | 0.3 | 0.95 | 0.3 | 0.2 | 0.5 |
+| Market Access | 0.3 | 0.5 | 0.4 | 0.9 | 0.3 |
+| Commercial | 0.4 | 0.4 | 0.6 | 0.7 | 0.8 |
+| R&D | 0.7 | 0.3 | 0.5 | 0.2 | 0.85 |
 
-**FR-2.4.5: Narrative Intelligence Briefs**
-- System SHALL synthesize all signals about an entity/topic into a 3-part executive brief: WHAT HAPPENED / WHY IT MATTERS / RECOMMENDED ACTION
-- Briefs SHALL be role-specific (Medical Affairs sees clinical implications; Regulatory sees compliance impact)
-- Each brief SHALL be grounded in traceable sources (cite signal counts, never speculate beyond evidence)
-- Weekly competitive briefs SHALL cover the previous 7 days
+### 2.6 Brief Generation (Q4)
 
-**FR-2.4.6: Natural Language Query ("Ask Athena" Lite)**
-- System SHALL accept natural-language questions (e.g., "What is Eli Lilly doing with oral GLP-1?")
-- Answers SHALL be generated using RAG over the signal store (hybrid search: semantic + keyword, alpha=0.6)
-- Answers SHALL cite supporting signals (top 3) and report retrieval confidence
-- If insufficient signals exist, system SHALL return "Insufficient signals in last 7 days"
-- Query responses SHALL be role-scoped (users only query data their role can access)
+**FR-2.6.1: Action Suggestion Generation**
+- System SHALL generate action suggestions per signal, prefaced with *"Suggested — requires human review"*
+- Examples:
+  - Regulatory signal on competitor: *"Suggested — review mim8 label change for haemophilia B alignment"*
+  - Gene therapy durability data: *"Suggested — Medical Affairs to draft response on factor vs gene therapy durability"*
+  - Market access blocker: *"Suggested — Market Access to re-run HTA budget impact model with new inhibitor data"*
 
-### 2.5 Data Storage & Retrieval
+**FR-2.6.2: Traceability & Sources**
+- Every insight SHALL include a traceable evidence chain: source URL, published date, exact excerpt, source credibility
+- System SHALL NOT hallucinate — every claim links to a public source or synthetic demo source marked as such
 
-**FR-2.5.1: Primary Database (PostgreSQL)**
-- System SHALL store:
-  - signals table: raw signal data + metadata
-  - entities table: extracted drug/company/indication references
-  - trending_scores table: velocity metrics over time
-  - role_relevance table: per-role importance scores
-- Queries SHALL use indexes for performance (< 100ms)
+### 2.7 Ask Athena (RAG Interface)
 
-**FR-2.5.2: Vector Search (pgvector in PostgreSQL)**
-- System SHALL store signal embeddings (768-dim, sentence-transformers/all-MiniLM-L6-v2) as pgvector columns inside PostgreSQL
-- Hybrid search SHALL combine:
-  - Dense vector similarity (semantic meaning, pgvector)
-  - Sparse keyword matching (exact matches, pg_trgm + FTS)
-- Query response time: < 1 second for 10K signals
-- No separate vector database container is required (eliminates one service)
+**FR-2.7.1: Conversational Search**
+- System SHALL provide conversational query over saved signals using pgvector + local LLM
+- Example queries: "What is the latest on mim8?", "Has anyone reported inhibitor rates on emicizumab?"
 
-**FR-2.5.3: Cache Layer (Redis)**
-- System SHALL cache:
-  - Dashboard data (2 hour TTL)
-  - API responses (per source rate limit window)
-  - User session data
-- Redis hit rate target: > 80%
+### 2.8 Stakeholder Calibration Loop (HITL)
 
-### 2.6 User Authentication & Authorization
+**FR-2.8.1: Feedback Submission**
+- System SHALL provide an endpoint for stakeholders to submit feedback on signal routing accuracy:
+  - `POST /api/v1/feedback` — body: `{signal_id, role, rating (1-5), reason, user_id}`
+- System SHALL store feedback in the `stakeholder_feedback` table (append-only, WORM audit)
 
-**FR-2.6.1: Role-Based Access Control (RBAC)**
-- System SHALL enforce role-based data access:
-  - Medical Affairs: See clinical/safety data only
-  - Regulatory: See regulatory/compliance data only
-  - Admin: See all data
-- Access enforcement on API layer (not UI only)
+**FR-2.8.2: Feedback Summary**
+- System SHALL provide `GET /api/v1/feedback/summary` — aggregated accuracy, per-role ratings, trend
 
-**FR-2.6.2: Session Management**
-- System SHALL issue JWT tokens on login (24 hour expiry)
-- System SHALL validate token on every API call
-- System SHALL handle token expiration gracefully
+**FR-2.8.3: Weight Recalibration**
+- System SHALL provide `POST /api/v1/calibrate` — triggers `StakeholderCalibrationService.recalibrate(role)`
+- Recalibration SHALL update `scoring_weights` table and persist a calibration history row (audit)
 
-### 2.7 Monitoring & Logging
+**FR-2.8.4: Simulated Stakeholder Personas (Hackathon Demo)**
+- System SHALL seed simulated persona feedback during the demo so calibration is demonstrable
+- Personas: Medical Affairs Lead (haemophilia), Regulatory Affairs Specialist, Market Access Manager
+- Calibration loop SHALL be visible in the UI (e.g., "Weights recalibrated 3x this month — latest by Regulatory persona")
 
-**FR-2.7.1: Structured Logging**
-- System SHALL log all operations with:
-  - Timestamp (ISO 8601)
-  - Operation name
-  - Status (success/failure)
-  - Duration (if performance-critical)
-  - Error details (if failed)
-- Logs retained for 30 days minimum
-- Log format: JSON (for easy parsing)
+**FR-2.8.5: Confidence Score Display**
+- Role routing SHALL display the feedback-informed confidence (e.g., "Regulatory 92% — up from 88% after calibration")
 
-**FR-2.7.2: Performance Monitoring**
-- System SHALL track:
-  - API response times (per endpoint)
-  - Database query times
-  - Cache hit/miss rates
-  - Data freshness (age of oldest signal)
-- Alerts triggered if:
-  - API response > 3 seconds
-  - Error rate > 5%
-  - Cache hit rate < 60%
-
-**FR-2.7.3: GxP Compliance Audit Trail (21 CFR Part 11)**
-- System SHALL maintain an append-only `audit_log` table for all user-initiated changes
-- Logged events SHALL include: taxonomy edits, signal dismissals, score overrides, role assignment changes
-- Each audit record SHALL capture: `user_id`, `action`, `entity`, `before_state` (JSONB), `after_state` (JSONB), `session_id`, `timestamp`
-- The `audit_log` table SHALL be WORM-enforced at the database level (no UPDATE or DELETE permissions granted to the application role)
-- Audit logs SHALL be retained for a minimum of 2 years
-- Audit trail SHALL be exportable per insight via `[Export Audit Trail]` UI control
-- System SHALL never present an AI-generated insight without a traceable source chain AND the disclaimer: *"Auto-generated by MetaRadar AI — verify clinically before use"*
-
-> **Research report alignment (Section 2 & 6):** "FDA 21 CFR Part 11 requires audit trails... log user ID, action, timestamp... write to a WORM log or cloud audit service whenever a critical change happens."
-
-
+---
 
 ## **3. NON-FUNCTIONAL REQUIREMENTS**
 
-### 3.1 Performance Requirements
+### 3.1 Performance
+- Signal fetch: < 3 minutes for full multi-source run
+- Signal processing: < 60 seconds per 100 signals (BART, CPU)
+- Cold start (no cache): < 3 seconds
+- Cached start: < 500 ms
+- Ask Athena response: < 30 seconds (local inference)
+- System SHALL handle 1,000 signals without degradation
 
-| Metric | Target | Rationale |
-|---|---|---|
-| Dashboard load (cached) | < 500ms | Real-time feel |
-| Dashboard load (cold) | < 3s | Acceptable wait |
-| API single request | < 200ms | Responsive UI |
-| Full data refresh (all sources) | < 5s | Reasonable background task |
-| Search/filter | < 1s | User interaction feel |
-| Database query (indexed) | < 100ms | 10K signals max |
-
-### 3.2 Scalability Requirements
-
-**Current Scale (Hackathon):**
-- 3,000 signals/day ingested
-- 5 concurrent users
-- 2-month data retention
-
-**Future Scale (Production):**
-- 10,000+ signals/day (10 sources)
-- 100+ concurrent users
-- 1-year data retention
-- Multi-tenant capability
-
-**Architecture supports scaling via:**
-- Horizontal scaling (multiple API instances behind load balancer)
-- Database replication (PostgreSQL read replicas)
-- Caching at edge (Vercel Edge Network for frontend)
-- Async task workers (Celery/Redis for background jobs)
+### 3.2 Security & Compliance
+- System SHALL redact PII/PHI before persistence (spaCy-based PII scrubber)
+- System SHALL support CORS with configurable allowlist (`CORS_ORIGINS`)
+- All external API calls SHALL be HTTPS with credentials via `.env` (never in code)
+- No secrets SHALL be committed to the repository (validate `.env` is gitignored)
+- System SHALL maintain append-only `audit_log` (WORM) compliant with GxP / 21 CFR Part 11 for traceability
 
 ### 3.3 Availability & Reliability
+- Data sources SHALL be treated as unreliable; system SHALL never crash on source failure
+- Fallback to synthetic demo dataset SHALL always be available offline
+- tenacity + httpx retry: 3 retries (2s, 4s, 8s) with exponential backoff
 
-- **Uptime SLA:** > 99% (graceful degradation acceptable)
-- **Data Loss:** Zero tolerance (backups, transactions)
-- **Backup Strategy:** Daily automated PostgreSQL dumps to cloud storage
-- **Disaster Recovery:** Full system restore possible within 1 hour
+### 3.4 Data Protection & Responsible AI
+- System SHALL ingest only **public** or **synthetic** data — no private/patient-identifiable data
+- AI outputs SHALL be clearly labeled as AI-generated; no automated clinical decisions
+- Guardrail statement SHALL appear in docs and UI: *"MetaRadar ingests only public API and synthetic demo data, no confidential or private data, fully CDA-compliant."*
 
-### 3.4 Security Requirements
-
-- **Data in Transit:** HTTPS/TLS 1.3 for all API calls
-- **Data at Rest:** PostgreSQL encryption at rest (optional for hackathon, required for production)
-- **API Authentication:** JWT tokens (RS256 signing)
-- **Input Validation:** All user inputs sanitized (SQL injection, XSS protection)
-- **Rate Limiting:** Per-user request rate limits (100 req/min)
-- **Logging:** No sensitive data (passwords, tokens) logged
-- **PII Detection:** System SHALL detect and strip any Personal Health Information (PHI/PII) found in scraped content before storage, using spaCy entity recognition or equivalent; unexpected PII triggers suppression + alert
-- **Dependency Scanning:** All Python and JavaScript dependencies SHALL be scanned for known CVEs via Dependabot or Snyk on every CI run
-- **Medical Accuracy Disclaimer:** Every AI-generated summary, confluence alert, and narrative brief SHALL display: *"Auto-generated by MetaRadar AI — verify clinically before use"* — suppressing this disclaimer is not permitted
-- **Third-Party Compliance:** Any managed cloud services used (Render, Vercel, AWS) SHALL have SOC 2 certification; documentation referenced before production deployment
-
-> **Research report alignment (Section 6):** Covers HIPAA guidelines, PHI/PII detection, dependency vulnerability scanning (Dependabot/Snyk), medical accuracy disclaimers, and third-party compliance certifications.
-
-
-### 3.5 Usability Requirements
-
-- **Learning Curve:** New user productive within 5 minutes
-- **Onboarding:** In-app tutorial for first-time users
-- **Accessibility:** WCAG 2.1 AA compliance (keyboard navigation, screen reader support)
-- **Documentation:** User guide + API docs auto-generated from code
-
-### 3.6 Maintainability & Code Quality
-
-- **Test Coverage:** > 80% of critical paths
-- **Code Style:** Black formatter + flake8 linter (Python), Prettier (JavaScript)
-- **Documentation:** Docstrings for all functions, API endpoint comments
-- **Version Control:** Git with conventional commits
-- **CI/CD:** Automated tests on every push, deploy on merge to main
+### 3.5 Model-Agnostic Local AI
+- All AI models SHALL be locally hosted (no external inference APIs)
+- Model names SHALL be configurable via environment variables (never hard-coded)
+- Default models: spaCy `en_core_sci_md`, BART `facebook/bart-large-cnn` (summarization), zero-shot classifier, MiniLM embeddings
 
 ---
 
-## **4. DATA REQUIREMENTS**
+## **4. INTERFACE REQUIREMENTS**
 
-### 4.1 Data Sources
+### 4.1 API Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/signals` | List signals with filters |
+| GET | `/api/v1/signals/{id}` | Signal detail with evidence chain |
+| GET | `/api/v1/entities` | Tracked entities + tag counts |
+| GET | `/api/v1/confluences` | Active confluence alerts |
+| GET | `/api/v1/trends` | Signal volume/trend over time |
+| GET | `/api/v1/dashboard` | Four-panel summary payload |
+| GET | `/api/v1/search` | Keyword/semantic search (Ask Athena) |
+| GET | `/api/v1/health` | Service health check |
+| POST | `/api/v1/ingest/manual` | Manually trigger ingestion |
+| POST | `/api/v1/feedback` | Submit stakeholder feedback (FR-2.8.1) |
+| GET | `/api/v1/feedback/summary` | Feedback summary (FR-2.8.2) |
+| POST | `/api/v1/calibrate` | Trigger weight recalibration (FR-2.8.3) |
 
-| Source | Type | Update Frequency | Cost |
-|---|---|---|---|
-| NewsAPI | Industry news | Real-time | Free (500/day) |
-| PubMed | Clinical literature | Real-time | Free |
-| Twitter API | Social signals | Real-time | Free (academic) |
-| Reddit | Patient/HCP sentiment | Real-time | Free |
-| FDA | Regulatory | Weekly | Free |
-| ClinicalTrials.gov | Trial intelligence | Weekly | Free (Week 4) |
-| Company websites | Competitor news | Weekly | Free |
+### 4.2 Environment Variables
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection | postgres://metaradar:metaradar@db:5432/metaradar |
+| `REDIS_URL` | Redis connection | redis://redis:6379 |
+| `NEWSAPI_KEY` | NewsAPI key | (empty) |
+| `REDDIT_CLIENT_ID/SECRET` | Reddit API creds | (empty) |
+| `SPACY_MODEL` | spaCy NER model | en_core_sci_md |
+| `LOCAL_LLM_MODEL` | Local summarization/QA model | facebook/bart-large-cnn |
+| `EMBEDDING_MODEL` | Embedding model | sentence-transformers/all-MiniLM-L6-v2 |
+| `CORS_ORIGINS` | CORS allowlist | http://localhost:3000 |
 
-**Service Level Objectives (SLOs) — research report Section 5:**
-
-| SLO | Target | Alert Threshold |
-|---|---|---|
-| Dashboard query response | 99% < 1s (cached) | > 3s p95 triggers alert |
-| Signal ingestion lag | < 5 minutes from publication | > 15 min triggers alert |
-| Data freshness | Latest signal < 2h old | > 6h triggers alert |
-| Ingestion error rate | < 1% per source per day | > 5% triggers alert |
-| Vector search (pgvector) | < 1s for 10K signals | > 2s triggers alert |
-
-### 4.2 Data Storage Requirements
-
-```
-PostgreSQL (incl. pgvector extension):
-├─ raw_signals_bronze:      raw API JSON (replay layer, pre-processing)
-├─ signals table:           1M rows × 5KB = 5GB
-├─ entities table:          500K rows × 1KB = 500MB
-├─ trending_scores table:   50K rows × 2KB = 100MB
-├─ role_relevance table:    100K rows × 3KB = 300MB
-├─ signal embeddings:       1M × 768 dims × 4 bytes = 3GB
-├─ confluence_events:       alerts + story summaries
-├─ briefs table:            narrative intelligence output
-└─ audit_log table:         WORM append-only, user action trail
-= ~9GB total (vector search in the same database)
-
-Redis (cache):
-├─ Hot signals:             100K × 2KB = 200MB
-├─ API responses:           50MB
-└─ User sessions:           10MB
-= ~260MB total
-
-Disk Archive:
-└─ 2 months × 50MB/day = ~3GB
-
-TOTAL: ~12GB (well within single server limits)
-```
-
-### 4.3 Data Quality Metrics
-
-- **Accuracy:** > 90% (entity extraction correctly identifies drugs/companies)
-- **Completeness:** > 95% (required fields present for > 95% of signals)
-- **Timeliness:** < 2 hours old (difference between signal creation and ingestion)
-- **Consistency:** Duplicate drug names standardized (e.g., "Ozempic" = "semaglutide")
+### 4.3 Database Schema
+- `signals` — id, title, source, source_url, published_at, summary, entities, signal_type, quality_score, embedding
+- `signal_types` — type, label, description, confidence_threshold
+- `entities` — id, name, type, metadata (from haemophilia ontology)
+- `signal_entities` — signal_id, entity_id
+- `stakeholder_feedback` — id, signal_id, role, rating, reason, user_id, created_at (WORM)
+- `scoring_weights` — role, signal_type, weight, version, updated_by, updated_at
+- `calibration_history` — id, role, old_weights, new_weights, trigger_reason, created_at
+- `confluences` — id, entities, pattern_name, signals, created_at, severity
+- `audit_log` — append-only (WORM)
 
 ---
 
-## **5. INTERFACE REQUIREMENTS**
+## **5. USAGE SCENARIOS (HAEMOPHILIA THEMED)**
 
-### 5.1 User Interface
+### 5.1 Core Scenario: Hemgenix 3-Year Durability Data at ASH
+1. ASH 2026 abstract: "Hemgenix 3-year Factor IX expression data shows sustained efficacy"
+2. System ingests via PubMed + congress repository + NewsAPI
+3. NER extracts: `Hemgenix`, `CSL Behring`, `gene therapy`, `Haemophilia B`
+4. Classified: `gene_therapy_milestone` + `congress_publication`
+5. Confluence: ≥ 3 signals within 48h → confluence alert (pattern: `gene_therapy_milestone_parade`)
+6. Role routing: Medical Affairs 91%, R&D 78%, Commercial 65%
+7. Q4 action: *"Suggested — Medical Affairs to brief Haemophilia team on gene therapy durability data vs concizumab/mim8 prophylaxis positioning"*
 
-**Dashboard Layout:**
-```
-┌─────────────────────────────────────┐
-│     MetaRadar - Medical Affairs     │  Header
-├─────────────────────────────────────┤
-│ [Date Range] [Entity Filter] [Search] │  Controls
-├─────────────────────────────────────┤
-│ Trend Chart (7-day signal volume)    │  Visualization
-├─────────────────────────────────────┤
-│ Signal Feed (sorted by score)        │  Main Content
-│ ┌──────────────────────────────────┐ │
-│ │ [High] Clinical Trial: GLP-1 ...  │ │
-│ │ Source: Reuters | Score: 0.92     │ │
-│ │ Entities: semaglutide, Novo N...  │ │
-│ └──────────────────────────────────┘ │
-└─────────────────────────────────────┘
-```
-
-**Key UI Components:**
-- Date range picker (calendar)
-- Multi-select filters (entity, source, type)
-- Search bar (keyword + semantic)
-- Trend charts (Recharts)
-- Signal cards (title, summary, metadata)
-- Loading states + error messages
-
-### 5.2 API Interface
-
-**REST Endpoints:**
-
-```
-GET /api/v1/signals
-  Params: role, limit, offset, date_range, entity_filter
-  Returns: 200 with paginated signal list
-
-GET /api/v1/signals/{id}
-  Returns: 200 with full signal details (incl. evidence chain)
-
-GET /api/v1/trends
-  Params: entity, days (default: 7)
-  Returns: 200 with time-series signal volume
-
-GET /api/v1/confluence
-  Params: role, entity, window_hours (default: 48)
-  Returns: 200 with confluence alerts (entity, level, constituent signals)
-
-GET /api/v1/entities
-  Params: type (drug|company|indication)
-  Returns: 200 with list of entities
-
-POST /api/v1/search
-  Body: { query: "oral GLP-1" }
-  Returns: 200 with search results
-
-POST /api/v1/query
-  Body: { question: "What is Eli Lilly doing with oral GLP-1?", role: "medical_affairs" }
-  Returns: 200 with grounded answer + supporting signals (Ask Athena)
-
-GET /api/v1/briefs
-  Params: entity, days (default: 7)
-  Returns: 200 with narrative intelligence brief (WHAT/WHY/ACTION)
-
-GET /api/v1/health
-  Returns: 200 if healthy, 503 if degraded
-```
-
-### 5.3 Notification Interface
-
-- Dashboard refresh (WebSocket) when new signals arrive
-- Email digest: Weekly summary for each role
-- In-app alerts: High-velocity signals highlighted
+### 5.2 Scenario: mim8 Phase 3 Readout
+1. NewsAPI: "Novo Nordisk mim8 Phase 3 in haemophilia A meets primary endpoint"
+2. NER extracts: `mim8`, `Novo Nordisk`, `Haemophilia A`, `Phase 3`
+3. Classified: `competitive_pipeline_move`
+4. Role routing: Commercial 85%, R&D 88%, Medical Affairs 80%
+5. Q4 action: *"Suggested — Commercial to assess emicizumab response and update positioning documents"*
 
 ---
 
-## **6. CONSTRAINTS & ASSUMPTIONS**
+## **6. ACCEPTANCE CRITERIA & MVP DEMO SCRIPT**
 
-### 6.1 Technical Constraints
+### 6.1 Acceptance Criteria
+| ID | Criterion |
+|----|-----------|
+| AC-1 | System ingests from ≥ 3 live public sources + synthetic fallback offline |
+| AC-2 | System correctly extracts haemophilia entities (emicizumab, mim8, concizumab, Hemgenix, etc.) |
+| AC-3 | System classifies signals into the 7 haemophilia types with ≥ 85% accuracy |
+| AC-4 | Four-Question dashboard renders (Q1-Q4) with live data within 3s cold |
+| AC-5 | Role routing shows badges + confidence for ≥ 90% of signals |
+| AC-6 | Confluence alert fires on ≥ 3 converging signals within 48h (synthetic seeded) |
+| AC-7 | Stakeholder calibration: persona submits feedback → weights recalibrate → confidence updates |
+| AC-8 | Ask Athena answers ≥ 2 demo queries with cited evidence |
 
-- **Backend Language:** Python (FastAPI)
-- **Agent Orchestration:** LangGraph (multi-agent state graph)
-- **Frontend Framework:** Next.js 15 (React)
-- **Database:** PostgreSQL 16 + pgvector (vector + relational in one DB)
-- **Cache:** Redis
-- **Task Queue:** Celery + Redis; APScheduler (2-hour fetch trigger)
-- **Deployment:** Docker Compose (local/dev), Vercel + Render (production)
-- **ML Models (NER/Embeddings):** spaCy 3.7 (`en_core_sci_md`) for NER; `sentence-transformers/all-MiniLM-L6-v2` for embeddings; `facebook/bart-large-mnli` for zero-shot classification — fixed, well-tested, free, open-source
-- **ML Models (Summarization/LLM):** Fully configurable via `LOCAL_LLM_MODEL` + `LOCAL_LLM_TASK` environment variables. Default: `facebook/bart-large-cnn`. Supports any HuggingFace-compatible model (Gemma, Mistral, Phi-3, TinyLlama, etc.) with zero code changes. Model selection is an operational decision, not a development constraint.
-- **No GPU required:** All models can run on CPU. GPU is optional and improves throughput for larger models.
-- **HTTP Resilience:** `tenacity` (exponential backoff retry) + `httpx` (async HTTP client) for all external API calls
-- **Audit/Compliance:** Append-only `audit_log` table (WORM-enforced); spaCy PII detection pipeline before storage
-
-### 6.2 Business Constraints
-
-- **Timeline:** 4 weeks (hackathon deadline)
-- **Budget:** $0 (all free/open-source)
-- **Team:** 2 CSE + 3 B.Pharm students
-- **Scope:** MVP only (1 role, 2 sources, core features)
-
-### 6.3 Assumptions
-
-- **Internet connectivity:** Available during development (APIs require internet)
-- **Demo environment:** Has Docker, Git, Python 3.11+
-- **Data availability:** NewsAPI + PubMed remain free and stable
-- **User expertise:** Medical/regulatory teams familiar with dashboards (not data scientists)
-- **Confidentiality:** All signal data treated as Novo Nordisk confidential per CDA; public APIs only, no proprietary Novo Nordisk data
-
-### 6.4 Business Context (Hackathon Alignment)
-
-MetaRadar is designed against Novo Nordisk's current business reality (see Novo Nordisk Analysis doc) to maximize judged Business Impact:
-
-- **Semaglutide patent expiry (India, Mar 20, 2026):** 12+ generic entrants (Sun Pharma, Torrent, Dr. Reddy's, Zydus). MetaRadar's confluence engine + market access signals give Commercial/Market Access a competitive head start.
-- **Eli Lilly tirzepatide momentum:** Beat semaglutide in a 2024 head-to-head trial; gained share in Q1 2026. MetaRadar flags Lilly's oral GLP-1 (orforglipron) trajectory via temporal pattern recognition.
-- **GBS AI mandate:** Novo Nordisk GBS Bangalore targets a two-thirds reduction in drug launch timelines using AI. MetaRadar demonstrates that intelligence infrastructure.
-- **Judging alignment:** Innovation 25% (confluence + ontology + traceability), Technical 25% (LangGraph + pgvector + Docker), Business Impact 20% (above), Feasibility 15% (free stack, CPU-only, CDA-compliant), Presentation 15% (B.Pharm domain narration + CSE architecture narration).
+### 6.2 MVP Demo Script (15 minutes)
+1. Open dashboard → Q1 feed shows live haemophilia signals (synthetic + live)
+2. Click "Hemgenix 3-year durability" → Q2 relevance, confluence badge, competitive context
+3. Show Q3 role badges with confidence scores
+4. Show Q4 suggested actions ("Suggested — requires human review")
+5. "Ask Athena": "Summarise mim8 latest data" → cited answer
+6. Stakeholder calibration demo: submit Regulatory persona feedback → weights update → confidence changes visible
 
 ---
 
-## **7. ACCEPTANCE CRITERIA**
+## **7. APPENDICES**
 
-### 7.1 MVP Acceptance Criteria (Week 3)
-
-- [ ] Dashboard loads in < 500ms (cached)
-- [ ] All signals from NewsAPI + PubMed appear in feed
-- [ ] Entity extraction works for drugs, companies, indications
-- [ ] Pharma ontology enrichment resolves brand→molecule→company (e.g., "Wegovy" → semaglutide → Novo Nordisk)
-- [ ] Confluence Engine produces ONE consolidated alert for ≥ 2 signal types on the same entity in 48h
-- [ ] Every insight displays a traceable source chain (source → URL → excerpt)
-- [ ] Role filtering works (Medical Affairs sees only relevant signals)
-- [ ] 7-day trend chart displays correctly
-- [ ] At least 1 integration test passes
-- [ ] Docker Compose runs without errors (pgvector, no Weaviate)
-- [ ] Fallback cache works when API fails
-- [ ] At least 1 B.Pharm student can explain the domain logic
-
-### 7.2 Extended Acceptance Criteria (Week 4)
-
-- [ ] One bonus feature fully implemented (Reddit OR Regulatory OR Ask Athena OR narrative briefs)
-- [ ] Temporal pattern matching flags a pre-approval or access-crisis trajectory
-- [ ] Unit test coverage > 60% for critical paths
-- [ ] Performance benchmarks met (see 3.1)
-- [ ] Judges can run `docker-compose up` and see live demo
-- [ ] Architecture diagram + code walkthrough documented
-- [ ] Demo script includes failure scenarios (API down, etc.)
-- [ ] Demo ties features to Novo Nordisk pain (patent expiry, Eli Lilly competition) for Business Impact score
-
-### 7.3 Quality Metrics
-
-- **Bug Severity:** No critical bugs (crashes) at demo
-- **Code Quality:** No warnings from linter/type checker
-- **Documentation:** README + API docs complete
-- **User Feedback:** At least 2 faculty review and approve domain logic
-
----
-
-## **8. GLOSSARY**
-
-| Term | Definition |
-|---|---|
-| **21 CFR Part 11** | FDA regulation requiring electronic audit trails, access controls, and WORM-compliant logs for pharma records |
-| **Agentic AI** | AI system that autonomously takes actions without human intervention |
-| **Bronze Layer** | Raw, unprocessed data table (`raw_signals_bronze`) stored before any transformation; enables full pipeline replay |
-| **Confluence** | Multiple independent signal types converging on the same entity in a time window → elevated alert |
-| **Embedding** | Vector representation of text (semantic meaning) |
-| **Evidence Chain** | Audit trail linking an insight to its source signals, URLs, and excerpts |
-| **GxP** | Good Practice regulations in pharma (GCP, GMP, GLP) requiring data integrity and audit trails |
-| **Hybrid Search** | Combining semantic (vector) + keyword (lexical) search |
-| **Knowledge Graph** | Graph database of entities and relationships |
-| **LangGraph** | Framework for stateful multi-agent orchestration (state graph) |
-| **LLM** | Large Language Model — any HuggingFace-compatible model (BART, Gemma, Mistral, Phi-3, etc.); configurable via env var |
-| **NER** | Named Entity Recognition (extract entities from text) |
-| **Narrative Synthesis** | LLM generation of executive briefs (what / why / action) |
-| **Ontology** | Domain hierarchy (drug → brand → mechanism → manufacturer → competitor) |
-| **Payload** | Request/response body in API |
-| **pgvector** | PostgreSQL extension enabling vector similarity search in the primary DB |
-| **PII** | Personally Identifiable Information; detected and stripped before storage |
-| **RAG** | Retrieval-Augmented Generation (fetch + generate) |
-| **Relevance Score** | ML metric (0-1) indicating importance |
-| **SLI/SLO** | Service Level Indicator / Objective — measurable reliability and performance targets |
-| **Temporal Pattern** | Recognition of competitive timeline stages (e.g., pre-approval surge) |
-| **Traceability** | Ability to show which signals produced an insight |
-| **Velocity** | Rate of change (e.g., mentions per day) |
-| **Vector DB** | Database optimized for semantic similarity search (here: pgvector) |
-| **WORM** | Write Once Read Many — append-only storage; no UPDATE/DELETE allowed; required for 21 CFR Part 11 |
-
----
-
-## **9. REVISION HISTORY**
-
-| Version | Date | Author | Changes |
-|---|---|---|---|
-| 1.0 | 2026-07-26 | Omprakash | Initial MVP specification |
-| 1.1 | 2026-07-28 | Omprakash | Aligned with Refined Architecture: pgvector (replaces Weaviate), LangGraph orchestration, confluence engine, pharma ontology, traceable reasoning, temporal patterns, narrative briefs, Ask Athena; added Novo Nordisk business context + judging criteria |
-| 1.2 | 2026-08-06 | Omprakash | Aligned with deep-research-report: model-agnostic LLM config (LOCAL_LLM_MODEL env var), FR-2.7.3 GxP audit trail (21 CFR Part 11 / WORM), expanded security (PII detection, Snyk, medical disclaimer), SLI/SLO targets, bronze raw_signals table, tenacity retry library, updated glossary |
-
+### 7.1 Glossary Additions (Haemophilia)
+- **Concizumab (Alhemo):** Novo Nordisk anti-TFPI antibody for Haemophilia A/B with/without inhibitors
+- **Mim8:** Novo Nordisk next-gen bispecific; Phase 3; aims to improve on emicizumab
+- **Emicizumab (Hemlibra):** Roche bispecific; standard non-factor care in Haemophilia A
+- **Fitusiran:** Sanofi RNAi antithrombin knockdown; approved 2023
+- **Hemgenix:** CSL Behring/UniQure gene therapy for Haemophilia B; approved 2022
+- **Roctavian:** BioMarin gene therapy for Haemophilia A; approved 2023
+- **Inhibitor:** Neutralizing antibody to factor replacement (~30% severe Haemophilia A)
+- **Anti-TFPI:** Blocks Tissue Factor Pathway Inhibitor to promote thrombin generation
 

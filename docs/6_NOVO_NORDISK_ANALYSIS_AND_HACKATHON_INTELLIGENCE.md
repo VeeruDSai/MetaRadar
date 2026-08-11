@@ -2,6 +2,10 @@
 
 ---
 
+> **v2.0 (Aug 12, 2026 kickoff):** Added haemophilia-specific context (concizumab/Alhemo, mim8 Phase 3, gene-therapy disruption), the **Stakeholder Calibration / "Stakeholder Learning Plan"** judging angle, and haemophilia-themed presentation lines. The metabolic-disease examples remain below as historical context on Novo Nordisk, but MetaRadar's target domain for this hackathon is **Haemophilia within Rare Disease**.
+
+---
+
 ## **PART 1: COMPANY OVERVIEW**
 
 ### 1.1 Who They Are
@@ -13,6 +17,12 @@ Novo Nordisk is a Danish multinational pharmaceutical company founded in 1923, h
 - **Rybelsus** (semaglutide, oral tablet, diabetes)
 - **Victoza** (liraglutide, older GLP-1)
 - **Pipeline:** Amycretin (Phase 3, obesity+diabetes), UBT251 (triple gut hormone agonist, early-stage)
+
+**Rare Disease / Haemophilia franchise (MetaRadar's focus):**
+- **Alhemo (concizumab)** — anti-TFPI antibody for Haemophilia A and B with/without inhibitors; EU approved February 2023, global expansion ongoing
+- **mim8** — next-generation bispecific antibody (Factor IXa/X bridge); **Phase 3 programme** across Haemophilia A; positioned to compete directly with Roche's emicizumab (Hemlibra)
+- **Other rare-disease assets:** esparin/egidiama (formerly in haemophilia), broader rare bleeding disorders pipeline
+- **Strategic threat:** single-administration gene therapies (CSL Behring's Hemgenix, BioMarin's Roctavian) are shifting the long-term treatment paradigm away from lifelong prophylaxis — the exact market shift MetaRadar is built to track
 
 **Scale:**
 - Revenue 2025: ~$50.9B (Forbes)
@@ -52,6 +62,18 @@ They are hiring specifically for **AI-led operations**, not general headcount. T
 **Challenge 4: Intelligence Needed Across 25 Functions**
 
 The problem statements reveal 25 distinct operational pain points across functions: clinical, regulatory, supply chain, market access, commercial strategy, pharmacovigilance, audit, IT system management, HR, publication tracking, and more. These teams collectively spend enormous time manually gathering and processing external information. Problem Statement 3 is the company-wide intelligence layer that benefits ALL 25 functions.
+
+**Challenge 5 (NEW v2.0): Haemophilia Paradigm Shift Is Happening RIGHT NOW**
+
+The haemophilia treatment landscape is in its most significant transition in decades — from IV factor replacement to subcutaneous non-factor therapies and single-administration gene therapy:
+
+- **Roche emicizumab (Hemlibra)** dominates non-factor Haemophilia A; Novo Nordisk's mim8 is designed to compete directly with it (Phase 3 readouts ongoing)
+- **Fitusiran (Sanofi, RNAi, approved 2023)** and **marstacimab (Pfizer, anti-TFPI)** expand the non-factor competitive set
+- **Gene therapy** (Hemgenix for Haemophilia B, Roctavian for Haemophilia A) is moving from "new modality" to "durability data" — sustained 3-year Factor IX expression stories directly pressure lifelong-prophylaxis economics that concizumab/mim8 rely on
+- Signals about these shifts are scattered across ASH/ISTH/WFH/EHA congress abstracts, PubMed, FDA/EMA filings, HTA appraisals (NICE/G-BA), and patient forums (r/Hemophilia)
+
+**Why this matters for MetaRadar:**
+> MetaRadar's Confluence Engine would track a "gene therapy milestone parade" — ASH abstract + CSL Behring press release + r/Hemophilia discussion converging in 48h — and alert Novo Nordisk's Medical Affairs/Commercial/R&D teams to re-brief on mim8/concizumab positioning vs durability narratives, before analysts make the case publicly.
 
 ---
 
@@ -217,6 +239,19 @@ Low score:
 - 15 slides of architecture diagrams with no demo
 - Presenting to pharma judges as if they understand NLP
 
+**NEW v2.0 — "Stakeholder Learning Plan" (the calibration angle judges will probe):**
+
+Given the kickoff focus on the Stakeholder Calibration Loop, judges are likely to evaluate how the system *improves with use*. Prepare to show:
+
+| Question | MetaRadar's Answer |
+|---|---|
+| How does the system get smarter after the demo? | Stakeholder feedback (⭐ 1-5 per signal, per role) recalibrates `scoring_weights`; routing confidence improves on next cycle |
+| Who calibrates it? | Simulated personas for the hackathon (Medical Affairs Lead, Regulatory Specialist, Market Access Manager) + real users in production |
+| Is it auditable? | Every recalibration written to `calibration_history` + WORM `audit_log` |
+| What improves measurably? | Q3 role-routing accuracy (per-role avg rating), confidence uplift pre- vs post-calibration, weight drift per signal type |
+
+Demo the loop live: submit a wrong routing rating → hit `POST /api/v1/calibrate` → show the Q3 confidence badge change. This turns a feature into a story.
+
 ---
 
 ## **PART 4: PREVIOUS HACKATHON PROJECT ANALYSIS**
@@ -276,12 +311,13 @@ Deployment:      Streamlit Cloud (live demo link included)
 |---|---|
 | **Streamlit UI** | Not production-grade. Next.js dashboard is enterprise-ready. |
 | **Hardcoded data** | "Some data are hardcoded to preserve reproducibility" — looks like a student project. MetaRadar pulls live APIs. |
-| **Single-problem scope** | Commercial strategy for 1 drug. MetaRadar serves ALL roles for the WHOLE haemophilia competitive landscape. |
+| **Single-problem scope** | Commercial strategy for 1 drug. MetaRadar serves ALL roles for the WHOLE haemophilia competitive landscape (Haemophilia A + B, inhibitors). |
 | **No real-time updates** | Static dashboard. MetaRadar updates every 2 hours automatically. |
 | **Batch analysis** | Requires user to run analysis manually. MetaRadar is always-on. |
 | **No AI pipeline** | pandas + plotly = data dashboard, not AI. MetaRadar has NLP, LLM summarization, scoring. |
 | **No persistence** | Refresh loses session state. MetaRadar has PostgreSQL + Redis. |
 | **Single user** | One person views one dashboard. MetaRadar supports multiple roles simultaneously. |
+| **No learning loop** | Static analysis. MetaRadar's Stakeholder Calibration Loop (HITL) recalibrates routing from persona feedback (NEW v2.0). |
 
 ---
 
@@ -299,15 +335,15 @@ The 2025 winning project was:
 
 | Dimension | 2025 Winner | MetaRadar 2026 |
 |---|---|---|
-| **Data** | Static (NFHS-5, hardcoded) | Live APIs (NewsAPI, PubMed, Reddit, FDA) |
+| **Data** | Static (NFHS-5, hardcoded) | Live APIs (NewsAPI, PubMed, Reddit, FDA, ClinicalTrials.gov, Congress) |
 | **AI** | None (pandas + plotly) | NLP, LLM summarization, ML scoring, vector search |
 | **Architecture** | Single Streamlit app | Multi-agent LangGraph + FastAPI + Next.js + PostgreSQL + Redis |
-| **Users** | Single user | Multi-role (Medical Affairs, Regulatory, Commercial) |
-| **Scope** | 1 drug, 1 market | Entire haemophilia rare disease competitive landscape |
+| **Users** | Single user | Multi-role (Medical Affairs, Regulatory, Market Access, Commercial, R&D) |
+| **Scope** | 1 drug, 1 market | Entire haemophilia rare disease competitive landscape (A + B, inhibitors, gene therapy) |
 | **Update frequency** | Manual (run script) | Automated (every 2 hours) |
 | **Production readiness** | Streamlit Cloud | Docker Compose + Vercel + Railway |
-| **Innovation** | Market analysis dashboard | Confluence detection, pharma ontology, traceable intelligence |
-| **Compliance/Audit** | None | WORM audit log (21 CFR Part 11), PII detection, medical disclaimer |
+| **Innovation** | Market analysis dashboard | Confluence detection, pharma ontology, traceable intelligence, **Stakeholder Calibration Loop (HITL, NEW v2.0)** |
+| **Compliance/Audit** | None | WORM audit log (21 CFR Part 11), PII detection, medical disclaimer, calibration_history audit |
 | **AI Model Flexibility** | Hardcoded pandas | Model-agnostic: any HuggingFace model via config (BART → Gemma → Mistral, zero code change) |
 
 
@@ -322,14 +358,17 @@ These are statements directly tied to their current business reality that will s
 **Opening statement (Innovation criterion):**
 > "Haemophilia is undergoing its most significant paradigm shift in decades—from IV factor replacement to subcutaneous bispecific antibodies and single-administration gene therapies like Hemgenix and Roctavian. Critical signals about this shift are scattered across congress abstracts, PubMed publications, FDA/EMA filings, patient forums, and competitor announcements. MetaRadar exists to make Novo Nordisk's response instant and coordinated across all functions."
 
-**On business impact:**
-> "Roche's Hemlibra (emicizumab) established non-factor prophylaxis, while competitors advance next-gen anti-TFPI and gene therapy readouts. MetaRadar flags when clinical data, HTA decisions, and patient sentiment converge—giving Novo Nordisk teams early strategic clarity."
+**On business impact (NEW v2.0 — mim8 vs emicizumab + gene therapy):**
+> "Roche's Hemlibra (emicizumab) established non-factor prophylaxis in Haemophilia A, and gene-therapy durability data (Hemgenix 3-year, Roctavian) is now challenging the lifelong-prophylaxis model itself. MetaRadar flags when clinical data, HTA decisions, and patient sentiment converge — giving Novo Nordisk's Medical Affairs and Commercial teams early clarity on how to position mim8 and concizumab against both, before analysts make the case publicly."
+
+**On the Stakeholder Calibration Loop (NEW v2.0):**
+> "MetaRadar doesn't just route intelligence to the right function — it learns whether the routing was right. Stakeholders rate each signal 1-5; the calibration service recalibrates scoring weights; Q3 role-routing confidence visibly improves. Our demo shows a Regulatory persona teaching the system, live."
 
 **On feasibility:**
 > "Novo Nordisk GBS already handles clinical data analysis, regulatory submissions, and commercial planning for global launches. MetaRadar integrates directly into that workflow—same cloud infrastructure, same role-based access structure, zero additional hardware."
 
 **On the team composition:**
-> "Competitive intelligence in pharma is not a technology problem—it's a domain + technology problem. Our B.Pharm team built the pharmaceutical ontology that makes MetaRadar understand 'Hemlibra' = 'emicizumab' = 'Roche Haemophilia A competitor.' Our CSE team built the system that makes it real-time. Neither team alone could have built this."
+> "Competitive intelligence in pharma is not a technology problem—it's a domain + technology problem. Our B.Pharm team built the haemophilia ontology that makes MetaRadar understand 'Hemlibra' = 'emicizumab' = 'Roche Haemophilia A competitor' and 'mim8' = 'concizumab' = Novo Nordisk assets. Our CSE team built the system that makes it real-time and self-calibrating. Neither team alone could have built this."
 
 **Closing (talent pipeline):**
 > "Novo Nordisk GBS is targeting a two-thirds reduction in drug launch timelines using AI. MetaRadar is a proof-of-concept for what that intelligence infrastructure looks like—built by a team that wants to build it at scale."
@@ -340,7 +379,15 @@ These are statements directly tied to their current business reality that will s
 
 **Q: "How is this different from just subscribing to Contify or SinglePoint?"**
 
-A: "Contify and SinglePoint are generic competitive intelligence platforms. They don't know that 'Hemlibra' and 'emicizumab' are the same molecule, or that 'mim8' is Novo Nordisk's bispecific candidate. They don't detect confluence—they don't know when a safety signal on Reddit and an FDA advisory are part of the same emerging story. MetaRadar is domain-specific to haemophilia rare disease, framed in a Four-Question model, and gets smarter via stakeholder calibration."
+A: "Contify and SinglePoint are generic competitive intelligence platforms. They don't know that 'Hemlibra' and 'emicizumab' are the same molecule, or that 'mim8' is Novo Nordisk's bispecific candidate. They don't detect confluence—they don't know when a safety signal on Reddit and an FDA advisory are part of the same emerging story. And they don't learn: nothing they deliver to Medical Affairs ever changes how they route to Medical Affairs. MetaRadar is domain-specific to haemophilia rare disease, framed in a Four-Question model, and gets smarter via stakeholder calibration."
+
+**Q: "How does the stakeholder calibration loop actually work? (NEW v2.0)"**
+
+A: "On every signal card, Q3 shows the routing with confidence — e.g., Regulatory 92%. The reviewer rates it 1-5 stars with a reason. That feedback lands in an append-only `stakeholder_feedback` table. Our `StakeholderCalibrationService.recalibrate(role)` recomputes that role's scoring weights across the seven haemophilia signal types and writes a `calibration_history` row for audit. Next ingestion cycle routes with the new weights, and the confidence badge shows the uplift. For the hackathon we seed three simulated personas — a Medical Affairs Lead, a Regulatory Specialist, and a Market Access Manager — so the loop is demonstrable live in minutes, not weeks."
+
+**Q: "Is the calibration auditable? What stops someone gaming the weights?"**
+
+A: "Feedback rows are WORM — UPDATE and DELETE are revoked at the database level, consistent with our 21 CFR Part 11 audit trail. Every recalibration writes `old_weights → new_weights` plus trigger reason and feedback count to `calibration_history`. We also gate recalibration on a minimum feedback count per role, so a single star rating can't move the system."
 
 **Q: "What happens when an API goes down?"**
 
@@ -366,11 +413,11 @@ A: "Our B.Pharm team built a validation layer—a pharma ontology that cross-ref
 
 **Q: "The judging criteria says you worked with dummy datasets. You're using real APIs—is that compliant?"**
 
-A: "All our data sources are publicly available—NewsAPI, PubMed, Twitter academic research tier, Reddit, FDA. These are the same sources Novo Nordisk's teams already read manually. We're not accessing proprietary Novo Nordisk data. The CDA covers the problem statements and mentorship discussions, not public internet data. However, we'd recommend consulting with your compliance team before deploying in a production context."
+A: "All our data sources are publicly available—NewsAPI, PubMed, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit, and congress abstract repositories (ASH, ISTH, WFH, EHA). These are the same sources Novo Nordisk's teams already read manually. We're not accessing proprietary Novo Nordisk data. The CDA covers the problem statements and mentorship discussions, not public internet data. However, we'd recommend consulting with your compliance team before deploying in a production context."
 
 **Q: "What does the Bangalore team actually do with this on Monday morning?"**
 
-A: "Medical Affairs opens their role-specific dashboard—top 20 signals from the last 24h, pre-prioritized by clinical relevance, with AI summaries. Instead of spending 3 hours reading industry newsletters, they spend 15 minutes reviewing pre-synthesized intelligence and acting on high-confluence alerts."
+A: "Medical Affairs opens their role-specific dashboard — top 20 signals from the last 24h, pre-prioritized by clinical relevance, with AI summaries and Q1-Q4 framing. Instead of spending 3 hours reading industry newsletters and congress digests, they spend 15 minutes reviewing pre-synthesized intelligence, acting on high-confluence alerts, and their star ratings keep the routing accurate for the next day."
 
 ---
 
@@ -394,7 +441,7 @@ Other college teams (especially from pharmacy backgrounds) tackling Problem Stat
 
 **Most common approach:**
 - Streamlit app with NewsAPI integration
-- Manual keyword filtering ("GLP-1", "obesity")
+- Manual keyword filtering ("emicizumab", "haemophilia")
 - Simple sentiment analysis (TextBlob or VADER)
 - Bar charts and pie charts
 - Static report output
@@ -403,7 +450,8 @@ Other college teams (especially from pharmacy backgrounds) tackling Problem Stat
 - Next.js vs Streamlit (production vs prototype)
 - LangGraph multi-agent vs single script (architecture vs code)
 - Confluence Engine (no one else will have this concept)
-- Pharma ontology built by domain experts (not just keyword matching)
+- Haemophilia ontology built by domain experts (not just keyword matching)
+- Stakeholder Calibration Loop (no one else will have a learning system)
 - Live data with fallback cache vs static or demo-only data
 
 **Second most common approach (from CSE-heavy teams):**
@@ -415,7 +463,8 @@ Other college teams (especially from pharmacy backgrounds) tackling Problem Stat
 **Why you beat this:**
 - Domain-validated by B.Pharm team (accuracy + credibility)
 - Scoped to MVP that works reliably (not over-built)
-- Business framing is stronger (you know the patent expiry, the Eli Lilly context)
+- Business framing is stronger (you know the haemophilia paradigm shift, the mim8 vs emicizumab fight, gene-therapy disruption)
+- A learning system (calibration loop) instead of a static dashboard
 
 ---
 
@@ -424,8 +473,8 @@ Other college teams (especially from pharmacy backgrounds) tackling Problem Stat
 ```
 WHAT NOVO NORDISK IS LOOKING FOR:
 ✓ Working prototype (not wireframe) — MetaRadar has this
-✓ Genuine innovation, not incremental improvement — Confluence Engine + Pharma Ontology
-✓ Business impact tied to their actual problems — Patent expiry, Lilly competition, AI mandate
+✓ Genuine innovation, not incremental improvement — Confluence Engine + Pharma Ontology + Stakeholder Calibration Loop
+✓ Business impact tied to their actual problems — Haemophilia paradigm shift, mim8 vs emicizumab, gene-therapy disruption, AI mandate
 ✓ Multi-disciplinary team — 2 CSE + 3 B.Pharm = perfect composition for this problem
 ✓ Scalable architecture — Next.js + FastAPI + PostgreSQL + Docker (enterprise-grade)
 ✓ Talent they want to hire — AI-led roles, data science, digital innovation
@@ -433,7 +482,7 @@ WHAT NOVO NORDISK IS LOOKING FOR:
 WHAT THE 2025 WINNER DID THAT YOU MUST DO BETTER:
 ✓ Live working demo (✓ your plan has this)
 ✓ Quantified impact (✓ add specific numbers: "800 signals → 15 high-priority alerts per day")
-✓ India-specific context (✓ mention semaglutide patent expiry, India GLP-1 market)
+✓ India-specific context (✓ mention Bangalore GBS AI mandate and role in global launches)
 ✓ Structured deliverables (✓ 2-page report + PPT + working app)
 
 WHAT THE 2025 WINNER MISSED THAT YOU WILL NAIL:
@@ -442,15 +491,16 @@ WHAT THE 2025 WINNER MISSED THAT YOU WILL NAIL:
 ✓ Multi-role access (vs single-user dashboard)
 ✓ Production architecture (vs Streamlit)
 ✓ Confluence detection (novel concept, doesn't exist elsewhere)
+✓ A learning loop — the Stakeholder Calibration Loop proves the system improves with use (NEW v2.0)
 
 YOUR SINGLE BIGGEST DIFFERENTIATOR:
-The B.Pharm team + CSE team building ONE system.
-No other team will have domain-validated pharmaceutical intelligence.
+The B.Pharm team + CSE team building ONE system that learns.
+No other team will have domain-validated, self-calibrating pharmaceutical intelligence.
 That's not a technical feature—it's a moat.
 ```
 
 ---
 
-*Document prepared: July 28, 2026*  
-*Context: Novo Nordisk GBS Hackathon 2026, Problem Statement 3*  
+*Document revised: August 12, 2026 (kickoff scope update)*  
+*Context: Novo Nordisk GBS Hackathon 2026, Problem Statement #3 — From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease*  
 *Team: MSRIT (2 CSE + 3 B.Pharm)*
