@@ -207,7 +207,7 @@ LangGraph 10-Agent Pipeline
    └─► Redis 7 (Hot Signal Cache 2h TTL + Rate Limiting)
         ▲
         │ Async Ingestion & Scheduled Triggers
-Celery 5.3 + APScheduler
+APScheduler (single in-process scheduler)
         ▲
         │ Public API Connectors (with tenacity exponential retries)
 Public Data Sources (PubMed, NewsAPI, ClinicalTrials.gov, FDA, EMA, Reddit, Congress Repositories)
@@ -277,7 +277,7 @@ Every answer follows a strict 2-part structure:
 
 ### Q3: Why Redis?
 * **Non-Technical Answer:** Redis provides ultra-fast memory storage so repeated user views load instantly without re-processing data.
-* **Technical Implementation:** Redis 7 serves as an in-memory key-value cache with a 2-hour TTL for processed hot signals, quota-aware rate-limiting counter for public API endpoints (e.g. NewsAPI Developer tier = 100 requests/day, dev/testing only, 24h article delay), and transient pub/sub broker for Celery async tasks.
+* **Technical Implementation:** Redis 7 serves as an in-memory key-value cache with a 2-hour TTL for processed hot signals and a quota-aware rate-limiting counter for public API endpoints (e.g. NewsAPI Developer tier = 100 requests/day, dev/testing only, 24h article delay). Scheduled jobs (2h fetch, nightly digest, on-demand recalibration) run on the single in-process APScheduler (Celery is not used — Master Plan §14.9).
 
 ---
 
@@ -330,8 +330,8 @@ Every answer follows a strict 2-part structure:
 ---
 
 ### Q12: How does the architecture scale?
-* **Non-Technical Answer:** Because our components are lightweight and decoupled, we can process thousands of signals simultaneously across multiple background workers.
-* **Technical Implementation:** The architecture separates API serving (FastAPI ASGI under Uvicorn) from async processing (Celery task queues backed by Redis). Read queries hit indexed PostgreSQL/pgvector views or Redis cache. Adding ingestion volume requires scaling Celery worker processes without modifying backend API code.
+* **Non-Technical Answer:** Because our components are lightweight and decoupled, we can process thousands of signals simultaneously across scheduled background jobs.
+* **Technical Implementation:** The architecture separates API serving (FastAPI ASGI under Uvicorn) from async intelligence processing (single in-process APScheduler; heavy LangGraph runs are offloaded from the event loop via asyncio/thread-pool execution, with Redis for caching — Celery is deliberately not used in the hackathon architecture, Master Plan §14.9). Read queries hit indexed PostgreSQL/pgvector views or Redis cache. Adding ingestion volume requires scaling the background job execution, not modifying backend API code.
 
 ---
 
@@ -355,7 +355,7 @@ Every answer follows a strict 2-part structure:
 
 ### Q16: Why is this feasible within a one-month hackathon?
 * **Non-Technical Answer:** We use lightweight, free, local open-source AI components with pre-curated fallback data so we don't waste time on complex cloud setups.
-* **Technical Implementation:** MetaRadar defaults to local CPU-executable models (spaCy `en_core_sci_md`, Gemma 3 4B, BART MNLI, MiniLM embeddings) running inside Docker Compose, so the demo works with zero API keys. By selecting PostgreSQL + pgvector over external vector databases and using standard Python frameworks (FastAPI + LangGraph), we eliminate mandatory cloud dependencies, key management overhead, and deployment friction — an optional hosted reasoning provider (xAI Grok) is available behind a strict external-LLM privacy gate when higher-quality reasoning is desired, with BART as the safe degraded factual fallback.
+* **Technical Implementation:** MetaRadar defaults to local models running inside Docker Compose — Gemma 3 4B Instruct (Q4/int4) on the **local GPU (NVIDIA RTX 3050, 4 GB VRAM)**, with spaCy `en_core_sci_md`, BART MNLI, and MiniLM embeddings on CPU — so the demo works with zero API keys. If Gemma cannot initialize (e.g., VRAM pressure), the provider chain falls back to Grok (if enabled) → BART degraded factual → source-linked summary with a human-review flag; the demo never crashes (Master Plan §14.1). By selecting PostgreSQL + pgvector over external vector databases and using standard Python frameworks (FastAPI + LangGraph), we eliminate mandatory cloud dependencies, key management overhead, and deployment friction — an optional hosted reasoning provider (xAI Grok) is available behind a strict external-LLM privacy gate when higher-quality reasoning is desired, with BART as the safe degraded factual fallback.
 
 ---
 

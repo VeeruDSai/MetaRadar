@@ -468,15 +468,14 @@ The following are outside the locked MVP:
 | Vector search          | pgvector                                 |
 | **Role** | **Default** | **Alternative** |
 |---|---|---|
-| Reasoning / Four Questions / Athena | `google/gemma-3-4b-it` (Gemma 3 4B, local) | xAI Grok API (`LLM_PROVIDER=xai`; privacy-gated) |
+| Reasoning / Four Questions / Athena | `google/gemma-3-4b-it` (Gemma 3 4B Instruct, **local GPU** — RTX 3050 4 GB VRAM, Q4/int4) | xAI Grok API (`LLM_PROVIDER=xai`; privacy-gated) |
 | Degraded factual summary | `facebook/bart-large-cnn` | — |
 | Batch summarization | `facebook/bart-large-cnn` | — |
 | NLI | `facebook/bart-large-mnli` | — |
 | NER | spaCy `en_core_sci_md` | — |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` | — |
 | Cache                  | Redis 7                                  |
-| Workers                | Celery                                   |
-| Scheduler              | APScheduler                              |
+| Scheduler              | APScheduler (single, in-process)         |
 | HTTP                   | httpx                                    |
 | Deployment             | Docker Compose                           |
 
@@ -746,9 +745,16 @@ NEWSAPI_KEY=your_newsapi_key
 # Model configuration (all local by default, zero API cost)
 # Reasoning layer (provider-agnostic): local | xai | auto
 LLM_PROVIDER=local
-# Reasoning LLM (local default): narrative synthesis, Four-Question briefs, Ask Athena
+# Reasoning LLM (local default, GPU-first): narrative synthesis, Four-Question briefs, Ask Athena
 LOCAL_LLM_MODEL=google/gemma-3-4b-it
 LOCAL_LLM_TASK=text-generation
+# Gemma runs on the local GPU (NVIDIA RTX 3050, 4 GB VRAM) as Q4/int4.
+# 4 GB VRAM does NOT guarantee inference — on init/failure the provider chain
+# falls back to Grok (if enabled) → BART degraded factual → source + human review.
+LLM_DEVICE=cuda:0
+LLM_DTYPE=int4
+MAX_CONTEXT_TOKENS=4096
+MAX_OUTPUT_TOKENS=1024
 # Optional hosted reasoning provider (xAI Grok) — only when LLM_PROVIDER=xai|auto.
 # Grok calls are gated by the external-LLM privacy gate (public/synthetic data only).
 XAI_API_KEY=
@@ -905,7 +911,7 @@ NewsAPI has request limits. Redis caching and periodic polling reduce unnecessar
 
 MetaRadar's reasoning layer is provider-agnostic (default local, no API key required): `LLM_PROVIDER=local` uses **Gemma 3 4B Instruct** locally; `LLM_PROVIDER=xai` uses the **hosted xAI Grok API**; `LLM_PROVIDER=auto` tries Gemma then Grok. All external (Grok) calls pass a mandatory privacy gate — only public or synthetic prototype data may leave the machine; blocked content falls back to local Gemma → BART → source-only display. Grok responses use JSON-Schema structured outputs and are validated at application level (evidence IDs, source URLs, controlled vocabularies, no fabricated entities). Every output records model metadata (provider/model/fallback reason).
 
-Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware. MetaRadar defaults to Gemma 3 4B Instruct for reasoning; when no reasoning provider is available the system enters **degraded mode — BART performs factual summarization only** (it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; the UI shows "AI reasoning unavailable — showing source-grounded factual summary"). Degraded mode is clearly marked and human review applies where necessary.
+Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware. MetaRadar defaults to Gemma 3 4B Instruct (Q4/int4) on the **local GPU — NVIDIA RTX 3050, 4 GB VRAM**. **4 GB VRAM does not guarantee inference success** — model weights, KV cache, runtime overhead, and context length are budgeted separately (`LLM_DEVICE`, `LLM_DTYPE`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS`); if Gemma cannot initialize or execute, the provider chain falls back to Grok (if configured) → BART degraded factual → source-grounded factual signal + human-review flag. The application never crashes because a model does not fit. When no reasoning provider is available the system enters **degraded mode — BART performs factual summarization only** (it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; the UI shows "AI reasoning unavailable — showing source-grounded factual summary"). Degraded mode is clearly marked and human review applies where necessary.
 
 ### Stakeholder feedback
 
@@ -1099,7 +1105,8 @@ SCATTERED INFORMATION
 
 **Pilot Area — Haemophilia within Rare Disease**
 
-**Team — Aura Pharmers**
+**Team — Aura Pharmers**  
+**Team Lead — Sanjana Rathore B.**
 
 ---
 ```

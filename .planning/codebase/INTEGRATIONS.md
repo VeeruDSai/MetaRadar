@@ -71,7 +71,7 @@
 - `REDIS_URL` — Redis connection string
 - `NEWSAPI_KEY` — NewsAPI credential (the only paid-key external *data* API)
 - `LLM_PROVIDER` — reasoning provider mode (`local` default / `xai` / `auto`)
-- `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` — local reasoning LLM (`google/gemma-3-4b-it`, `text-generation`)
+- `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` — local reasoning LLM (`google/gemma-3-4b-it`, `text-generation`); `LLM_DEVICE` (GPU/cpu/auto) · `LLM_DTYPE` (int4) · `MAX_CONTEXT_TOKENS` · `MAX_OUTPUT_TOKENS` — Gemma runs Q4/int4 on the local GPU (RTX 3050, 4 GB VRAM; VRAM not guaranteed — never-crash fallback, Master Plan §14.1)
 - `XAI_API_KEY` / `XAI_MODEL` / `XAI_TIMEOUT` — optional hosted Grok (only when `LLM_PROVIDER=xai|auto`; privacy-gated)
 - `SUMMARIZER_MODEL` / `SUMMARIZER_TASK` — batch summarizer (`facebook/bart-large-cnn`, `summarization`)
 
@@ -89,7 +89,7 @@
 - None
 
 **Outgoing:**
-- None — the system polls public APIs on a 2-hour schedule (Celery + APScheduler) rather than receiving webhooks (`docs/METARADAR_MASTER_PLAN_v5.0.md` §5)
+- None — the system polls public APIs on a 2-hour schedule via the single in-process APScheduler (Celery removed per `docs/METARADAR_MASTER_PLAN_v5.0.md` §14.9) rather than receiving webhooks (`docs/METARADAR_MASTER_PLAN_v5.0.md` §5)
 
 ---
 

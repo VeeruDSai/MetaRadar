@@ -41,14 +41,13 @@ This repository is currently **specification-first**: it contains only documenta
 - TanStack Query v5 — server state, auto-caching, background revalidation (`CLAUDE.md`)
 - Recharts + Framer Motion — visualizations and card animations (`CLAUDE.md`)
 
-**Workers (prescribed):**
-- Celery 5.3 — asynchronous ingestion pipeline
-- APScheduler — 2-hour periodic fetch scheduler (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4)
+**Scheduler (prescribed — ONE scheduler):**
+- **APScheduler** — in-process, inside FastAPI: 2-hour periodic fetch · nightly digest · on-demand recalibration. **Celery is deliberately NOT used** in the hackathon architecture (rationale + reintroduction path: `docs/METARADAR_MASTER_PLAN_v5.0.md` §14.9)
 
 ## AI / ML Models (Local by Default, Free — Zero API Cost)
 
 **Prescribed by `CLAUDE.md` and `docs/2_SRS_Software_Requirements_Specification.md` §3/§4.2:**
-- **Reasoning Layer (provider-agnostic, Master Plan v5.0 §13):** `google/gemma-3-4b-it` (Gemma 3 4B Instruct, Q4-quantized for CPU) as default **local** provider — Four-Question reasoning, narrative synthesis, AI-suggested actions, Ask Athena — via `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` env vars; model-agnostic by design (any HuggingFace text-generation model swap-in). **Optional hosted provider: xAI Grok API** (`LLM_PROVIDER=xai|auto`, `XAI_API_KEY`/`XAI_MODEL`) gated by a mandatory external-LLM privacy gate (public/synthetic data only; JSON-Schema structured outputs; per-output model metadata). When no reasoning provider is available the system enters **degraded mode**: BART performs factual summarization only — it is NOT a reasoning-equivalent replacement, no unsupported interpretation is generated, and no AI action recommendation requiring reasoning is produced (`docs/2_SRS_Software_Requirements_Specification.md` FR-2.2.3A–G)
+- **Reasoning Layer (provider-agnostic, Master Plan v5.1 §13/§14.1):** `google/gemma-3-4b-it` (Gemma 3 4B Instruct, **Q4/int4 on the local GPU — NVIDIA RTX 3050, 4 GB VRAM**) as default **local** provider — Four-Question reasoning, narrative synthesis, AI-suggested actions, Ask Athena — via `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` + `LLM_DEVICE` / `LLM_DTYPE` / `MAX_CONTEXT_TOKENS` / `MAX_OUTPUT_TOKENS` env vars (4 GB VRAM never assumed to guarantee inference; never-crash provider fallback chain); model-agnostic by design (any HuggingFace text-generation model swap-in). **Optional hosted provider: xAI Grok API** (`LLM_PROVIDER=xai|auto`, `XAI_API_KEY`/`XAI_MODEL`) gated by a mandatory external-LLM privacy gate (public/synthetic data only; JSON-Schema structured outputs; per-output model metadata). When no reasoning provider is available the system enters **degraded mode**: BART performs factual summarization only — it is NOT a reasoning-equivalent replacement, no unsupported interpretation is generated, and no AI action recommendation requiring reasoning is produced (`docs/2_SRS_Software_Requirements_Specification.md` FR-2.2.3A–G)
 - **Batch Summarizer:** `facebook/bart-large-cnn` — CPU-fast seq2seq 1-sentence factual summaries (< 60s per 100 signals target); also the **safe degraded fallback: factual summarization only** when the reasoning LLM is unavailable (`SUMMARIZER_MODEL` / `SUMMARIZER_TASK`)
 - **Contradiction Analysis:** `facebook/bart-large-mnli` — zero-shot NLI entailment/contradiction checks, flag threshold > 0.60 (`docs/METARADAR_MASTER_PLAN_v5.0.md` §6)
 - **NER:** spaCy 3.7 `en_core_sci_md` — pharmaceutical entity extraction (drugs, companies, trial phases, indications); contributes to entity detection only — a dedicated PII/PHI detection + redaction layer is responsible for preventing sensitive information from being persisted (spaCy alone is not a guaranteed scrubber)
@@ -72,7 +71,7 @@ This repository is currently **specification-first**: it contains only documenta
 
 **Environment:**
 - Configured via `.env` (copied from `.env.example`) — never commit secrets (`README.md` "Configuration")
-- Key vars: `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `NEWSAPI_KEY`, `LLM_PROVIDER`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_TASK`, `XAI_API_KEY`, `XAI_MODEL`, `XAI_TIMEOUT`, `SUMMARIZER_MODEL`, `SUMMARIZER_TASK` (`docs/2_SRS_Software_Requirements_Specification.md` §4.2)
+- Key vars: `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `NEWSAPI_KEY`, `LLM_PROVIDER`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_TASK`, `LLM_DEVICE`, `LLM_DTYPE`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS`, `XAI_API_KEY`, `XAI_MODEL`, `XAI_TIMEOUT`, `SUMMARIZER_MODEL`, `SUMMARIZER_TASK`, `CORS_ORIGINS` (`docs/2_SRS_Software_Requirements_Specification.md` §4.2)
 - All external API calls HTTPS with credentials via `.env` only, never in code (SRS NFR)
 
 **Build:**
@@ -82,7 +81,7 @@ This repository is currently **specification-first**: it contains only documenta
 
 **Development:**
 - Git, Docker Desktop, Docker Compose, Node.js 20.9+, Python 3.11+ (`README.md` "Prerequisites")
-- **Estimated** memory requirement to run Gemma 3 4B on CPU: ~2.6 GB weights (Q4-quantized) and roughly 4.5–7.5 GB RAM — planning estimates only; actual usage depends on the runtime, quantization implementation, context length, and system configuration (`docs/2_SRS_Software_Requirements_Specification.md`). Lighter alternative: `google/gemma-3-1b-it`; BART fallback for summarization
+- **Estimated** resource requirement to run Gemma 3 4B on the **local GPU (NVIDIA RTX 3050, 4 GB VRAM)**: ~2.6 GB Q4/int4 weights on the GPU; model weights, KV cache, runtime overhead, and context length are budgeted **separately** (`MAX_CONTEXT_TOKENS`/`MAX_OUTPUT_TOKENS`); **4 GB VRAM does NOT guarantee inference success** — on init/inference failure the provider chain falls back (Gemma → Grok if enabled → BART degraded factual → source-linked + human-review flag). Planning estimates only; actual usage depends on the runtime, quantization implementation, context length, and system configuration (`docs/2_SRS_Software_Requirements_Specification.md`). Lighter alternative: `google/gemma-3-1b-it`; BART fallback for summarization
 
 **Production:**
 - Docker Compose stack: frontend `:3000`, backend `:8000`, PostgreSQL `:5432`, Redis `:6379` (`README.md` "Running with Docker")

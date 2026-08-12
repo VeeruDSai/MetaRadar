@@ -1,9 +1,10 @@
 # MetaRadar: Software Design Document (SDD)
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 2.1  
+**Version:** 2.4  
 **Date:** August 2026  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. **v2.2 (Aug 13, 2026):** integrated the B.Pharm domain research (Master Plan v4.0 §12) — canonical domain-classification fields + `DomainClassifier` service, nullable clinical-evidence fields, evidence-maturity ladder, access as a separate intelligence event (8 access subtypes + `access_info` JSONB), and the extended Red-Team evidence-check suite A–S. **v2.3 (Aug 13, 2026):** provider-agnostic reasoning layer (Master Plan v5.0 §13) — `LLMProvider` interface (`LocalGemmaProvider` / `XAIProvider` / `BartDegradedProvider`), `LLM_PROVIDER=local|xai|auto`, two output schemas (FULL INTELLIGENCE vs DEGRADED FACTUAL SUMMARY), external-LLM privacy gate for hosted Grok, Grok JSON-Schema structured-output validation, per-output model metadata. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged; the six primary functions remain Medical Affairs · Regulatory · Safety/PV · Market Access · Medical Communications · Leadership.
+**Team:** Aura Pharmers — MSRIT (2 CSE + 3 B.Pharm) · **Team Lead: Sanjana Rathore B.**  
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. **v2.2 (Aug 13, 2026):** integrated the B.Pharm domain research (Master Plan v4.0 §12) — canonical domain-classification fields + `DomainClassifier` service, nullable clinical-evidence fields, evidence-maturity ladder, access as a separate intelligence event (8 access subtypes + `access_info` JSONB), and the extended Red-Team evidence-check suite A–S. **v2.3 (Aug 13, 2026):** provider-agnostic reasoning layer (Master Plan v5.0 §13) — `LLMProvider` interface (`LocalGemmaProvider` / `XAIProvider` / `BartDegradedProvider`), `LLM_PROVIDER=local|xai|auto`, two output schemas (FULL INTELLIGENCE vs DEGRADED FACTUAL SUMMARY), external-LLM privacy gate for hosted Grok, Grok JSON-Schema structured-output validation, per-output model metadata. Architecture, data sources, and embedding model are unchanged (Docker Compose footprint unchanged through v2.3 — v2.4 removes Celery → 4 services); the six primary functions remain Medical Affairs · Regulatory · Safety/PV · Market Access · Medical Communications · Leadership. **v2.4 (Aug 13, 2026):** pre-implementation architecture hardening (Master Plan v5.1 §14) — Gemma deployment target corrected to **local GPU (NVIDIA RTX 3050, 4 GB VRAM, Q4/int4)** with `LLM_DEVICE`/`LLM_DTYPE`/`MAX_CONTEXT_TOKENS`/`MAX_OUTPUT_TOKENS`; scheduling consolidated to **ONE in-process APScheduler** (Celery removed — 4-service Docker Compose, `/models` volume, healthchecks); canonical entity layer added to the schema (`sources · companies · assets · trials · developments · events` + evidence relationships); scoring/calibration versioning fields (`scoring_model_version`, `scoring_config_version`, `score_breakdown`, baseline-vs-calibrated routing, `calibration_version`); formal LangGraph state contract (reducers, initial state, `node_calibrate → END`); health endpoints `/api/v1/health/ready|models|connectors`; deterministic dedup + source-independence before Confluence; Alembic migrations and versioned Redis caching.
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
@@ -112,7 +113,7 @@ META RADAR
         │
    ┌────▼──────────────────┐
    │  DATA INGESTION       │
-   │  (Celery + APScheduler)│
+   │  (APScheduler, single)│
    │  ├─ fetch_newsapi()         │
    │  ├─ fetch_pubmed()          │
    │  ├─ fetch_clinicaltrials()  │
@@ -141,11 +142,11 @@ META RADAR
 | **Styling** | TailwindCSS 4 + shadcn/ui | Fast development, pre-built components |
 | **Backend API** | FastAPI + Python 3.11 | Async-first, auto OpenAPI docs, ML-friendly |
 | **Agent Orchestration** | LangGraph | Stateful multi-agent pipeline (ingest → validate → NLP → confluence → lifecycle → red-team → missing-signal → synthesize → brief → **stakeholder calibration**) |
-| **Task Queue** | Celery + Redis + APScheduler | Background ingestion, 2-hour fetch trigger |
+| **Scheduler (single)** | APScheduler (in-process, inside FastAPI) + Redis | 2-hour fetch · nightly digest · on-demand recalibration — Celery NOT used (Master Plan §14.9); heavy LangGraph runs offloaded via asyncio/thread-pool |
 | **Primary DB** | PostgreSQL 16 + pgvector | ACID, JSONB, vector search in one DB (replaces Weaviate) |
 | **Cache** | Redis 7 | Sub-millisecond access, rate limiting |
 | **NLP/NER** | spaCy 3.7 (`en_core_sci_md`) + medspacy | Entity extraction, pharma-grade NER; medspacy extends coverage |
-| **Reasoning Layer (provider-agnostic, Master Plan §13)** | `google/gemma-3-4b-it` (default local) via `LOCAL_LLM_MODEL`; optional hosted Grok via `XAI_API_KEY`/`XAI_MODEL` (`LLM_PROVIDER=local|xai|auto`) | Gemma 3 4B Instruct — narrative synthesis, Four-Question reasoning, suggested actions, Ask Athena; `text-generation` task; Q4-quantized for CPU. Optional xAI Grok (JSON-Schema structured outputs, privacy-gated). Provider chain: Gemma → Grok → BART degraded factual mode |
+| **Reasoning Layer (provider-agnostic, Master Plan §13)** | `google/gemma-3-4b-it` (default local) via `LOCAL_LLM_MODEL`; optional hosted Grok via `XAI_API_KEY`/`XAI_MODEL` (`LLM_PROVIDER=local|xai|auto`) | Gemma 3 4B Instruct — narrative synthesis, Four-Question reasoning, suggested actions, Ask Athena; `text-generation` task; **Q4/int4 on the local GPU (NVIDIA RTX 3050, 4 GB VRAM)** via `LLM_DEVICE`/`LLM_DTYPE`/`MAX_CONTEXT_TOKENS`/`MAX_OUTPUT_TOKENS` (VRAM not guaranteed — provider chain falls back on init/inference failure, §14.1). Optional xAI Grok (JSON-Schema structured outputs, privacy-gated). Provider chain: Gemma → Grok → BART degraded factual mode |
 | **Batch Summarizer** | `facebook/bart-large-cnn` via `SUMMARIZER_MODEL` env var | Fast CPU seq2seq 1-sentence summaries (< 60s/100 signals) + demo-safety fallback |
 | **Classification** | `facebook/bart-large-mnli` (zero-shot) | Signal type classification AND Red-Team contradiction entailment (one local model, two jobs) |
 | **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | 384-dim local embeddings, 80MB |
@@ -160,7 +161,7 @@ META RADAR
 
 | Role | Default | Alternative |
 |---|---|---|
-| Reasoning / Four Questions / Athena | Gemma 3 4B local | Grok API |
+| Reasoning / Four Questions / Athena | Gemma 3 4B local (**GPU** — RTX 3050 4 GB VRAM, Q4/int4) | Grok API |
 | Degraded factual summary | BART-large-CNN | — |
 | Batch summarization | BART-large-CNN | — |
 | NLI | BART-MNLI | — |
@@ -274,7 +275,7 @@ backend/
 │   │   │   ├── calibrate.py     # POST /api/v1/calibrate (Stakeholder Calibration)
 │   │   │   ├── digest.py        # GET /api/v1/digest (weekly digest, function filter)
 │   │   │   ├── watchlist.py     # GET/POST/DELETE /api/v1/watchlist (entity focus)
-│   │   │   └── health.py        # GET /api/v1/health
+│   │   │   └── health.py        # GET /api/v1/health · /health/ready · /health/models · /health/connectors
 │   │   └── routers.py           # API router aggregation
 │   └── auth.py                   # JWT token validation
 ├── agents/
@@ -316,15 +317,16 @@ backend/
 │   ├── database.py              # SQLAlchemy ORM models
 │   └── types.py                 # Custom types
 ├── workers/
-│   ├── signal_ingestion.py      # Celery task for fetching
-│   ├── signal_processing.py     # Celery task for NLP
-│   ├── confluence_detection.py  # Celery task for confluence scan
-│   ├── lifecycle_detection.py   # Celery task for lifecycle advance
-│   ├── red_team_scan.py         # Celery task for NLI contradiction scan
-│   ├── missing_signal_scan.py   # Celery task for expected-event scan
-│   ├── trends_aggregation.py    # Celery task for aggregates
-│   ├── calibration_worker.py    # Celery task for async weight recalibration
-│   └── digest_worker.py         # Celery task for nightly digest generation
+│   ├── jobs.py                  # APScheduler job definitions (single scheduler, Master Plan §14.9)
+│   ├── signal_ingestion.py      # APScheduler job: fetch from connectors
+│   ├── signal_processing.py     # APScheduler job: run LangGraph pipeline (offloaded via asyncio/thread-pool)
+│   ├── confluence_detection.py  # APScheduler job: confluence scan
+│   ├── lifecycle_detection.py   # APScheduler job: lifecycle advance
+│   ├── red_team_scan.py         # APScheduler job: NLI contradiction scan
+│   ├── missing_signal_scan.py   # APScheduler job: expected-event scan
+│   ├── trends_aggregation.py    # APScheduler job: aggregates
+│   ├── calibration_job.py       # APScheduler job: async weight recalibration
+│   └── digest_job.py            # APScheduler job: nightly digest generation
 ├── entities/
 │   └── pharma_ontology.py       # B.Pharm-authored ontology (JSON)
 ├── utils/
@@ -445,19 +447,25 @@ Replaces the monolithic pipeline with specialized agents coordinated by LangGrap
 # graph/intelligence_graph.py
 from langgraph.graph import StateGraph
 
+# LangGraph state contract (Master Plan §14.6 — canonical field names govern): explicit
+# initial state is required; accumulating fields use typed append/merge reducers so parallel
+# connector/analysis nodes never overwrite each other; scalar fields use replacement
+# semantics; each node declares read/write fields; explicit termination node_calibrate → END.
 class IntelligenceState(TypedDict):
     raw_signals: list[dict]
     validated_signals: list[dict]
     extracted_entities: list[dict]
+    ontology_entities: list[dict]
+    developments: list[dict]
     scored_signals: list[dict]
     confluent_stories: list[dict]
-    lifecycle_chains: list[dict]        # Analysis 2 (lifecycle state machine)
-    contradictions: list[dict]          # Analysis 3 (red-team NLI)
-    missing_signal_alerts: list[dict]   # Analysis 4 (expected-event detector)
-    watch_items: list[dict]             # Watch-for-Next (extends Analysis 4)
-    signal_routing: list[dict]          # primary/secondary functions + routing_reason
+    lifecycle_events: list[dict]        # Analysis 2 (lifecycle state machine)
+    redteam_flags: list[dict]           # Analysis 3 (red-team NLI)
+    missing_signals: list[dict]         # Analysis 4 (expected-event detector)
     role_briefs: dict[str, list]
-    calibration_weights: dict[str, float]   # from stakeholder_feedback (Analysis 5, HITL)
+    calibration_feedback: list[dict]    # from stakeholder_feedback (Analysis 5, HITL)
+    model_metadata: list[dict]
+    errors: list[dict]
 
 graph = StateGraph(IntelligenceState)
 graph.add_node("ingest", ingestion_agent)        # 6 APIs parallel + dedup
@@ -487,10 +495,12 @@ graph.add_edge("missing_signal", "synthesize")
 graph.add_edge("synthesize", "brief")
 graph.add_edge("brief", "calibrate")             # calibration reads briefs + feedback
 graph.set_entry_point("ingest")
+graph.set_finish_point("calibrate")               # explicit termination: node_calibrate → END
 runner = graph.compile()
 
-# Scheduled every 2h by APScheduler → Celery task invokes runner
-result = runner.invoke({})
+# Single scheduler (Master Plan §14.9): in-process APScheduler invokes the runner every 2h;
+# CPU/GPU-bound runs are offloaded from the event loop via asyncio/thread-pool execution.
+result = await asyncio.to_thread(runner.invoke, {})
 ```
 
 **Why LangGraph:** Built-in state management across agents (no global variables), the synthesis agent can read NLP state directly, and the graph can later branch per role without re-architecture.
@@ -728,6 +738,93 @@ class BartDegradedProvider(LLMProvider): ... # factual summary ONLY; degraded_mo
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- ─────────────────────────────────────────────────────────────────────
+-- ENTITY LAYER (v2.4 — Master Plan §14.2): stable entities with stable IDs.
+-- Signals reference these by ID; ONE development accumulates MANY signals
+-- (trial → congress abstract → oral → poster → publication stays one chain).
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_id UUID NOT NULL UNIQUE,
+    source_type VARCHAR(50) NOT NULL,       -- 'newsapi' | 'pubmed' | 'clinicaltrials' | 'fda' | 'ema' | 'congress' | 'reddit' | 'synthetic'
+    publisher VARCHAR(255),
+    freshness_class VARCHAR(20) NOT NULL,   -- real_time | near_real_time | delayed | batch | adapter_ready | synthetic
+    syndication_group VARCHAR(100),         -- same syndicated content cluster (source independence, §14.4)
+    parent_source_id UUID,                  -- canonical origin if this is a syndicated copy
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE companies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    canonical_name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE assets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_id UUID NOT NULL UNIQUE,
+    generic_name VARCHAR(255),
+    brand_name VARCHAR(255),
+    company_id UUID REFERENCES companies(id),
+    mechanism VARCHAR(100),
+    disease VARCHAR(30),
+    factor VARCHAR(10),
+    inhibitor_population VARCHAR(20),
+    approval_status VARCHAR(50),            -- updateable fact, not static (ontology quality gate, §14.5)
+    approval_date DATE,
+    jurisdiction VARCHAR(100),
+    ontology_source TEXT,
+    last_verified TIMESTAMP
+);
+
+CREATE TABLE trials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trial_id UUID NOT NULL UNIQUE,
+    nct_id VARCHAR(30),
+    title TEXT,
+    phase VARCHAR(20),
+    status VARCHAR(30),
+    company_id UUID REFERENCES companies(id),
+    asset_id UUID REFERENCES assets(id)
+);
+
+CREATE TABLE developments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    development_id UUID NOT NULL UNIQUE,
+    asset_id UUID REFERENCES assets(id),
+    company_id UUID REFERENCES companies(id),
+    trial_id UUID REFERENCES trials(id),
+    current_lifecycle_state VARCHAR(30),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID NOT NULL UNIQUE,
+    event_type VARCHAR(40) NOT NULL,        -- incl. publication_id | congress_event_id | regulatory_event_id | access_event_id
+    development_id UUID REFERENCES developments(id),
+    trial_id UUID REFERENCES trials(id),
+    signal_id UUID,                          -- FK to signals(id) applied in migration order after signals table
+    event_date TIMESTAMP,
+    source_id UUID REFERENCES sources(id)
+);
+CREATE INDEX idx_events_development ON events(development_id, event_date);
+
+CREATE TABLE evidence (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    claim_id UUID NOT NULL,                 -- claim → evidence; interpretation → evidence;
+    claim_type VARCHAR(20),                 -- claim | interpretation | priority | routing | action
+    source_id UUID REFERENCES sources(id),
+    signal_id UUID,
+    source_url TEXT,
+    raw_content_hash TEXT,                  -- immutable provenance: sha256 of raw source text
+    content_version INT DEFAULT 1,
+    extracted_quote TEXT,
+    evidence_level VARCHAR(15),             -- fact | interpretation | speculation
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Signals table (core)
 CREATE TABLE signals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -786,6 +883,9 @@ CREATE TABLE signals (
     asset_type VARCHAR(30),            -- bispecific_antibody | anti_tfpi | rnai | gene_therapy |
                                        -- factor_replacement | ehl_factor | other
     priority VARCHAR(10),              -- high | medium | low
+    scoring_model_version VARCHAR(10), -- scoring model version (e.g., 'v1') — versioned scoring (v2.4, §14.10)
+    scoring_config_version VARCHAR(40),-- scoring config version (e.g., 'haemophilia_v1')
+    score_breakdown JSONB,             -- factor-level priority breakdown (novelty/safety/regulatory/access/...)
     impacted_functions JSONB,          -- {"primary": "medical_affairs", "secondary": ["regulatory"]}
     development_id UUID,              -- lifecycle chain this signal belongs to; NULL = NEW DEVELOPMENT
     event_date TIMESTAMP,             -- underlying event date (congress presentation, publication...)
@@ -969,6 +1069,11 @@ CREATE TABLE signal_routing (
     function_relevance_scores JSONB NOT NULL,   -- {"medical_affairs": 0.91, ...} (calibrated)
     routing_reason TEXT NOT NULL,               -- "why this function, why now" (explainable)
     suggested_action VARCHAR(60),               -- controlled vocabulary (FR-2.6.1)
+    baseline_primary_function VARCHAR(50),      -- pre-calibration AI baseline (v2.4, §14.10) — NEVER overwritten
+    baseline_relevance_scores JSONB,
+    baseline_suggested_action VARCHAR(60),
+    calibration_version VARCHAR(10),
+    feedback_id UUID,                          -- originating stakeholder feedback row
     calibrated_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -1062,6 +1167,7 @@ CREATE TABLE calibration_history (
     role VARCHAR(50) NOT NULL,
     old_weights JSONB NOT NULL,
     new_weights JSONB NOT NULL,
+    calibration_version VARCHAR(10),    -- e.g., 'v1' (v2.4, §14.10)
     trigger_reason TEXT,                -- 'stakeholder_feedback_batch' | 'manual'
     feedback_count INT,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL
@@ -1621,6 +1727,7 @@ Infrastructure Layer (DB, cache, APIs)
 | **Database Down** | Can't persist or retrieve | Return cached data only |
 | **Cache Down (Redis)** | Slower (no cache), but works | Fall back to DB queries |
 | **NLP Model crash** | Can't extract entities | Skip extraction, store raw text |
+| **Gemma cannot fit/init on GPU (4 GB VRAM)** | No reasoning output | Provider chain fallback: Gemma → Grok (xai/auto) → BART degraded factual → source-linked signal + human-review flag; dashboard stays alive (FR-2.2.3B, Master Plan §14.1) |
 | **Embedding model fail** | No semantic search | Fall back to pg_trgm keyword search (same DB) |
 | **LangGraph node fails** | Pipeline stalls | Retry node, fall back to cached partial state |
 | **Confluence engine error** | No confluence alerts | Log, serve signals normally (alerts skip, not crash) |
@@ -1866,7 +1973,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download ML models at build time (cached in image)
+# Model weights live in the mounted /models volume (HF_HOME=/models, set at build AND runtime)
+ENV HF_HOME=/models
+# Download ML models at build time (cached in volume)
 RUN python -m spacy download en_core_sci_md
 RUN python -c "from transformers import pipeline; \
     pipeline('summarization', model='facebook/bart-large-cnn'); \
@@ -1877,6 +1986,8 @@ RUN python -c "from sentence_transformers import SentenceTransformer; \
 # a first-run download — if omitted, the model downloads on first run or the
 # pipeline falls back through the provider chain (Gemma → Grok in xai/auto → BART degraded factual mode; Master Plan §13.6):
 # RUN python -c "from transformers import pipeline; pipeline('text-generation', model='google/gemma-3-4b-it')"
+# Model weights are mounted from the /models volume (HF_HOME=/models) — the application image
+# stays small and the demo does not re-download multiple GB on every start (Master Plan §14.14).
 
 # Copy source
 COPY . .
@@ -1888,7 +1999,7 @@ EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]
 ```
 
-### 8.2 Docker Compose (Local/Demo) — 5 services, Weaviate removed
+### 8.2 Docker Compose (Local/Demo) — 4 services, Weaviate removed, Celery removed
 
 ```yaml
 version: '3.8'
@@ -1901,8 +2012,16 @@ services:
       - DATABASE_URL=postgresql://user:pass@postgres:5432/metaradar
       - REDIS_URL=redis://redis:6379
       - NEWSAPI_KEY=xxx
-    depends_on: [postgres, redis, celery]
+      - HF_HOME=/models          # model weights persist in a mounted volume (Master Plan §14.14)
+    volumes:
+      - models_data:/models      # app starts without re-downloading multiple GB of weights
+    depends_on: [postgres, redis]
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/ready')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   frontend:
     build: ./frontend
@@ -1922,24 +2041,28 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metauser -d metaradar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
     restart: unless-stopped
-
-  celery:
-    build: .
-    command: celery -A workers.celery_app worker --loglevel=info
-    environment:
-      - DATABASE_URL=postgresql://user:pass@postgres:5432/metaradar
-      - REDIS_URL=redis://redis:6379
-    depends_on: [postgres, redis]
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
+  models_data:                    # model weights volume (separate from the application image)
 ```
+
+**Note:** Weaviate removed entirely (Refined Architecture simplification); **Celery removed** (single in-process APScheduler, Master Plan §14.9). Vector search = pgvector extension inside PostgreSQL. `depends_on` is complemented by healthchecks — a dependency is only considered ready when its healthcheck passes.
 
 **Note:** Weaviate removed entirely (Refined Architecture simplification). Vector search = pgvector extension inside PostgreSQL. One fewer container = faster, more reliable demo setup.
 
@@ -2052,7 +2175,7 @@ This design is explicitly engineered against the Novo Nordisk judging criteria (
 | **Innovation (25%)** | The **Five Advanced Analyses** — Confluence Engine (2.4), Signal Lifecycle Tracker (2.4), Red-Team Contradiction Engine (2.4), Missing-Signal Detector (2.4), Stakeholder Calibration Loop / HITL (2.4) — plus Pharma Ontology enrichment (2.4) and Traceable Reasoning (2.4). No open-source tool combines these |
 | **Technical (25%)** | LangGraph 10-agent orchestration incl. lifecycle/red-team/missing-signal/calibration agents (2.3), pgvector hybrid search (2.6), Docker Compose 1-command deploy (8.2), graceful failure modes (5.1) |
 | **Business Impact (20%)** | Detects haemophilia paradigm shift (IV factor → subcutaneous non-factor → single-dose gene therapy); confluence alerts give Medical Affairs/Commercial a head start on mim8 positioning vs emicizumab and on Hemgenix/Roctavian gene-therapy disruption; missing-signal detection catches silent readouts and stalled submissions (see SRS 6.4) |
-| **Feasibility (15%)** | Free APIs + local CPU-only models (NLI reuses BART-MNLI — zero extra download), pgvector (one less container), public data sources (CDA-compliant), MVP → production path (10) |
+| **Feasibility (15%)** | Free APIs + local models (Gemma 3 4B Q4 on the RTX 3050 4 GB GPU; BART/spaCy/MiniLM on CPU — NLI reuses BART-MNLI, zero extra download), pgvector (one less container), public data sources (CDA-compliant), MVP → production path (10) |
 | **Presentation (15%)** | B.Pharm owns haemophilia ontology + confluence/lifecycle clinical validation; CSE owns architecture; demo = `docker-compose up` + live Four-Question dashboard + live calibration / contradiction / missing-signal demos |
 
 **Key differentiators over existing open-source tools (Refined Architecture doc):**

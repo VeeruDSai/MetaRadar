@@ -63,7 +63,7 @@ metaradar/
 ├── data/
 │   ├── synthetic/            # 500-signal fallback dataset
 │   └── ontology/             # ontology seed data
-├── workers/                  # Celery + APScheduler
+├── workers/                  # APScheduler jobs (single scheduler)
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
@@ -75,7 +75,7 @@ metaradar/
 **Entry Points (planned):**
 - `backend/app/main.py`: FastAPI app (per SDD `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` §2)
 - `frontend/app/`: Next.js pages
-- `workers/`: Celery beat 2h scheduler
+- `workers/`: APScheduler 2h jobs (single scheduler; Celery removed per Master Plan §14.9)
 
 **Configuration:**
 - `.env.example` (template) + `.env` (gitignored, real secrets) — prescribed in `README.md` "Configuration"; SRS §4.2 defines the var table

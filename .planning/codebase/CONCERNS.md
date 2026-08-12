@@ -51,16 +51,16 @@
 
 ## Performance Bottlenecks
 
-**Local CPU model inference:**
-- Problem: Gemma 3 4B (Q4, **estimated** ~2.6 GB weights / ~4.5–7.5 GB RAM — estimates, not guaranteed; actual use depends on runtime, quantization, context length, config) is the slowest link on constrained hardware
+**Local GPU model inference (RTX 3050, 4 GB VRAM):**
+- Problem: Gemma 3 4B (Q4/int4, **estimated** ~2.6 GB weights; weights, KV cache, runtime overhead, and context length budgeted separately — 4 GB VRAM does NOT guarantee inference; actual use depends on runtime, quantization, context length, config) is the slowest link on constrained hardware
 - Files: [`docs/2_SRS_Software_Requirements_Specification.md`](docs/2_SRS_Software_Requirements_Specification.md), `docs/9_RISK_AND_GUARDRAILS.md` R6
-- Cause: CPU-bound transformer inference + quantization trade-offs
-- Improvement path: BART fallback for batch summarization (< 60s/100 signals); lighter Gemma 3 1B option; cache hot signals (Redis 2h TTL)
+- Cause: small VRAM headroom (4 GB) + quantization trade-offs; context/KV-cache growth
+- Improvement path: provider-chain fallback on init/inference failure (Gemma → Grok if enabled → BART degraded factual → source + human review — never crash, Master Plan §14.1); BART fallback for batch summarization (< 60s/100 signals); lighter Gemma 3 1B option; cache hot signals (Redis 2h TTL)
 
 **Dashboard latency target < 500 ms:**
 - Problem: cached views must render fast while AI workflows run async
 - Cause: heavy synthesis on request path would blow the budget
-- Improvement path: serve cached results; run intelligence async via Celery; verify with load test (1000 signals, CUP §11)
+- Improvement path: serve cached results; run intelligence async via the single in-process APScheduler (asyncio/thread-pool offload); verify with load test (1000 signals, CUP §11)
 
 ## Fragile Areas
 
@@ -87,7 +87,7 @@
 - Scaling path: quota-aware connector; on exhaustion fall back Redis 2h-TTL cache → bronze DB → 500-signal synthetic dataset; adapter-ready sources (FDA/EMA/congress/Reddit) are scaffolded but not fully live
 
 **Local model capability envelope:**
-- Current capacity: 4B-parameter reasoning on CPU
+- Current capacity: 4B-parameter reasoning on the local GPU (RTX 3050, 4 GB VRAM, Q4/int4)
 - Limit: reasoning depth vs commercial LLMs
 - Scaling path: model-agnostic `LOCAL_LLM_MODEL` swap (Mistral 7B, Phi-3 Mini, etc. documented in [`docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md`](docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md)); optional hosted Grok (`LLM_PROVIDER=xai|auto`) for higher-quality reasoning when an external provider is acceptable (privacy-gated, Master Plan §13)
 

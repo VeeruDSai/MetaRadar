@@ -68,12 +68,20 @@ from transformers import pipeline
 #   LLM_PROVIDER=local (default) | xai (hosted Grok) | auto (Gemma → Grok → BART degraded)
 LLM_PROVIDER     = os.getenv("LLM_PROVIDER", "local")
 # Reasoning LLM (synthesis, briefs, Ask Athena) — default Gemma 3 4B Instruct:
-#   LOCAL_LLM_MODEL=google/gemma-3-4b-it        (default: modern instruction LLM)
-#   LOCAL_LLM_MODEL=google/gemma-3-1b-it        (light-CPU option)
+#   LOCAL_LLM_MODEL=google/gemma-3-4b-it        (default: modern instruction LLM; Q4/int4 on the local GPU)
+#   LOCAL_LLM_MODEL=google/gemma-3-1b-it        (light-hardware option)
 #   LOCAL_LLM_MODEL=mistralai/Mistral-7B-Instruct  (near-GPT4 quality)
 #   LOCAL_LLM_MODEL=microsoft/phi-3-mini-4k-instruct (tiny, 3.8B)
 LOCAL_LLM_MODEL  = os.getenv("LOCAL_LLM_MODEL",  "google/gemma-3-4b-it")
 LOCAL_LLM_TASK   = os.getenv("LOCAL_LLM_TASK",   "text-generation")
+# Deployment target: local GPU — NVIDIA RTX 3050, 4 GB VRAM. 4 GB VRAM does NOT guarantee
+# inference: weights (~2.6GB Q4), KV cache, runtime overhead, context length are budgeted
+# separately. On init/inference failure the provider chain falls back (Gemma → Grok if
+# enabled → BART degraded factual → source + human-review flag) — never crash (Master Plan §14.1).
+LLM_DEVICE        = os.getenv("LLM_DEVICE", "cuda:0" if torch.cuda.is_available() else "cpu")
+LLM_DTYPE         = os.getenv("LLM_DTYPE", "int4")
+MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "4096"))
+MAX_OUTPUT_TOKENS  = int(os.getenv("MAX_OUTPUT_TOKENS", "1024"))
 # Optional hosted Grok (only when LLM_PROVIDER=xai|auto; external-LLM privacy gate, Master Plan §13.5):
 XAI_API_KEY      = os.getenv("XAI_API_KEY", "")
 XAI_MODEL        = os.getenv("XAI_MODEL", "")
@@ -81,11 +89,13 @@ XAI_MODEL        = os.getenv("XAI_MODEL", "")
 SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "facebook/bart-large-cnn")
 SUMMARIZER_TASK  = os.getenv("SUMMARIZER_TASK",  "summarization")
 
-# Reasoning LLM loader (Gemma 3 4B Instruct by default)
+# Reasoning LLM loader (Gemma 3 4B Instruct by default; device fully configurable via LLM_DEVICE)
 llm = pipeline(
     LOCAL_LLM_TASK,
     model=LOCAL_LLM_MODEL,
-    device=0 if torch.cuda.is_available() else -1
+    device=LLM_DEVICE,      # 'cuda:0' | 'cpu' | 'auto' — failure handled by the provider chain (§13.6)
+    torch_dtype=LLM_DTYPE,
+    max_new_tokens=MAX_OUTPUT_TOKENS
 )
 # Batch summarizer loader (fast CPU seq2seq + demo-safety fallback)
 batch_summarizer = pipeline(
@@ -287,7 +297,9 @@ services:
   backend:
     build: .
     ports: ["8000:8000"]
-    depends_on: [postgres, redis, celery]
+    depends_on: [postgres, redis]
+    volumes:
+      - models_data:/models     # mounted model weights (Master Plan §14.14)
   
   frontend:
     build: ./frontend
@@ -303,10 +315,8 @@ services:
     image: redis:7-alpine
     ports: ["6379:6379"]
 
-  celery:
-    build: .
-    command: celery -A workers.celery_app worker
-    depends_on: [postgres, redis]
+volumes:
+  models_data:
 ```
 
 **Key simplification (from Refined Architecture):** Weaviate was replaced with **pgvector** (a PostgreSQL extension). One less Docker container, hybrid search (keyword + semantic) stays in PostgreSQL, faster setup on demo day.
@@ -316,7 +326,7 @@ services:
 ---
 
 ### **Gap 7: API Rate Limiting Not Defined**
-**Problem:** NewsAPI allows 500 calls/day. If you refresh 10x, quota burns in 50 refreshes.
+**Problem:** NewsAPI Developer/free tier allows only **100 requests/day**. If you refresh 10x, quota burns in 10 refreshes.
 
 **Resolution:**
 ```python
@@ -342,13 +352,13 @@ class RateLimiter:
 
 # Apply limits
 API_LIMITS = {
-    "newsapi": (500, 1440),      # 500/day
+    "newsapi": (100, 1440),      # 100/day (verified Developer tier — not 500; dev/testing only, 24h delay)
     "clinicaltrials": (100, 1440),  # 100/day (conservative)
     "pubmed": (10000, 1440),     # 10K/day
 }
 
 async def fetch_newsapi():
-    if not await limiter.is_allowed("newsapi", 500, 1440):
+    if not await limiter.is_allowed("newsapi", 100, 1440):
         logger.warning("Rate limit hit, using cache")
         return get_cached_signals()
     return await fetch_live()
@@ -1273,7 +1283,7 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 | **Innovation (25%)** | The **Five Advanced Analyses** — Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, Stakeholder Learning Loop — plus Haemophilia Pharma Ontology and Traceable Intelligence. No open-source tool combines these | Opt. 11-18, Gap 13-17 |
 | **Technical (25%)** | LangGraph 10-agent pipeline (incl. lifecycle/red-team/missing-signal agents), FastAPI + Next.js, pgvector hybrid search, Docker Compose | Opt. 15, Gap 6 |
 | **Business Impact (20%)** | Addresses real Novo Nordisk pain: gene therapy disrupting the prophylaxis paradigm, Roche emicizumab dominance, HTA decisions on Hemgenix/Roctavian, and *silent readouts / stalled submissions* caught by missing-signal detection | Business Context below |
-| **Feasibility (15%)** | Free APIs only, local ML models (no GPU — NLI reuses BART-MNLI), public data sources (CDA-compliant), clear MVP→production path | Gap 1, Gap 6 |
+| **Feasibility (15%)** | Free APIs only, local ML models (Gemma 3 4B Q4 on the RTX 3050 4 GB GPU; NLI reuses BART-MNLI on CPU — zero extra download), public data sources (CDA-compliant), clear MVP→production path | Gap 1, Gap 6 |
 | **Presentation (15%)** | B.Pharm narrates domain; CSE narrates architecture; working demo + 2-page report; live calibration + missing-signal + contradiction demo | Team split |
 
 **Business Context (must be stated in demo) — NOVO NORDISK HAEMOPHILIA CONTEXT:**
@@ -1325,10 +1335,10 @@ RESPONSE TIMES:
 
 RESOURCE USAGE:
 ├─ Frontend bundle:                < 50KB gzipped    ✅
-├─ Backend memory:                 < 500MB (API core; Gemma LLM adds est. ~4.5–7.5GB while loaded — planning estimate) ✅
+├─ Backend memory:                 < 500MB (API core; Gemma LLM runs on the GPU — ~2.6GB Q4 weights in VRAM, RTX 3050 4GB; weights/KV-cache/context budgeted separately — planning estimate) ✅
 ├─ Database:                       < 100ms per query ✅
 ├─ Redis hit rate:                 > 80%             ✅
-└─ Total Docker image size:        < 2GB base (Gemma Q4 adds est. ~2.6GB if pre-downloaded — planning estimate) ✅
+└─ Total Docker image size:        < 2GB base (Gemma Q4 ~2.6GB kept in a mounted /models volume, NOT baked into the image — planning estimate) ✅
 
 RELIABILITY:
 ├─ Uptime:                         > 99%             ✅

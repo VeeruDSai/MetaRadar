@@ -26,11 +26,11 @@ MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feed
 - **LangGraph 0.1+**: Stateful 10-node coordination workflow (`node_ingest → node_validate → node_nlp_extract → node_ontology_enrich → node_confluence → node_lifecycle → node_redteam → node_missing_signal → node_synthesize → node_calibrate`).
 ### Database & Vector Storage
 - **PostgreSQL 16 + pgvector**: Unified relational (ACID) and 384-dimensional vector similarity search (`sentence-transformers/all-MiniLM-L6-v2`) in a single database.
-### Cache & Task Queue
+### Cache & Scheduler
 - **Redis 7**: Key-value caching for hot signals (2h TTL), rate limiting, user session storage.
-- **Celery 5.3 + APScheduler**: Asynchronous ingestion pipeline and 2-hour periodic fetch scheduler.
+- **APScheduler (single scheduler)**: In-process inside FastAPI — 2-hour periodic fetch · nightly digest · on-demand recalibration. **Celery is deliberately NOT used** in the hackathon architecture (Master Plan §14.9); heavy LangGraph runs are offloaded via asyncio/thread-pool execution.
 ### NLP & AI Models (Local by Default, Free)
-- **Reasoning Layer (provider-agnostic, Master Plan §13)**: Default local **Gemma 3 4B Instruct (`google/gemma-3-4b-it`)** for narrative synthesis, Four-Question reasoning, suggested actions, and Ask Athena; **optional hosted xAI Grok API** (`LLM_PROVIDER=local|xai|auto`) behind a mandatory external-LLM privacy gate (public/synthetic data only, JSON-Schema structured outputs, per-output model metadata); safe degraded mode via BART — factual summarization only, never reasoning-equivalent.
+- **Reasoning Layer (provider-agnostic, Master Plan §13)**: Default local **Gemma 3 4B Instruct (`google/gemma-3-4b-it`)** — **Q4/int4 on the local GPU (NVIDIA RTX 3050, 4 GB VRAM)** via `LLM_DEVICE`/`LLM_DTYPE`/`MAX_CONTEXT_TOKENS`/`MAX_OUTPUT_TOKENS` (VRAM never assumed to guarantee inference; never-crash fallback chain) — for narrative synthesis, Four-Question reasoning, suggested actions, and Ask Athena; **optional hosted xAI Grok API** (`LLM_PROVIDER=local|xai|auto`) behind a mandatory external-LLM privacy gate (public/synthetic data only, JSON-Schema structured outputs, per-output model metadata); safe degraded mode via BART — factual summarization only, never reasoning-equivalent.
 - **spaCy 3.7 (en_core_sci_md)**: Local Named Entity Recognition (NER) for pharmaceutical entity extraction (drugs, companies, trial phases, indications).
 - **BART (facebook/bart-large-cnn)**: Local factual signal summarization (CPU-friendly); also the safe degraded fallback when the reasoning LLM is unavailable — **factual summarization only, NOT a reasoning-equivalent replacement**.
 - **BART MNLI (`facebook/bart-large-mnli`)**: Zero-shot classification for haemophilia signal types AND Red-Team contradiction entailment (one local model, two jobs; canonical per SRS `NLI_MODEL`).

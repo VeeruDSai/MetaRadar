@@ -1,15 +1,18 @@
 # MetaRadar: Master Plan & Canonical Specification (v5.0)
 
 **Project:** MetaRadar — Near-Real-Time Competitive Intelligence Radar  
-**Version:** 5.0 (Canonical Master Specification · B.Pharm Domain Research Integrated · Provider-Agnostic Reasoning Layer)  
+**Version:** 5.1 (Canonical Master Specification · B.Pharm Domain Research Integrated · Provider-Agnostic Reasoning Layer · Pre-Implementation Architecture Hardening)  
 **Date:** August 13, 2026  
 **Target Event:** Novo Nordisk GBS Hackathon 2026 (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease")  
-**Team:** MS Ramaiah Institute of Technology (MSRIT) — Cross-Disciplinary (2 CSE + 3 B.Pharm)  
+**Team:** Aura Pharmers — MS Ramaiah Institute of Technology (MSRIT), Cross-Disciplinary (2 CSE + 3 B.Pharm)  
+**Team Lead:** Sanjana Rathore B.  
 **Specification Status:** **SOLE AUTHORITATIVE MASTER PLAN** (All other documentation files are secondary historical references).
 
 > **v4.0 Change Note (Aug 13, 2026):** This version integrates the B.Pharm domain research reports — Sanjana (Medical Affairs & prioritisation), Ishaaq (disease/inhibitor/modality classification & trial lifecycle), Usha (evidence quality, safety, access, Red-Team) — as **domain rules**, NOT as an architecture change. The 10-node LangGraph pipeline, five intelligence mechanisms, Four-Question UI, six primary functions, and stakeholder calibration loop are **unchanged**. What is added: canonical haemophilia classification fields (disease/factor/inhibitor/population/modality), nullable clinical-evidence fields, an evidence-maturity hierarchy, access as a separate intelligence event, 19 Red-Team evidence checks, research-informed routing rules mapped into the **six primary functions**, congress/publication lifecycle logic, Watch-for-Next, a triage (not clinical) priority model, and 7 deterministic evaluation cases. See §12.
 
 > **v5.0 Change Note (Aug 13, 2026):** Final consistency + technical-accuracy pass. The reasoning layer becomes **provider-agnostic** — an internal detail of `node_synthesize` (NO new nodes, NO new agents, NO pipeline change): default **local Gemma 3 4B** (`LLM_PROVIDER=local`), **optional hosted xAI Grok** (`LLM_PROVIDER=xai` or `auto`) behind a mandatory external-LLM privacy gate, and **BART as degraded factual summary only** — never a reasoning-equivalent replacement. Adds the `LLMProvider` interface, two output schemas (FULL INTELLIGENCE vs DEGRADED FACTUAL SUMMARY), Grok JSON-Schema structured-output validation, per-output model metadata, and provider fallback acceptance tests. The 10-node pipeline, five mechanisms, six primary functions, and all §12 domain rules are unchanged. See §13.
+
+> **v5.1 Change Note (Aug 13, 2026 — pre-implementation architecture hardening):** A final hardening pass over the ENTIRE project plan and documentation set, performed BEFORE implementation starts. **No redesign — scope, ten nodes, five mechanisms, six functions, calibration loop, Ask Athena, and the provider abstraction are all retained.** This version: (1) declares the concrete development/demo deployment target — **Gemma 3 4B Instruct Q4/int4 on the local GPU (NVIDIA RTX 3050, 4 GB VRAM)** with `LLM_DEVICE`/`LLM_DTYPE`/`MAX_CONTEXT_TOKENS`/`MAX_OUTPUT_TOKENS` configuration and a never-crash fallback chain (Gemma → Grok → BART degraded → source-grounded factual signal + human-review flag); (2) consolidates scheduling to **ONE scheduler (in-process APScheduler + Redis)** — Celery is removed for the hackathon architecture (§14.9); (3) hardens the **database entity model** (stable `source_id · company_id · asset_id · trial_id · development_id · event_id · publication_id · congress_event_id · regulatory_event_id · access_event_id`, immutable source provenance, canonical Signal schema, evidence relationships, Alembic migrations); (4) defines the **deterministic deduplication layer and source-independence model** BEFORE Confluence; (5) formally specifies the **LangGraph state contract** (state fields, reducers, explicit initial state, `node_calibrate → END`, recursion/failure limits); (6) adds the **domain configuration layer** (`config/haemophilia.yaml`) and ontology quality gate (verified mappings: fitusiran → Qfitlia · concizumab → Alhemo · marstacimab → Hympavzi); and (7) locks the operational surface — versioned `/api/v1/` endpoints, `health/ready|models|connectors`, configurable CORS, versioned scoring/calibration, safe Redis serialization + cache invalidation, observability (`run_id`/`signal_id`/`model_request_id`), idempotency, prompt versioning, evaluation/calibration datasets, Docker `/models` volume, and an honest implementation-status vocabulary. All decisions are specified in **§14** (they do not alter the §4 pipeline).
 
 ---
 
@@ -105,7 +108,7 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
                                     ↓
                   EVIDENCE + PRIORITY (sufficiency gate)
                                     ↓
-           SYNTHESIS PROVIDER (Gemma local · Grok hosted · BART degraded)
+           SYNTHESIS PROVIDER (Gemma GPU · Grok hosted · BART degraded)
                                     ↓
                   FACT / INTERPRETATION / SPECULATION
                                     ↓
@@ -121,8 +124,8 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 ```
 
 ### 10-Node LangGraph Execution Breakdown:
-1. **`node_ingest`**: Fetches raw JSON from PubMed API & NewsAPI via `httpx` async client.
-2. **`node_validate`**: Filters short text (<50 chars), non-English data, and non-haemophilia scope.
+1. **`node_ingest`**: Runs all enabled `SourceConnector` adapters (PubMed, NewsAPI, ClinicalTrials.gov LIVE; FDA/EMA/Congress/Reddit adapter-ready; 500-signal synthetic fallback) through the **one shared connector interface (§14.3)** via `httpx` async clients. Every raw payload is persisted **verbatim** to `raw_signals_bronze` (immutable provenance: `source_id · external_id · url · publisher · published_at · retrieved_at · raw_content_hash · content_version`, §14.2) before any transformation.
+2. **`node_validate`**: Filters short text (<50 chars), non-English data, and non-haemophilia scope. Runs the **deterministic deduplication layer** (stable fingerprints from PMID / NCT ID / FDA identifiers / congress abstract IDs, else normalized title+publisher+date+company+asset+URL — §14.4) and the **source-independence classification** (`source_class · publisher · syndication_group · parent_source_id`) BEFORE Confluence, so syndicated copies are never counted as independent signals. PII/PHI scrub runs before persistence.
 3. **`node_nlp_extract`**: Extracts drug names, companies, indications, and clinical trial IDs using spaCy (`en_core_sci_md`).
 4. **`node_ontology_enrich`**: Maps extracted entities against B.Pharm Haemophilia Ontology (Hemlibra $\rightarrow$ emicizumab $\rightarrow$ Roche $\rightarrow$ bispecific antibody).
 5. **`node_confluence`**: Scans rolling 48-hour window for entity convergence across $\ge 3$ distinct signal types. **For congress/publication signals, first asks *"is this part of an existing development?"*** — if a matching `development_id` exists, the signal is linked into the existing development/evidence chain instead of becoming a new intelligence card (NEW EVIDENCE ABOUT EXISTING DEVELOPMENT vs NEW DEVELOPMENT).
@@ -130,7 +133,9 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 7. **`node_redteam`**: Runs pairwise NLI entailment/contradiction checks using local `facebook/bart-large-mnli`.
 8. **`node_missing_signal`**: Evaluates FSM state against max lag rules to flag absent expected milestones. Supports **stakeholder-defined WATCH RULES** (source_event → expected/interesting next event → monitoring window → responsible function → status). Statuses: `watching` → `new_evidence_detected` / `no_new_evidence` / `watch_expired` / `human_review_required`. Wording is always *"Watch for…" / "Expected/possible next evidence" / "Not observed yet"* — never a claim that the event will happen.
 9. **`node_synthesize`**: Runs the **evidence-sufficiency check** (retrieve evidence → sufficient? → YES: generate grounded interpretation; NO: restrict output to verified facts / "Insufficient evidence to support an interpretation" + request human review). Generates 1-sentence summaries (BART batch), **Fact / Interpretation / Speculation labels**, and Four-Question briefs via the **provider-agnostic reasoning layer (§13)** — default local Gemma 3 4B, optional hosted Grok, degraded BART factual mode — anchored strictly in source excerpts.
-10. **`node_calibrate`**: Updates function-scoring weights based on stakeholder feedback ratings (`StakeholderCalibrationService`) → improved future routing/prioritization. **Calibration scope is not limited to priority** — stakeholders can influence priority, routing, actions, watch rules, and relevance criteria (BEFORE/AFTER shown in demo).
+10. **`node_calibrate`**: Updates function-scoring weights based on stakeholder feedback ratings (`StakeholderCalibrationService`) → improved future routing/prioritization. **Calibration scope is not limited to priority** — stakeholders can influence priority, routing, actions, watch rules, and relevance criteria (BEFORE/AFTER shown in demo). **Explicit termination: `node_calibrate → END`** — the graph never relies on implicit termination.
+
+**LangGraph State Contract (formal, §14.6):** The graph uses one explicit `MetaRadarState` (TypedDict) with declared fields, explicit **initial state**, and **typed reducers** — accumulating fields (`raw_signals`, `validated_signals`, `extracted_entities`, `ontology_entities`, `developments`, `scored_signals`, `confluent_stories`, `lifecycle_events`, `redteam_flags`, `missing_signals`, `role_briefs`, `calibration_feedback`, `model_metadata`, `errors`) use append/merge reducers so parallel connector nodes never overwrite each other; scalar fields use replacement semantics. Each node declares which fields it reads/writes; no node mutates arbitrary state. Recursion/failure limits are configured (e.g., `recursion_limit` and per-node error boundaries) so one source failure never kills the pipeline (see also §14.6).
 
 ### Technology Stack:
 * **Frontend:** Next.js 15 (React 19, TypeScript, TailwindCSS 4, shadcn/ui)
@@ -138,10 +143,10 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 * **Workflow Orchestration:** LangGraph 0.1+ (10-node state graph)
 * **Database & Vector Storage:** PostgreSQL 16 + `pgvector` extension
 * **Embedding Model:** `sentence-transformers/all-MiniLM-L6-v2` (**384-dimensional vector embeddings**)
-* **Reasoning Layer (provider-agnostic, §13):** **Default local provider `google/gemma-3-4b-it`** — Gemma 3 4B Instruct, a local instruction-tuned LLM (Q4-quantized for CPU) driving narrative synthesis, Four-Question reasoning, AI-suggested actions, and Ask Athena; **optional hosted provider: xAI Grok API** (`LLM_PROVIDER=local|xai|auto`, mandatory external-LLM privacy gate, §13.5); and a safe **degraded mode: BART performs factual summarization only** when no reasoning provider is available — it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; degraded mode is clearly marked in the UI (*"AI reasoning unavailable — showing source-grounded factual summary"*) and human review applies where necessary.
+* **Reasoning Layer (provider-agnostic, §13):** **Default local provider `google/gemma-3-4b-it`** — Gemma 3 4B Instruct, a local instruction-tuned LLM (**Q4/int4-quantized, deployed on the local GPU — NVIDIA RTX 3050, 4 GB VRAM**; §14.1) driving narrative synthesis, Four-Question reasoning, AI-suggested actions, and Ask Athena; **optional hosted provider: xAI Grok API** (`LLM_PROVIDER=local|xai|auto`, mandatory external-LLM privacy gate, §13.5); and a safe **degraded mode: BART performs factual summarization only** when no reasoning provider is available — it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; degraded mode is clearly marked in the UI (*"AI reasoning unavailable — showing source-grounded factual summary"*) and human review applies where necessary. Model execution is configured via `LLM_DEVICE` (GPU/CPU/auto), `LLM_DTYPE` (e.g., int4), `MAX_CONTEXT_TOKENS`, and `MAX_OUTPUT_TOKENS` — **the system MUST NOT assume 4 GB VRAM guarantees successful inference** (model weights, KV cache, runtime overhead, and context length are treated as separate budgets; if Gemma cannot initialize/execute, the provider chain falls back per §13.6 and §14.1 — the application never crashes because Gemma does not fit).
 * **Batch Summarizer:** `facebook/bart-large-cnn` — fast CPU seq2seq model for 1-sentence factual signal summaries (< 60s per 100 signals target); also the safe degraded fallback (factual summarization only).
-* **Cache & Rate Limiting:** Redis 7 (2h TTL hot cache, quota-aware API rate limiting — NewsAPI Developer tier is 100 req/day)
-* **Async Workers & Scheduler:** Celery 5.3 + APScheduler (2-hour periodic fetch execution)
+* **Cache & Rate Limiting:** Redis 7 (2h TTL hot cache, quota-aware API rate limiting — NewsAPI Developer tier is 100 req/day; safe JSON serialization + versioned cache keys + invalidation rules, §14.8)
+* **Scheduler (single):** **APScheduler (3.x stable), in-process with FastAPI** — the ONLY scheduling system (2-hour periodic fetch, nightly digest, on-demand recalibration). **Celery is deliberately NOT used in the hackathon architecture** (rationale + reintroduction path in §14.9). Heavy CPU/GPU-bound LangGraph runs are offloaded from the event loop via `asyncio`/thread/process execution, not via a second scheduling system.
 
 ---
 
@@ -152,8 +157,9 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 2. **NewsAPI:** Industry news, press releases, competitor corporate announcements (**Developer/free tier: 100 requests/day**, development/testing use only, articles delayed up to 24 hours — NOT real-time, NOT for production/internal deployment; official pricing https://newsapi.org/pricing). Quota-aware connector; on exhaustion fall back to Redis cache → bronze DB → synthetic dataset.
 
 ### System Data Polling & Availability:
-* **Source Polling Frequency:** Every 2 hours (via Celery + APScheduler).
+* **Source Polling Frequency:** Every 2 hours (via the single in-process **APScheduler**; §14.9).
 * **Dashboard Availability:** Continuously available near-real-time radar.
+* **Source Freshness Classes (honest labeling, §14.3):** each connector is labelled `real_time` · `near_real_time` · `delayed` · `batch` · `adapter_ready` · `synthetic`. The dashboard shows freshness honestly (e.g., NewsAPI = `delayed` — Developer tier articles are up to 24h old; PubMed = `delayed`/`batch`; ClinicalTrials.gov = `near_real_time`). No connector is blanket-labelled "real-time".
 
 ### Synthetic Demo Fallback:
 * **500-Signal Pre-Curated Synthetic Dataset:** Local JSON fallback designed to keep the offline demo executable when public APIs experience rate limits or network failures (an engineering target exercised in rehearsal — not an absolute guarantee).
@@ -225,7 +231,7 @@ The UI is strictly subordinate to the intelligence. Rather than presenting raw n
 ## **8. IMPLEMENTATION TIMELINE (REVISED 4-WEEK PLAN)**
 
 ### Week 1 — Foundation (Make Live Signals Appear)
-* **Engineering Tasks:** Docker Compose environment setup (FastAPI, Next.js 15, PostgreSQL 16 + pgvector, Redis 7). Implement NCBI PubMed (E-utilities) & NewsAPI connectors with `httpx` async fetching. Database schema initialization (`signals`, `entities`, `raw_signals_bronze`).
+* **Engineering Tasks:** Docker Compose environment setup (FastAPI, Next.js 15, PostgreSQL 16 + pgvector, Redis 7 — 4 services; model weights in a mounted `/models` volume, §14.14). Implement NCBI PubMed (E-utilities) & NewsAPI connectors via the shared `SourceConnector` interface (`httpx` async + `tenacity`). **Alembic-managed schema migrations** creating the canonical entity layer (§14.2): `sources · companies · assets · trials · developments · events · evidence · signals · calibration · audit` (no `drop_all()`/`create_all()` for normal development).
 * **Milestone:** Live signals appear on basic dashboard screen.
 
 ### Week 2 — Intelligence Core (Connect Signals into Stories)
@@ -289,7 +295,7 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 ## **11. KNOWN LIMITATIONS**
 
 1. **Public API Quotas:** NewsAPI Developer/free tier is capped at **100 requests/day** (development/testing use only; articles delayed up to 24h; not for production/internal deployment). Mitigated by quota-aware connectors, Redis caching, and 2-hour fetch polling; on exhaustion fall back to bronze DB / synthetic dataset. (Official pricing: https://newsapi.org/pricing.)
-2. **Model Capabilities:** Default inference runs entirely on local CPU (`google/gemma-3-4b-it` reasoning LLM, `facebook/bart-large-cnn` batch summarizer, BART MNLI, spaCy, MiniLM embeddings). Reasoning depth and speed are bounded by CPU RAM constraints compared to commercial LLMs; an **optional hosted Grok provider** (`LLM_PROVIDER=xai|auto`) can supplement reasoning where available, gated by the external-LLM privacy gate (§13.5) — Gemma remains fully usable with zero external API calls. When no reasoning provider is available the system enters **degraded mode — BART factual summarization only** (no reasoning-equivalent output).
+2. **Model Capabilities:** The local reasoning model (`google/gemma-3-4b-it`, Q4/int4) runs on the **local GPU (NVIDIA RTX 3050, 4 GB VRAM)**; BART (batch summarizer + degraded fallback), BART-MNLI (NLI), spaCy (NER), and MiniLM (embeddings) run on CPU. **4 GB VRAM is NOT assumed to guarantee successful inference** — model weights (~2.6 GB Q4), KV cache, runtime overhead, and context length are budgeted separately (max context/output tokens are configurable). If Gemma cannot initialize or execute, the chain falls back: **Gemma → Grok (if configured & privacy-gated) → BART degraded factual → source-grounded factual signal + human-review flag** — the application never crashes because a model does not fit (§13.6, §14.1). Reasoning depth remains bounded on constrained hardware compared to commercial LLMs; an **optional hosted Grok provider** (`LLM_PROVIDER=xai|auto`) can supplement reasoning where available, gated by the external-LLM privacy gate (§13.5). When no reasoning provider is available the system enters **degraded mode — BART factual summarization only** (no reasoning-equivalent output).
 3. **Stakeholder Feedback Scope:** True organizational feedback across global pharma teams is unavailable in a hackathon setting; the calibration loop is demonstrated using persona-driven simulated feedback.
 4. **Absence Alerting Precision:** Missing-signal detection relies on rule-based time lag thresholds ($t_{\text{max\_lag}}$); abnormal market delays may trigger false-positive alerts, which are strictly gated behind mandatory human review.
 
@@ -498,6 +504,8 @@ One shared evidence-grounded intelligence pipeline with a provider-agnostic reas
 
 Gemma MUST remain fully usable without any external API key; **no deployment is forced to use Grok.**
 
+**Local Gemma deployment is GPU-first but failure-tolerant (§14.1):** `LLM_DEVICE` selects the device (`cuda:0` default when a GPU is available, else `cpu`/`auto`); `LLM_DTYPE`/quantization selects `int4`/Q4; `MAX_CONTEXT_TOKENS` and `MAX_OUTPUT_TOKENS` bound the model budgets. **Model initialization/inference failure (including "does not fit in 4 GB VRAM") is handled like any other provider failure** — fall through the configured chain. No GPU-specific logic is hard-coded into LangGraph nodes; the provider abstraction owns all model execution.
+
 ### 13.2 Provider Interface
 
 LangGraph nodes call the provider interface — never Gemma or Grok directly. Provider-specific logic stays inside the provider implementations:
@@ -545,7 +553,7 @@ xAI API data handling does **not** override the hackathon's stricter public/synt
 Handle: missing API key · timeout · rate limit · quota exhaustion · network failure · provider unavailable · invalid provider response · schema validation failure · semantic evidence validation failure.
 
 ```text
-Gemma unavailable → Grok (in xai/auto modes)
+Gemma unavailable (incl. VRAM/init failure) → Grok (in xai/auto modes)
 Grok unavailable  → BART factual summary
 No reasoning provider → source-linked factual signal + human-review flag
 ```
@@ -567,7 +575,7 @@ Every generated output SHALL record: `provider` · `model` · `model version/ID`
 
 | Role | Default | Alternative |
 |---|---|---|
-| Reasoning / Four Questions / Athena | Gemma 3 4B local | Grok API |
+| Reasoning / Four Questions / Athena | Gemma 3 4B local (**GPU**, Q4/int4 — RTX 3050 4 GB VRAM) | Grok API |
 | Degraded factual summary | BART-large-CNN | — |
 | Batch summarization | BART-large-CNN | — |
 | NLI | BART-MNLI | — |
@@ -578,6 +586,174 @@ BART is NEVER listed as a reasoning model.
 
 ---
 
+## **14. ARCHITECTURE HARDENING (v5.1 — PRE-IMPLEMENTATION DECISIONS)**
+
+This section records the decisions from the final pre-implementation hardening pass. It is **not a redesign** — the §4 pipeline, ten nodes, five mechanisms, six functions, calibration loop, Ask Athena, and the provider abstraction are all unchanged. Every item below is a decision that would become expensive, dangerous, or difficult to change AFTER implementation begins, so it is locked here first.
+
+### 14.1 Local Model Execution — GPU Deployment Target (Gemma on RTX 3050)
+
+**Deployment target (actual development/demo machine):** NVIDIA RTX 3050, **4 GB VRAM**.
+
+* **Gemma 3 4B Instruct, Q4/int4 — Local GPU.** All documentation that previously said "Gemma — Local CPU" is corrected to: **"Gemma 3 4B Instruct, Q4/int4 — Local GPU (NVIDIA RTX 3050 4 GB VRAM)."**
+* **4 GB VRAM does NOT guarantee successful inference.** Model weights, KV cache, runtime overhead, and context length are budgeted **separately** (weights ≈ 2.6 GB Q4; KV cache and context grow with `MAX_CONTEXT_TOKENS`; runtime/overhead depends on the runner).
+* **The system must never crash because Gemma cannot fit or execute.** Execution flow:
+
+```text
+GPU available → Gemma 3 4B Q4 → reasoning output
+        ↓ init/inference failure
+Grok API (if configured and permitted) → reasoning output
+        ↓ failure
+BART factual degraded mode (source-grounded summary)
+        ↓ if no reasoning provider at all
+source-grounded factual signal + human-review flag (dashboard stays alive)
+```
+
+* **Configurable settings (env vars, SRS §4.2):** `LOCAL_LLM_MODEL` · `LLM_DEVICE` (`cuda:0` / `cpu` / `auto`) · `LLM_DTYPE`/quantization (`int4`/Q4 default) · `MAX_CONTEXT_TOKENS` · `MAX_OUTPUT_TOKENS`. BART/spaCy/MiniLM/BART-MNLI remain CPU-friendly and are unaffected.
+* **No GPU-specific logic in LangGraph nodes.** The `LLMProvider` abstraction (`LocalGemmaProvider`/`XAIProvider`/`BartDegradedProvider`) owns ALL model execution, device selection, quantization, and failure handling (§13).
+
+### 14.2 Canonical Entity Model & Database Architecture
+
+The database is designed around **stable entities** — never one giant `signals` table. Stable identifiers (UUIDs):
+
+```text
+signal_id · source_id · company_id · asset_id · trial_id · development_id · event_id ·
+publication_id · congress_event_id · regulatory_event_id · access_event_id
+```
+
+**Central relationships (must hold in the schema):**
+
+```text
+Signal → Development → Asset → Company
+
+Development → Trial → Congress → Publication → Regulatory event → Access event → Post-market evidence
+```
+
+* The **same development accumulates multiple signals without duplicate developments** (essential for Confluence and Lifecycle). A trial → congress abstract → oral → poster → publication stays ONE development.
+* **Entity tables (first migration must anticipate all of them):** `sources` · `companies` · `assets` · `trials` · `developments` · `events` · `evidence` · `signals` · `raw_signals_bronze` · `confluences` · `lifecycle_chains`/`lifecycle_events` · `contradictions` · `watch_items` · `calibration` (`stakeholder_feedback` + `calibration_history` + `scoring_weights`) · `audit_log`.
+* **Canonical Signal object** (consumed identically by database, LangGraph, API, frontend, LLM provider, scoring engine, calibration engine, audit system):
+
+```text
+signal_id · source_id · external_id · development_id · company_id · asset_id · trial_id ·
+signal_type · disease · factor · inhibitor_status · population · title · content ·
+published_at · retrieved_at · source_type · source_authority · evidence_maturity ·
+facts · interpretation · speculation · priority · priority_breakdown · routing ·
+actions · watch_for_next · supporting_evidence_ids · contradictory_evidence_ids ·
+model_metadata · calibration_metadata
+```
+
+  All fields are **nullable** where evidence may be unavailable — the AI is never forced to invent missing fields.
+* **Immutable source provenance:** every ingested source item preserves `source_id · external_id · source_url · publisher · source_type · published_at · retrieved_at · raw_content_hash · content_version`. AI claims reference evidence IDs; the database can always answer *"What exact source caused this statement?"*
+* **Explicit evidence relationships** (explainability): `claim → evidence` · `interpretation → evidence` · `priority → evidence` · `routing → evidence + scoring logic` · `action → evidence + reasoning`.
+* **Migrations:** schema evolution via **Alembic** only — never `drop_all()`/`create_all()` for normal development (§14.14).
+
+### 14.3 Source Connector Interface
+
+All external sources implement **one common interface** returning the same normalized `RawSignal`:
+
+```text
+RawSignal: source_id · source_type · external_id · title · content · url ·
+           published_at · retrieved_at · publisher · raw_hash
+```
+
+Adapters: `PubMedConnector` · `NewsAPIConnector` · `ClinicalTrialsConnector` · `FDAConnector` · `EMAConnector` · `CongressConnector` · `RedditConnector` (+ `SyntheticConnector`). **Adding a future source requires a new adapter only — never a rewrite of `node_ingest`.** Each connector reports its **freshness class**: `real_time` · `near_real_time` · `delayed` · `batch` · `adapter_ready` · `synthetic` (the dashboard is honest about freshness; no blanket "real-time" labels).
+
+### 14.4 Deduplication & Source Independence (BEFORE Confluence)
+
+* **Deterministic deduplication layer runs before Confluence.** Every raw source item receives a stable fingerprint, preferring available identifiers: PubMed PMID · ClinicalTrials.gov NCT ID · FDA identifiers · official publication identifiers · congress abstract identifiers; for sources without stable IDs, use the normalized **title + publisher + date + company + asset + URL**.
+* **Source-independence model:** store `source_class · publisher · syndication_group · parent_source_id`. Example — PubMed + ClinicalTrials.gov + a company announcement may count as independent; **three websites reproducing the same company release are ONE source**, not three signals.
+* Confluence operates on **independent evidence, not raw article count.** Duplicate/syndicated copies are never counted as independent signals (supports Red-Team check B).
+
+### 14.5 Domain Configuration Layer & Ontology Quality Gate
+
+* **Haemophilia is configuration, not hard-code.** No `if haemophilia` / `if Hemlibra` / `if FVIII` scattered through application code. A domain configuration layer (`config/haemophilia.yaml`) contains: diseases · factors · inhibitor categories · companies · assets · therapies · signal types · keywords · synonyms · functions · ontology mappings · scoring defaults. **The core intelligence engine is therapy-area agnostic** — the primary scalability mechanism for expanding beyond Haemophilia (Haemophilia → other Rare Diseases → multiple therapy areas) without touching the database, API contracts, LangGraph nodes, provider layer, or frontend foundation.
+* **Ontology quality gate (before any ontology data enters production/demo databases):** `generic_name · brand_name · company · mechanism · disease · factor · inhibitor_population · approval_status · approval_date · jurisdiction · source · last_verified`. Stale or manually-guessed product information is rejected. Approval status is tracked as an **updatable fact** (with source + last_verified), never treated as permanent/static.
+* **Verified FDA product mappings (do not swap):**
+  - **fitusiran → Qfitlia** (Sanofi; FDA-approved March 2025 for routine prophylaxis, haemophilia A/B ± inhibitors)
+  - **concizumab → Alhemo** (Novo Nordisk; FDA-approved December 2024 for prophylaxis in haemophilia A/B with inhibitors)
+  - **marstacimab → Hympavzi** (Pfizer; approved 2024, expanded June 2026 to ages 6+ haemophilia A/B ± inhibitors)
+
+### 14.6 LangGraph State Contract (formal)
+
+* **Explicit state fields:** `raw_signals · validated_signals · extracted_entities · ontology_entities · developments · scored_signals · confluent_stories · lifecycle_events · redteam_flags · missing_signals · role_briefs · calibration_feedback · model_metadata · errors`.
+* **Explicit initial state** is defined; no node may assume a field is pre-initialized (`state["signals"].append(...)` on an uninitialized field is forbidden).
+* **Typed reducers:** list/accumulating fields use append/merge reducers (critical for parallel source connectors and parallel analysis nodes); scalar fields use replacement semantics.
+* **Ownership:** each node declares read/write fields (documented in the graph module); no node mutates arbitrary state.
+* **Explicit termination:** `node_calibrate → END` (never implicit). Configure `recursion_limit` and per-node error boundaries/failure limits. One node's failure does not kill the pipeline (per-node error handling, §39 → SRS error FRs).
+* **Concurrency:** parallel connectors share `raw_signals`/`validated_signals`/`evidence`/`errors` through reducers — concurrent nodes cannot overwrite the same field incorrectly.
+
+### 14.7 API Versioning, Health & CORS
+
+* **Versioned API only:** `/api/v1/` (`/signals · /developments · /companies · /trials · /briefs · /feedback · /athena · /health`). No unversioned production-style endpoints are added.
+* **Health endpoints:** `GET /api/v1/health` · `GET /api/v1/health/ready` · `GET /api/v1/health/models` · `GET /api/v1/health/connectors`. Health separately reports: **API · PostgreSQL · Redis · Gemma (loaded/available) · Grok (configured/not) · PubMed · NewsAPI · ClinicalTrials.gov**. **A failed optional source must not make the entire application appear dead** (source health degrades independently).
+* **CORS:** `CORSMiddleware` with an environment-configurable allowlist (`CORS_ORIGINS=http://localhost:3000`, multiple origins supported). `"*"` is never hard-coded for credentialed application traffic.
+
+### 14.8 Caching — Redis Serialization & Invalidation
+
+* **One canonical JSON serialization layer** for datetime · UUID · Decimal · Enum · Pydantic models before Redis — no scattered custom `json.dumps` over raw ORM/Pydantic objects.
+* **Versioned cache keys:** `signal:{signal_id}:v1`, `brief:{brief_id}:v{api_version}` etc.
+* **Every cache entry carries:** TTL · schema version · source timestamp · optional model/config version. When scoring/calibration/model logic changes, stale generated intelligence must NOT silently appear as current — keys or TTLs are invalidated on version bump (pattern: `signal:{id}:v1` → `:v2`).
+
+### 14.9 Scheduler — ONE Scheduler (decision record)
+
+* **Decision:** **FastAPI + APScheduler (in-process, single scheduler) + Redis for caching.** **Celery is NOT used** in the hackathon architecture.
+* **Why:** the required jobs (2-hour fetch, nightly digest, on-demand recalibration) are lightweight and fully served by one in-process APScheduler with async jobs; heavy LangGraph runs are offloaded from the event loop via `asyncio`/thread-pool execution. Two scheduling systems would introduce duplicate scheduling paths and unnecessary infrastructure for a 4-week demo on a 4 GB VRAM laptop.
+* **Reintroduction path (documented, NOT built):** if sustained throughput exceeds ~1,000 signals/cycle, multi-node workers are needed, or jobs must survive backend restarts, migrate the job bodies to Celery workers with APScheduler (or Celery beat) as the single scheduler — the job logic lives in services, so the move is additive, not a rewrite.
+* All docs, Docker Compose, and the stack references are updated to remove Celery (README · CLAUDE.md · SDD · SRS · plan docs).
+
+### 14.10 Scoring & Calibration Versioning
+
+* **Priority score versioning:** never store only `priority_score = 82`. Store `priority_score` **+ `scoring_model_version` (e.g., "v1") + `scoring_config_version` (e.g., "haemophilia_v1") + `score_breakdown`** (factor-level). Future scoring changes do not rewrite historical results.
+* **Calibration versioning:** never overwrite the AI baseline. Per signal store `baseline_score · baseline_routing · baseline_action` THEN `calibrated_score · calibrated_routing · calibrated_action`, plus `calibration_version · feedback_id · feedback_timestamp · stakeholder_function`. The demo must reproduce **BEFORE → stakeholder feedback → AFTER** for exactly the same signal.
+
+### 14.11 Red-Team Modularity, Watch Rules, Action Vocabulary
+
+* **Red-Team rules are modular:** `RedTeamRule` registry (causality · denominator · population mismatch · endpoint mismatch · surrogate overclaim · small sample · short follow-up · preliminary evidence · source independence · stale information · negative evidence · approval/access · jurisdiction · lifecycle · statistical vs clinical significance · contradiction · duplicate inflation — a superset already covers A–S in §12.7). **New checks are addable without rewriting `node_redteam`.**
+* **Watch rules are data/configuration-driven** (no competitor watches hard-coded in Python): `watch_id · development_id · trigger_event · expected_event · monitoring_window · responsible_function · status`. Canonical statuses: **`active` · `observed` · `expired` · `dismissed`**, with an explicit mapping to the persisted/UI-facing §12.8 statuses (stored in `watch_items.status`): **`active` ↔ `watching`** · **`observed` ↔ `new_evidence_detected`** (also covers `no_new_evidence` while still watching) · **`expired` ↔ `watch_expired`** · **`dismissed` ↔ `human_review_required`** (human-resolved). The schema stores the UI-facing value; the canonical vocabulary is the application-level contract.
+* **Action vocabulary (controlled, FR-2.6.1):** `monitor` · `review` · `prepare_internal_briefing` · `prepare_scientific_faq` · `escalate` · `request_stakeholder_review` · `no_immediate_action`. Every action is **"Suggested — requires human review." No autonomous action.**
+
+### 14.12 Prompt Versioning, Observability, Idempotency
+
+* **Prompt versioning:** every production prompt carries `prompt_id` + `prompt_version` (e.g., `four_question_reasoning_v1` · `routing_v1` · `redteam_v1` · `athena_v1`). The prompt version is stored with every model output (`prompt_template_id` in model metadata). Prompts live in versioned config/template files — never buried in random source files.
+* **Model metadata (every output, FR-2.2.3F):** `provider · model · model_version · task · prompt_template_id · config_hash · timestamp · fallback_status · fallback_reason · latency`.
+* **Observability:** structured logging with `run_id` per pipeline run, `signal_id` per signal, `model_request_id` per model request; log `node · duration · provider · fallback · error · source · signal_id · run_id`. **No confidential data or patient information is ever logged.**
+* **Idempotency:** pipeline jobs are safe to run repeatedly. Stable external IDs + idempotency keys mean: the same source item retrieved twice does not create duplicate signals; the same calibration feedback submitted twice is not applied twice; the same development event processed twice does not duplicate lifecycle events.
+
+### 14.13 Evaluation & Calibration Datasets
+
+* **Synthetic 500-signal dataset carries ground truth:** `signal_id · ground_truth_signal_type · ground_truth_company · ground_truth_asset · ground_truth_disease · ground_truth_priority · ground_truth_function · ground_truth_action · expected_evidence_level` — making the **≥85% classification target measurable**. The classifier is never evaluated only on data it generated itself.
+* **Calibration uses separate feedback data:** calibration is never trained AND tested on the same feedback records. Feedback records carry `feedback_id · signal_id · function · relevance · urgency · action_appropriate · comment · timestamp`; the system tracks `baseline → feedback → calibrated result` (see §14.10).
+
+### 14.14 Migrations, Indexing, Docker & Configuration
+
+* **Migrations:** Alembic for ALL schema evolution; `drop_all()`/`create_all()` are never the normal development path. The FIRST migration already anticipates `signals · sources · companies · assets · trials · developments · events · evidence · calibration · audit`.
+* **Indexing (frequent queries):** `signal_id · development_id · company_id · asset_id · trial_id · published_at · retrieved_at · signal_type · primary_function · priority · evidence_maturity`; **vector indexes only where semantic search actually requires them** — no unnecessary indexes everywhere.
+* **Docker:** application image is separate from **model weights** — a mounted `/models` directory (model volume/cache) so the app starts without re-downloading multiple GB every time. Compose uses healthchecks (`pg_isready` for PostgreSQL, `redis-cli ping` for Redis, `/api/v1/health/ready` for the backend) — `depends_on` alone never implies readiness.
+* **Configuration:** database URL · Redis URL · CORS origins · LLM provider · Gemma model/device/dtype/context · Grok model/API key · NewsAPI key · source polling intervals · cache TTL · scoring configuration · calibration configuration are ALL environment-configurable. **No hard-coded credentials. No secrets in Next.js/browser code.**
+
+### 14.15 Frontend / Backend Contract & Reusable Components
+
+* **API response schemas (Pydantic) define the contract** — the frontend NEVER depends on database models directly. Flow: `Database → service/domain layer → API schema → frontend` (not `Database model → directly serialized into frontend`).
+* **Reusable component contract (canonical names, one implementation each):** `SignalCard` · `EvidenceBadge` · `PriorityBadge` · `FunctionBadge` · `LifecycleTimeline` · `ConfluenceAlert` · `RedTeamPanel` · `CalibrationWidget` · `WatchAlert` · `AthenaPanel`. No separate one-off implementations per signal type (the UI Design doc maps existing components to these canonical names, §4_UI).
+
+### 14.16 Implementation Status Vocabulary
+
+Repository claims are **honest** using exactly: **`PLANNED`** (designed, not started) · **`SPECIFIED`** (fully specified in docs) · **`IMPLEMENTED`** (code exists) · **`TESTED`** (verified by tests) · **`VERIFIED`** (demonstrated). Nothing is claimed implemented/working/tested/verified unless the repository actually contains and passes it. Today the repository is documentation-only: every feature is **SPECIFIED**.
+
+### 14.17 Final Architecture (unchanged canonical flow)
+
+```text
+PUBLIC SOURCES → SOURCE CONNECTORS → NORMALIZATION → DEDUPLICATION → VALIDATION →
+NLP EXTRACTION → ONTOLOGY ENRICHMENT → CONFLUENCE → LIFECYCLE → RED-TEAM →
+MISSING-SIGNAL / WATCH → SYNTHESIS → STAKEHOLDER CALIBRATION → FOUR QUESTIONS →
+FUNCTION ROUTING → DASHBOARD / DIGEST / ATHENA
+
+SYNTHESIS PROVIDER: Gemma GPU → (failure) Grok API → (failure) BART factual degraded mode
+```
+
+No additional pipeline exists. The hardening decisions in §14 do not change the §4 pipeline — they lock its contracts so implementation can begin without expensive late changes.
+
+---
+
 *Master Specification Approved & Frozen: August 2026*  
 *Novo Nordisk GBS Hackathon 2026 — Problem Statement #3*  
-*Team: MSRIT (2 CSE + 3 B.Pharm)*
+*Team: Aura Pharmers — MSRIT (2 CSE + 3 B.Pharm) · Team Lead: Sanjana Rathore B.*

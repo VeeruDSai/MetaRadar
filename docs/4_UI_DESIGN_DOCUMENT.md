@@ -1,10 +1,10 @@
 # MetaRadar: UI Design Document
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 3.3  
+**Version:** 3.4  
 **Date:** August 2026  
 **Design Framework:** shadcn/ui + TailwindCSS 4  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1). **v3.2 (Aug 13, 2026):** integrated the B.Pharm domain research UI (Master Plan v4.0 §12) — domain metadata row (disease/factor/inhibitor/population/modality), evidence-maturity label, evidence-context panels (Q5–Q7), Red-Team evidence-check flags, "WHY THIS ROUTING", and "WATCH FOR NEXT" on the signal card; advanced clinical-evidence fields remain expandable so the default card is never overloaded. **v3.3 (Aug 13, 2026):** provider-agnostic reasoning layer (Master Plan v5.0 §13) — UI shows the active reasoning provider and the degraded-mode banner *"AI reasoning unavailable — showing source-grounded factual summary"* whenever BART degraded factual mode is active; `ProviderBadge` renders model metadata (provider/model/fallback reason) non-intrusively on signal cards.
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1). **v3.2 (Aug 13, 2026):** integrated the B.Pharm domain research UI (Master Plan v4.0 §12) — domain metadata row (disease/factor/inhibitor/population/modality), evidence-maturity label, evidence-context panels (Q5–Q7), Red-Team evidence-check flags, "WHY THIS ROUTING", and "WATCH FOR NEXT" on the signal card; advanced clinical-evidence fields remain expandable so the default card is never overloaded. **v3.3 (Aug 13, 2026):** provider-agnostic reasoning layer (Master Plan v5.0 §13) — UI shows the active reasoning provider and the degraded-mode banner *"AI reasoning unavailable — showing source-grounded factual summary"* whenever BART degraded factual mode is active; `ProviderBadge` renders model metadata (provider/model/fallback reason) non-intrusively on signal cards. **v3.4 (Aug 13, 2026):** pre-implementation hardening (Master Plan v5.1 §14.15) — canonical reusable component contract (`SignalCard · EvidenceBadge · PriorityBadge · FunctionBadge · LifecycleTimeline · ConfluenceAlert · RedTeamPanel · CalibrationWidget · WatchAlert · AthenaPanel`); the component list below maps existing components to these canonical names; source-freshness badges (real-time/near-real-time/delayed/batch/adapter-ready/synthetic) are shown honestly per connector; a health footer renders `/api/v1/health` + per-source `/api/v1/health/connectors` states (a failed optional source shows degraded, never dead).
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
@@ -1219,7 +1219,22 @@ Modal fade:    0.2s opacity transition
 - `RoutingBadges` (NEW v3.1) — primary + secondary function badges with per-function relevance scores AND the routing reason line (explainable routing; renders `GET /api/v1/signals/{id}` routing block)
 - `DevelopmentLinkCard` (NEW v3.1) — congress/publication connection block: Development · Event · Relationship ("New evidence for existing development") · Related evidence links
 - `WatchRuleCard` (NEW v3.1) — stakeholder-defined watch: source event → expected next event → window → responsible function → status (watching / new_evidence_detected / no_new_evidence / watch_expired / human_review_required); renders `GET /api/v1/watchlist`
-- `ProviderBadge` (NEW v3.3) — non-intrusive provider/degraded label from model metadata (provider · model · mode · fallback_from · fallback_reason; FR-2.2.3F): shows "Gemma · local" / "Grok · hosted" / "BART · degraded factual summary" with the exact banner text *"AI reasoning unavailable — showing source-grounded factual summary"* when degraded
+- `ProviderBadge` (NEW v3.3) — non-intrusive provider/degraded label from model metadata (provider · model · mode · fallback_from · fallback_reason; FR-2.2.3F): shows "Gemma · local GPU" / "Grok · hosted" / "BART · degraded factual summary" with the exact banner text *"AI reasoning unavailable — showing source-grounded factual summary"* when degraded
+
+**Canonical component contract (v3.4 — Master Plan §14.15, one reusable implementation each, no per-signal-type one-offs):**
+
+| Canonical name | Mapped existing component(s) |
+|---|---|
+| `SignalCard` | `SignalCard` (Dashboard) |
+| `EvidenceBadge` | `EvidenceChain` (badge variant) + `OntologyTag` |
+| `PriorityBadge` | Badge (priority tags) + `TemporalPatternTag` |
+| `FunctionBadge` | `RoutingBadges` (primary/secondary + routing reason) |
+| `LifecycleTimeline` | `LifecycleTimeline` |
+| `ConfluenceAlert` | `ConfluenceAlertCard` |
+| `RedTeamPanel` | `ContradictionPanel` (+ Red-Team evidence-check flags) |
+| `CalibrationWidget` | `StakeholderFeedbackWidget` (+ BEFORE/AFTER readout) |
+| `WatchAlert` | `WatchRuleCard` + `MissingSignalCard` |
+| `AthenaPanel` | `AthenaQueryBar` + grounded answer panel |
 
 **Installation:**
 ```bash

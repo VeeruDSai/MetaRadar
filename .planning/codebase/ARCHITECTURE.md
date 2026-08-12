@@ -29,8 +29,8 @@
 └───────────────────────────────┬──────────────────────────────────┘
                                 ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  PostgreSQL 16 + pgvector · Redis 7 · Celery/APScheduler         │
-│  (relational + vector store, cache/rate-limit, 2h fetch schedule) │
+│  PostgreSQL 16 + pgvector · Redis 7 · APScheduler               │
+│  (relational + vector store, cache/rate-limit, single 2h scheduler) │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -142,10 +142,10 @@
 - Triggers: dashboard HTTP requests, Ask Athena
 - Responsibilities: FastAPI app wiring, routers
 
-**Scheduler:**
-- APScheduler + Celery (planned `workers/`)
-- Triggers: every 2 hours
-- Responsibilities: periodic fetch of live sources
+**Scheduler (single):**
+- **APScheduler** (in-process inside FastAPI; Celery removed — Master Plan §14.9) — planned `workers/`
+- Triggers: every 2 hours · nightly digest · on-demand recalibration
+- Responsibilities: periodic fetch of live sources; heavy LangGraph runs offloaded via asyncio/thread-pool execution
 
 **Frontend app:**
 - Location: `frontend/app/` (planned)
@@ -153,7 +153,7 @@
 
 ## Architectural Constraints
 
-- **Threading:** Async-first (`httpx` async, FastAPI ASGI); local model inference runs CPU-bound. **Estimated** Gemma 3 4B footprint: ~2.6 GB weights (Q4) and roughly 4.5–7.5 GB RAM — planning estimates, not guaranteed requirements; actual usage depends on runtime, quantization, context length, and system config (`docs/2_SRS_Software_Requirements_Specification.md`)
+- **Threading:** Async-first (`httpx` async, FastAPI ASGI); local model inference runs on the **local GPU (RTX 3050, 4 GB VRAM)** for Gemma (Q4/int4) and on CPU for BART/spaCy/MiniLM. **Estimated** Gemma 3 4B GPU footprint: ~2.6 GB Q4 weights; weights, KV cache, runtime overhead, and context length are budgeted separately (`LLM_DEVICE`/`LLM_DTYPE`/`MAX_CONTEXT_TOKENS`/`MAX_OUTPUT_TOKENS`); **4 GB VRAM does NOT guarantee inference** — never-crash provider fallback chain (Master Plan §14.1). Planning estimates, not guaranteed requirements; actual usage depends on runtime, quantization, context length, and system config (`docs/2_SRS_Software_Requirements_Specification.md`)
 - **Global state:** LangGraph shared workflow state; no module-level singletons prescribed
 - **Fallback chain (target, to be verified by failure-injection tests):** Redis cache → bronze DB → 500-signal synthetic dataset. **Target: graceful degradation during tested connector/model failures** — resilience is an acceptance target, not a tested guarantee (`docs/METARADAR_MASTER_PLAN_v5.0.md` §10)
 - **No autonomous decisions:** AI suggests → human reviews → human decides; controlled action vocabulary (`docs/9_RISK_AND_GUARDRAILS.md` §1.2)

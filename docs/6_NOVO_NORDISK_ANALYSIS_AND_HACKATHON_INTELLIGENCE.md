@@ -74,7 +74,7 @@ The problem statements reveal 25 distinct operational pain points across functio
 The haemophilia treatment landscape is in its most significant transition in decades — from IV factor replacement to subcutaneous non-factor therapies and single-administration gene therapy:
 
 - **Roche emicizumab (Hemlibra)** dominates non-factor Haemophilia A; Novo Nordisk's mim8 is designed to compete directly with it (Phase 3 readouts ongoing)
-- **Fitusiran (Sanofi, RNAi, approved 2023)** and **marstacimab (Pfizer, anti-TFPI)** expand the non-factor competitive set
+- **Fitusiran/Qfitlia (Sanofi, RNAi, FDA approved March 2025)** and **marstacimab/Hympavzi (Pfizer, anti-TFPI, FDA approved 2024)** expand the non-factor competitive set
 - **Gene therapy** (Hemgenix for Haemophilia B, Roctavian for Haemophilia A) is moving from "new modality" to "durability data" — sustained 3-year Factor IX expression stories directly pressure lifelong-prophylaxis economics that concizumab/mim8 rely on
 - Signals about these shifts are scattered across ASH/ISTH/WFH/EHA congress abstracts, PubMed, FDA/EMA filings, HTA appraisals (NICE/G-BA), and patient forums (r/Hemophilia)
 
@@ -412,7 +412,7 @@ These are statements directly tied to their current business reality that will s
 
 3. **Why Redis?**
    - *Non-Technical:* Redis provides ultra-fast memory storage so repeated user views load instantly without re-processing data.
-   - *Technical:* Redis 7 provides an in-memory key-value cache (2h TTL), quota-aware API rate-limiting counter (NewsAPI Developer tier = 100 req/day), and pub/sub broker for Celery async tasks.
+   - *Technical:* Redis 7 provides an in-memory key-value cache (2h TTL) and quota-aware API rate-limiting counter (NewsAPI Developer tier = 100 req/day). Scheduled jobs (2h fetch, nightly digest, on-demand recalibration) run on the single in-process APScheduler (Celery not used — Master Plan §14.9).
 
 4. **How does confluence work?**
    - *Non-Technical:* It checks if three or more independent sources — like a publication, a trial registry, and a news report — mention the same drug within 48 hours; for congress/publication signals it first asks whether they belong to an existing development.
@@ -448,7 +448,7 @@ These are statements directly tied to their current business reality that will s
 
 12. **How does the architecture scale?**
     - *Non-Technical:* Because our components are lightweight and decoupled, we can process thousands of signals simultaneously across multiple background workers.
-    - *Technical:* Decouples API serving (FastAPI ASGI under Uvicorn) from async ingestion (Celery queue backed by Redis). Read operations utilize indexed PostgreSQL views and Redis cache.
+    - *Technical:* Decouples API serving (FastAPI ASGI under Uvicorn) from async ingestion (single in-process APScheduler; heavy LangGraph runs offloaded via asyncio/thread-pool, Redis for caching). Read operations utilize indexed PostgreSQL views and Redis cache.
 
 13. **Why is this different from a normal RAG chatbot?**
     - *Non-Technical:* A RAG chatbot only answers questions when you ask it; MetaRadar actively monitors, connects, flags contradictions, and routes signals to the right team automatically.
@@ -464,7 +464,7 @@ These are statements directly tied to their current business reality that will s
 
 16. **Why is this feasible within a one-month hackathon?**
     - *Non-Technical:* We use lightweight, free, local open-source AI components with pre-curated fallback data so we don't waste time on complex cloud setups.
-    - *Technical:* Relies on local CPU-executable models (spaCy `en_core_sci_md`, BART MNLI, MiniLM embeddings) in Docker Compose. Using PostgreSQL + pgvector and standard Python frameworks (FastAPI + LangGraph) eliminates cloud API dependencies, key management overhead, and deployment friction.
+    - *Technical:* Relies on local models in Docker Compose — Gemma 3 4B Instruct (Q4/int4) on the local GPU (RTX 3050, 4 GB VRAM; never-crash provider fallback, Master Plan §14.1), spaCy `en_core_sci_md`, BART MNLI, and MiniLM embeddings on CPU. Using PostgreSQL + pgvector and standard Python frameworks (FastAPI + LangGraph) eliminates cloud API dependencies, key management overhead, and deployment friction.
 
 ---
 

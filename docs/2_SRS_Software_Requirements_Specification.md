@@ -4,6 +4,8 @@
 **Version:** 2.2  
 **Date:** August 13, 2026  
 > **v2.2 Change Note:** Provider-agnostic reasoning layer (Master Plan v5.0 §13): FR-2.2.3A/B rewritten — default local Gemma 3 4B, optional hosted xAI Grok (`LLM_PROVIDER=local|xai|auto`), BART degraded factual mode only; new FR-2.2.3C (provider modes), FR-2.2.3D (external-LLM privacy gate), FR-2.2.3E (Grok structured-output + semantic validation), FR-2.2.3F (model metadata), FR-2.2.3G (provider interface + two output schemas); §3.5, §4.2 env vars, §4.3 schema, and AC-23..25 updated. Architecture, ten nodes, five mechanisms, and six primary functions unchanged.
+
+> **v2.3 Change Note (architecture hardening, Master Plan v5.1 §14):** Gemma deployment target corrected to **local GPU — NVIDIA RTX 3050, 4 GB VRAM (Q4/int4)** with new env vars `LLM_DEVICE`, `LLM_DTYPE`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS`; VRAM is not assumed to guarantee inference (never-crash provider fallback chain). New hardened contracts: FR-2.1.3 (deterministic dedup), FR-2.1.3A (source independence), FR-2.1.5 (canonical entity model), §2.9 FR-2.9.1–2.9.5 (scoring versioning, calibration versioning, health & observability, single scheduler, migrations & cache integrity). Health surface extended to `/health/ready|models|connectors`; schema extended with entity-layer tables (sources/companies/assets/trials/developments/events/evidence), versioned scoring, and baseline-vs-calibrated fields. Ten nodes, five mechanisms, six functions, provider abstraction, and the 10-node architecture are unchanged.
 > **v2.1 Change Note:** Integrated B.Pharm domain research (v4.0 master-plan rules): canonical haemophilia classification fields (FR-2.2.5A), nullable clinical-evidence fields (FR-2.2.5B), evidence maturity (FR-2.2.5C), access as a separate intelligence event with 8 access subtypes (FR-2.2.2), Red-Team evidence-check suite A–S (FR-2.3B.2A), and acceptance criteria AC-18..22. Architecture and six primary functions unchanged.
 **Organization:** MS Ramaiah Institute of Technology (MSRIT)  
 **Hackathon:** Novo Nordisk GBS Hackathon 2026  
@@ -115,9 +117,18 @@ HAEMOPHILIA_QUERY_TERMS = {
 - System SHALL fall back to cached data or synthetic demo dataset
 - System SHALL log all failures with timestamp and error details
 
-**FR-2.1.3: Data Deduplication**
-- System SHALL identify and remove duplicate signals across sources
-- Duplicates identified by > 80% semantic similarity in titles
+**FR-2.1.3: Data Deduplication (deterministic, BEFORE Confluence)**
+- System SHALL identify and remove duplicate signals across sources using a **deterministic deduplication layer** with stable fingerprints: preferred identifiers are PubMed PMID · ClinicalTrials.gov NCT ID · FDA identifiers · official publication identifiers · congress abstract identifiers; where no stable ID exists, the normalized title + publisher + date + company + asset + URL is fingerprinted (Master Plan §14.4)
+- Duplicates/syndicated copies SHALL NOT be counted as independent signals (also covered by > 80% semantic similarity fallback)
+
+**FR-2.1.3A: Source Independence**
+- Each raw source item SHALL carry `source_class · publisher · syndication_group · parent_source_id`
+- Confluence SHALL operate on **independent evidence**, not raw article count: e.g., PubMed + ClinicalTrials.gov + a company announcement may be independent; three websites reproducing the same company release are ONE source (Master Plan §14.4)
+
+**FR-2.1.5: Canonical Entity Model (stable identifiers)**
+- The database SHALL provide stable identifiers: `signal_id · source_id · company_id · asset_id · trial_id · development_id · event_id · publication_id · congress_event_id · regulatory_event_id · access_event_id`
+- The schema SHALL support `Signal → Development → Asset → Company` and `Development → Trial → Congress → Publication → Regulatory → Access → Post-market evidence`; **one development SHALL accumulate multiple signals without duplicate developments** (Master Plan §14.2)
+- Every ingested source item SHALL preserve immutable provenance (`source_id · external_id · source_url · publisher · source_type · published_at · retrieved_at · raw_content_hash · content_version`); AI claims SHALL reference evidence IDs so *"what exact source caused this statement"* is always answerable
 
 **FR-2.1.4: Data Validation**
 - System SHALL reject signals with text < 50 characters, non-English text, or non-haemophilia scope
@@ -159,7 +170,7 @@ HAEMOPHILIA_QUERY_TERMS = {
 
 **FR-2.2.3A: Reasoning & Generation (Provider-Agnostic — Gemma 3 Default Local, Grok Optional Hosted)**
 - System SHALL power narrative synthesis, Four-Question reasoning, AI-suggested actions (Q4), and Ask Athena grounded answers through a **provider-agnostic reasoning layer** (`LLMProvider`, FR-2.2.3C/2.2.3G) — default **local provider** `google/gemma-3-4b-it` loaded via `LOCAL_LLM_MODEL` (`LOCAL_LLM_TASK` = `text-generation`), with an **optional hosted provider: xAI Grok API** (`LLM_PROVIDER=xai|auto`; FR-2.2.3C/2.2.3D/2.2.3E)
-- Default (hackathon/CPU): `google/gemma-3-4b-it` (Gemma 3 4B Instruct — local, Q4-quantized; **estimated** ~2.6GB weights / ~4.5–7.5GB RAM — planning estimates, actual usage depends on runtime, quantization, context length, and system configuration)
+- Default (local GPU — NVIDIA RTX 3050, 4 GB VRAM): `google/gemma-3-4b-it` (Gemma 3 4B Instruct — local, Q4/int4-quantized; **estimated** ~2.6 GB Q4 weights. **4 GB VRAM does NOT guarantee inference success** — model weights, KV cache, runtime overhead, and context length are budgeted separately via `LLM_DEVICE` · `LLM_DTYPE` · `MAX_CONTEXT_TOKENS` · `MAX_OUTPUT_TOKENS`; on initialization/inference failure (incl. "does not fit in VRAM") the provider chain falls back per FR-2.2.3B — the application never crashes because a model does not fit. Planning estimates only; actual usage depends on runtime, quantization, context length, and configuration)
 - Light-hardware alternative: `google/gemma-3-1b-it`; other supported local swaps: `mistralai/Mistral-7B-Instruct`, `microsoft/phi-3-mini-4k-instruct`, `TinyLlama/TinyLlama-1.1B-Chat`, or any HuggingFace-compatible text-generation model
 - The hosted Grok provider is **required only when `LLM_PROVIDER=xai|auto`**; Gemma SHALL remain fully usable without any external API key, and no deployment SHALL be forced to use Grok
 - LLM outputs SHALL remain strictly grounded in retrieved source excerpts (temperature locked, "INSUFFICIENT EVIDENCE" guardrail when no source supports the answer)
@@ -592,6 +603,27 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 **FR-2.8.5: Confidence Score Display**
 - Role routing SHALL display the feedback-informed confidence (e.g., "Regulatory 92% — up from 88% after calibration")
 
+### 2.9 Hardened Engineering Contracts (v2.3 — Master Plan §14)
+
+**FR-2.9.1: Priority Scoring Versioning**
+- Every scored signal SHALL store `priority_score` **together with** `scoring_model_version` (e.g., "v1") and `scoring_config_version` (e.g., "haemophilia_v1") and a factor-level `score_breakdown` — never a bare `priority_score = 82`; future scoring changes SHALL NOT rewrite historical results (Master Plan §14.10)
+
+**FR-2.9.2: Calibration Versioning (baseline preserved)**
+- The AI baseline SHALL never be overwritten: per signal store `baseline_score · baseline_routing · baseline_action` AND `calibrated_score · calibrated_routing · calibrated_action`, plus `calibration_version · feedback_id · feedback_timestamp · stakeholder_function`
+- The demo SHALL reproduce BEFORE → stakeholder feedback → AFTER for the same signal
+- Calibration SHALL be trained/tested on **separate feedback records** (never the same records used for both)
+
+**FR-2.9.3: Health & Observability**
+- System SHALL expose `GET /api/v1/health` · `GET /api/v1/health/ready` · `GET /api/v1/health/models` · `GET /api/v1/health/connectors`, reporting separately: API · PostgreSQL · Redis · Gemma · Grok (configuration) · PubMed · NewsAPI · ClinicalTrials.gov; a failed optional source SHALL NOT make the whole application report unhealthy
+- Structured logging SHALL carry `run_id` (per pipeline run) · `signal_id` · `model_request_id`, logging node, duration, provider, fallback, error, source — and SHALL NEVER log confidential or patient data
+
+**FR-2.9.4: Single Scheduler**
+- System SHALL use exactly ONE scheduling system: in-process **APScheduler** inside FastAPI (2-hour fetch · nightly digest · on-demand recalibration). **Celery SHALL NOT be used** for the hackathon architecture (rationale: Master Plan §14.9); heavy LangGraph runs are offloaded via `asyncio`/thread-pool execution
+
+**FR-2.9.5: Migrations & Cache Integrity**
+- All schema evolution SHALL use Alembic migrations; `drop_all()`/`create_all()` are never the normal development path
+- Redis values SHALL be serialized via one canonical JSON layer (datetime/UUID/Decimal/Enum/Pydantic); cache keys SHALL embed schema/model/config versions (e.g., `signal:{id}:v1`) and every entry SHALL carry TTL · schema version · source timestamp · optional model/config version; when scoring/calibration/model logic changes, stale generated intelligence SHALL NOT silently appear current
+
 ---
 
 ## **3. NON-FUNCTIONAL REQUIREMENTS**
@@ -601,7 +633,7 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 - Signal processing: < 60 seconds per 100 signals (batch summarizer, CPU)
 - Cold start (no cache): < 3 seconds
 - Cached start: < 500 ms
-- Ask Athena response: < 30 seconds (local inference; Gemma 3 4B Q4 on CPU — auto-falls back to BART per FR-2.2.3B if the latency budget is exceeded)
+- Ask Athena response: < 30 seconds (local inference; Gemma 3 4B Q4 on the local GPU — auto-falls back to BART per FR-2.2.3B if the latency budget is exceeded)
 - System SHALL handle 1,000 signals without degradation
 
 ### 3.2 Security & Compliance
@@ -630,7 +662,7 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 
 | Role | Default | Alternative |
 |---|---|---|
-| Reasoning / Four Questions / Athena | Gemma 3 4B local | Grok API |
+| Reasoning / Four Questions / Athena | Gemma 3 4B local (**GPU** — RTX 3050 4 GB VRAM, Q4/int4) | Grok API |
 | Degraded factual summary | BART-large-CNN | — |
 | Batch summarization | BART-large-CNN | — |
 | NLI | BART-MNLI | — |
@@ -659,7 +691,10 @@ BART is NEVER listed as a reasoning model.
 | GET | `/api/v1/trends` | Signal volume/trend over time |
 | GET | `/api/v1/dashboard` | Four-panel summary payload |
 | GET | `/api/v1/search` | Keyword/semantic search (Ask Athena) |
-| GET | `/api/v1/health` | Service health check |
+| GET | `/api/v1/health` | Overall health summary |
+| GET | `/api/v1/health/ready` | Readiness (API · PostgreSQL · Redis) |
+| GET | `/api/v1/health/models` | Model availability (Gemma · BART · MNLI · spaCy · MiniLM) |
+| GET | `/api/v1/health/connectors` | Per-source connector health (PubMed · NewsAPI · ClinicalTrials.gov · adapters) |
 | POST | `/api/v1/ingest/manual` | Manually trigger ingestion |
 | POST | `/api/v1/feedback` | Submit stakeholder feedback (FR-2.8.1) |
 | GET | `/api/v1/feedback/summary` | Feedback summary (FR-2.8.2) |
@@ -676,6 +711,10 @@ BART is NEVER listed as a reasoning model.
 | `LOCAL_LLM_MODEL` | Reasoning/generation LLM (synthesis, briefs, Ask Athena) | google/gemma-3-4b-it |
 | `LOCAL_LLM_TASK` | Pipeline task for the reasoning LLM | text-generation |
 | `LLM_PROVIDER` | Reasoning provider mode (local/xai/auto) | local |
+| `LLM_DEVICE` | Local Gemma execution device | cuda:0 (GPU) / cpu / auto |
+| `LLM_DTYPE` | Local Gemma dtype/quantization | int4 (Q4) |
+| `MAX_CONTEXT_TOKENS` | Gemma max context length | 4096 (tunable; budgeted separately from 4 GB VRAM) |
+| `MAX_OUTPUT_TOKENS` | Gemma max generated tokens | 1024 (tunable) |
 | `XAI_API_KEY` | xAI/Grok API key (only when LLM_PROVIDER=xai/auto) | (empty) |
 | `XAI_MODEL` | xAI/Grok model ID | (configured model) |
 | `XAI_TIMEOUT` | Grok request timeout (seconds) | 30 |
@@ -689,7 +728,7 @@ BART is NEVER listed as a reasoning model.
 
 ### 4.3 Database Schema
 - `signals` — id, title, source, source_url, published_at, summary, entities, signal_type (11 canonical incl. congress/publication), signal_subtype (incl. congress/publication subtypes), disease, patient_type, company, asset, asset_type, priority, impacted_functions, **development_id, event_date, source_id**, evidence_level (fact/interpretation/speculation), evidence_sufficient, quality_score, embedding, **domain fields (v4.0): factor (fviii/fix/unknown), inhibitor_status (with/without/mixed/unknown), population (adult/adolescent/child/unknown), therapy_modality (canonical 10-value), evidence_maturity (very_high/high/medium_high/medium/lower), source_authority**, **clinical evidence JSONB (nullable): trial_id, trial_phase, study_design, comparator, primary_endpoint, secondary_endpoints, abr, bleeding_outcome, joint_or_target_joint_outcome, patient_reported_outcome, quality_of_life_outcome, treatment_burden, follow_up_duration, sample_size, safety_findings, effect_size, confidence_interval, p_value, interim_or_final**, **access fields (JSONB, nullable): country, jurisdiction, effective_date, expiry_or_review_date, coverage_status, restrictions, prior_authorisation, specialist_centre_requirements, intended_vs_actual_access**, **model_metadata (JSONB, FR-2.2.3F): provider, model, mode (reasoning/degraded_factual), fallback_from, fallback_reason, prompt_template_id, config_hash, temperature, generated_at**
-- `signal_routing` — id, signal_id, **primary_function, secondary_functions (JSONB), function_relevance_scores (JSONB), routing_reason, suggested_action**, created_at (one row per signal; FR-2.5.1)
+- `signal_routing` — id, signal_id, **primary_function, secondary_functions (JSONB), function_relevance_scores (JSONB), routing_reason, suggested_action**, **baseline_primary_function, baseline_relevance_scores (JSONB), baseline_suggested_action, calibration_version, feedback_id** (baseline never overwritten; FR-2.9.2), calibrated_at, created_at (one row per signal; FR-2.5.1)
 - `action_recommendations` — id, signal_id, action (controlled vocabulary), reason, relevant_function, evidence, confidence, human_review_required, created_at
 - `watch_items` — id, watch_id, **source_event_id, expected_event_type, monitoring_window, responsible_function, status (watching/new_evidence_detected/no_new_evidence/watch_expired/human_review_required)**, created_at, resolved_at (stakeholder-defined watch rules; FR-2.3C.1A)
 - `missing_signal_watch_items` — id, entity, missing_event, days_since_last_signal, confidence, status (watch/resolved), created_at
@@ -698,9 +737,16 @@ BART is NEVER listed as a reasoning model.
 - `signal_types` — type, label, description, confidence_threshold
 - `entities` — id, name, type, metadata (from haemophilia ontology)
 - `signal_entities` — signal_id, entity_id
-- `stakeholder_feedback` — id, signal_id, role, rating, reason, user_id, created_at (WORM)
+- `stakeholder_feedback` — id, feedback_id, signal_id, role, rating (1-5), reason, user_id, created_at (WORM); calibration-relevant ratings cover relevance, urgency, action_appropriate, comment (Master Plan §14.13)
 - `scoring_weights` — role, signal_type, weight, version, updated_by, updated_at
-- `calibration_history` — id, role, old_weights, new_weights, trigger_reason, created_at
+- `calibration_history` — id, role, old_weights, new_weights, calibration_version, trigger_reason, feedback_count, created_at
+- `sources` — source_id, source_type, publisher, freshness_class (real_time/near_real_time/delayed/batch/adapter_ready/synthetic), syndication_group, parent_source_id (v2.3; Master Plan §14.2/§14.4)
+- `companies` — company_id, name, canonical_name (v2.3)
+- `assets` — asset_id, generic_name, brand_name, company_id, mechanism, disease, factor, inhibitor_population, approval_status, approval_date, jurisdiction, source, last_verified (v2.3; ontology quality gate, Master Plan §14.5)
+- `trials` — trial_id, nct_id, title, phase, status, company_id, asset_id (v2.3)
+- `developments` — development_id, asset_id, company_id, current_lifecycle_state (v2.3; one development accumulates many signals)
+- `events` — event_id, event_type (incl. publication_id/congress_event_id/regulatory_event_id/access_event_id), development_id, trial_id, signal_id, event_date, source_id (v2.3)
+- `evidence` — claim_id, claim_type (claim/interpretation/priority/routing/action), source_id, signal_id, source_url, raw_content_hash, content_version, extracted_quote, evidence_level — explicit evidence relationships for explainability (v2.3)
 - `confluences` — id, entities, pattern_name, signals, created_at, severity, **development_id** (link decision: new development vs new evidence)
 - `lifecycle_chains` — id, entity, modality, indication, current_state, expected_next, created_at, updated_at
 - `lifecycle_events` — id, chain_id, **development_id, signal_id, event_type, event_date, source_id, state**, ordered_date, created_at
@@ -817,7 +863,7 @@ BART is NEVER listed as a reasoning model.
 - **Concizumab (Alhemo):** Novo Nordisk anti-TFPI antibody for Haemophilia A/B with/without inhibitors
 - **Mim8:** Novo Nordisk next-gen bispecific; Phase 3; aims to improve on emicizumab
 - **Emicizumab (Hemlibra):** Roche bispecific; standard non-factor care in Haemophilia A
-- **Fitusiran:** Sanofi RNAi antithrombin knockdown; approved 2023
+- **Fitusiran (Qfitlia):** Sanofi RNAi antithrombin knockdown; FDA approved March 2025 for routine prophylaxis 12+ haemophilia A/B with or without inhibitors (ontology quality gate, Master Plan §14.5)
 - **Hemgenix:** CSL Behring/UniQure gene therapy for Haemophilia B; approved 2022
 - **Roctavian:** BioMarin gene therapy for Haemophilia A; approved 2023
 - **Inhibitor:** Neutralizing antibody to factor replacement (~30% severe Haemophilia A)

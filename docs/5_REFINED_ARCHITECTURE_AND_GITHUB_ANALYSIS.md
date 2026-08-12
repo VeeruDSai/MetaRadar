@@ -1103,8 +1103,7 @@ AGENT ORCHESTRATION:
 
 BACKEND:
 ├─ FastAPI + Python 3.11 (async-first)
-├─ Celery + Redis (background agent tasks)
-└─ APScheduler (every 2 hours fetch trigger)
+└─ APScheduler (single in-process scheduler: 2h fetch · nightly digest · on-demand recalibration — Celery removed, Master Plan §14.9)
 
 NLP / AI:
 ├─ spaCy 3.7 en_core_sci_md (pharma NER, free, local)
@@ -1115,7 +1114,7 @@ NLP / AI:
 ├─ Batch summarization: ANY HuggingFace-compatible model via SUMMARIZER_MODEL env var
 │   Default: facebook/bart-large-cnn (CPU-fast, seq2seq, hackathon default)
 │   Swap-in examples (zero code change, config only):
-│   ├─ google/gemma-2b              (better quality, ~2GB VRAM or slow CPU)
+│   ├─ google/gemma-3-4b-it          (default reasoning model; Q4/int4 on the local GPU — RTX 3050 4 GB VRAM)
 │   ├─ mistralai/Mistral-7B-Instruct (near-GPT4 quality, 4-bit quant for CPU)
 │   ├─ microsoft/phi-3-mini-4k-instruct (3.8B, best quality/size ratio)
 │   └─ TinyLlama/TinyLlama-1.1B-Chat (ultra-light, minimal hardware)
@@ -1164,7 +1163,7 @@ FRONTEND:
 └─ react-window (virtual scrolling for 800 signals)
 
 DEPLOYMENT:
-├─ Docker Compose (5 services: backend, frontend, postgres, redis, celery)
+├─ Docker Compose (4 services: backend, frontend, postgres, redis — Celery removed; /models volume)
 └─ Vercel (frontend, free) + Render (backend, free) OR single VPS
 
 MONITORING:
@@ -1319,7 +1318,7 @@ CSE:
 ├─ Signal classification (zero-shot with BART-MNLI)
 ├─ BART summarization (batch, local)
 ├─ Signal scoring + role-relevance mapping
-├─ Celery scheduled tasks (every 2h fetch)
+├─ APScheduler jobs (every 2h fetch; single scheduler, Master Plan §14.9)
 └─ Redis caching (L1 cache, 2h TTL)
 
 B.Pharm:
