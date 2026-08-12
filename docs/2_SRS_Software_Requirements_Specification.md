@@ -1,8 +1,9 @@
 # MetaRadar: Software Requirements Specification (SRS)
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 2.0  
-**Date:** August 2026  
+**Version:** 2.1  
+**Date:** August 13, 2026  
+> **v2.1 Change Note:** Integrated B.Pharm domain research (v4.0 master-plan rules): canonical haemophilia classification fields (FR-2.2.5A), nullable clinical-evidence fields (FR-2.2.5B), evidence maturity (FR-2.2.5C), access as a separate intelligence event with 8 access subtypes (FR-2.2.2), Red-Team evidence-check suite A–S (FR-2.3B.2A), and acceptance criteria AC-18..22. Architecture and six primary functions unchanged.
 **Organization:** MS Ramaiah Institute of Technology (MSRIT)  
 **Hackathon:** Novo Nordisk GBS Hackathon 2026  
 **Problem Statement:** #3 - From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease
@@ -139,7 +140,7 @@ HAEMOPHILIA_QUERY_TERMS = {
   - `congress` — FIRST-CLASS signal type (not generic news). Subtypes: `congress_abstract` · `oral_presentation` · `poster` · `new_congress_data` · `updated_congress_analysis` · `presentation_of_previously_known_data` · `congress_related_safety_signal` · `congress_related_efficacy_signal` · `congress_related_pro` · `congress_related_mechanism_dosing`
   - `regulatory` — FDA, EMA, HTA decisions and filings
   - `safety` — adverse events, safety signals, risk communications
-  - `access` — reimbursement decisions, access restrictions, pricing/HTA guidance
+  - `access` — reimbursement decisions, access restrictions, pricing/HTA guidance. **Canonical access subtypes (v4.0):** `access_reimbursement_event` · `restricted_reimbursement` · `supply_access_risk` · `geographic_access_gap` · `budget_impact_signal` · `outcome_based_access_model` · `real_world_access_gap` · `access_support`. Access SHALL be tracked as a **separate intelligence event from regulatory approval** (approval ≠ reimbursement ≠ commercial availability ≠ actual patient access)
   - `market` — market dynamics, share, pricing signals
   - `patient_advocacy` — patient/advocacy positions and narratives
   - `company_news` — press releases, investor communications, corporate announcements
@@ -192,7 +193,7 @@ HAEMOPHILIA_QUERY_TERMS = {
       "indications": ["Haemophilia A", "Haemophilia B", "with/without inhibitors"],
       "formulations": ["subcutaneous injection"],
       "competitors": ["emicizumab", "fitusiran", "marstacimab"],
-      "status": "EU approved 2023, Phase 3 completion"
+      "status": "EU approved 2023; FDA approved December 2024 (12+ HA with FVIII inhibitors or HB with FIX inhibitors); US expansion July 2025 to specified non-inhibitor populations"
     },
     "mim8": {
       "brand_names": ["Investigational"],
@@ -204,22 +205,22 @@ HAEMOPHILIA_QUERY_TERMS = {
       "status": "Phase 3 (key Novo Nordisk pipeline asset)"
     },
     "fitusiran": {
-      "brand_names": ["Alhemo"],
+      "brand_names": ["Qfitlia"],
       "mechanism": "RNAi (antithrombin inhibitor, subcutaneous)",
       "manufacturer": "Sanofi",
       "indications": ["Haemophilia A and B", "with/without inhibitors"],
       "formulations": ["subcutaneous injection"],
       "competitors": ["emicizumab", "concizumab"],
-      "status": "FDA approved 2023"
+      "status": "FDA approved March 2025 (Qfitlia) — routine prophylaxis 12+ HA/HB with or without FVIII/FIX inhibitors"
     },
     "marstacimab": {
-      "brand_names": ["Investigational"],
+      "brand_names": ["Hympavzi"],
       "mechanism": "Anti-TFPI monoclonal antibody",
       "manufacturer": "Pfizer",
-      "indications": ["Haemophilia A and B", "without inhibitors"],
+      "indications": ["Haemophilia A and B", "with/without inhibitors"],
       "formulations": ["subcutaneous injection"],
       "competitors": ["concizumab"],
-      "status": "Phase 3"
+      "status": "FDA approved October 2024 (12+ without inhibitors); approval expanded June 2026 (6+ with or without inhibitors)"
     },
     "etranacogene_dezaparvovec": {
       "brand_names": ["Hemgenix"],
@@ -301,6 +302,23 @@ Every normalized signal SHALL carry all of the following dimensions (added to th
 - `source_id`: canonical reference to the source record in `raw_signals_bronze`
 - `evidence_level` / `fis_label`: `fact` | `interpretation` | `speculation`
 - `evidence_sufficient`: boolean — result of the evidence-sufficiency gate (FR-2.2.7)
+
+**FR-2.2.5A: Haemophilia Domain Classification (mandatory, B.Pharm research — v4.0)**
+- In addition to FR-2.2.5 dimensions, every normalized signal SHALL carry these canonical domain fields: `disease` (`haemophilia_a` · `haemophilia_b` · `both` · `unknown`), `factor` (`fviii` · `fix` · `unknown`), `inhibitor_status` (`with_inhibitor` · `without_inhibitor` · `mixed` · `unknown`), `population` (`adult` · `adolescent` · `child` · `other_or_unknown`), `therapy_modality` (`factor_replacement` · `extended_half_life_factor` · `non_factor` · `bispecific_antibody` · `sirna` · `gene_therapy` · `aav_gene_therapy` · `lentiviral` · `gene_editing` · `other`)
+- System SHALL attempt entity resolution (source, product, trial ID, context) before assigning A/B; if the signal says only "haemophilia" and the subtype cannot be established, `disease` SHALL be `unknown`
+- System SHALL NOT assume inhibitor status: extract from trigger terms ("FVIII/FIX inhibitor", "neutralising antibody", "inhibitor-positive/negative") or set `unknown`
+- System SHALL treat inhibitor status as a core segmentation variable (WFH maintains separate guidance for inhibitors, outcome assessment, and AAV gene therapy — https://guidelines.wfh.org/guidelines/)
+- System SHALL detect `INDICATION_EXPANSION` when an indication crosses the inhibitor boundary (e.g., with-inhibitor → with/without-inhibitor), scoring it high-priority
+
+**FR-2.2.5B: Clinical Evidence Fields (nullable, v4.0)**
+- For clinical/trial signals, system SHALL support (populated only when supported by source, otherwise NULL): `trial_id` · `trial_phase` · `study_design` · `population` · `comparator` · `primary_endpoint` · `secondary_endpoints` · `abr` · `bleeding_outcome` · `joint_or_target_joint_outcome` · `patient_reported_outcome` · `quality_of_life_outcome` · `treatment_burden` · `follow_up_duration` · `sample_size` · `safety_findings` · `effect_size` · `confidence_interval` · `p_value` · `interim_or_final` · `evidence_maturity`
+- System SHALL preserve endpoint definitions (e.g., treated vs all-bleed ABR) and never compare ABR values blindly across differing endpoint definitions
+
+**FR-2.2.5C: Evidence Maturity (v4.0)**
+- Every important signal SHALL carry `source_type` · `source_authority` · `evidence_maturity` · `source_date`
+- Evidence maturity hierarchy (evidence-context indicator, NOT a truth ranking): **VERY HIGH** = regulatory decision/assessment · **HIGH** = peer-reviewed publication / ClinicalTrials.gov structured update · **MEDIUM/HIGH** = congress abstract/presentation · **MEDIUM** = official company announcement · **LOWER** = secondary media/commentary
+- Congress evidence SHALL be ingested as provisional (never discarded); confidence upgrades only on peer-reviewed/registry/regulatory confirmation
+- Company announcements SHALL be treated as important early signals but NOT as independently verified evidence
 
 **FR-2.2.6: Fact / Interpretation / Speculation (F-I-S) Classification (mandatory)**
 - **FACT** — directly supported by reliable source evidence.
@@ -386,6 +404,10 @@ mim8 (Novo Nordisk · bispecific · Haemophilia A)
 **FR-2.3B.2: Red-Team Review**
 - System SHALL attach a devil's-advocate AI note to every contradiction listing how the evidence could be misleading/incomplete
 - System SHALL show BOTH evidence chains (claim A + claim B with source, URL, date) with a `requires_human_review` flag
+
+**FR-2.3B.2A: Evidence-Check Suite (Red-Team checks A–S, v4.0)**
+- In addition to NLI contradiction detection, system SHALL run the 19 evidence checks from Master Plan §12.7 on high-impact signals: (A) causality error — never convert "adverse event occurred" into "drug caused adverse event"; (B) duplicate counting — same underlying evidence via trial+congress+announcement+publication ≠ 4 developments; (C) denominator blindness — no risk/cluster interpretation without exposure/sample size where available; (D) population mismatch — no HA→HB, adult→child, inhibitor+→inhibitor− generalisation; (E) endpoint mismatch — no blind ABR comparison across differing endpoint definitions; (F) surrogate overclaim — factor activity ≠ proof of patient-important benefit; (G) small-sample overconfidence; (H) short-follow-up/durability overclaim — early gene-therapy data ≠ lifelong durability; (I) preliminary-evidence error — congress abstract/preprint/press release ≠ final evidence; (J) sponsor/source-independence error — company statement ≠ independent confirmation; (K) stale information; (L) negative-evidence omission — search terminated/withdrawn/unpublished trials; (M) approval ≠ reimbursement; (N) approval ≠ actual patient access; (O) jurisdiction mismatch — no cross-country generalisation of payer decisions; (P) lifecycle disconnection — link publication/congress/registry update to existing record; (Q) statistical significance ≠ clinical significance; (R) contradiction blindness — never report a strong claim without searching for conflicting evidence; (S) governance bypass — no autonomous diagnosis/causality/treatment/decision without qualified human review
+- Each triggered check SHALL be surfaced on the signal card as a Red-Team flag with the governing rule cited
 
 **FR-2.3B.3: Contradiction Endpoint**
 - System SHALL expose `GET /api/v1/contradictions` (filter by entity, role, date range)
@@ -615,7 +637,7 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | `CORS_ORIGINS` | CORS allowlist | http://localhost:3000 |
 
 ### 4.3 Database Schema
-- `signals` — id, title, source, source_url, published_at, summary, entities, signal_type (11 canonical incl. congress/publication), signal_subtype (incl. congress/publication subtypes), disease, patient_type, company, asset, asset_type, priority, impacted_functions, **development_id, event_date, source_id**, evidence_level (fact/interpretation/speculation), evidence_sufficient, quality_score, embedding
+- `signals` — id, title, source, source_url, published_at, summary, entities, signal_type (11 canonical incl. congress/publication), signal_subtype (incl. congress/publication subtypes), disease, patient_type, company, asset, asset_type, priority, impacted_functions, **development_id, event_date, source_id**, evidence_level (fact/interpretation/speculation), evidence_sufficient, quality_score, embedding, **domain fields (v4.0): factor (fviii/fix/unknown), inhibitor_status (with/without/mixed/unknown), population (adult/adolescent/child/unknown), therapy_modality (canonical 10-value), evidence_maturity (very_high/high/medium_high/medium/lower), source_authority**, **clinical evidence JSONB (nullable): trial_id, trial_phase, study_design, comparator, primary_endpoint, secondary_endpoints, abr, bleeding_outcome, joint_or_target_joint_outcome, patient_reported_outcome, quality_of_life_outcome, treatment_burden, follow_up_duration, sample_size, safety_findings, effect_size, confidence_interval, p_value, interim_or_final**, **access fields (JSONB, nullable): country, jurisdiction, effective_date, expiry_or_review_date, coverage_status, restrictions, prior_authorisation, specialist_centre_requirements, intended_vs_actual_access**
 - `signal_routing` — id, signal_id, **primary_function, secondary_functions (JSONB), function_relevance_scores (JSONB), routing_reason, suggested_action**, created_at (one row per signal; FR-2.5.1)
 - `action_recommendations` — id, signal_id, action (controlled vocabulary), reason, relevant_function, evidence, confidence, human_review_required, created_at
 - `watch_items` — id, watch_id, **source_event_id, expected_event_type, monitoring_window, responsible_function, status (watching/new_evidence_detected/no_new_evidence/watch_expired/human_review_required)**, created_at, resolved_at (stakeholder-defined watch rules; FR-2.3C.1A)
@@ -713,6 +735,11 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | AC-15 | Congress and publication are first-class signal types with subtypes; a congress abstract for an existing trial links into that development chain (NEW EVIDENCE), not a new card |
 | AC-16 | Every high-priority signal carries routing_reason + primary/secondary functions + per-function relevance scores (explainable routing) |
 | AC-17 | Watch-for-Next: stakeholder-defined watch rule created → status transitions → new evidence linked to existing development → functions notified; absence returns the "no subsequent congress evidence" wording |
+| AC-18 | Domain classification: disease/factor/inhibitor_status/population/modality fields populated on ≥85% of signals; "haemophilia" alone → `unknown`, never guessed |
+| AC-19 | Evidence maturity labels present on every high-priority card (VERY HIGH→LOWER hierarchy); company announcement never labeled as independently verified evidence |
+| AC-20 | Access tracked separately from approval: approval card does NOT infer reimbursement/actual access; access subtypes (8) supported; jurisdiction recorded on access signals |
+| AC-21 | Red-Team evidence-check suite A–S: seeded cases (e.g., causality error, denominator blindness, population mismatch, approval≠access) flagged with governing rule; 7 deterministic evaluation cases (Master Plan §12.11) pass |
+| AC-22 | Routing follows the six primary functions: Medical Affairs / Regulatory / Safety-PV / Market Access / Medical Communications / Leadership (extended stakeholders never replace them); every signal has primary + secondary + relevance scores + routing_reason |
 
 ### 6.2 MVP Demo Script (15 minutes)
 1. Open dashboard → Q1 feed shows live haemophilia signals (synthetic + live)
@@ -724,6 +751,9 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 7. Lifecycle demo: open mim8 timeline → current state `results_in`, expected next event shown
 8. Red-Team demo: show seeded contradiction (ASH durability vs real-world waning) with both evidence chains
 9. Missing-Signal demo: show flagged silence on a tracked entity with growing confidence
+10. Domain-classification demo (v4.0): expand a signal card → DOMAIN row (Disease: Haemophilia B · Factor: FIX · Inhibitor: Without · Population: Adult · Modality: AAV gene therapy) and evidence-maturity label (MEDIUM/HIGH — congress, preliminary, not regulatory); show a bare-"haemophilia" signal resolving to `unknown` (never guessed)
+11. Evidence-context demo (v4.0): show Q5 evidence strength, Q6 uncertainty/contradiction, Q7 watch-next panels + Red-Team evidence-check flags (e.g., H short-follow-up vs durability) on the same card
+12. Access-separation demo (v4.0): show an approval signal NOT implying reimbursement, and an `ACCESS_REIMBURSEMENT_EVENT`/restricted-reimbursement card routed to Market Access with jurisdiction recorded (approval ≠ reimbursement ≠ availability ≠ access)
 
 ---
 

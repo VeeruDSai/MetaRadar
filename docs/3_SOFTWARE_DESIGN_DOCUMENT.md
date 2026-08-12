@@ -3,7 +3,7 @@
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
 **Version:** 2.1  
 **Date:** August 2026  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged.
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. **v2.2 (Aug 13, 2026):** integrated the B.Pharm domain research (Master Plan v4.0 §12) — canonical domain-classification fields + `DomainClassifier` service, nullable clinical-evidence fields, evidence-maturity ladder, access as a separate intelligence event (8 access subtypes + `access_info` JSONB), and the extended Red-Team evidence-check suite A–S. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged; the six primary functions remain Medical Affairs · Regulatory · Safety/PV · Market Access · Medical Communications · Leadership.
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
@@ -593,6 +593,72 @@ async def detect_contradictions(signals, entity, window_days=90) -> list[dict]:
     return out
 ```
 
+**Domain Classification Service** (`services/domain_classifier.py` + `agents/nlp_extract_agent.py` v4.0) — B.Pharm research-driven extraction layer that populates the canonical haemophilia domain fields on every normalized signal (see SRS FR-2.2.5A/5B/5C):
+
+```python
+# services/domain_classifier.py — v4.0 (B.Pharm research integration)
+class DomainClassifier:
+    # Ishaaq rules: disease/factor/inhibitor/modality hard classifiers
+    DISEASE_TERMS = {
+        "haemophilia_a": ["factor viii", "fviii", "f8", "haemophilia a", "hemophilia a"],
+        "haemophilia_b": ["factor ix", "fix", "f9", "haemophilia b", "hemophilia b"],
+    }
+    MODALITY_RULES = [  # factor protein → FACTOR; antibody/TFPI/siRNA → NON_FACTOR; AAV/lentiviral/editing → GENE_THERAPY
+        (["aav", "transgene", "gene transfer", "gene editing", "lentiviral"], "aav_gene_therapy"),
+        (["sirna", "rnai", "antithrombin"], "sirna"),
+        (["bispecific", "fviiia mimetic", "fviii mimetic"], "bispecific_antibody"),
+        (["anti-tfpi", "tfpi"], "non_factor"),
+        (["extended half-life", "ehl"], "extended_half_life_factor"),
+        (["factor viii", "factor ix", "factor replacement"], "factor_replacement"),
+    ]
+
+    def classify(self, text: str, entities: dict) -> dict:
+        """Return domain fields; NEVER guess — unknown when evidence insufficient."""
+        disease = self._match_terms(text, self.DISEASE_TERMS) or \
+                  self._resolve_via_entity(entities)            # product/trial-ID/context resolution
+        inhibitor = "unknown"
+        if re.search(r"(fviii|fix|factor) inhibitor|neutrali[sz]ing antibod|inhibitor-positive", text):
+            inhibitor = "with_inhibitor"
+        elif re.search(r"without inhibitors|no inhibitors|inhibitor-negative|inhibitor-free", text):
+            inhibitor = "without_inhibitor"
+        return {
+            "disease": disease or "unknown",          # bare "haemophilia" → unknown
+            "factor": "fviii" if disease == "haemophilia_a" else "fix" if disease == "haemophilia_b" else "unknown",
+            "inhibitor_status": inhibitor,
+            "population": self._population(text) or "other_or_unknown",
+            "therapy_modality": self._modality(text) or "other",
+            "evidence_maturity": self._maturity(source_type=entities.get("source_type")),
+        }
+
+    def _maturity(self, source_type) -> str:
+        """Sanjana/Usha evidence ladder: regulatory > peer-review/registry > congress > company > media."""
+        return {"regulatory": "very_high", "pubmed": "high", "clinicaltrials": "high",
+                "congress": "medium_high", "newsapi_company": "medium",
+                "media": "lower"}.get(source_type, "medium")
+```
+
+**Extended Red-Team Evidence Checks** (`services/red_team_engine.py` v4.0) — in addition to NLI contradiction detection, the engine SHALL run the 19 evidence checks (A–S, Master Plan §12.7) on high-impact signals. Example implementation pattern for the deterministic (non-NLI) checks:
+
+```python
+# services/red_team_engine.py — evidence-check suite (v4.0)
+EVIDENCE_CHECKS = {
+    "A_causality": r"(adverse event|AE).{0,120}?(caused|due to|led to)",       # correlation ≠ causation
+    "E_endpoint_definition": r"treated.*ABR|ABR.*treated",                     # preserve endpoint definitions
+    "H_short_followup_durability": r"gene therap.{0,80}?durab",                # short FU ≠ lifelong durability
+    "M_approval_reimbursement": r"approv.{0,80}?(reimburs|covered)",           # approval ≠ reimbursement
+    "N_approval_access": r"approv.{0,80}?(available|access to patients)",      # approval ≠ actual access
+}
+
+def run_evidence_checks(signal) -> list[dict]:
+    """Return triggered check ids with the governing rule; surfaced on the signal card."""
+    flags = []
+    for check_id, pattern in EVIDENCE_CHECKS.items():
+        if re.search(pattern, signal["text"], re.IGNORECASE):
+            flags.append({"check": check_id, "rule": MASTER_PLAN_S12_7[check_id],
+                          "requires_human_review": True})
+    return flags
+```
+
 **Missing-Signal Detector** (`services/missing_signal_detector.py` + `agents/missing_signal_agent.py`) — Analysis 4 of the Five. Uses the lifecycle state + B.Pharm-authored `MISSING_SIGNAL_RULES` (expected-event sequences with `max_lag_days`) to flag expected-but-absent milestones. Confidence grows with silence; configurable windows prevent over-warning:
 
 ```python
@@ -667,6 +733,25 @@ CREATE TABLE signals (
                                        -- competitive_pipeline_move (or congress/publication subtype)
     disease VARCHAR(20),               -- haemophilia_a | haemophilia_b | both | unknown
     patient_type VARCHAR(20),          -- with_inhibitors | without_inhibitors | unknown
+    -- ── B.Pharm domain fields (v4.0) ──────────────────────────────
+    factor VARCHAR(10),                -- fviii | fix | unknown (never guessed)
+    inhibitor_status VARCHAR(20),      -- with_inhibitor | without_inhibitor | mixed | unknown
+    population VARCHAR(20),            -- adult | adolescent | child | other_or_unknown
+    therapy_modality VARCHAR(30),      -- factor_replacement | extended_half_life_factor | non_factor |
+                                       -- bispecific_antibody | sirna | gene_therapy | aav_gene_therapy |
+                                       -- lentiviral | gene_editing | other
+    evidence_maturity VARCHAR(15),     -- very_high | high | medium_high | medium | lower
+    source_authority VARCHAR(255),     -- regulator / peer-reviewed journal / registry / company / media
+    clinical_evidence JSONB,           -- nullable: trial_id, trial_phase, study_design, comparator,
+                                       -- primary_endpoint, secondary_endpoints, abr, bleeding_outcome,
+                                       -- joint_or_target_joint_outcome, patient_reported_outcome,
+                                       -- quality_of_life_outcome, treatment_burden, follow_up_duration,
+                                       -- sample_size, safety_findings, effect_size, confidence_interval,
+                                       -- p_value, interim_or_final
+    access_info JSONB,                 -- nullable (access signals only): country, jurisdiction,
+                                       -- effective_date, expiry_or_review_date, coverage_status,
+                                       -- restrictions, prior_authorisation, specialist_centre_requirements,
+                                       -- intended_vs_actual_access
     company VARCHAR(255),              -- ontology-normalized
     asset VARCHAR(255),                -- ontology-normalized
     asset_type VARCHAR(30),            -- bispecific_antibody | anti_tfpi | rnai | gene_therapy |

@@ -1,8 +1,9 @@
 # MetaRadar: Pitch Narrative, Presentation Structure & Technical Defense Guide
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 3.0  
-**Date:** August 2026  
+**Version:** 3.1  
+**Date:** August 13, 2026  
+> **v3.1 (Aug 13, 2026):** Aligned with Master Plan v4.0 B.Pharm domain-research integration — the pitch now reflects canonical haemophilia domain classification (disease/factor/inhibitor/population/modality), the evidence-maturity ladder (regulatory > peer-review/registry > congress > company > media), access-as-separate-event (approval ≠ reimbursement ≠ availability ≠ access), the 19 Red-Team evidence checks, and the seven-question output (Q1–Q4 + evidence strength / uncertainty / watch-next). Six primary functions unchanged.
 **Target Event:** Novo Nordisk GBS Hackathon 2026 (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease")  
 **Team:** MS Ramaiah Institute of Technology (MSRIT) — Cross-Disciplinary (2 CSE + 3 B.Pharm)
 

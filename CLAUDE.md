@@ -32,7 +32,7 @@ MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feed
 ### NLP & AI Models (All Local, Free)
 - **spaCy 3.7 (en_core_sci_md)**: Local Named Entity Recognition (NER) for pharmaceutical entity extraction (drugs, companies, trial phases, indications).
 - **BART (facebook/bart-large-cnn)**: Local signal summarization (CPU-friendly); also the demo-safety fallback when the reasoning LLM is unavailable.
-- **BART MNLI (cross-encoder/nli-MiniLM2-L6-H768)**: Zero-shot classification for haemophilia signal types (120MB).
+- **BART MNLI (`facebook/bart-large-mnli`)**: Zero-shot classification for haemophilia signal types AND Red-Team contradiction entailment (one local model, two jobs; canonical per SRS `NLI_MODEL`).
 - **Sentence-Transformers (sentence-transformers/all-MiniLM-L6-v2)**: Local 384-dim vector embeddings (80MB).
 - **RAG Interface**: "Ask Athena" semantic search over saved signals via pgvector + local LLM.
 ### Data Sources (All Public)

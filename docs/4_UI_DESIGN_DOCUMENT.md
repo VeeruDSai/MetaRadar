@@ -4,7 +4,7 @@
 **Version:** 2.1  
 **Date:** August 2026  
 **Design Framework:** shadcn/ui + TailwindCSS 4  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1).
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1). **v3.2 (Aug 13, 2026):** integrated the B.Pharm domain research UI (Master Plan v4.0 §12) — domain metadata row (disease/factor/inhibitor/population/modality), evidence-maturity label, evidence-context panels (Q5–Q7), Red-Team evidence-check flags, "WHY THIS ROUTING", and "WATCH FOR NEXT" on the signal card; advanced clinical-evidence fields remain expandable so the default card is never overloaded.
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
@@ -200,6 +200,10 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │     Evidence: FACT · Disease: Haemophilia B · Patient:     │
 │     Without inhibitors · Company: CSL Behring · Asset:     │
 │     Hemgenix · Signal: congress · Priority: HIGH           │
+│     ▸ DOMAIN (v4.0): Disease: Haemophilia B · Factor: FIX  │
+│       Inhibitor: Without · Population: Adult · Modality:   │
+│       AAV gene therapy · Evidence maturity: MEDIUM/HIGH    │
+│       (congress abstract — preliminary, not regulatory)    │
 ├────────────────────────────────────────────────────────────┤
 │ Q1 · WHAT CHANGED?  (panel tint #F0F4FF)                   │
 │ "CSL Behring/UniQure present 3-year durability for         │
@@ -207,6 +211,9 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │  sustained Factor IX expression, no new safety signals."   │
 │ Entities: 🔬 gene therapy · 🏢 CSL Behring, UniQure       │
 │           📋 Haemophilia B · 📊 FDA-approved (2022)        │
+│ TRIAL: NCT03350945 · Phase 3 · Comparator: prophylaxis     │
+│ ABR/bleeding + FIX activity + follow-up 3 yrs (nullable     │
+│ clinical-evidence fields; expandable — v4.0)               │
 ├────────────────────────────────────────────────────────────┤
 │ Q2 · WHY DOES IT MATTER?  (panel tint #FFF4E6)             │
 │ Relevance: Medical Affairs 0.92 · Regulatory 0.71 ·         │
@@ -220,6 +227,9 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │ ⚔ CONTRADICTION (v2.1): "sustained 3-yr efficacy" (ASH)    │
 │   vs "waning expression in subset" (real-world) · score 0.81│
 │   [View evidence A] [View evidence B] · Human review req.  │
+│ ⚠ RED-TEAM CHECKS (v4.0): [H] short follow-up vs durability│
+│   claim · [I] congress abstract = preliminary · [P] linked  │
+│   to development · [B] same data ≠ new event — expandable   │
 ├────────────────────────────────────────────────────────────┤
 │ 🔍 WHY WAS THIS FLAGGED?  (explainable priority, v3.0)     │
 │ ✓ 3 independent sources in 48h (confluence)                │
@@ -237,6 +247,9 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │ ROUTING REASON: "Clinical efficacy/safety data with         │
 │  potential implications for scientific understanding and   │
 │  future regulatory review." (explainable, v3.1)           │
+│ WHY THIS ROUTING? (v4.0): new congress data → Medical       │
+│  Affairs primary + MedComms/Regulatory secondary per the    │
+│  six-function matrix (research-informed, Master Plan §12.5)│
 │ ┌────────────────────────────────────────────────────────┐ │
 │ │ ⭐ Stakeholder Review (HITL calibration):              │ │
 │ │ Was this routing correct?  ★★★★★ (1-5)               │ │
@@ -254,6 +267,17 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │  [MONITOR] Market Access — HTA budget-impact implication   │
 │      (v2.1 · ⚔ contradiction flagged above)                │
 ├────────────────────────────────────────────────────────────┤
+│ EVIDENCE CONTEXT (v4.0 — explainability support)           │
+│ Q5 · HOW STRONG IS THE EVIDENCE?                           │
+│  Evidence maturity: MEDIUM/HIGH (congress abstract)        │
+│  Confidence: 84% · Source authority: congress archive      │
+│ Q6 · WHAT IS UNCERTAIN OR CONTRADICTORY?                   │
+│  ⚔ waning-expression subset vs sustained claim (0.81)      │
+│  ⚠ follow-up 3 yrs — durability beyond 12m not yet proven  │
+│ Q7 · WHAT SHOULD WE WATCH NEXT?                            │
+│  ◉ Watch for: peer-reviewed publication / regulatory data  │
+│  (monitoring — not a claim the event will occur)           │
+├────────────────────────────────────────────────────────────┤
 │ ⛓ Evidence Chain (traceable reasoning):                    │
 │ [1] ASH 2026 Abstract · Dec → "Hemgenix 3-yr data"         │
 │     https://ash.confex.com/...  (excerpt preview)          │
@@ -270,6 +294,9 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │   (NOT a new card — linked via development_id)             │
 │ Related evidence: [ClinicalTrials.gov] [previous           │
 │   publication] [congress presentation]                     │
+│ WATCH FOR NEXT (v4.0): stakeholder watch rule — next       │
+│   congress disclosure of this trial · status: watching     │
+│   (wording: "Watch for…" — never a claim)                 │
 ├────────────────────────────────────────────────────────────┤
 │ Original Source:                                           │
 │ "Etranacogene dezaparvovec (Hemgenix) demonstrated         │

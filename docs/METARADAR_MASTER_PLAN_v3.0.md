@@ -1,11 +1,13 @@
-# MetaRadar: Master Plan & Canonical Specification (v3.0)
+# MetaRadar: Master Plan & Canonical Specification (v4.0)
 
 **Project:** MetaRadar — Near-Real-Time Competitive Intelligence Radar  
-**Version:** 3.0 (Canonical Master Specification)  
-**Date:** August 2026  
+**Version:** 4.0 (Canonical Master Specification · B.Pharm Domain Research Integrated)  
+**Date:** August 13, 2026  
 **Target Event:** Novo Nordisk GBS Hackathon 2026 (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease")  
 **Team:** MS Ramaiah Institute of Technology (MSRIT) — Cross-Disciplinary (2 CSE + 3 B.Pharm)  
 **Specification Status:** **SOLE AUTHORITATIVE MASTER PLAN** (All other documentation files are secondary historical references).
+
+> **v4.0 Change Note (Aug 13, 2026):** This version integrates the B.Pharm domain research reports — Sanjana (Medical Affairs & prioritisation), Ishaaq (disease/inhibitor/modality classification & trial lifecycle), Usha (evidence quality, safety, access, Red-Team) — as **domain rules**, NOT as an architecture change. The 10-node LangGraph pipeline, five intelligence mechanisms, Four-Question UI, six primary functions, and stakeholder calibration loop are **unchanged**. What is added: canonical haemophilia classification fields (disease/factor/inhibitor/population/modality), nullable clinical-evidence fields, an evidence-maturity hierarchy, access as a separate intelligence event, 19 Red-Team evidence checks, research-informed routing rules mapped into the **six primary functions**, congress/publication lifecycle logic, Watch-for-Next, a triage (not clinical) priority model, and 7 deterministic evaluation cases. See §12.
 
 ---
 
@@ -285,6 +287,164 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 2. **Local Model Capabilities:** Inference runs entirely on local CPU (`google/gemma-3-4b-it` reasoning LLM, `facebook/bart-large-cnn` batch summarizer, BART MNLI, spaCy, MiniLM embeddings). Reasoning depth and speed are bounded by CPU RAM constraints compared to commercial LLMs; the system automatically falls back to BART when the Gemma model cannot be loaded.
 3. **Stakeholder Feedback Scope:** True organizational feedback across global pharma teams is unavailable in a hackathon setting; the calibration loop is demonstrated using persona-driven simulated feedback.
 4. **Absence Alerting Precision:** Missing-signal detection relies on rule-based time lag thresholds ($t_{\text{max\_lag}}$); abnormal market delays may trigger false-positive alerts, which are strictly gated behind mandatory human review.
+
+---
+
+## **12. B.PHARM DOMAIN RESEARCH INTEGRATION (v4.0 — CANONICAL DOMAIN RULES)**
+
+This section converts the B.Pharm research reports (Sanjana · Ishaaq · Usha) into concrete MetaRadar rules. It does **not** change the architecture (§4): everything below runs inside the existing 10-node pipeline as extraction fields, evidence assessment, Confluence/Lifecycle/Red-Team/Missing-Signal rules, priority inputs, and routing adjustments. **No new engines are created.**
+
+### 12.1 Haemophilia Domain Classification (mandatory fields)
+
+Every normalized signal SHALL carry the following canonical domain fields. **Do not infer a field when evidence is insufficient — set it to `unknown`.** Entity resolution SHALL attempt source, product, trial ID, and context before assigning A/B.
+
+| Field | Allowed values | Extraction rule |
+|---|---|---|
+| `disease` | `haemophilia_a` · `haemophilia_b` · `both` · `unknown` | FVIII/F8 terms → A; FIX/F9 terms → B; explicit "A and B" → both; bare "haemophilia" → **unknown** until entity resolution (product/trial/context) succeeds |
+| `factor` | `fviii` · `fix` · `unknown` | Factor VIII / F8 → fviii; Factor IX / F9 → fix; else unknown |
+| `inhibitor_status` | `with_inhibitor` · `without_inhibitor` · `mixed` · `unknown` | "FVIII inhibitor" / "FIX inhibitor" / "neutralising antibody" / "inhibitor-positive" → with; explicit "no/without inhibitors" → without; both → mixed; absent → **unknown** (never assume) |
+| `population` | `adult` · `adolescent` · `child` · `other_or_unknown` | Where available (age words, trial eligibility) |
+| `therapy_modality` | `factor_replacement` · `extended_half_life_factor` · `non_factor` · `bispecific_antibody` · `sirna` · `gene_therapy` · `aav_gene_therapy` · `lentiviral` · `gene_editing` · `other` | Modality classifier per Ishaaq rules (FVIII/FIX protein → factor; antibody/TFPI/siRNA/pathway modifier → non-factor; AAV/lentiviral/transgene/editing → gene therapy) |
+
+**Why inhibitor status is a core segmentation variable:** Inhibitor status materially changes treatment context and competitive relevance (separate WFH guidance for inhibitors, outcome assessment, and AAV gene therapy — https://guidelines.wfh.org/guidelines/). A therapy indicated for inhibitor patients occupies a distinct niche; indication expansion **across** the inhibitor boundary (e.g., Hemlibra, Alhemo, Hympavzi) is a high-value `INDICATION_EXPANSION` signal. Do not generalise evidence between inhibitor-positive and inhibitor-negative populations (Red-Team check D, §12.7).
+
+### 12.2 Clinical Evidence Fields (nullable)
+
+For clinical/trial signals the system SHALL populate the following **nullable** fields only when supported by the source — never forced, never fabricated:
+
+`trial_id` · `trial_phase` · `study_design` · `population` · `comparator` · `primary_endpoint` · `secondary_endpoints` · `abr` · `bleeding_outcome` · `joint_or_target_joint_outcome` · `patient_reported_outcome` · `quality_of_life_outcome` · `treatment_burden` · `follow_up_duration` · `sample_size` · `safety_findings` · `effect_size` · `confidence_interval` · `p_value` · `interim_or_final` · `evidence_maturity`.
+
+Extraction implications (Sanjana): capture endpoint **definitions** (e.g., treated vs all-bleed ABR — Red-Team check E), comparator, effect size, CI/p-value, population, regimen, and safety findings rather than just "positive trial". Capture PROs, QoL, pain, physical function, joint outcomes, and treatment burden as separate fields (never buried in a summary).
+
+### 12.3 Evidence Maturity Hierarchy
+
+Every important signal SHALL carry `source_type` · `source_authority` · `evidence_maturity` · `source_date`. Evidence maturity is an **evidence-context indicator, NOT a truth ranking** — a congress abstract can be extremely important but preliminary; a company announcement can be an important early signal but is not independently verified evidence.
+
+| Maturity tier | Source types |
+|---|---|
+| **VERY HIGH** | Regulatory decision / official regulatory assessment |
+| **HIGH** | Peer-reviewed publication · ClinicalTrials.gov structured update/result |
+| **MEDIUM/HIGH** | Congress abstract/presentation |
+| **MEDIUM** | Official company announcement |
+| **LOWER** | Secondary media / commentary |
+
+Confidence starts lower for preliminary evidence and is upgraded only when peer-reviewed publication, registry results, or regulatory documentation confirm/qualify the finding. Congress evidence is ingested as provisional, never discarded (low-volume field — it may precede formal literature).
+
+### 12.4 Access Is a Separate Intelligence Event
+
+**Approval ≠ Reimbursement ≠ Commercial availability ≠ Actual patient access.** These distinctions SHALL appear in the Red-Team documentation (§12.7 checks M/N/O) and drive a dedicated access signal class. The system SHALL NOT merge regulatory approval and access.
+
+**Access signal types (new canonical values for `signal_type = access`):**
+- `ACCESS_REIMBURSEMENT_EVENT` — positive/negative/conditional/restricted payer or HTA decision
+- `RESTRICTED_REIMBURSEMENT` — eligibility narrowed by severity/age/treatment history
+- `SUPPLY_ACCESS_RISK` — shortage, manufacturing, distribution, treatment-interruption risk
+- `GEOGRAPHIC_ACCESS_GAP` — material variation between countries/regions
+- `BUDGET_IMPACT_SIGNAL` — major economic consequences for payers
+- `OUTCOME_BASED_ACCESS_MODEL` — payment linked to performance/durability
+- `REAL_WORLD_ACCESS_GAP` — approved treatment not reaching intended patients (affordability/infrastructure/system barriers)
+- `ACCESS_SUPPORT` — manufacturer patient-support programme (kept distinct from reimbursement)
+
+**Access fields:** `country` · `jurisdiction` · `effective_date` · `expiry_or_review_date` · `product` · `indication` · `eligible_population` · `inhibitor_status` (where relevant) · `coverage_status` · `restrictions` · `prior_authorisation` · `specialist_centre_requirements` · `source_authority` · `intended_vs_actual_access`.
+
+### 12.5 Function Routing (research-informed, mapped into the six PRIMARY functions)
+
+Routing rules below replace/supplement the §2 seed matrix. **The six primary functions remain: Medical Affairs · Regulatory · Safety/Pharmacovigilance · Market Access/Patient Access · Medical Communications · Leadership.** Commercial, R&D, Clinical Development, Competitive Intelligence, Strategy, etc. exist only as **extended/secondary stakeholders** where appropriate — never as replacements. The student research routing tables (R&D/CI/Strategy-led) are **domain reference only** and are re-mapped into the six primary functions as follows:
+
+| Signal type | Primary function | Secondary functions (from six) |
+|---|---|---|
+| Major clinical efficacy result | Medical Affairs | Medical Communications · Leadership (where material) |
+| Serious safety signal | Safety/PV | Medical Affairs · Regulatory (where relevant) |
+| Regulatory approval/rejection/label change | Regulatory | Medical Affairs · Market Access · Leadership (where material) |
+| New patient outcome / QoL evidence | Medical Affairs | Market Access · Medical Communications (where relevant) |
+| New congress data | Medical Affairs | Medical Communications · Regulatory / Leadership (depending on content) |
+| Pricing / reimbursement / access event | Market Access | Leadership · Medical Affairs (where relevant) |
+| Major competitor therapy/development | Medical Affairs | Leadership (+ extended: Competitive Intelligence / R&D stakeholder where appropriate) |
+| Trial lifecycle change | Medical Affairs | Regulatory · Leadership (depending on significance) |
+| Guideline change | Medical Affairs | Regulatory · Market Access |
+| Serious thromboembolic/TMA signal | Safety/PV | Medical Affairs · Regulatory |
+| Gene-therapy durability/safety data | Medical Affairs | Medical Communications · Safety/PV (durability/late-safety aspects) |
+
+Output per signal: `primary_function` · `secondary_functions[]` · `function_relevance_scores` · `routing_reason`. Never broadcast every signal to every function.
+
+### 12.6 Congress / Publication Lifecycle Logic (major requirement)
+
+Congress and publication signals SHALL NOT automatically become independent intelligence items. Lifecycle chain:
+
+```text
+Clinical trial → Congress abstract/presentation → Company announcement → Peer-reviewed publication → Regulatory event → Long-term follow-up
+```
+
+Connect via `development_id` · `trial_id` · `product_id` · `source_id` · `event_id`. Decision logic:
+- Same trial ID/product/programme as an existing development → **link to existing development** (NEW EVIDENCE, not a new card)
+- Genuinely new information → **create a new lifecycle event** within the chain
+- Only repeats known information → **mark as repeated / low novelty** (deduplication, not a new event)
+
+This feeds Confluence + Lifecycle + Priority. Publication/registry results later confirmed by peer-reviewed publication upgrade evidence maturity (never counted as two independent findings). Trial registries are live timelines: status changes (recruiting → terminated), protocol/endpoint/population changes, and recruitment variance are lifecycle signals with reason classification (safety-driven termination ≫ recruitment issue).
+
+### 12.7 Red-Team Evidence Checks (extended checklist)
+
+The existing Red-Team layer (NLI contradiction) SHALL additionally run the following evidence checks (from Usha's consolidated framework). High-impact signals must actively search for contradictory/qualifying evidence before producing a strong narrative.
+
+| ID | Check | Rule |
+|---|---|---|
+| A | **Causality error** | Never convert "adverse event occurred" into "drug caused adverse event"; require causality assessment, preserve uncertainty |
+| B | **Duplicate counting** | Trial + congress abstract + company announcement + publication for the SAME underlying evidence ≠ four developments; link records and deduplicate |
+| C | **Denominator blindness** | Do not interpret percentages/safety clusters without exposure/sample size where available; block confirmation when denominator absent |
+| D | **Population mismatch** | Do not generalise HA→HB, adult→child, inhibitor+→inhibitor− without evidence; check applicability fields |
+| E | **Endpoint mismatch** | Do not compare ABR values blindly when endpoint definitions differ (treated vs all bleeds; assay differences) |
+| F | **Surrogate overclaim** | Factor activity is not automatically proof of patient-important benefit |
+| G | **Small-sample overconfidence** | Very small cohorts must not get high certainty; apply uncertainty penalty |
+| H | **Short-follow-up / durability overclaim** | Early gene-therapy data ≠ lifelong durability; require explicit follow-up-duration check |
+| I | **Preliminary-evidence error** | Congress abstract/preprint/press release ≠ final evidence; label evidence maturity |
+| J | **Sponsor / source-independence error** | Company statement ≠ independent confirmation; capture sponsor/funding relationship |
+| K | **Stale information** | Old label/reimbursement rule/trial status used after a newer authoritative update; mark stale, refresh lifecycle |
+| L | **Negative-evidence omission** | Terminated/withdrawn/unpublished trials must not be ignored; actively search for disconfirming evidence |
+| M | **Approval ≠ reimbursement** | Marketing authorisation must not be presented as reimbursement/coverage |
+| N | **Approval ≠ actual patient access** | Approval ≠ commercial availability ≠ actual patient access |
+| O | **Jurisdiction mismatch** | A payer decision in one country must not be generalised elsewhere |
+| P | **Lifecycle disconnection** | Publication/congress/registry update must link to the existing product/trial record |
+| Q | **Statistical significance ≠ clinical significance** | Statistically significant ≠ automatically clinically meaningful (and vice versa for small studies) |
+| R | **Contradiction blindness** | Never report a strong positive/safety claim without actively searching for conflicting evidence |
+| S | **Governance bypass** | No autonomous diagnosis, causality determination, treatment change, or high-impact decision without qualified human review |
+
+### 12.8 Watch-for-Next (extends Missing-Signal)
+
+Stakeholder feedback can create a **watch rule**: `source_event → development → expected_event_type (e.g., Congress) → monitoring window → responsible function → status`. Statuses: `watching` · `new_evidence_detected` · `no_new_evidence` · `watch_expired` · `human_review_required`. The system NEVER claims a future event will definitely happen — wording is limited to *"Watch for…"*, *"Expected/possible next evidence…"*, *"No subsequent evidence observed during the configured period."* (See §3 Watch-for-Next; mechanism unchanged.)
+
+### 12.9 Priority Scoring (triage mechanism, not a clinical score)
+
+**This is a MetaRadar prioritisation mechanism, not a validated clinical score.** The score is an internal triage aid. It considers: novelty · clinical relevance · safety impact · regulatory impact · strategic/competitive impact · patient impact · evidence maturity · source authority · access impact · freshness · uncertainty · duplication. The research-informed starting formula:
+
+```text
+Priority = 0.25 novelty + 0.20 seriousness/actionability + 0.15 source authority
+          + 0.15 evidence strength/maturity + 0.10 population relevance
+          + 0.10 geographic/access impact + 0.05 freshness  (± uncertainty/duplication penalties)
+```
+
+**Automatic CRITICAL/HIGH triggers (regardless of score):** serious safety warning · regulatory rejection/approval/major label change · trial termination for safety · major unexpected benefit-risk change · major treatment-landscape change (new modality/paradigm) · major access restriction. Safety and regulatory events may trigger automatic high-priority escalation. Safety findings can override an otherwise positive efficacy classification. Stakeholder calibration can modify the effective relevance/priority logic (mechanism 5).
+
+### 12.10 Four-Question Output + Evidence Context
+
+Q1–Q4 remain the core stakeholder questions. Every significant signal additionally carries evidence context (supporting explainability): **Q5 How strong is the evidence?** (evidence maturity + confidence) · **Q6 What is uncertain or contradictory?** (Red-Team flags, uncertainty penalties) · **Q7 What should we watch next?** (watch-for-next / expected milestones).
+
+### 12.11 Deterministic Evaluation Cases (B.Pharm-labelled ground truth)
+
+| Case | Scenario | MetaRadar must… |
+|---|---|---|
+| CASE 1 | Company says "positive Phase 3 results" | Ask: endpoint? comparator? population? effect size? follow-up? safety? preliminary? (check A/E/H/I/J) |
+| CASE 2 | Congress abstract reports new gene-therapy data | Mark preliminary evidence, identify trial, connect to lifecycle, search/flag later publication/regulatory evidence, do NOT treat as regulatory confirmation (I/H/P) |
+| CASE 3 | Safety event in positive efficacy programme | Allow safety signal to override simple positive classification; route Safety/PV first; do NOT establish causality automatically (A) |
+| CASE 4 | Drug receives regulatory approval | Route Regulatory; do NOT infer reimbursement or actual patient access (M/N) |
+| CASE 5 | Reimbursement restriction in one country | Route Market Access; record jurisdiction; do not generalise globally (O) |
+| CASE 6 | Evidence from inhibitor-positive haemophilia A patients | Must NOT generalise to inhibitor-negative or haemophilia B populations (D) |
+| CASE 7 | Congress presentation + later publication refer to same trial | Link them; identify publication as lifecycle continuation; avoid duplicate development counting (B/P) |
+
+### 12.12 Authoritative Example Sources (examples only — never hard-coded into architecture)
+
+- FDA confirms QFITLIA (fitusiran) approved for routine prophylaxis in patients aged 12+ with haemophilia A or B, with or without FVIII/FIX inhibitors: https://www.fda.gov/news-events/press-announcements/fda-approves-novel-treatment-hemophilia-or-without-factor-inhibitors
+- FDA confirms Roctavian for eligible adults with severe haemophilia A: https://www.fda.gov/vaccines-blood-biologics/roctavian
+- FDA confirms Hemgenix for specified adults with haemophilia B: https://www.fda.gov/vaccines-blood-biologics/vaccines/hemgenix
+- WFH guidelines cover inhibitors, outcome assessment, musculoskeletal complications, and AAV gene therapy: https://guidelines.wfh.org/guidelines/
 
 ---
 

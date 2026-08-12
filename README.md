@@ -334,11 +334,11 @@ The MVP routes each signal to the six kickoff functions from **one intelligence 
 * Medical Affairs
 * Regulatory
 * Safety / Pharmacovigilance
-* Market Access
+* Market Access / Patient Access
 * Medical Communications
 * Leadership
 
-Commercial and R&D are retained in the routing matrix as **extended/future roles** (not removed). Each signal identifies a **primary function** and **secondary functions[]**, with `function_relevance_score`, a **routing reason** (explainable: "why this function, why now"), and role-specific explanations — all sharing the same evidence chain. The initial routing matrix is a seed (clinical trial → Medical Affairs + Medical Communications + Regulatory; safety → Safety/PV; access issue → Market Access; congress data → Medical Affairs + Medical Communications; publication → Medical Affairs + Medical Communications) and is **adjustable through stakeholder calibration** — never a hard-coded universal rule.
+Commercial, R&D, Clinical Development, Competitive Intelligence, and Strategy are retained in the routing matrix as **extended/secondary stakeholders** only — they never replace the six primary functions. Each signal identifies a **primary function** and **secondary functions[]**, with `function_relevance_score`, a **routing reason** (explainable: "why this function, why now"), and role-specific explanations — all sharing the same evidence chain. The initial routing matrix is a seed (major clinical efficacy → Medical Affairs + MedComms/Leadership; safety signal → Safety/PV + Medical Affairs/Regulatory; regulatory decision → Regulatory + Medical Affairs/Market Access/Leadership; patient outcome/QoL → Medical Affairs + Market Access/MedComms; congress data → Medical Affairs + MedComms/Regulatory; access/reimbursement event → Market Access + Leadership/Medical Affairs; major competitor development → Medical Affairs + Leadership; trial lifecycle change → Medical Affairs + Regulatory/Leadership) and is **adjustable through stakeholder calibration** — never a hard-coded universal rule.
 
 ## Q4 — What internal action may be required?
 
@@ -550,6 +550,36 @@ Roche
 ```
 
 The ontology helps prevent the system from treating every mention of "haemophilia" as equally meaningful.
+
+## Domain Classification (v4.0 — from B.Pharm research)
+
+Every normalized signal carries canonical haemophilia domain fields — populated only when supported by evidence, **never guessed**:
+
+- **Disease:** Haemophilia A · B · Both · Unknown (bare "haemophilia" → `unknown` until entity resolution via source/product/trial/context)
+- **Factor:** FVIII · FIX · Unknown
+- **Inhibitor status:** With inhibitor · Without inhibitor · Mixed · Unknown — a core segmentation variable (WFH maintains separate guidance for inhibitors, outcome assessment, and AAV gene therapy)
+- **Population:** Adult · Adolescent · Child · Other/Unknown (where available)
+- **Therapy/modality:** Factor replacement · EHL factor · Non-factor · Bispecific antibody · siRNA · Gene therapy · AAV · Lentiviral · Gene editing · Other
+
+## Evidence Maturity (v4.0)
+
+Every important signal carries `source_type` · `source_authority` · `evidence_maturity` · `source_date`. Maturity is an **evidence-context indicator, not a truth ranking**:
+
+| Tier | Source |
+|---|---|
+| **Very High** | Regulatory decision / official regulatory assessment |
+| **High** | Peer-reviewed publication · ClinicalTrials.gov structured update |
+| **Medium/High** | Congress abstract/presentation |
+| **Medium** | Official company announcement |
+| **Lower** | Secondary media / commentary |
+
+A congress abstract can be extremely important but preliminary; a company announcement is an important early signal, never independently verified evidence. Confidence upgrades only on peer-reviewed/registry/regulatory confirmation.
+
+## Access Is Separate From Approval (v4.0)
+
+> **Approval ≠ Reimbursement ≠ Commercial availability ≠ Actual patient access.**
+
+Access is tracked as a distinct intelligence event with its own signal types: `ACCESS_REIMBURSEMENT_EVENT` · `RESTRICTED_REIMBURSEMENT` · `SUPPLY_ACCESS_RISK` · `GEOGRAPHIC_ACCESS_GAP` · `BUDGET_IMPACT_SIGNAL` · `OUTCOME_BASED_ACCESS_MODEL` · `REAL_WORLD_ACCESS_GAP` · `ACCESS_SUPPORT`, each with country/jurisdiction, effective date, restrictions, and intended-vs-actual access. The Red-Team layer enforces the approval/access distinction (checks M/N/O).
 
 ---
 
