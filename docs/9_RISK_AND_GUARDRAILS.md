@@ -1,6 +1,6 @@
 # MetaRadar — Risk Register & Guardrails (INTERNAL DECISION SUPPORT ONLY)
 
-**Document:** 9 of the MetaRadar doc set · v1.1 · Aug 12, 2026 (latest stakeholder brief)
+**Document:** 9 of the MetaRadar doc set · v1.2 · Aug 13, 2026 (latest stakeholder brief)
 **Scope:** Risks of the AI-assisted competitive-intelligence prototype, with detection, mitigation, and human-review requirements. Companion to SRS §3 (Non-Functional / Guardrails), SRS FR-2.2.6/FR-2.2.7 (F-I-S and evidence sufficiency), and the v1.2 additions: relevance-based routing (FR-2.5.1), Congress/Publication first-class signal types (FR-2.2.2), Watch-for-Next (FR-2.3C.1A), and role-aware actions (FR-2.6.1).
 
 ---
@@ -46,7 +46,7 @@ For safety / regulatory / high-impact signals: **AI suggests → human reviews �
 | R3 | **Source quality risk** — low-credibility or adversarial sources (e.g., unverified forums) | Reddit/advocacy or unknown domains weighted like primary literature | Per-domain credibility scores; quality_score ≥ threshold; source tier shown in UI | Weighted credibility in confidence; low-credibility signals labeled and demoted; ontology validation | B.Pharm QA on source selection; analysts decide whether a source is usable |
 | R4 | **Conflicting evidence** — sources disagree | Genuine scientific/regulatory disagreement; different cohorts | Red-Team NLI contradiction scan (dual evidence chains) | Contradictions surfaced, never hidden; both claims shown; devil's-advocate note; Q2 flags | Human reconciles before use (e.g., HTA engagement) |
 | R5 | **Stale information** — aged data presented as current | Long cache TTL; infrequent fetch; discontinued sources | Data-freshness indicators (<5min/2h/24h/>24h); source-status footer; last-verified timestamps | Redis 2h TTL; 2-hour polling; staleness banners; bronze replay for re-processing | Analysts check publication dates before acting |
-| R6 | **Model uncertainty** — local models (Gemma 3 4B, BART) produce weaker reasoning | CPU-bound small models; quantization | Confidence scores; F-I-S labels; auto-fallback to BART logged and surfaced in UI | Model-agnostic config; known capability envelope documented; fallback chain (Gemma → BART) | Human review required for all AI-generated briefs |
+| R6 | **Model uncertainty** — local models (Gemma 3 4B, BART) produce weaker reasoning | CPU-bound small models; quantization | Confidence scores; F-I-S labels; provider chain + fallback logged and surfaced in UI (model metadata) | Model-agnostic config via `LLMProvider`; known capability envelope documented; provider chain per `LLM_PROVIDER` (Gemma → Grok → BART degraded factual); optional hosted Grok gated by the external-LLM privacy gate (R28) | Human review required for all AI-generated briefs |
 | R7 | **Classification errors** — wrong disease/patient type/signal type/priority/function | NER/zero-shot limits; ambiguous text | EV-2/EV-2b/EV-13 metric harness; B.Pharm-labelled validation set; confusion matrix review | ≥85% classification target; ontology validation layer; false-positive test cases (cardiac "gene therapy", engineering "mim8") | B.Pharm manual QA on flagged signals (Ishaaq labels, Usha reviews) |
 | R8 | **Missing-signal false positives** — silence flagged when nothing is wrong | Delayed disclosure; incomplete coverage; changed strategy | Confidence-by-silence threshold; configurable `max_lag_days`; status = WATCH (monitoring, not a claim) | WATCH items clearly labeled; never presented as confirmed events; human review gate | Human verifies against other sources before escalating |
 | R9 | **Duplicate / confluence errors** — same event counted as independent confluence | Press-wire syndication; near-duplicate articles | Deduplication (>80% similarity); confluence requires ≥3 distinct signal types; control tests (duplicate wires ≠ confluence) | Dedup before confluence; severity formula; EV-8 control scenarios | Analysts review confluence alerts before acting |
@@ -68,8 +68,11 @@ For safety / regulatory / high-impact signals: **AI suggests → human reviews �
 | R25 | **Evidence-maturity mislabel** — preliminary evidence presented with regulatory-level confidence | Congress/company evidence over-weighted | EV-16 evidence-maturity harness; `evidence_maturity` field | Maturity ladder (VERY HIGH→LOWER); company announcements never labeled independently verified | Human review of all AI briefs; B.Pharm evidence QA (Usha) |
 | R26 | **Negative-evidence omission** — terminated/unpublished trials ignored in a strong positive narrative | Missing result/termination data | Red-Team check L; registry-status diffs | Actively search for disconfirming evidence before strong claims; lifecycle disconnection check (P) | Analysts reconcile before use |
 | R27 | **Duplicate-count inflation** — same evidence counted as multiple independent developments | Trial+congress+announcement+publication of one result | Red-Team check B; development_id linking; EV-9 | Congress/publication link to existing development (NEW EVIDENCE, not new card); repeated → low-novelty | Analysts verify development links |
+| R28 | **External-LLM privacy/retention (hosted Grok)** — public/synthetic-only data leaves the local environment; xAI retains requests/responses ~30 days (encrypted, for abuse auditing) | Hosted provider misuse; data-boundary breach | Mandatory external-LLM privacy gate before any Grok call (public/synthetic → PII/PHI → confidentiality → ALLOW/BLOCK); gate decisions logged | Blocked content never sent; on block → local Gemma → BART degraded → source-only; xAI data handling does not override the hackathon's stricter public/synthetic-only rule (no training without explicit permission; ~30-day abuse-audit retention unless applicable stricter arrangements are used — https://docs.x.ai/developers/faq/security); EV-20 | Security review of any external send; CDA compliance maintained |
+| R29 | **Hosted provider failure/dependency (Grok)** — outage, key expiry, quota, latency, invalid or schema-invalid responses | External dependency; network; key management | tenacity retries; per-provider health; response schema + semantic validation (FR-2.2.3E); model metadata | Fallback chain per `LLM_PROVIDER` (Gemma → Grok → BART degraded factual; no reasoning provider → source-linked factual signal + human-review flag); dashboard is designed to remain available during tested provider failures (EV-19) | Operators see provider/degraded badges and decide whether to re-fetch/review |
 
 > **v1.1 (Aug 13, 2026):** Added R20–R27 from the B.Pharm domain research integration (Master Plan v4.0 §12) — causality, denominator, population-mismatch, approval≠access, endpoint comparability, evidence-maturity mislabel, negative-evidence omission, and duplicate-count inflation. The six primary functions remain unchanged.
+> **v1.2 (Aug 13, 2026):** Added R28 (external-LLM privacy/retention — hosted Grok, Master Plan v5.0 §13.5) and R29 (hosted provider failure/dependency, §13.6); R6 updated to the provider-agnostic chain (Gemma → Grok → BART degraded factual) per `LLM_PROVIDER`.
 
 ---
 
@@ -78,7 +81,7 @@ For safety / regulatory / high-impact signals: **AI suggests → human reviews �
 For every AI-generated intelligence output, the system preserves enough metadata to answer: *"What information did the system use to produce this, and with what model?"*
 
 - `evidence_chain` JSONB (source, URL, published_at, excerpt, credibility, sha256)
-- `model_metadata` (model name/version, task, temperature, prompt-template id, config hash)
+- `model_metadata` (provider, model name/version, mode, task, temperature, prompt-template id, config hash, fallback status/reason, generated_at)
 - WORM `audit_log` (append-only; no UPDATE/DELETE; **engineering design analogy inspired by electronic-record traceability principles** — MetaRadar does NOT claim 21 CFR Part 11 or GxP compliance)
 - Append-only `stakeholder_feedback` and `calibration_history`
 - `raw_signals_bronze` verbatim payloads with timestamps (full replay)
@@ -89,4 +92,4 @@ These guardrails align with current FDA thinking on AI credibility in drug devel
 
 ---
 
-*Risk Register v1.1 · August 13, 2026 · Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 · Team: MSRIT Aura Pharmers*
+*Risk Register v1.2 · August 13, 2026 · Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 · Team: MSRIT Aura Pharmers*

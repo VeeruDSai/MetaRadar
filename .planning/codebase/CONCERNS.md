@@ -8,7 +8,7 @@
 - Issue: The repo contains 15 spec/research documents (14.6k lines) but zero source code. Everything is `[SOURCE-DERIVED]` / specified, nothing built.
 - Files: [`README.md`](README.md), [`docs/`](docs/) (all)
 - Impact: Implementation must start from scratch inside a 4-week hackathon window; every spec item is a potential scope risk
-- Fix approach: Follow [`docs/8_CORRECTED_UNIFIED_PLAN.md`](docs/8_CORRECTED_UNIFIED_PLAN.md) roadmap (week 1: Docker Compose + FastAPI + Next.js + DB + connectors); lock MVP scope per [`docs/METARADAR_MASTER_PLAN_v3.0.md`](docs/METARADAR_MASTER_PLAN_v3.0.md) §3
+- Fix approach: Follow [`docs/8_CORRECTED_UNIFIED_PLAN.md`](docs/8_CORRECTED_UNIFIED_PLAN.md) roadmap (week 1: Docker Compose + FastAPI + Next.js + DB + connectors); lock MVP scope per [`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §3
 
 **Document drift across the doc set:**
 - Issue: Historical docs (SRS, SDD, UI design, Refined Architecture) partially disagree with the canonical master plan; some carry old decisions (e.g., summarizer model `sshleifer/distilbart-cnn-12-6` vs canonical `facebook/bart-large-cnn`; BART vs Gemma as reasoning LLM; `Veeva`-style industry references in doc 6).
@@ -39,6 +39,12 @@
 - Current mitigation: these are placeholders, not live credentials; never commit a real `.env`
 - Recommendations: keep `.env.example` as the only committed env template (SRS NFR line ~553)
 
+**External-LLM privacy gate (hosted reasoning, R28):**
+- Risk: if `LLM_PROVIDER=xai|auto` is enabled, only public/synthetic prototype data may be sent to Grok; xAI retains requests/responses ~30 days (encrypted, abuse auditing) and does not train without explicit permission
+- Files: [`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §13.5, [`docs/9_RISK_AND_GUARDRAILS.md`](docs/9_RISK_AND_GUARDRAILS.md) R28
+- Current mitigation (prescribed): mandatory gate (public/synthetic → PII/PHI → confidentiality → ALLOW/BLOCK) before any external call; blocked → local Gemma → BART degraded → source-only; EV-20 acceptance scenarios
+- Recommendations: default `LLM_PROVIDER=local`; never enable hosted mode without the gate implemented and tested
+
 **Prompt/ontology drift (R15):**
 - Risk: manual ontology edits or prompt changes silently degrade classification (known error class: fitusiran/Alhemo confusion)
 - Mitigation prescribed: ontology versioning (`updated_by`), regression tests on evaluation set, change log in WORM `audit_log`
@@ -64,7 +70,7 @@
 - Safe modification: minimum feedback threshold before recalibration, damped updates, WORM history, per-function agreement metrics
 
 **Congress/publication linking (R17):**
-- Files: [`docs/METARADAR_MASTER_PLAN_v3.0.md`](docs/METARADAR_MASTER_PLAN_v3.0.md) §6, R17
+- Files: [`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §6, R17
 - Why fragile: same drug different trial, press-wire noise, `development_id` match errors
 - Safe modification: `link_decision` audit field, subtype classification, human-review flag on ambiguous links
 - Test coverage: prescribed EV-9/AC-15 control scenarios (not yet written)
@@ -83,7 +89,7 @@
 **Local model capability envelope:**
 - Current capacity: 4B-parameter reasoning on CPU
 - Limit: reasoning depth vs commercial LLMs
-- Scaling path: model-agnostic `LOCAL_LLM_MODEL` swap (Mistral 7B, Phi-3 Mini, etc. documented in [`docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md`](docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md))
+- Scaling path: model-agnostic `LOCAL_LLM_MODEL` swap (Mistral 7B, Phi-3 Mini, etc. documented in [`docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md`](docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md)); optional hosted Grok (`LLM_PROVIDER=xai|auto`) for higher-quality reasoning when an external provider is acceptable (privacy-gated, Master Plan §13)
 
 ## Dependencies at Risk
 
@@ -91,6 +97,11 @@
 - Risk: Gemma 3 4B / BART / MNLI / spaCy models must download before offline demo; failure blocks pipeline
 - Impact: demo failure if network is unavailable and models uncached
 - Migration plan: pre-download models into Docker image/volume; BART as fallback is smaller and CPU-fast
+
+**Optional hosted Grok dependency (xAI API, R29):**
+- Risk: Grok outage/key expiry/quota/latency/invalid responses affect reasoning when hosted mode is enabled
+- Impact: reasoning quality degrades, not the data pipeline — Grok is never a data source
+- Migration plan: `LLM_PROVIDER=local` default keeps the demo fully offline-capable; provider chain Gemma → Grok → BART degraded (EV-19); privacy gate (EV-20)
 
 **LangGraph version drift:**
 - Risk: "LangGraph 0.1+" pinned loosely; graph API changes

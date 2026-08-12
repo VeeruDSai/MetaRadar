@@ -11,7 +11,7 @@ novonordisk/                    # repo root (project name: MetaRadar)
 ├── CLAUDE.md                   # AI agent instructions: project, stack, conventions, GSD workflow
 ├── README.md                   # Full project README: problem, solution, architecture, stack, config, demo
 ├── docs/                       # All specification & research documentation
-│   ├── METARADAR_MASTER_PLAN_v3.0.md      # CANONICAL master specification (authoritative)
+│   ├── METARADAR_MASTER_PLAN_v5.0.md      # CANONICAL master specification (authoritative)
 │   ├── 1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md
 │   ├── 2_SRS_Software_Requirements_Specification.md
 │   ├── 3_SOFTWARE_DESIGN_DOCUMENT.md
@@ -36,7 +36,7 @@ novonordisk/                    # repo root (project name: MetaRadar)
 **`docs/`:**
 - Purpose: All specification, design, planning, and research documentation
 - Contains: 13 markdown files — numbered spec docs (1–9) + 3 B.Pharm research files
-- Key files: `METARADAR_MASTER_PLAN_v3.0.md` is **the sole authoritative spec**; all other docs are secondary/historical (each carries a note pointing to the master plan)
+- Key files: `METARADAR_MASTER_PLAN_v5.0.md` is **the sole authoritative spec**; all other docs are secondary/historical (each carries a note pointing to the master plan)
 
 ## Planned Implementation Layout (per `README.md` "Project Structure")
 
@@ -83,7 +83,7 @@ metaradar/
 
 **Core Logic (planned):**
 - `backend/app/intelligence/`: five mechanisms — confluence.py, lifecycle.py, redteam.py, missing_signal.py
-- `backend/app/services/narrative_synthesizer.py`: reasoning-LLM briefs (SDD line ~620)
+- `backend/app/services/narrative_synthesizer.py`: reasoning-layer briefs via `LLMProvider` — Gemma local default / Grok hosted optional / BART degraded (SDD line ~620, Master Plan §13)
 - `backend/app/services/`: `StakeholderCalibrationService` (calibration)
 - `backend/app/agents/`: LangGraph node implementations
 
@@ -99,10 +99,10 @@ metaradar/
 
 **Python (prescribed by docs):**
 - `snake_case` module and function names (e.g., `node_nlp_extract`, `narrative_synthesizer.py`, `StakeholderCalibrationService` class CamelCase)
-- LangGraph nodes prefixed `node_` (e.g., `node_ingest`, `node_confluence`) (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4)
+- LangGraph nodes prefixed `node_` (e.g., `node_ingest`, `node_confluence`) (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4)
 
 **Env vars:**
-- UPPER_SNAKE (e.g., `DATABASE_URL`, `NEWSAPI_KEY`, `LOCAL_LLM_MODEL`) — SRS §4.2
+- UPPER_SNAKE (e.g., `DATABASE_URL`, `NEWSAPI_KEY`, `LLM_PROVIDER`, `LOCAL_LLM_MODEL`, `XAI_API_KEY`) — SRS §4.2
 
 ## Where to Add New Code
 

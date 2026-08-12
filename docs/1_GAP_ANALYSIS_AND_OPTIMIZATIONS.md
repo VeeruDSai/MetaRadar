@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
-> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+> *Note: This document is a secondary/historical reference and must not override the Master Plan. The sole canonical and authoritative specification for MetaRadar is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md).*
 
 ---
 
@@ -64,6 +64,9 @@ HAEMOPHILIA_QUERY_TERMS = {
 import os
 from transformers import pipeline
 
+# Reasoning provider mode (provider-agnostic, Master Plan §13):
+#   LLM_PROVIDER=local (default) | xai (hosted Grok) | auto (Gemma → Grok → BART degraded)
+LLM_PROVIDER     = os.getenv("LLM_PROVIDER", "local")
 # Reasoning LLM (synthesis, briefs, Ask Athena) — default Gemma 3 4B Instruct:
 #   LOCAL_LLM_MODEL=google/gemma-3-4b-it        (default: modern instruction LLM)
 #   LOCAL_LLM_MODEL=google/gemma-3-1b-it        (light-CPU option)
@@ -71,6 +74,9 @@ from transformers import pipeline
 #   LOCAL_LLM_MODEL=microsoft/phi-3-mini-4k-instruct (tiny, 3.8B)
 LOCAL_LLM_MODEL  = os.getenv("LOCAL_LLM_MODEL",  "google/gemma-3-4b-it")
 LOCAL_LLM_TASK   = os.getenv("LOCAL_LLM_TASK",   "text-generation")
+# Optional hosted Grok (only when LLM_PROVIDER=xai|auto; external-LLM privacy gate, Master Plan §13.5):
+XAI_API_KEY      = os.getenv("XAI_API_KEY", "")
+XAI_MODEL        = os.getenv("XAI_MODEL", "")
 # Batch summarizer + demo-safety fallback (fast CPU seq2seq):
 SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "facebook/bart-large-cnn")
 SUMMARIZER_TASK  = os.getenv("SUMMARIZER_TASK",  "summarization")
@@ -89,7 +95,7 @@ batch_summarizer = pipeline(
 )
 ```
 
-> **Research Report alignment (Section 8 — Model Comparison):** The report shows that modern small LLMs (Gemma, Mistral 7B, Phi-3) approach GPT-4 quality at a fraction of the cost. MetaRadar ships **Gemma 3 4B Instruct as the default reasoning LLM** (narrative synthesis, Four-Question briefs, Ask Athena) while keeping **BART-large-CNN as the CPU-fast batch summarizer and automatic fallback** — quality where it matters, demo stability on any hardware, zero code changes.
+> **Research Report alignment (Section 8 — Model Comparison):** The report shows that modern small LLMs (Gemma, Mistral 7B, Phi-3) approach GPT-4 quality at a fraction of the cost. MetaRadar ships **Gemma 3 4B Instruct as the default local reasoning LLM** (narrative synthesis, Four-Question briefs, Ask Athena) while keeping **BART-large-CNN as the CPU-fast batch summarizer and degraded factual fallback** — quality where it matters, demo stability on any hardware, zero code changes. The reasoning layer is provider-agnostic (Master Plan §13): an **optional hosted xAI Grok** provider can supplement reasoning (`LLM_PROVIDER=xai|auto`) behind the external-LLM privacy gate; BART is never a reasoning-equivalent replacement.
 
 **Cost Savings:** $500/month → $0
 
@@ -136,7 +142,7 @@ async def fetch_with_fallback(source_name: str, fetch_fn):
 
 > **Research Report alignment (Section 2):** Uses `tenacity` + `httpx.AsyncClient` as explicitly recommended. Also populates bronze raw table for replay (see Gap 11).
 
-**Demo Impact:** Dashboard always shows SOMETHING, never breaks.
+**Demo Impact:** Dashboard is designed to remain available during tested source/provider failures via retry, cache, bronze replay, or synthetic fallback.
 
 ---
 
@@ -1283,7 +1289,7 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 | Gap | Impact | Resolution | Optimization | Outcome |
 |---|---|---|---|---|
 | **API Costs** | $500/month | Free APIs only + haemophilia query terms | Pluggable local LLM (any HF model via config) | **$0 cost** |
-| **Crashes on Failure** | Demo fail | tenacity retries + fallback cache | 3-layer caching | **100% uptime** |
+| **Crashes on Failure** | Demo fail | tenacity retries + fallback cache | 3-layer caching | **Target: 0 unhandled errors across tested failure scenarios** |
 | **Scope Creep** | Incomplete | MVP only | Strict scope | **on-time delivery** |
 | **Bad Data Quality** | Clutter | Validation pipeline | Deduplication | **73% junk removal** |
 | **No Tests** | Production bugs | Unit tests | CI/CD pipeline | **0 bugs** |

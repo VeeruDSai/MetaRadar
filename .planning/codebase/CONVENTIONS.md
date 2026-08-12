@@ -2,7 +2,7 @@
 
 **Analysis Date:** 2026-08-13
 
-> **Status note:** `CLAUDE.md` states *"Conventions not yet established. Will populate as patterns emerge during development."* The repository is specification-first (docs only), so the conventions below are **prescriptive** — derived from the canonical spec ([`docs/METARADAR_MASTER_PLAN_v3.0.md`](docs/METARADAR_MASTER_PLAN_v3.0.md)) and SRS, to be followed when implementation begins.
+> **Status note:** `CLAUDE.md` states *"Conventions not yet established. Will populate as patterns emerge during development."* The repository is specification-first (docs only), so the conventions below are **prescriptive** — derived from the canonical spec ([`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md)) and SRS, to be followed when implementation begins.
 
 ## Naming Patterns
 
@@ -46,7 +46,8 @@
 
 **Patterns (prescribed):**
 - **External API failures:** `tenacity` exponential backoff (3 retries: 2s, 4s, 8s); fallback cascade Redis cache → bronze DB → 500-signal synthetic dataset. **Target: graceful degradation during tested connector/model failures** (resilience is an acceptance target verified by failure-injection tests — do not claim untested guarantees) (`CLAUDE.md` "Resilience & Calibration", `docs/9_RISK_AND_GUARDRAILS.md` R11)
-- **LLM load failure:** safe **degraded mode** — Gemma 3 4B unavailable → BART factual summarization ONLY (no unsupported interpretation, no reasoning-based action recommendation), clearly marked degraded in the UI, human review where necessary (`docs/9_RISK_AND_GUARDRAILS.md` R6)
+- **LLM provider failure:** follow the configured `LLM_PROVIDER` chain — Gemma → Grok (in `xai`/`auto` modes) → BART degraded factual mode (Master Plan §13.6). If no reasoning provider is available, safe **degraded mode** — BART factual summarization ONLY (no unsupported interpretation, no reasoning-based action recommendation), clearly marked degraded in the UI ("AI reasoning unavailable — showing source-grounded factual summary"), human review where necessary (`docs/9_RISK_AND_GUARDRAILS.md` R6)
+- **External-LLM privacy gate:** before any hosted (Grok) call — public/synthetic → PII/PHI → confidentiality → ALLOW/BLOCK; blocked → local Gemma → BART → source-only (Master Plan §13.5, `docs/9_RISK_AND_GUARDRAILS.md` R28)
 - **Low-confidence retrieval:** evidence-sufficiency gate blocks generation — return *"Insufficient evidence to support an interpretation."* (R1)
 - **API auth errors:** raise `HTTPException(401, "Invalid credentials")` (SDD line ~1543)
 
@@ -55,7 +56,7 @@
 **Framework:** Standard library logging (prescribed; no external logger).
 
 **Patterns:**
-- Log degraded-mode events (Gemma unavailable → BART factual summarization) so degradation is visible and reviewable (`docs/9_RISK_AND_GUARDRAILS.md` R6)
+- Log provider fallback events (provider-chain hops with `fallback_from`/`fallback_reason`; BART degraded factual mode) so degradation is visible and reviewable (`docs/9_RISK_AND_GUARDRAILS.md` R6/R28)
 - Append-only/WORM `audit_log` table (engineering design analogy **inspired by electronic-record traceability principles** — MetaRadar does NOT claim 21 CFR Part 11 or GxP regulatory compliance) for calibration history and ontology changes — never overwrite/delete audit rows (`CLAUDE.md`, `docs/9_RISK_AND_GUARDRAILS.md` R10/R15)
 - Data-freshness + source-health status surfaced in UI, not just logs (R5/R11)
 
@@ -73,10 +74,10 @@
 ## Function Design
 
 **Size:**
-- Single-responsibility per LangGraph node (10 nodes, one concern each) — mirror this in plain functions (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4)
+- Single-responsibility per LangGraph node (10 nodes, one concern each) — mirror this in plain functions (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4)
 
 **Parameters:**
-- Prefer config via env vars over hard-coded values — *"Model names SHALL be configurable via environment variables (never hard-coded)"* (SRS NFR, line ~570). Example: `LOCAL_LLM_MODEL`, `SUMMARIZER_MODEL`.
+- Prefer config via env vars over hard-coded values — *"Model names SHALL be configurable via environment variables (never hard-coded)"* (SRS NFR, line ~570). Example: `LOCAL_LLM_MODEL`, `SUMMARIZER_MODEL`. Provider selection via `LLM_PROVIDER=local|xai|auto`; all reasoning goes through the `LLMProvider` interface (`generate_intelligence(evidence, task, output_schema, metadata)`) — never call a specific model directly (Master Plan §13.2, SRS FR-2.2.3G).
 
 **Return Values:**
 - Structured/typed where possible (Pydantic models for FastAPI; dataclasses for signals/developments)
@@ -98,6 +99,7 @@
 - **F-I-S labeling on every AI output** — speculation never presented as fact (R1/R2)
 - **Controlled action vocabulary only** — monitor · review · prepare_internal_briefing · prepare_scientific_faq · escalate · request_stakeholder_review · no_immediate_action (R13)
 - **Human review required** — AI suggests, human decides (R13/R19)
+- **External-LLM privacy gate (hosted reasoning)** — only public or synthetic prototype data may be sent to Grok; blocked content falls back to local Gemma → BART degraded → source-only display (Master Plan §13.5, R28)
 
 ---
 

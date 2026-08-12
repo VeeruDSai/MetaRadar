@@ -1,11 +1,11 @@
 # MetaRadar — Corrected Unified Plan (Audit-Closed Specification)
 
 **Project:** MetaRadar — Near-Real-Time Haemophilia Competitive Intelligence Radar
-**Document:** v1.0 — Corrected Unified Plan (supersedes conflicting statements in all earlier docs)
+**Document:** v1.4 — Corrected Unified Plan (secondary working reference aligned to the canonical Master Plan — METARADAR_MASTER_PLAN_v5.0.md — which remains the sole authority)
 **Date:** August 12, 2026 (post-kickoff)
 **Target Event:** Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 "From Inbox Noise to Strategic Signal" | Pilot: Haemophilia within Rare Disease
 **Team:** MSRIT — Aura Pharmers (2 CSE + 3 B.Pharm)
-**Method:** Audit of METARADAR_MASTER_PLAN_v3.0, SRS v2.0, SDD v2.1, UI Design v2.1, Refined Architecture v2.1, Novo Nordisk/Hackathon Intelligence v2.1, Pitch Narrative v3.0, Gap Analysis, and README against the 20-point correction brief. Web research used only to validate industry practice, never to expand scope.
+**Method:** Audit of the MetaRadar master plan (then v3.0 — now METARADAR_MASTER_PLAN_v5.0.md), SRS v2.0, SDD v2.1, UI Design v2.1, Refined Architecture v2.1, Novo Nordisk/Hackathon Intelligence v2.1, Pitch Narrative v3.0, Gap Analysis, and README against the 20-point correction brief. Web research used only to validate industry practice, never to expand scope.
 
 > **v1.1 (newest kickoff, Aug 12, 2026):** Aligned to the latest Novo Nordisk kickoff — six primary functions (Medical Affairs, Regulatory, Safety/Pharmacovigilance, Market Access, Medical Communications, Leadership; Commercial & R&D retained as extended roles), the expanded canonical signal schema, mandatory Fact/Interpretation/Speculation labeling, the evidence-sufficiency gate, the controlled action vocabulary, and named B.Pharm owners. Supersedes v1.0 function lists.
 
@@ -18,6 +18,7 @@
 > **v1.2 (latest stakeholder brief, Aug 12, 2026):** Adds relevance-based routing ("not every signal goes to everyone" — primary/secondary functions + routing_reason), Congress and Publication as first-class signal types with subtypes linked to development lifecycles (NEW EVIDENCE vs NEW DEVELOPMENT), stakeholder-defined Watch-for-Next rules extending Missing-Signal, role-aware actions, the 6 kickoff demo cases, and the updated architecture flow. Supersedes v1.1 function lists and adds MR-ROUTE-1 / MR-CGR-1/2 / MR-PUB-1 / MR-WATCH-2 / MR-ACT-2.
 
 > **v1.3 (Aug 13, 2026 — B.Pharm research integration):** Integrates the three B.Pharm research reports (Sanjana · Ishaaq · Usha) as domain rules per Master Plan v4.0 §12 — canonical domain classification (disease/factor/inhibitor/population/modality, never-guess-unknown), nullable clinical-evidence fields, evidence-maturity ladder, access as a separate intelligence event (8 access subtypes), the 19 Red-Team evidence checks (A–S), research-informed routing rules re-mapped into the six primary functions (student tables are domain reference only), Watch-for-Next, triage priority model, and 7 deterministic evaluation cases (EV-15..18). Architecture unchanged; the six primary functions remain Medical Affairs · Regulatory · Safety/PV · Market Access · Medical Communications · Leadership (Commercial/R&D/CI/Strategy = extended stakeholders only).
+> **v1.4 (Aug 13, 2026 — provider-agnostic reasoning layer):** Per Master Plan v5.0 §13 — the reasoning layer becomes provider-agnostic: default local Gemma 3 4B (`LLM_PROVIDER=local`), optional hosted xAI Grok (`LLM_PROVIDER=xai|auto`) behind a mandatory external-LLM privacy gate, BART degraded factual mode only (never reasoning-equivalent). Adds EV-19/EV-20 (provider fallback chain, external-LLM privacy gate), SRS FR-2.2.3C–G tasking in Phase 2, and provider failure-injection scenarios in Phase 9. Architecture, ten nodes, five mechanisms, six primary functions unchanged.
 
 **Labeling convention used throughout:**
 
@@ -125,7 +126,7 @@ Supersedes conflicting SRS statements. Existing SRS FR IDs remain valid where un
 
 ## 3.4 Four-Question completeness
 
-- **MR-Q-1 [SOURCE-DERIVED+ARCHITECTURAL]:** Automated acceptance test `test_four_question_completeness`: for every card with priority ≥ HIGH, assert non-empty: `q1.what_changed`, `q2.why_it_matters`, `q3.role_routing[]` (≥1 role badge with confidence), `q4.suggested_actions[]` (prefixed "Suggested — requires human review"), plus `evidence_chain[]`, `confidence`, `source`, `timestamp`, `ai_generated_label`. Result: 100% pass on the demo dataset and on live/fallback data. UI renders a per-card completeness strip (Q1✓ Q2✓ Q3✓ Q4✓ ⛓✓) so judges see the guarantee.
+- **MR-Q-1 [SOURCE-DERIVED+ARCHITECTURAL]:** Automated acceptance test `test_four_question_completeness`: for every card with priority ≥ HIGH, assert non-empty: `q1.what_changed`, `q2.why_it_matters`, `q3.role_routing[]` (≥1 role badge with confidence), `q4.suggested_actions[]` (prefixed "Suggested — requires human review"), plus `evidence_chain[]`, `confidence`, `source`, `timestamp`, `ai_generated_label`. Result: 100% pass on the demo dataset and on live/fallback data. UI renders a per-card completeness strip (Q1✓ Q2✓ Q3✓ Q4✓ ⛓✓) so judges see the acceptance check pass.
 
 ## 3.5 Weekly Intelligence Digest (new)
 
@@ -157,7 +158,7 @@ Supersedes conflicting SRS statements. Existing SRS FR IDs remain valid where un
 
 ## 3.12 Guardrails (explicit, enforced)
 
-- **MR-GRD-1 [SOURCE-DERIVED]:** public/synthetic data only · no confidential data · no patient-identifiable data (dedicated PII/PHI detection + redaction layer before persistence; spaCy NER contributes but is not a guaranteed scrubber; low-confidence content rejected/quarantined) · no automated clinical/regulatory/commercial decisions · AI-generated content clearly labeled (non-suppressible `DisclaimerBadge`) · human review required for recommended actions · evidence required for claims · target: graceful degradation during tested source failures (fallback cascade: Redis → bronze → synthetic) · synthetic fallback always available · secrets never enter source control (`.env` gitignored; env vars only).
+- **MR-GRD-1 [SOURCE-DERIVED]:** public/synthetic data only · no confidential data · no patient-identifiable data (dedicated PII/PHI detection + redaction layer before persistence; spaCy NER contributes but is not a guaranteed scrubber; low-confidence content rejected/quarantined) · no automated clinical/regulatory/commercial decisions · AI-generated content clearly labeled (non-suppressible `DisclaimerBadge`) · human review required for recommended actions · evidence required for claims · target: graceful degradation during tested source failures (fallback cascade: Redis → bronze → synthetic) · synthetic fallback available offline (local 500-signal dataset) · secrets never enter source control (`.env` gitignored; env vars only).
 - **MR-ONT-1 [SOURCE-DERIVED+ARCHITECTURAL]:** Ontology v2 QA by B.Pharm corrects factual errors (C8), adds version + `updated_by` metadata, and is validated by an ontology-QA evaluation row. (C8 fixes: fitusiran ≠ Alhemo; verify fitusiran/marstacimab approval status.)
 
 ## 3.13 Security / auditability (retained and strengthened)
@@ -228,8 +229,9 @@ One engine, one evidence graph, one prioritization layer, six function interpret
 
   Storage: PostgreSQL 16 + pgvector (384-dim) · Redis 7 cache/queue
   Workers: Celery + APScheduler (2h fetch · digest nightly · recalibration on demand)
-  AI (local): spaCy en_core_sci_md · Gemma 3 4B (reasoning) · BART-large-cnn
-              (summarize+fallback) · BART-large-MNLI (classify+red-team) · MiniLM (384-dim)
+  AI (local default): spaCy en_core_sci_md · Gemma 3 4B (reasoning) · BART-large-cnn
+              (summarize+degraded factual fallback) · BART-large-MNLI (classify+red-team)
+              · MiniLM (384-dim) · optional hosted Grok (LLM_PROVIDER=xai|auto, privacy-gated)
 ```
 
 **Key corrections vs old diagrams:** role layer expanded from "MEDICAL AFFAIRS UI" to six function interpretations (+ extended); sources split into three tiers; Temporal mechanism added; Calibration explicitly feeds back into prioritization weights (not just Q3); 384-dim noted; Twitter removed.
@@ -320,7 +322,7 @@ Every high-priority card renders Q1–Q4 + evidence + **F-I-S badge** (FACT / IN
 | EV-2b | Entity extraction | **≥90%** | NER vs ground truth (drug/company/indication/phase) | 20 labelled texts | ≥90% exact-match accuracy |
 | EV-3 | Top-signal discovery time | **≤5 min** | 100-signal deterministic week; task: identify top-5 priorities; measure TTD; same task vs manual browsing baseline | Synthetic week (100) | Median ≤5 min AND ≥50% faster than baseline |
 | EV-4 | Confidential/patient data | **0 (evaluation target)** | Audit scan: no non-public data rows; dedicated PII/PHI detection + redaction layer unit tests (incl. reject/quarantine on low confidence); `.env` not in repo | Repo + DB scan | 0 violations (target) |
-| EV-5 | Source-failure resilience | **100% graceful** | Kill each live source (simulate 429/500/timeout) → dashboard still renders from fallback | Synthetic + cache | Zero 5xx; data freshness banner |
+| EV-5 | Source-failure resilience | **Target: 100% graceful degradation across the defined failure-injection scenarios** | Kill each live source (simulate 429/500/timeout) → dashboard still renders from fallback (retry → cache → bronze → synthetic) | Synthetic + cache | 0 unhandled 5xx on tested scenarios; data freshness banner |
 | EV-6 | Calibration improvement | **Agreement +≥10 pts** | Pre-calibration top-1 function agreement vs post-calibration on the 5-scenario set; confidence uplift on corrected routes | 5 calibration scenarios | Agreement 60% → ≥70%; uplift >0 |
 | EV-7 | Four-Question completeness | **100%** | `test_four_question_completeness` over all HIGH+ cards | Demo + live/fallback | 100% pass |
 | EV-8 | Confluence correctness | **≥4/5 scenarios** | Seeded confluence scenarios must produce one consolidated event (no duplicates, correct alert level) | 5 confluence scenarios | ≥4/5 match ground truth |
@@ -334,6 +336,8 @@ Every high-priority card renders Q1–Q4 + evidence + **F-I-S badge** (FACT / IN
 | EV-16 | Evidence maturity | **100%** | Every high-priority card carries source_type/source_authority/evidence_maturity/source_date; company announcement never labeled independently-verified | All high-priority cards | 100% present; hierarchy respected |
 | EV-17 | Access separation | **100%** | Approval signal does not imply reimbursement/access; access subtypes recognised; jurisdiction recorded; approval≠access Red-Team checks (M/N/O) fire on seeded cases | 5 access scenarios + controls | 0 conflation; checks fire |
 | EV-18 | Red-Team evidence checks A–S | **≥4/5 scenarios** | Seeded causality/denominator/population/surrogate/approval-access cases flagged with governing rule; controls not flagged | 7 domain cases + 3 controls | ≥4/5; 0/3 controls |
+| EV-19 | Provider fallback chain | **All modes** | Failure-injection: Gemma unavailable → Grok used (xai/auto); Gemma+Grok unavailable → BART degraded factual output correctly labeled in UI (SRS FR-2.2.3B/C, AC-23) | 10 provider scenarios (TESTING.md Provider Fallback Tests) | Chain follows `LLM_PROVIDER`; degraded output labeled |
+| EV-20 | External-LLM privacy gate | **100%** | PII/PHI or confidential content → external call blocked → local Gemma/BART/source-only (SRS FR-2.2.3D, AC-24); Grok schema- or semantically-invalid response rejected/retried/fallback (FR-2.2.3E, AC-25) | 5 privacy scenarios + controls | 0 external sends of blocked content; 0 unvalidated Grok outputs |
 
 ## 9.2 Curated evaluation dataset (`data/evaluation/`)
 
@@ -366,7 +370,7 @@ Every mechanism demo points at its scenario: *"This scenario was deliberately co
 | Lifecycle | Historical signal log | FSM state machine + temporal linking + expected-next rules | Timeline (state, expected next, elapsed) | EV-9 (≥4/5) | Degrade: no timeline, card still renders |
 | Red-Team | Claim pairs (same entity, 90d) | NLI entailment (BART-MNLI); contradiction >0.6 | Contradiction flag + dual evidence chains + human-review flag | EV-10 (≥4/5, 0/3 controls) | Degrade: no flag; flags never block delivery |
 | Missing-Signal | Lifecycle state + rules | Lag check vs `max_lag_days`; confidence-by-silence | Missing alert + confidence + human review | EV-11 (≥4/5, 0/3 controls) | Degrade: no alert (advisory only) |
-| Calibration | Ratings (1–5) per role | Weighted update on `scoring_weights`; audited | New weights + history row + confidence change | EV-6 (agreement uplift) | Skip if <MIN_FEEDBACK; never crash pipeline |
+| Calibration | Ratings (1–5) per role | Weighted update on `scoring_weights`; audited | New weights + history row + confidence change | EV-6 (agreement uplift) | Skip if <MIN_FEEDBACK; degradation-safe (no pipeline crash on tested failures) |
 | Temporal | Daily mention counts | 7d slope, Δslope, delta vs prev window | Velocity/acceleration/delta labels | Manual spot-check + EV-3 support | Degrade: badge hidden |
 | Priority (explainability) | All mechanism outputs | Weighted factor composition | Priority 0–100 + factor checklist | EV-7 + manual inspection | Degrade: show factors, hide score |
 
@@ -454,7 +458,7 @@ Kickoff = Aug 12, 2026. Team = 2 CSE + 3 B.Pharm. **Phase 0 completes by Aug 14 
 
 ## PHASE 2 — Entity + ontology (Week 1–2)
 - **Objective:** One normalized signal via spaCy + B.Pharm ontology; classification baseline.
-- **Tasks:** spaCy `en_core_sci_md` NER; ontology JSON v2 (fix C8; add version + `updated_by`); ontology enrichment + validation layer; zero-shot classification (BART-MNLI) → 11 canonical types + 7 domain subtypes; F-I-S classification + evidence-sufficiency gate wiring (FR-2.2.6/2.2.7); batch summarization (BART-large-cnn) + Gemma 3 4B reasoning wiring with auto-fallback; build the 25-example classification + 20-example extraction labelled sets; **B.Pharm manual review of all labels.**
+- **Tasks:** spaCy `en_core_sci_md` NER; ontology JSON v2 (fix C8; add version + `updated_by`); ontology enrichment + validation layer; zero-shot classification (BART-MNLI) → 11 canonical types + 7 domain subtypes; F-I-S classification + evidence-sufficiency gate wiring (FR-2.2.6/2.2.7); batch summarization (BART-large-cnn) + **provider-agnostic reasoning layer** — `LLMProvider` interface (`LocalGemmaProvider`/`XAIProvider`/`BartDegradedProvider`), `LLM_PROVIDER=local|xai|auto` chain, external-LLM privacy gate (FR-2.2.3D), Grok JSON-Schema structured-output + semantic validation (FR-2.2.3E), per-output model metadata (FR-2.2.3F); build the 25-example classification + 20-example extraction labelled sets; **B.Pharm manual review of all labels.**
 - **B.Pharm owners:** Ishaaq (treatment map, disease/inhibitor classification, lifecycle stages, signal types, expected-event rules) · Sanjana (signal importance, priority rules, function routing, suggested actions) · Usha (evidence quality, F-I-S rules, red-team questions, safety/access context, human-review triggers). Their output = the labelled evaluation dataset + domain rules.
 - **Dependencies:** Phase 1 (signals flowing).
 - **Acceptance criteria:** EV-2 ≥85% on the labelled set; EV-2b ≥90%; ontology QA row passes; false-positive cases (cardiac "gene therapy", engineering "mim8") classified correctly.
@@ -504,10 +508,10 @@ Kickoff = Aug 12, 2026. Team = 2 CSE + 3 B.Pharm. **Phase 0 completes by Aug 14 
 
 ## PHASE 9 — Demo hardening (Week 4)
 - **Objective:** Bulletproof submission (Master Plan §8 preserved).
-- **Tasks:** Offline rehearsal (network off → synthetic fallback); docker-compose up on clean machine; load test 1000 signals; **failure-injection tests** (API 429/500 → cache/bronze/synthetic; Gemma unavailable → BART factual-summarization degraded mode); recorded demo video; demo dataset finalized; risk/guardrail summary doc; demo script doc (§12 rehearsed); PII/secret scan; `pytest` green.
+- **Tasks:** Offline rehearsal (network off → synthetic fallback); docker-compose up on clean machine; load test 1000 signals; **failure-injection tests** (API 429/500 → cache/bronze/synthetic; provider chain: Gemma unavailable → Grok in xai/auto → BART degraded factual mode; Grok timeout/rate-limit/schema-invalid → retry/fallback; privacy gate blocks external call on PII/confidential content → local Gemma/BART/source-only); recorded demo video; demo dataset finalized; risk/guardrail summary doc; demo script doc (§12 rehearsed); PII/secret scan; `pytest` green.
 - **Dependencies:** Phase 8.
 - **Acceptance criteria:** Rehearsal passes end-to-end twice; fallback works with 0 internet; video backup ready.
-- **Demo outcome:** The §12 script runs flawlessly.
+- **Demo outcome:** The §12 script runs end-to-end as rehearsed.
 
 ## PHASE 10 — Presentation (Week 4)
 - **Objective:** 5–7 slide deck + 2-page note + submission package mapped to judging criteria.
@@ -525,7 +529,7 @@ Every beat maps to a judging criterion (Innovation I · Technical T · Business 
 | Time | Beat | On screen | What to say (one line) | Criterion | Fallback if live APIs fail |
 |---|---|---|---|---|---|
 | 0:00–0:30 | Problem & principle | Title slide | "MetaRadar converts inbox noise into strategic signal — one engine, six function perspectives, every claim labeled Fact/Interpretation/Speculation and traceable." | P, I | — |
-| 0:30–1:00 | Live sources | Dashboard footer + Q1 feed | "Three live sources — PubMed, NewsAPI, ClinicalTrials.gov — plus adapters and synthetic fallback; every payload audited in the bronze layer." | T, F | Show SYNTHETIC tier; say "network failed → auto-fallback, zero crash" (that IS the demo) |
+| 0:30–1:00 | Live sources | Dashboard footer + Q1 feed | "Three live sources — PubMed, NewsAPI, ClinicalTrials.gov — plus adapters and synthetic fallback; every payload audited in the bronze layer." | T, F | Show SYNTHETIC tier; say "network failed → graceful fallback to the synthetic tier (tested scenario)" (that IS the demo) |
 | 1:00–1:30 | Confluence + card | CRITICAL confluence alert → expand card | "ASH abstract + CSL press release + patient forum within 48h = ONE development. The card answers Q1–Q4 with evidence, confidence, a FACT label, and a WHY checklist — Priority 91/100, here's why." | I, T | Seeded confluence scenario (labeled) |
 | 1:30–2:00 | Five mechanisms | Lifecycle / Red-Team / Missing pages | "Where is mim8? results_in → next: submission. Is the evidence challenged? ASH 'sustained' vs real-world 'waning' — both chains shown, human review flagged. What should have happened? Roctavian follow-up silent 150 days — confidence grows with silence." | I | Seeded scenarios |
 | 2:00–2:30 | Function model + routing | Function switcher on same event; routing reason shown | "Same evidence, six interpretations: Medical Affairs briefs, Regulatory watches labeling, Safety/PV flags a watch, Market Access re-runs HTA math, Medical Communications drafts the FAQ, Leadership sees escalation triggers — plus extended Commercial/R&D views. Routing is relevance-based — not every signal goes to everyone — with an explainable reason on every card." | B, I | Works offline |
@@ -562,7 +566,7 @@ Nothing counts as complete unless **implemented + testable + demonstrable**.
 - [ ] **Final 5–7 slide presentation** — refreshed pitch, criterion-mapped
 - [ ] **Demo dataset** — curated evaluation set + 100-signal synthetic week (labeled)
 - [ ] **Demo script** — §12 rehearsed twice + recorded video backup
-- [ ] **Offline fallback** — network-off rehearsal passes; synthetic fallback always available
+- [ ] **Offline fallback** — network-off rehearsal passes; synthetic fallback available offline from the local 500-signal dataset
 
 ---
 
@@ -587,7 +591,8 @@ Concrete changes only (no redesign, no feature-count inflation, all five mechani
 10. **Temporal/change intelligence added:** deterministic velocity/acceleration/delta layer (current state vs what changed), no predictive ML.
 11. **Watchlist / entity focus added:** watch any drug/company/trial/indication → all nine intelligence panels, reusing existing infrastructure.
 12. **Security strengthened:** `model_metadata` (model, version, task, config hash) on every AI output for full provenance reconstruction; WORM audit retained.
-13. **Contradictions resolved:** 384-dim embeddings (not 768); Gemma 3 4B reasoning default with BART fallback; confluence ≥3 types/48h (configurable); 500 curated synthetic; ontology factual errors flagged for B.Pharm QA (fitusiran ≠ Alhemo).
+13. **Contradictions resolved:** 384-dim embeddings (not 768); Gemma 3 4B reasoning default local, optional hosted Grok, BART degraded factual mode only; confluence ≥3 types/48h (configurable); 500 curated synthetic; ontology factual errors flagged for B.Pharm QA (fitusiran ≠ Alhemo).
+16. **Provider-agnostic reasoning layer added (v1.4):** `LLMProvider` interface + two output schemas (FULL INTELLIGENCE vs DEGRADED FACTUAL SUMMARY), `LLM_PROVIDER=local|xai|auto`, external-LLM privacy gate for hosted Grok, Grok structured-output + semantic validation, per-output model metadata (EV-19/EV-20; Master Plan v5.0 §13).
 14. **Deliverable alignment added:** 20-item submission checklist + full rubric traceability matrix with honest statuses (nothing "complete" until implemented, tested, demonstrable).
 15. **Roadmap restructured** into Phases 0–10 (with Phase 0 closing doc contradictions and hitting the 48h concept-note deadline) mapped onto the 4-week window, each phase with objective / tasks / dependencies / acceptance criteria / demo outcome.
 
@@ -595,4 +600,4 @@ Concrete changes only (no redesign, no feature-count inflation, all five mechani
 
 ---
 
-*Corrected Unified Plan v1.0 · August 12, 2026 · Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 · Team: MSRIT Aura Pharmers (2 CSE + 3 B.Pharm)*
+*Corrected Unified Plan v1.4 · August 13, 2026 · Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 · Team: MSRIT Aura Pharmers (2 CSE + 3 B.Pharm)*

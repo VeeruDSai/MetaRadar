@@ -8,7 +8,7 @@
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
-> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+> *Note: This document is a secondary/historical reference and must not override the Master Plan. The sole canonical and authoritative specification for MetaRadar is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md).*
 
 ---
 
@@ -362,7 +362,7 @@ The 2025 winning project was:
 | **Production readiness** | Streamlit Cloud | Docker Compose + Vercel + Railway |
 | **Innovation** | Market analysis dashboard | **The Five Advanced Analyses** (confluence, lifecycle, red-team contradiction, missing-signal, stakeholder learning) + pharma ontology + traceable intelligence |
 | **Compliance/Audit** | None | WORM audit log (traceability analogy — no compliance claim), dedicated PII/PHI detection + redaction layer, medical disclaimer, calibration_history audit, contradiction + missing-signal audit |
-| **AI Model Flexibility** | Hardcoded pandas | Model-agnostic: any HuggingFace model via config (BART → Gemma → Mistral, zero code change) |
+| **AI Model Flexibility** | Hardcoded pandas | Model-agnostic: provider-agnostic reasoning layer — Gemma local default → Grok hosted optional → BART degraded factual, zero code change (Master Plan §13) |
 
 
 ---

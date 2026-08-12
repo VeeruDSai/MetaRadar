@@ -2,7 +2,7 @@
 
 **Analysis Date:** 2026-08-13
 
-> **Status note:** This repository is specification-first (docs only). All integrations below are *prescribed* by the canonical spec ([`docs/METARADAR_MASTER_PLAN_v3.0.md`](docs/METARADAR_MASTER_PLAN_v3.0.md) §5) and are to be implemented with `httpx` async clients + `tenacity` retry (3 retries: 2s, 4s, 8s). No connector code exists yet.
+> **Status note:** This repository is specification-first (docs only). All integrations below are *prescribed* by the canonical spec ([`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §5) and are to be implemented with `httpx` async clients + `tenacity` retry (3 retries: 2s, 4s, 8s). No connector code exists yet.
 
 ## APIs & External Services
 
@@ -19,6 +19,9 @@
 
 **Synthetic fallback:**
 - **500-signal curated, deterministic, labelled haemophilia dataset** — offline demos, API-failure protection, rate-limit protection, reproducible testing. Flagged `is_synthetic=true`, never presented as real (`README.md` "Synthetic Fallback").
+
+**Optional hosted reasoning (NOT a data source):**
+- **xAI Grok API** — OPTIONAL hosted reasoning provider (Master Plan §13). Only active when `LLM_PROVIDER=xai|auto`; default `local` mode requires no external key. Every Grok call passes a mandatory **external-LLM privacy gate** — only public/synthetic prototype data may be sent; blocked content falls back to local Gemma → BART degraded → source-only. Responses use **JSON-Schema structured outputs** (https://docs.x.ai/developers/model-capabilities/text/structured-outputs) plus application-level semantic/evidence validation. Data handling: xAI does not train on API I/O without explicit permission; requests/responses are retained ~30 days (encrypted, abuse auditing) unless stricter arrangements apply (https://docs.x.ai/developers/faq/security). Auth: `XAI_API_KEY` env var. Grok is NEVER a data source — PubMed/ClinicalTrials.gov/etc. remain the pipeline inputs (Master Plan §13.4/§13.6).
 
 ## Data Storage
 
@@ -66,8 +69,10 @@
 - `APP_ENV` — application environment
 - `DATABASE_URL` — PostgreSQL connection string
 - `REDIS_URL` — Redis connection string
-- `NEWSAPI_KEY` — NewsAPI credential (the only paid-key external API)
-- `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` — reasoning LLM (`google/gemma-3-4b-it`, `text-generation`)
+- `NEWSAPI_KEY` — NewsAPI credential (the only paid-key external *data* API)
+- `LLM_PROVIDER` — reasoning provider mode (`local` default / `xai` / `auto`)
+- `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` — local reasoning LLM (`google/gemma-3-4b-it`, `text-generation`)
+- `XAI_API_KEY` / `XAI_MODEL` / `XAI_TIMEOUT` — optional hosted Grok (only when `LLM_PROVIDER=xai|auto`; privacy-gated)
 - `SUMMARIZER_MODEL` / `SUMMARIZER_TASK` — batch summarizer (`facebook/bart-large-cnn`, `summarization`)
 
 **Secrets location:**
@@ -84,7 +89,7 @@
 - None
 
 **Outgoing:**
-- None — the system polls public APIs on a 2-hour schedule (Celery + APScheduler) rather than receiving webhooks (`docs/METARADAR_MASTER_PLAN_v3.0.md` §5)
+- None — the system polls public APIs on a 2-hour schedule (Celery + APScheduler) rather than receiving webhooks (`docs/METARADAR_MASTER_PLAN_v5.0.md` §5)
 
 ---
 

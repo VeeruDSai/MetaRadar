@@ -36,7 +36,7 @@ pytest tests/ -v --cov=services --cov-report=html   # Coverage report
 **Patterns:**
 - Async pipeline nodes tested with `@pytest.mark.asyncio` — e.g., entity extraction, full signal processing, confluence detection, lifecycle tracking, red-team contradiction (SDD samples)
 
-**Prescribed critical-path coverage** (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10, `docs/5_REFINED_ARCHITECTURE_AND_GITHUB_ANALYSIS.md`):
+**Prescribed critical-path coverage** (`docs/METARADAR_MASTER_PLAN_v5.0.md` §10, `docs/5_REFINED_ARCHITECTURE_AND_GITHUB_ANALYSIS.md`):
 - Ingestion connectors, entity extraction, confluence clustering, calibration service, lifecycle, red-team, missing-signal, watch/routing — minimum 60% coverage for unit + integration
 
 ## Mocking
@@ -45,7 +45,7 @@ pytest tests/ -v --cov=services --cov-report=html   # Coverage report
 
 **Patterns:**
 - Mock external APIs (`httpx` responses) for connector tests — never hit live APIs in unit tests
-- Mock the reasoning LLM; test the degraded path explicitly (Gemma unavailable → BART factual summarization only — no reasoning-equivalent output, degraded mode flagged) (`docs/9_RISK_AND_GUARDRAILS.md` R6)
+- Mock the reasoning providers; test the full provider chain explicitly (per `LLM_PROVIDER`: Gemma → Grok → BART degraded factual summarization only — no reasoning-equivalent output, degraded mode flagged) (`docs/9_RISK_AND_GUARDRAILS.md` R6, SRS FR-2.2.3B/C, EV-19)
 - Mock stakeholder feedback for calibration service tests
 
 **What to Mock:**
@@ -93,14 +93,14 @@ pytest tests/ -v --cov=services
 
 ## Evaluation Metrics (Hackathon-Specific, Prescribed)
 
-**The five hackathon success metrics** (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10) double as acceptance tests — **targets to be demonstrated by the implementation, not current results**:
+**The five hackathon success metrics** (`docs/METARADAR_MASTER_PLAN_v5.0.md` §10) double as acceptance tests — **targets to be demonstrated by the implementation, not current results**:
 1. **Source-linked summaries = 100%** (EV-1) — every high-priority insight carries source name/URL/date/type/excerpt/evidence level/confidence/timestamp/label
 2. **Classification accuracy ≥ 85%** (EV-2/EV-2b/EV-13) — B.Pharm-labelled validation set; report accuracy, precision, recall, confusion matrix; false-positive test cases (cardiac "gene therapy", engineering "mim8")
 3. **Top-signal discovery ≤ 5 min** — reproducible 100-signal batch vs manual baseline
 4. **Confidential/patient data = 0** (EV-4) — audit scan, PII scrubber unit test, `.env` not in repo
 5. **Calibrated improvement** (EV-6) — routing agreement uplift ≥ 10 points before/after feedback
 
-**Additional EV checks:** dedup >80% similarity control (EV-8), congress/publication miscoupling controls (EV-9), controlled-vocabulary conformance (EV-14), AC-15 watch-rule scenario (`docs/8_CORRECTED_UNIFIED_PLAN.md` §10)
+**Additional EV checks:** dedup >80% similarity control (EV-8), congress/publication miscoupling controls (EV-9), controlled-vocabulary conformance (EV-14), AC-15 watch-rule scenario, provider fallback chain (EV-19), external-LLM privacy gate (EV-20) (`docs/8_CORRECTED_UNIFIED_PLAN.md` §9)
 
 ## Common Patterns
 
@@ -115,8 +115,27 @@ async def test_full_signal_processing():
 
 **Error/Resilience Testing (planned failure-injection tests — targets, not existing results):**
 - Simulate API 429/500 → assert graceful fallback to cache → bronze → synthetic (R11); the acceptance target is graceful degradation during tested connector failures, not an untested "never crashes" guarantee
-- Simulate LLM load failure → assert **degraded mode**: BART performs factual summarization ONLY; no unsupported interpretation; no reasoning-based action recommendation; degraded mode flagged and logged (R6)
+- Simulate reasoning-provider failures → assert the configured provider chain (Gemma → Grok in xai/auto → BART degraded factual mode); if no reasoning provider is available assert **degraded mode**: BART performs factual summarization ONLY; no unsupported interpretation; no reasoning-based action recommendation; degraded mode flagged and logged (R6, EV-19)
 - Simulate PII-containing input → assert the dedicated PII/PHI detection + redaction layer produces `[REDACTED:LABEL]` before persistence, or rejects/quarantines on low detection confidence (R14)
+
+### Provider Fallback Tests (prescribed — Master Plan §13, SRS FR-2.2.3A–G, EV-19/EV-20)
+
+Ten failure-injection scenarios (targets to be demonstrated by the implementation, not existing results):
+
+| # | Scenario | Expected behavior |
+|---|---|---|
+| 1 | Gemma available | Gemma used (output_mode=reasoning) |
+| 2 | Gemma unavailable | Grok used (in `xai`/`auto` modes) |
+| 3 | Gemma + Grok unavailable | BART degraded factual summary; UI label "AI reasoning unavailable — showing source-grounded factual summary" |
+| 4 | Grok API key missing | BART degraded (`fallback_reason=missing_api_key`) |
+| 5 | Grok timeout | BART degraded (`fallback_reason=api_timeout`) |
+| 6 | Grok schema-invalid response | retry once → fallback (`fallback_reason=schema_invalid`) |
+| 7 | Grok semantic/evidence validation fails | reject/fallback (fabricated entity or unknown source ID → `fallback_reason=evidence_invalid`) |
+| 8 | PII/PHI or confidential content detected | external call blocked by privacy gate → local Gemma / BART degraded / source-only (EV-20) |
+| 9 | Offline mode | cached/synthetic data served; zero external calls |
+| 10 | BART degraded output | UI correctly labels degraded mode; model metadata recorded (FR-2.2.3F) |
+
+Each provider test records: `provider_used` · `fallback_triggered` · `fallback_reason` · `latency` · `schema_valid` · `evidence_valid` · `output_mode` (reasoning/degraded_factual).
 
 ---
 

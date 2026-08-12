@@ -1,8 +1,9 @@
 # MetaRadar: Software Requirements Specification (SRS)
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 2.1  
+**Version:** 2.2  
 **Date:** August 13, 2026  
+> **v2.2 Change Note:** Provider-agnostic reasoning layer (Master Plan v5.0 §13): FR-2.2.3A/B rewritten — default local Gemma 3 4B, optional hosted xAI Grok (`LLM_PROVIDER=local|xai|auto`), BART degraded factual mode only; new FR-2.2.3C (provider modes), FR-2.2.3D (external-LLM privacy gate), FR-2.2.3E (Grok structured-output + semantic validation), FR-2.2.3F (model metadata), FR-2.2.3G (provider interface + two output schemas); §3.5, §4.2 env vars, §4.3 schema, and AC-23..25 updated. Architecture, ten nodes, five mechanisms, and six primary functions unchanged.
 > **v2.1 Change Note:** Integrated B.Pharm domain research (v4.0 master-plan rules): canonical haemophilia classification fields (FR-2.2.5A), nullable clinical-evidence fields (FR-2.2.5B), evidence maturity (FR-2.2.5C), access as a separate intelligence event with 8 access subtypes (FR-2.2.2), Red-Team evidence-check suite A–S (FR-2.3B.2A), and acceptance criteria AC-18..22. Architecture and six primary functions unchanged.
 **Organization:** MS Ramaiah Institute of Technology (MSRIT)  
 **Hackathon:** Novo Nordisk GBS Hackathon 2026  
@@ -10,7 +11,7 @@
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
-> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+> *Note: This document is a secondary/historical reference and must not override the Master Plan. The sole canonical and authoritative specification for MetaRadar is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md).*
 
 ---
 
@@ -156,15 +157,45 @@ HAEMOPHILIA_QUERY_TERMS = {
 - Summary SHALL preserve key entities and metrics
 - Every AI-generated summary SHALL carry a disclaimer: *"Auto-generated — verify clinically before use"*
 
-**FR-2.2.3A: Reasoning & Generation (Gemma 3 Default)**
-- System SHALL power narrative synthesis, Four-Question reasoning, AI-suggested actions (Q4), and Ask Athena grounded answers with a modern instruction-tuned LLM loaded via `LOCAL_LLM_MODEL` (`LOCAL_LLM_TASK` = `text-generation`)
+**FR-2.2.3A: Reasoning & Generation (Provider-Agnostic — Gemma 3 Default Local, Grok Optional Hosted)**
+- System SHALL power narrative synthesis, Four-Question reasoning, AI-suggested actions (Q4), and Ask Athena grounded answers through a **provider-agnostic reasoning layer** (`LLMProvider`, FR-2.2.3C/2.2.3G) — default **local provider** `google/gemma-3-4b-it` loaded via `LOCAL_LLM_MODEL` (`LOCAL_LLM_TASK` = `text-generation`), with an **optional hosted provider: xAI Grok API** (`LLM_PROVIDER=xai|auto`; FR-2.2.3C/2.2.3D/2.2.3E)
 - Default (hackathon/CPU): `google/gemma-3-4b-it` (Gemma 3 4B Instruct — local, Q4-quantized; **estimated** ~2.6GB weights / ~4.5–7.5GB RAM — planning estimates, actual usage depends on runtime, quantization, context length, and system configuration)
-- Light-hardware alternative: `google/gemma-3-1b-it`; other supported swaps: `mistralai/Mistral-7B-Instruct`, `microsoft/phi-3-mini-4k-instruct`, `TinyLlama/TinyLlama-1.1B-Chat`, or any HuggingFace-compatible text-generation model
+- Light-hardware alternative: `google/gemma-3-1b-it`; other supported local swaps: `mistralai/Mistral-7B-Instruct`, `microsoft/phi-3-mini-4k-instruct`, `TinyLlama/TinyLlama-1.1B-Chat`, or any HuggingFace-compatible text-generation model
+- The hosted Grok provider is **required only when `LLM_PROVIDER=xai|auto`**; Gemma SHALL remain fully usable without any external API key, and no deployment SHALL be forced to use Grok
 - LLM outputs SHALL remain strictly grounded in retrieved source excerpts (temperature locked, "INSUFFICIENT EVIDENCE" guardrail when no source supports the answer)
 
-**FR-2.2.3B: Automatic Model Fallback (Demo Safety)**
-- If `LOCAL_LLM_MODEL` fails to load or exceeds its latency budget, the system SHALL automatically enter **degraded mode** using `facebook/bart-large-cnn` for factual summarization only (no interpretation, no reasoning-based action recommendation), so the dashboard remains available during tested failures (degraded mode SHALL be flagged in the UI)
-- The fallback SHALL be logged and surfaced in the UI (e.g., "running in BART fallback mode")
+**FR-2.2.3B: Automatic Provider Fallback (Demo Safety)**
+- The reasoning layer SHALL follow the configured fallback chain (FR-2.2.3C): `local` → Gemma → BART degraded; `xai` → Grok → BART degraded; `auto` → Gemma → Grok → BART degraded
+- On reasoning-provider failure (load failure, latency budget, missing API key, timeout, rate limit, quota exhaustion, network failure, invalid or schema-invalid response), the system SHALL move to the next provider in the configured chain; if **no reasoning provider is available**, the system SHALL enter **degraded mode**: `facebook/bart-large-cnn` produces a **source-grounded factual summary only** (no interpretation, no reasoning-based action recommendation, no safety causality), so the dashboard remains available during tested failures
+- Degraded mode SHALL be flagged in the UI with the text: *"AI reasoning unavailable — showing source-grounded factual summary"*
+- Every fallback SHALL be logged and surfaced in the UI with `fallback_from` + `fallback_reason` (e.g., "running in BART degraded mode — api_timeout") and recorded in model metadata (FR-2.2.3F)
+
+**FR-2.2.3C: Provider Modes (`LLM_PROVIDER`)**
+- System SHALL support the `LLM_PROVIDER` env var: `local` (default — Gemma → BART degraded), `xai` (Grok → BART degraded), `auto` (Gemma → Grok → BART degraded)
+- System SHALL route all reasoning through one provider interface (FR-2.2.3G): LangGraph nodes SHALL call the provider interface, NOT Gemma or Grok directly; provider-specific logic SHALL NOT be introduced into other nodes
+- Providers: `LocalGemmaProvider` · `XAIProvider` · `BartDegradedProvider`
+- No deployment SHALL be forced to use Grok; local mode runs with zero external API calls
+
+**FR-2.2.3D: External LLM Privacy Gate (mandatory for hosted providers)**
+- Before any external (Grok) API call, the system SHALL run the privacy gate: PUBLIC/SYNTHETIC check → PII/PHI check → CONFIDENTIALITY check → allowed? YES → call Grok; NO → **BLOCK**
+- The system SHALL NEVER send: confidential Novo Nordisk strategy · internal forecasts · launch plans · patient-level information · PII/PHI · non-public information · confidential documents
+- If blocked: use local Gemma if available → otherwise BART degraded mode → otherwise source-only display
+- xAI API data handling does NOT override the hackathon's stricter public/synthetic-only rule (xAI does not use API inputs/outputs for training without explicit permission, but requests/responses are normally retained ~30 days for abuse auditing unless applicable stricter retention arrangements are used — https://docs.x.ai/developers/faq/security)
+
+**FR-2.2.3E: Grok Structured Output & Validation**
+- Grok calls SHALL use JSON-Schema structured outputs (`response_format` with `json_schema`) — "please return JSON" alone is insufficient (https://docs.x.ai/developers/model-capabilities/text/structured-outputs)
+- The system SHALL validate responses at application level: required fields · enum values · evidence IDs exist · source URLs correspond to retrieved sources · confidence within valid range · evidence level valid · suggested action from the controlled vocabulary · primary/secondary functions valid · no unsupported source IDs · no fabricated entities
+- Even when the provider guarantees schema conformity, semantic/evidence validation SHALL still be performed; on validation failure → retry once → fall back per FR-2.2.3B
+
+**FR-2.2.3F: Model Metadata (every generated output)**
+- Every generated output SHALL record and persist: `provider` · `model` · `model version/ID` · `task` · `temperature` · `prompt-template ID` · `config hash` · `timestamp` · `fallback status` · `fallback reason` (examples: `{provider: xai, fallback_from: local_gemma, fallback_reason: model_load_failure}`; `{provider: local, model: facebook/bart-large-cnn, mode: degraded_factual, fallback_reason: api_timeout}`)
+- Model metadata SHALL be rendered in the UI (provider/degraded badge) and written to the WORM audit log
+
+**FR-2.2.3G: Provider Interface & Two Output Schemas**
+- System SHALL implement one conceptual provider interface: `generate_intelligence(evidence, task, output_schema, metadata) -> IntelligenceResult`
+- **FULL INTELLIGENCE OUTPUT** (Gemma/Grok): `what_changed` · `why_it_matters` · `primary_function` · `secondary_functions` · `routing_reason` · `suggested_action` · `evidence_level` · `confidence` · `supporting_sources` · `uncertainties` · `contradictions` · `watch_for_next` (+ relevant signal metadata)
+- **DEGRADED FACTUAL SUMMARY** (BART only): `factual_summary` · `source_ids` · `source_urls` · `published_at` · `evidence_level` · `degraded_mode=true` · `reason_for_degradation`
+- BART SHALL NOT be forced to produce the reasoning schema, and SHALL NOT generate strategic interpretation, unsupported competitor conclusions, treatment recommendations, safety causality, or role-specific strategic recommendations
 
 **FR-2.2.4: Pharma Ontology Enrichment**
 - System SHALL maintain a local pharma ontology (JSON) mapping: drug → brand names → mechanism → manufacturer → indications → competitor drugs (haemophilia ontology)
@@ -592,10 +623,21 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 - System SHALL be labeled **INTERNAL DECISION SUPPORT ONLY** and MUST NOT: provide treatment recommendations; make medical conclusions; claim product superiority without appropriate evidence; make unsupported competitor comparisons; determine safety causality; replace expert review; or autonomously execute business actions.
 - For safety / regulatory / high-impact signals: **AI suggests → human reviews → human decides.**
 
-### 3.5 Model-Agnostic Local AI
-- All AI models SHALL be locally hosted (no external inference APIs)
+### 3.5 Model-Agnostic Local AI (with optional gated hosted reasoning)
+- All AI models SHALL default to **locally hosted** inference; hosted reasoning (xAI Grok) is OPTIONAL and gated by `LLM_PROVIDER` + the external-LLM privacy gate (FR-2.2.3C/2.2.3D); OpenAI/Claude are NOT used
 - Model names SHALL be configurable via environment variables (never hard-coded)
-- Default models: spaCy `en_core_sci_md` (NER), Gemma 3 4B Instruct `google/gemma-3-4b-it` (reasoning/generation), BART `facebook/bart-large-cnn` (batch summarization + fallback), zero-shot classifier `facebook/bart-large-mnli`, MiniLM embeddings
+- **Canonical model table (Master Plan §13.8):**
+
+| Role | Default | Alternative |
+|---|---|---|
+| Reasoning / Four Questions / Athena | Gemma 3 4B local | Grok API |
+| Degraded factual summary | BART-large-CNN | — |
+| Batch summarization | BART-large-CNN | — |
+| NLI | BART-MNLI | — |
+| NER | spaCy | — |
+| Embeddings | MiniLM | — |
+
+BART is NEVER listed as a reasoning model.
 
 ---
 
@@ -633,7 +675,11 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | `SPACY_MODEL` | spaCy NER model | en_core_sci_md |
 | `LOCAL_LLM_MODEL` | Reasoning/generation LLM (synthesis, briefs, Ask Athena) | google/gemma-3-4b-it |
 | `LOCAL_LLM_TASK` | Pipeline task for the reasoning LLM | text-generation |
-| `SUMMARIZER_MODEL` | Fast batch summarizer (also automatic fallback) | facebook/bart-large-cnn |
+| `LLM_PROVIDER` | Reasoning provider mode (local/xai/auto) | local |
+| `XAI_API_KEY` | xAI/Grok API key (only when LLM_PROVIDER=xai/auto) | (empty) |
+| `XAI_MODEL` | xAI/Grok model ID | (configured model) |
+| `XAI_TIMEOUT` | Grok request timeout (seconds) | 30 |
+| `SUMMARIZER_MODEL` | Fast batch summarizer (also degraded factual fallback) | facebook/bart-large-cnn |
 | `SUMMARIZER_TASK` | Pipeline task for the batch summarizer | summarization |
 | `NLI_MODEL` | Zero-shot NLI for classification + red-team contradiction | facebook/bart-large-mnli |
 | `CONTRADICTION_WINDOW_DAYS` | Red-team rolling entailment window | 90 |
@@ -642,7 +688,7 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | `CORS_ORIGINS` | CORS allowlist | http://localhost:3000 |
 
 ### 4.3 Database Schema
-- `signals` — id, title, source, source_url, published_at, summary, entities, signal_type (11 canonical incl. congress/publication), signal_subtype (incl. congress/publication subtypes), disease, patient_type, company, asset, asset_type, priority, impacted_functions, **development_id, event_date, source_id**, evidence_level (fact/interpretation/speculation), evidence_sufficient, quality_score, embedding, **domain fields (v4.0): factor (fviii/fix/unknown), inhibitor_status (with/without/mixed/unknown), population (adult/adolescent/child/unknown), therapy_modality (canonical 10-value), evidence_maturity (very_high/high/medium_high/medium/lower), source_authority**, **clinical evidence JSONB (nullable): trial_id, trial_phase, study_design, comparator, primary_endpoint, secondary_endpoints, abr, bleeding_outcome, joint_or_target_joint_outcome, patient_reported_outcome, quality_of_life_outcome, treatment_burden, follow_up_duration, sample_size, safety_findings, effect_size, confidence_interval, p_value, interim_or_final**, **access fields (JSONB, nullable): country, jurisdiction, effective_date, expiry_or_review_date, coverage_status, restrictions, prior_authorisation, specialist_centre_requirements, intended_vs_actual_access**
+- `signals` — id, title, source, source_url, published_at, summary, entities, signal_type (11 canonical incl. congress/publication), signal_subtype (incl. congress/publication subtypes), disease, patient_type, company, asset, asset_type, priority, impacted_functions, **development_id, event_date, source_id**, evidence_level (fact/interpretation/speculation), evidence_sufficient, quality_score, embedding, **domain fields (v4.0): factor (fviii/fix/unknown), inhibitor_status (with/without/mixed/unknown), population (adult/adolescent/child/unknown), therapy_modality (canonical 10-value), evidence_maturity (very_high/high/medium_high/medium/lower), source_authority**, **clinical evidence JSONB (nullable): trial_id, trial_phase, study_design, comparator, primary_endpoint, secondary_endpoints, abr, bleeding_outcome, joint_or_target_joint_outcome, patient_reported_outcome, quality_of_life_outcome, treatment_burden, follow_up_duration, sample_size, safety_findings, effect_size, confidence_interval, p_value, interim_or_final**, **access fields (JSONB, nullable): country, jurisdiction, effective_date, expiry_or_review_date, coverage_status, restrictions, prior_authorisation, specialist_centre_requirements, intended_vs_actual_access**, **model_metadata (JSONB, FR-2.2.3F): provider, model, mode (reasoning/degraded_factual), fallback_from, fallback_reason, prompt_template_id, config_hash, temperature, generated_at**
 - `signal_routing` — id, signal_id, **primary_function, secondary_functions (JSONB), function_relevance_scores (JSONB), routing_reason, suggested_action**, created_at (one row per signal; FR-2.5.1)
 - `action_recommendations` — id, signal_id, action (controlled vocabulary), reason, relevant_function, evidence, confidence, human_review_required, created_at
 - `watch_items` — id, watch_id, **source_event_id, expected_event_type, monitoring_window, responsible_function, status (watching/new_evidence_detected/no_new_evidence/watch_expired/human_review_required)**, created_at, resolved_at (stakeholder-defined watch rules; FR-2.3C.1A)
@@ -745,6 +791,9 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | AC-20 | Access tracked separately from approval: approval card does NOT infer reimbursement/actual access; access subtypes (8) supported; jurisdiction recorded on access signals |
 | AC-21 | Red-Team evidence-check suite A–S: seeded cases (e.g., causality error, denominator blindness, population mismatch, approval≠access) flagged with governing rule; 7 deterministic evaluation cases (Master Plan §12.11) pass |
 | AC-22 | Routing follows the six primary functions: Medical Affairs / Regulatory / Safety-PV / Market Access / Medical Communications / Leadership (extended stakeholders never replace them); every signal has primary + secondary + relevance scores + routing_reason |
+| AC-23 | Provider fallback chain (FR-2.2.3B/C): Gemma unavailable → Grok used in xai/auto mode; Gemma + Grok unavailable → BART degraded factual output correctly labeled in the UI ("AI reasoning unavailable — showing source-grounded factual summary") |
+| AC-24 | External-LLM privacy gate (FR-2.2.3D): PII/PHI or confidential content → external call blocked; falls back to local Gemma / BART degraded / source-only display |
+| AC-25 | Grok structured-output validation (FR-2.2.3E) + model metadata (FR-2.2.3F): schema-invalid or semantically invalid response (fabricated entity, unknown source ID) rejected/retried/fallback; every output carries provider/model/fallback metadata |
 
 ### 6.2 MVP Demo Script (15 minutes)
 1. Open dashboard → Q1 feed shows live haemophilia signals (synthetic + live)

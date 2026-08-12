@@ -3,7 +3,7 @@
 
 **Analysis Date:** 2026-08-13
 
-> **Current state:** This repository contains the *specification* of the MetaRadar architecture (docs only). The architecture below is the **prescribed design** defined in the canonical [`docs/METARADAR_MASTER_PLAN_v3.0.md`](docs/METARADAR_MASTER_PLAN_v3.0.md) §4 and detailed in [`docs/3_SOFTWARE_DESIGN_DOCUMENT.md`](docs/3_SOFTWARE_DESIGN_DOCUMENT.md). No implementation exists yet.
+> **Current state:** This repository contains the *specification* of the MetaRadar architecture (docs only). The architecture below is the **prescribed design** defined in the canonical [`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §4 and detailed in [`docs/3_SOFTWARE_DESIGN_DOCUMENT.md`](docs/3_SOFTWARE_DESIGN_DOCUMENT.md). No implementation exists yet.
 
 ## System Overview
 
@@ -40,14 +40,14 @@
 |-----------|----------------|------|
 | Frontend dashboard | Four-Question panels, signal cards, lifecycle timelines, calibration BEFORE/AFTER widget | [`docs/4_UI_DESIGN_DOCUMENT.md`](docs/4_UI_DESIGN_DOCUMENT.md) |
 | FastAPI backend API | REST endpoints, serves dashboard + Ask Athena (RAG Q&A) | [`docs/3_SOFTWARE_DESIGN_DOCUMENT.md`](docs/3_SOFTWARE_DESIGN_DOCUMENT.md) |
-| LangGraph workflow | 10-node orchestration of ingestion → intelligence → calibration | [`docs/METARADAR_MASTER_PLAN_v3.0.md`](docs/METARADAR_MASTER_PLAN_v3.0.md) §4 |
-| Ingestion connectors | `httpx` async fetch from live APIs, `tenacity` retries | `docs/METARADAR_MASTER_PLAN_v3.0.md` §4 node 1 |
+| LangGraph workflow | 10-node orchestration of ingestion → intelligence → calibration | [`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §4 |
+| Ingestion connectors | `httpx` async fetch from live APIs, `tenacity` retries | `docs/METARADAR_MASTER_PLAN_v5.0.md` §4 node 1 |
 | Haemophilia ontology | B.Pharm-maintained knowledge graph (disease/therapy/asset/company) | `README.md` "Haemophilia Knowledge Layer" |
-| StakeholderCalibrationService | HITL weight recalibration of function scoring, WORM logging | `docs/METARADAR_MASTER_PLAN_v3.0.md` §6 mech 5 |
+| StakeholderCalibrationService | HITL weight recalibration of function scoring, WORM logging | `docs/METARADAR_MASTER_PLAN_v5.0.md` §6 mech 5 |
 
 ## Pattern Overview
 
-**Overall:** Event-sourced intelligence pipeline — public signals are treated as *evidence events belonging to developing stories*, orchestrated as a stateful LangGraph workflow (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4).
+**Overall:** Event-sourced intelligence pipeline — public signals are treated as *evidence events belonging to developing stories*, orchestrated as a stateful LangGraph workflow (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4).
 
 **Key Characteristics:**
 - Signal-first, evidence-linked modeling: each signal persists to `raw_signals_bronze` (verbatim) before processing
@@ -87,12 +87,12 @@
 
 ### Primary Request Path (signal → intelligence card)
 
-1. Signal fetch — `node_ingest` pulls raw JSON via `httpx` from NCBI PubMed (E-utilities) / NewsAPI / ClinicalTrials.gov; persists verbatim to `raw_signals_bronze` (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4 node 1)
-2. Validation — `node_validate` filters short (<50 chars), non-English, out-of-scope content; **PII/PHI detection + redaction/rejection layer** runs before persistence (spaCy NER contributes to entity detection; a dedicated PII/PHI detection and redaction layer is responsible for preventing sensitive information from being persisted — spaCy alone is not a guaranteed scrubber). If detection confidence is insufficient, content is rejected or quarantined (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4 node 2)
+1. Signal fetch — `node_ingest` pulls raw JSON via `httpx` from NCBI PubMed (E-utilities) / NewsAPI / ClinicalTrials.gov; persists verbatim to `raw_signals_bronze` (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4 node 1)
+2. Validation — `node_validate` filters short (<50 chars), non-English, out-of-scope content; **PII/PHI detection + redaction/rejection layer** runs before persistence (spaCy NER contributes to entity detection; a dedicated PII/PHI detection and redaction layer is responsible for preventing sensitive information from being persisted — spaCy alone is not a guaranteed scrubber). If detection confidence is insufficient, content is rejected or quarantined (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4 node 2)
 3. Extraction — `node_nlp_extract` spaCy `en_core_sci_md` NER (drugs, companies, indications, trial IDs) (`node 3`)
 4. Ontology enrichment — `node_ontology_enrich` maps entities (e.g., Hemlibra → emicizumab → Roche → bispecific) (`node 4`)
 5. Intelligence — Confluence (48h window, ≥3 signal types; congress/publication link to existing development), Lifecycle FSM advance, Red-Team NLI contradiction, Missing-Signal WATCH evaluation (`nodes 5–8`)
-6. Synthesis — evidence-sufficiency gate → F-I-S labels → Four-Question brief via Gemma 3 4B (`node 9`). **Degraded mode (Gemma unavailable):** BART performs factual summarization only — no interpretation, no reasoning-based action recommendation; degraded mode is clearly marked in the UI and human review applies where necessary
+6. Synthesis — evidence-sufficiency gate → F-I-S labels → Four-Question brief via the **provider-agnostic `LLMProvider`** (default local Gemma 3 4B; optional hosted Grok when `LLM_PROVIDER=xai|auto`, gated by the external-LLM privacy gate — public/synthetic data only; BART degraded factual mode) (`node 9`). **Degraded mode (no reasoning provider):** BART performs factual summarization only — no interpretation, no reasoning-based action recommendation; degraded mode is clearly marked in the UI ("AI reasoning unavailable — showing source-grounded factual summary") and human review applies where necessary. Every output carries model metadata (provider/model/mode/fallback reason)
 7. Calibration — stakeholder feedback updates scoring weights via `StakeholderCalibrationService`, WORM-logged (`node 10`)
 
 ### Ask Athena (RAG Q&A)
@@ -121,9 +121,14 @@
 - Pattern: FACT = statement directly supported by an authoritative or sufficiently reliable source (e.g., an FDA approval announcement can be FACT on the FDA source alone; a ClinicalTrials.gov status can be FACT on the registry alone; a peer-reviewed publication can establish facts directly supported by it). Multi-source corroboration increases confidence and helps resolve conflicts — preferred for important interpretations, but NOT mandatory for every factual statement. Speculation is never presented as fact (`docs/9_RISK_AND_GUARDRAILS.md` R1/R2)
 - Source authority is contextual (never "source X is always true"): regulatory source → high authority for regulatory facts; registry → status facts; peer-reviewed → published findings; congress → potentially preliminary; company announcement → sponsor-originated; media → discovery; social → signal/discovery only. The AI preserves the distinction between "source says X" and "MetaRadar interprets X as Y" (Master Plan §12.9A, SRS FR-2.2.6A)
 
+**LLMProvider (provider-agnostic reasoning layer):**
+- Purpose: One interface behind synthesis and Ask Athena — LangGraph nodes never call a specific model directly
+- Providers: `LocalGemmaProvider` (default local Gemma 3 4B) · `XAIProvider` (optional hosted Grok, `LLM_PROVIDER=xai|auto`, JSON-Schema structured outputs, external-LLM privacy gate) · `BartDegradedProvider` (degraded factual summary only — never reasoning-equivalent)
+- Two output schemas: FULL INTELLIGENCE OUTPUT (Gemma/Grok) vs DEGRADED FACTUAL SUMMARY (BART); per-output model metadata (Master Plan §13, SRS FR-2.2.3C–G)
+
 **WATCH Rule (Watch-for-Next):**
 - Purpose: Stakeholder-defined monitoring expectation (`source_event → expected next event → window → responsible function → status`)
-- Statuses: `watching · new_evidence_detected · no_new_evidence · watch_expired · human_review_required` (`docs/METARADAR_MASTER_PLAN_v3.0.md` §3)
+- Statuses: `watching · new_evidence_detected · no_new_evidence · watch_expired · human_review_required` (`docs/METARADAR_MASTER_PLAN_v5.0.md` §3)
 
 **Congress/Publication Link Decision (tri-state):**
 - Purpose: Decide whether a congress/publication signal belongs to an existing development — never force a link when evidence is insufficient
@@ -150,8 +155,9 @@
 
 - **Threading:** Async-first (`httpx` async, FastAPI ASGI); local model inference runs CPU-bound. **Estimated** Gemma 3 4B footprint: ~2.6 GB weights (Q4) and roughly 4.5–7.5 GB RAM — planning estimates, not guaranteed requirements; actual usage depends on runtime, quantization, context length, and system config (`docs/2_SRS_Software_Requirements_Specification.md`)
 - **Global state:** LangGraph shared workflow state; no module-level singletons prescribed
-- **Fallback chain (target, to be verified by failure-injection tests):** Redis cache → bronze DB → 500-signal synthetic dataset. **Target: graceful degradation during tested connector/model failures** — resilience is an acceptance target, not a tested guarantee (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10)
+- **Fallback chain (target, to be verified by failure-injection tests):** Redis cache → bronze DB → 500-signal synthetic dataset. **Target: graceful degradation during tested connector/model failures** — resilience is an acceptance target, not a tested guarantee (`docs/METARADAR_MASTER_PLAN_v5.0.md` §10)
 - **No autonomous decisions:** AI suggests → human reviews → human decides; controlled action vocabulary (`docs/9_RISK_AND_GUARDRAILS.md` §1.2)
+- **External-LLM privacy gate:** hosted reasoning (xAI Grok) is optional; only public or synthetic prototype data may be sent externally; blocked content falls back to local Gemma / BART degraded / source-only display (Master Plan §13.5)
 - **Data boundaries:** public + synthetic only; dedicated PII/PHI detection and redaction layer before persistence (with reject/quarantine on low confidence); `.env` secrets never committed (`docs/9_RISK_AND_GUARDRAILS.md` §1.1)
 
 ## Anti-Patterns
@@ -160,7 +166,7 @@
 
 **What happens:** Seed routing matrix routes signals to too many or too few functions (`docs/9_RISK_AND_GUARDRAILS.md` R16).
 **Why it's wrong:** Violates the "not every signal needs to go to everyone" principle; inbox noise returns.
-**Do this instead:** Relevance-based routing with `primary_function` + `secondary_functions[]` + per-function scores + `routing_reason`; adjustable via calibration (`docs/METARADAR_MASTER_PLAN_v3.0.md` §2).
+**Do this instead:** Relevance-based routing with `primary_function` + `secondary_functions[]` + per-function scores + `routing_reason`; adjustable via calibration (`docs/METARADAR_MASTER_PLAN_v5.0.md` §2).
 
 ### Presenting Absence as Fact
 
@@ -180,15 +186,17 @@
 
 **Patterns:**
 - **Target: graceful degradation during tested connector/model failures** — external API failure should serve cached/bronze/synthetic fallback; verified with failure-injection tests, not asserted as an untested guarantee
+- **LLM provider failures (target):** per `LLM_PROVIDER` chain — Gemma unavailable → Grok (xai/auto) → BART degraded factual mode; no reasoning provider → source-linked factual signal + human-review flag; the dashboard is designed to remain available during tested provider failures (EV-19; Master Plan §13.6)
+- **External-LLM privacy gate:** before any Grok call — public/synthetic → PII/PHI → confidentiality → ALLOW/BLOCK; blocked → local Gemma → BART → source-only (EV-20; Master Plan §13.5)
 - Verbatim replay from `raw_signals_bronze` for re-processing
 - Evidence-sufficiency gate blocks generation when retrieval confidence is low (R1)
 
 ## Cross-Cutting Concerns
 
 **Logging:** application logs; append-only/WORM `audit_log` (inspired by electronic-record traceability principles — no 21 CFR Part 11/GxP compliance claim) for calibration/ontology changes; source-status footers (`docs/9_RISK_AND_GUARDRAILS.md`)
-**Validation:** `node_validate` quality filters; B.Pharm-labelled evaluation dataset (≥85% classification); confusion matrix review (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10)
+**Validation:** `node_validate` quality filters; B.Pharm-labelled evaluation dataset (≥85% classification); confusion matrix review (`docs/METARADAR_MASTER_PLAN_v5.0.md` §10)
 **Authentication:** lightweight API token (hackathon scope) (`docs/3_SOFTWARE_DESIGN_DOCUMENT.md`)
-**Traceability:** 100% of high-priority AI insights carry source name, URL, publication date, source type, excerpt, evidence level, confidence, timestamp, AI label (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10)
+**Traceability:** 100% of high-priority AI insights carry source name, URL, publication date, source type, excerpt, evidence level, confidence, timestamp, AI label (`docs/METARADAR_MASTER_PLAN_v5.0.md` §10)
 
 ---
 

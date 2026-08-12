@@ -466,11 +466,14 @@ The following are outside the locked MVP:
 | Workflow               | LangGraph                                |
 | Database               | PostgreSQL 16                            |
 | Vector search          | pgvector                                 |
-| Embeddings             | `sentence-transformers/all-MiniLM-L6-v2` |
-| NLP                    | spaCy                                    |
-| Reasoning LLM          | `google/gemma-3-4b-it` (Gemma 3 4B Instruct) |
-| Batch summarizer       | `facebook/bart-large-cnn` (CPU + fallback) |
-| Contradiction analysis | `facebook/bart-large-mnli`               |
+| **Role** | **Default** | **Alternative** |
+|---|---|---|
+| Reasoning / Four Questions / Athena | `google/gemma-3-4b-it` (Gemma 3 4B, local) | xAI Grok API (`LLM_PROVIDER=xai`; privacy-gated) |
+| Degraded factual summary | `facebook/bart-large-cnn` | — |
+| Batch summarization | `facebook/bart-large-cnn` | — |
+| NLI | `facebook/bart-large-mnli` | — |
+| NER | spaCy `en_core_sci_md` | — |
+| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` | — |
 | Cache                  | Redis 7                                  |
 | Workers                | Celery                                   |
 | Scheduler              | APScheduler                              |
@@ -683,7 +686,7 @@ metaradar/
 ├── docker-compose.yml
 │
 ├── docs/
-│   ├── METARADAR_MASTER_PLAN_v3.0.md
+│   ├── METARADAR_MASTER_PLAN_v5.0.md
 │   ├── SRS.md
 │   ├── SDD.md
 │   └── presentation/
@@ -740,11 +743,18 @@ REDIS_URL=redis://redis:6379
 # Public data sources
 NEWSAPI_KEY=your_newsapi_key
 
-# Model configuration (all local, zero API cost)
-# Reasoning LLM: narrative synthesis, Four-Question briefs, Ask Athena
+# Model configuration (all local by default, zero API cost)
+# Reasoning layer (provider-agnostic): local | xai | auto
+LLM_PROVIDER=local
+# Reasoning LLM (local default): narrative synthesis, Four-Question briefs, Ask Athena
 LOCAL_LLM_MODEL=google/gemma-3-4b-it
 LOCAL_LLM_TASK=text-generation
-# Fast batch summarizer (also the automatic fallback if Gemma is unavailable)
+# Optional hosted reasoning provider (xAI Grok) — only when LLM_PROVIDER=xai|auto.
+# Grok calls are gated by the external-LLM privacy gate (public/synthetic data only).
+XAI_API_KEY=
+XAI_MODEL=
+XAI_TIMEOUT=30
+# Fast batch summarizer (also the degraded factual fallback if no reasoning provider is available)
 SUMMARIZER_MODEL=facebook/bart-large-cnn
 SUMMARIZER_TASK=summarization
 ```
@@ -891,9 +901,11 @@ The project prioritizes **verifiable measurements** over unsupported claims abou
 
 NewsAPI has request limits. Redis caching and periodic polling reduce unnecessary requests.
 
-### Local model limitations
+### Reasoning providers
 
-Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware. MetaRadar defaults to Gemma 3 4B Instruct for reasoning; when Gemma cannot be loaded the system enters **degraded mode — BART performs factual summarization only** (it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated). Degraded mode is clearly marked and human review applies where necessary.
+MetaRadar's reasoning layer is provider-agnostic (default local, no API key required): `LLM_PROVIDER=local` uses **Gemma 3 4B Instruct** locally; `LLM_PROVIDER=xai` uses the **hosted xAI Grok API**; `LLM_PROVIDER=auto` tries Gemma then Grok. All external (Grok) calls pass a mandatory privacy gate — only public or synthetic prototype data may leave the machine; blocked content falls back to local Gemma → BART → source-only display. Grok responses use JSON-Schema structured outputs and are validated at application level (evidence IDs, source URLs, controlled vocabularies, no fabricated entities). Every output records model metadata (provider/model/fallback reason).
+
+Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware. MetaRadar defaults to Gemma 3 4B Instruct for reasoning; when no reasoning provider is available the system enters **degraded mode — BART performs factual summarization only** (it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; the UI shows "AI reasoning unavailable — showing source-grounded factual summary"). Degraded mode is clearly marked and human review applies where necessary.
 
 ### Stakeholder feedback
 
@@ -1009,7 +1021,7 @@ The repository contains deeper documentation for different audiences.
 
 | Document                              | Purpose                                           |
 | ------------------------------------- | ------------------------------------------------- |
-| `METARADAR_MASTER_PLAN_v3.0.md`       | Canonical project specification                   |
+| `METARADAR_MASTER_PLAN_v5.0.md`       | Canonical project specification                   |
 | `SRS.md`                              | Functional and non-functional requirements        |
 | `SDD.md`                              | Detailed software architecture and implementation |
 | `GAP_ANALYSIS_AND_OPTIMIZATIONS.md`   | Architectural decisions, risks and resolutions    |

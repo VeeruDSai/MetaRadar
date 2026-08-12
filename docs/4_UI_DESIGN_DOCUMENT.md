@@ -1,14 +1,14 @@
 # MetaRadar: UI Design Document
 
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
-**Version:** 2.1  
+**Version:** 3.3  
 **Date:** August 2026  
 **Design Framework:** shadcn/ui + TailwindCSS 4  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1). **v3.2 (Aug 13, 2026):** integrated the B.Pharm domain research UI (Master Plan v4.0 §12) — domain metadata row (disease/factor/inhibitor/population/modality), evidence-maturity label, evidence-context panels (Q5–Q7), Red-Team evidence-check flags, "WHY THIS ROUTING", and "WATCH FOR NEXT" on the signal card; advanced clinical-evidence fields remain expandable so the default card is never overloaded.
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff — replaced Signal Feed + Trend layout with the **Four-Question Panel layout (Q1–Q4)**, added stakeholder review widget (HITL calibration), and haemophilia-themed examples (v2.0); extended with the **Five Advanced Analyses** UI — lifecycle timeline, red-team contradiction panel, and missing-signal warnings (v2.1). **v3.2 (Aug 13, 2026):** integrated the B.Pharm domain research UI (Master Plan v4.0 §12) — domain metadata row (disease/factor/inhibitor/population/modality), evidence-maturity label, evidence-context panels (Q5–Q7), Red-Team evidence-check flags, "WHY THIS ROUTING", and "WATCH FOR NEXT" on the signal card; advanced clinical-evidence fields remain expandable so the default card is never overloaded. **v3.3 (Aug 13, 2026):** provider-agnostic reasoning layer (Master Plan v5.0 §13) — UI shows the active reasoning provider and the degraded-mode banner *"AI reasoning unavailable — showing source-grounded factual summary"* whenever BART degraded factual mode is active; `ProviderBadge` renders model metadata (provider/model/fallback reason) non-intrusively on signal cards.
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
-> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+> *Note: This document is a secondary/historical reference and must not override the Master Plan. The sole canonical and authoritative specification for MetaRadar is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md).*
 
 ---
 
@@ -34,6 +34,7 @@
 16. **Fact/Interpretation/Speculation Transparency (v3.0):** Every intelligence output carries a visible F-I-S label; speculation is never presented as fact; insufficient evidence renders "Insufficient evidence to support an interpretation."
 17. **Internal Decision Support Only (v3.0):** The UI never implies clinical, regulatory, or safety decisions are being made autonomously; every suggested action is a suggestion requiring human review.
 18. **Relevance-Based Routing (v3.1):** *"Not every signal needs to go to everyone."* The UI shows primary/secondary function routing with a routing reason — never a bare broadcast. Congress and publication signals render a Development Connection block (Development · Event · Relationship · Related evidence) so judges see Confluence/Lifecycle working. Watch-for-Next rules render on the Missing-Signals page with explicit statuses.
+19. **Provider Transparency (v3.3):** The UI shows which reasoning provider generated an output (Gemma local · Grok hosted · BART degraded) via a small `ProviderBadge` (model metadata: provider, model, fallback reason). When no reasoning provider is available, a non-suppressible degraded banner reads exactly: *"AI reasoning unavailable — showing source-grounded factual summary."*
 
 ### 1.2 Color Palette
 
@@ -46,7 +47,7 @@ PRIMARY (Signal importance)
 
 SEMANTIC (Health)
 ├─ Success (Green):      Data loaded, API available
-├─ Warning (Orange):     Cache used, degraded mode
+├─ Warning (Orange):     Cache used, degraded mode · AI reasoning unavailable (BART degraded factual summary)
 ├─ Error (Red):          API failed, data stale
 └─ Info (Blue):          FYI: cached since 2h ago
 
@@ -1218,6 +1219,7 @@ Modal fade:    0.2s opacity transition
 - `RoutingBadges` (NEW v3.1) — primary + secondary function badges with per-function relevance scores AND the routing reason line (explainable routing; renders `GET /api/v1/signals/{id}` routing block)
 - `DevelopmentLinkCard` (NEW v3.1) — congress/publication connection block: Development · Event · Relationship ("New evidence for existing development") · Related evidence links
 - `WatchRuleCard` (NEW v3.1) — stakeholder-defined watch: source event → expected next event → window → responsible function → status (watching / new_evidence_detected / no_new_evidence / watch_expired / human_review_required); renders `GET /api/v1/watchlist`
+- `ProviderBadge` (NEW v3.3) — non-intrusive provider/degraded label from model metadata (provider · model · mode · fallback_from · fallback_reason; FR-2.2.3F): shows "Gemma · local" / "Grok · hosted" / "BART · degraded factual summary" with the exact banner text *"AI reasoning unavailable — showing source-grounded factual summary"* when degraded
 
 **Installation:**
 ```bash

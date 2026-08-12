@@ -3,7 +3,7 @@
 
 **MetaRadar** is a near-real-time competitive intelligence radar that converts fragmented public signals into evidence-backed developments and role-specific actions, built for the **Novo Nordisk GBS Hackathon 2026** (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease").
 
-> **Master Specification:** The sole canonical and authoritative plan for this repository is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).
+> **Master Specification:** The sole canonical and authoritative specification for this repository is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md). All other documentation files are secondary historical references and must not override the Master Plan.
 
 While conventional AI systems summarize documents, MetaRadar builds an evidence story around every key development in the haemophilia treatment landscape (from IV factor replacement to subcutaneous bispecific antibodies like emicizumab, concizumab, and mim8, and single-administration gene therapies like Hemgenix and Roctavian). It runs a **10-node LangGraph workflow** (`INGEST → VALIDATE → UNDERSTAND → ANALYZE (Confluence, Lifecycle, Red-Team, Missing-Signal) → SYNTHESIZE → CALIBRATE → BRIEF`) that feeds five intelligence mechanisms into a **Four-Question Framework**:
 1. **What changed?** (Near-real-time signal feed, entity tags, multi-source confluence alerts)
@@ -29,7 +29,8 @@ MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feed
 ### Cache & Task Queue
 - **Redis 7**: Key-value caching for hot signals (2h TTL), rate limiting, user session storage.
 - **Celery 5.3 + APScheduler**: Asynchronous ingestion pipeline and 2-hour periodic fetch scheduler.
-### NLP & AI Models (All Local, Free)
+### NLP & AI Models (Local by Default, Free)
+- **Reasoning Layer (provider-agnostic, Master Plan §13)**: Default local **Gemma 3 4B Instruct (`google/gemma-3-4b-it`)** for narrative synthesis, Four-Question reasoning, suggested actions, and Ask Athena; **optional hosted xAI Grok API** (`LLM_PROVIDER=local|xai|auto`) behind a mandatory external-LLM privacy gate (public/synthetic data only, JSON-Schema structured outputs, per-output model metadata); safe degraded mode via BART — factual summarization only, never reasoning-equivalent.
 - **spaCy 3.7 (en_core_sci_md)**: Local Named Entity Recognition (NER) for pharmaceutical entity extraction (drugs, companies, trial phases, indications).
 - **BART (facebook/bart-large-cnn)**: Local factual signal summarization (CPU-friendly); also the safe degraded fallback when the reasoning LLM is unavailable — **factual summarization only, NOT a reasoning-equivalent replacement**.
 - **BART MNLI (`facebook/bart-large-mnli`)**: Zero-shot classification for haemophilia signal types AND Red-Team contradiction entailment (one local model, two jobs; canonical per SRS `NLI_MODEL`).
@@ -56,7 +57,7 @@ MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feed
 - **Recharts + Framer Motion**: Interactive trend visualizations and smooth signal card animations.
 ## What NOT to Use
 - **Weaviate**: Replaced by pgvector to simplify Docker Compose and database administration.
-- **Commercial LLM API keys (OpenAI / Claude)**: All inference runs locally (zero API cost).
+- **OpenAI / Claude API keys**: Not used — default inference runs locally (zero API cost). Optional hosted reasoning (xAI Grok) is allowed ONLY when explicitly enabled via `LLM_PROVIDER=xai|auto`, behind the external-LLM privacy gate (Master Plan §13.5).
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->

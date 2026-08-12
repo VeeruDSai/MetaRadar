@@ -4,12 +4,12 @@
 
 ## Repository Nature (Important Context)
 
-This repository is currently **specification-first**: it contains only documentation (`README.md`, `CLAUDE.md`, `docs/*.md`) describing the planned MetaRadar system. **No implementation code or package manifests exist yet.** Every technology below is *prescribed* by the canonical specification ([`docs/METARADAR_MASTER_PLAN_v3.0.md`](docs/METARADAR_MASTER_PLAN_v3.0.md)) and supporting docs. The prescribed stack is what any implementation must follow.
+This repository is currently **specification-first**: it contains only documentation (`README.md`, `CLAUDE.md`, `docs/*.md`) describing the planned MetaRadar system. **No implementation code or package manifests exist yet.** Every technology below is *prescribed* by the canonical specification ([`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md)) and supporting docs. The prescribed stack is what any implementation must follow.
 
 ## Languages
 
 **Primary (prescribed, backend):**
-- Python 3.11 — backend API, workflow orchestration, NLP/ML pipeline (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4, `docs/2_SRS_Software_Requirements_Specification.md` §3)
+- Python 3.11 — backend API, workflow orchestration, NLP/ML pipeline (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4, `docs/2_SRS_Software_Requirements_Specification.md` §3)
 
 **Primary (prescribed, frontend):**
 - TypeScript + React 19 — Next.js 15 App Router frontend (`README.md` "Technology Stack" table)
@@ -32,8 +32,8 @@ This repository is currently **specification-first**: it contains only documenta
 ## Frameworks
 
 **Core (prescribed):**
-- FastAPI 0.110+ — async-first backend API, automatic OpenAPI docs (`CLAUDE.md` "Technology Stack", `docs/METARADAR_MASTER_PLAN_v3.0.md` §4)
-- LangGraph 0.1+ — 10-node stateful workflow (`node_ingest → node_validate → node_nlp_extract → node_ontology_enrich → node_confluence → node_lifecycle → node_redteam → node_missing_signal → node_synthesize → node_calibrate`) (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4)
+- FastAPI 0.110+ — async-first backend API, automatic OpenAPI docs (`CLAUDE.md` "Technology Stack", `docs/METARADAR_MASTER_PLAN_v5.0.md` §4)
+- LangGraph 0.1+ — 10-node stateful workflow (`node_ingest → node_validate → node_nlp_extract → node_ontology_enrich → node_confluence → node_lifecycle → node_redteam → node_missing_signal → node_synthesize → node_calibrate`) (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4)
 - Next.js 15 (React 19, TypeScript) — App Router, Server Components, streaming (`README.md` Technical Architecture)
 - TailwindCSS 4 + shadcn/ui — styling and component system (`CLAUDE.md` "Technology Stack")
 
@@ -43,15 +43,15 @@ This repository is currently **specification-first**: it contains only documenta
 
 **Workers (prescribed):**
 - Celery 5.3 — asynchronous ingestion pipeline
-- APScheduler — 2-hour periodic fetch scheduler (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4)
+- APScheduler — 2-hour periodic fetch scheduler (`docs/METARADAR_MASTER_PLAN_v5.0.md` §4)
 
-## AI / ML Models (All Local, Free — Zero API Cost)
+## AI / ML Models (Local by Default, Free — Zero API Cost)
 
 **Prescribed by `CLAUDE.md` and `docs/2_SRS_Software_Requirements_Specification.md` §3/§4.2:**
-- **Reasoning LLM:** `google/gemma-3-4b-it` (Gemma 3 4B Instruct, Q4-quantized for CPU) — Four-Question reasoning, narrative synthesis, AI-suggested actions, Ask Athena. Configured via `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` env vars; model-agnostic by design (any HuggingFace text-generation model swap-in). When Gemma is unavailable the system enters a **degraded mode**: BART performs factual summarization only — it is NOT a reasoning-equivalent replacement, no unsupported interpretation is generated, and no AI action recommendation requiring reasoning is produced (`docs/2_SRS_Software_Requirements_Specification.md` FR-2.2.3A/B)
+- **Reasoning Layer (provider-agnostic, Master Plan v5.0 §13):** `google/gemma-3-4b-it` (Gemma 3 4B Instruct, Q4-quantized for CPU) as default **local** provider — Four-Question reasoning, narrative synthesis, AI-suggested actions, Ask Athena — via `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` env vars; model-agnostic by design (any HuggingFace text-generation model swap-in). **Optional hosted provider: xAI Grok API** (`LLM_PROVIDER=xai|auto`, `XAI_API_KEY`/`XAI_MODEL`) gated by a mandatory external-LLM privacy gate (public/synthetic data only; JSON-Schema structured outputs; per-output model metadata). When no reasoning provider is available the system enters **degraded mode**: BART performs factual summarization only — it is NOT a reasoning-equivalent replacement, no unsupported interpretation is generated, and no AI action recommendation requiring reasoning is produced (`docs/2_SRS_Software_Requirements_Specification.md` FR-2.2.3A–G)
 - **Batch Summarizer:** `facebook/bart-large-cnn` — CPU-fast seq2seq 1-sentence factual summaries (< 60s per 100 signals target); also the **safe degraded fallback: factual summarization only** when the reasoning LLM is unavailable (`SUMMARIZER_MODEL` / `SUMMARIZER_TASK`)
-- **Contradiction Analysis:** `facebook/bart-large-mnli` — zero-shot NLI entailment/contradiction checks, flag threshold > 0.60 (`docs/METARADAR_MASTER_PLAN_v3.0.md` §6)
-- **NER:** spaCy 3.7 `en_core_sci_md` — pharmaceutical entity extraction (drugs, companies, trial phases, indications); also PII/PHI scrubber
+- **Contradiction Analysis:** `facebook/bart-large-mnli` — zero-shot NLI entailment/contradiction checks, flag threshold > 0.60 (`docs/METARADAR_MASTER_PLAN_v5.0.md` §6)
+- **NER:** spaCy 3.7 `en_core_sci_md` — pharmaceutical entity extraction (drugs, companies, trial phases, indications); contributes to entity detection only — a dedicated PII/PHI detection + redaction layer is responsible for preventing sensitive information from being persisted (spaCy alone is not a guaranteed scrubber)
 - **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` — 384-dim vectors via pgvector (`CLAUDE.md`)
 
 ## Key Dependencies
@@ -72,7 +72,7 @@ This repository is currently **specification-first**: it contains only documenta
 
 **Environment:**
 - Configured via `.env` (copied from `.env.example`) — never commit secrets (`README.md` "Configuration")
-- Key vars: `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `NEWSAPI_KEY`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_TASK`, `SUMMARIZER_MODEL`, `SUMMARIZER_TASK` (`docs/2_SRS_Software_Requirements_Specification.md` §4.2)
+- Key vars: `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `NEWSAPI_KEY`, `LLM_PROVIDER`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_TASK`, `XAI_API_KEY`, `XAI_MODEL`, `XAI_TIMEOUT`, `SUMMARIZER_MODEL`, `SUMMARIZER_TASK` (`docs/2_SRS_Software_Requirements_Specification.md` §4.2)
 - All external API calls HTTPS with credentials via `.env` only, never in code (SRS NFR)
 
 **Build:**
@@ -90,7 +90,7 @@ This repository is currently **specification-first**: it contains only documenta
 ## What NOT to Use (Explicit Decisions)
 
 - **Weaviate** — replaced by pgvector (`CLAUDE.md`, `docs/5_REFINED_ARCHITECTURE_AND_GITHUB_ANALYSIS.md`)
-- **Commercial LLM API keys (OpenAI / Claude)** — all inference runs locally, zero API cost (`CLAUDE.md`)
+- **OpenAI / Claude API keys** — not used; all inference runs locally by default, zero API cost (`CLAUDE.md`). Optional hosted reasoning (xAI Grok) is allowed only when explicitly enabled via `LLM_PROVIDER=xai|auto`, behind the external-LLM privacy gate (Master Plan §13.5)
 - **LangChain** — rejected in `docs/5_REFINED_ARCHITECTURE_AND_GITHUB_ANALYSIS.md` (adds ~200MB overhead, over-abstracts for hackathon scope)
 
 ---

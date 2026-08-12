@@ -9,7 +9,7 @@
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
-> *Note: This document is preserved for historical presentation context. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+> *Note: This document is a secondary/historical reference and must not override the Master Plan. The sole canonical and authoritative specification for MetaRadar is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md).*
 
 ---
 
@@ -355,7 +355,7 @@ Every answer follows a strict 2-part structure:
 
 ### Q16: Why is this feasible within a one-month hackathon?
 * **Non-Technical Answer:** We use lightweight, free, local open-source AI components with pre-curated fallback data so we don't waste time on complex cloud setups.
-* **Technical Implementation:** MetaRadar relies exclusively on local CPU-executable models (spaCy `en_core_sci_md`, BART MNLI, MiniLM embeddings) running inside Docker Compose. By selecting PostgreSQL + pgvector over external vector databases and using standard Python frameworks (FastAPI + LangGraph), we eliminate cloud API dependencies, key management overhead, and deployment friction.
+* **Technical Implementation:** MetaRadar defaults to local CPU-executable models (spaCy `en_core_sci_md`, Gemma 3 4B, BART MNLI, MiniLM embeddings) running inside Docker Compose, so the demo works with zero API keys. By selecting PostgreSQL + pgvector over external vector databases and using standard Python frameworks (FastAPI + LangGraph), we eliminate mandatory cloud dependencies, key management overhead, and deployment friction — an optional hosted reasoning provider (xAI Grok) is available behind a strict external-LLM privacy gate when higher-quality reasoning is desired, with BART as the safe degraded factual fallback.
 
 ---
 

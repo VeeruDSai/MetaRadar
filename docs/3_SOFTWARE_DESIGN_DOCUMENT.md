@@ -3,11 +3,11 @@
 **Project:** MetaRadar - Real-Time Haemophilia Competitive Intelligence Radar  
 **Version:** 2.1  
 **Date:** August 2026  
-**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. **v2.2 (Aug 13, 2026):** integrated the B.Pharm domain research (Master Plan v4.0 §12) — canonical domain-classification fields + `DomainClassifier` service, nullable clinical-evidence fields, evidence-maturity ladder, access as a separate intelligence event (8 access subtypes + `access_info` JSONB), and the extended Red-Team evidence-check suite A–S. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged; the six primary functions remain Medical Affairs · Regulatory · Safety/PV · Market Access · Medical Communications · Leadership.
+**Scope Note:** Revised for Novo Nordisk GBS Hackathon 2026 kickoff (Aug 12, 2026) — added **Stakeholder Calibration Loop (HITL)**, Four-Question Framework wiring, and haemophilia-specific design updates (v2.0), then extended with the **Five Advanced Analyses** (v2.1): Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, and Stakeholder Learning Loop. **v2.2 (Aug 13, 2026):** integrated the B.Pharm domain research (Master Plan v4.0 §12) — canonical domain-classification fields + `DomainClassifier` service, nullable clinical-evidence fields, evidence-maturity ladder, access as a separate intelligence event (8 access subtypes + `access_info` JSONB), and the extended Red-Team evidence-check suite A–S. **v2.3 (Aug 13, 2026):** provider-agnostic reasoning layer (Master Plan v5.0 §13) — `LLMProvider` interface (`LocalGemmaProvider` / `XAIProvider` / `BartDegradedProvider`), `LLM_PROVIDER=local|xai|auto`, two output schemas (FULL INTELLIGENCE vs DEGRADED FACTUAL SUMMARY), external-LLM privacy gate for hosted Grok, Grok JSON-Schema structured-output validation, per-output model metadata. Architecture, data sources, embedding model, and Docker Compose footprint are unchanged; the six primary functions remain Medical Affairs · Regulatory · Safety/PV · Market Access · Medical Communications · Leadership.
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
-> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+> *Note: This document is a secondary/historical reference and must not override the Master Plan. The sole canonical and authoritative specification for MetaRadar is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md).*
 
 ---
 
@@ -145,7 +145,7 @@ META RADAR
 | **Primary DB** | PostgreSQL 16 + pgvector | ACID, JSONB, vector search in one DB (replaces Weaviate) |
 | **Cache** | Redis 7 | Sub-millisecond access, rate limiting |
 | **NLP/NER** | spaCy 3.7 (`en_core_sci_md`) + medspacy | Entity extraction, pharma-grade NER; medspacy extends coverage |
-| **Reasoning LLM** | `google/gemma-3-4b-it` (default) via `LOCAL_LLM_MODEL` env var | Gemma 3 4B Instruct — narrative synthesis, Four-Question reasoning, suggested actions, Ask Athena; `text-generation` task; Q4-quantized for CPU; auto-fallback to BART |
+| **Reasoning Layer (provider-agnostic, Master Plan §13)** | `google/gemma-3-4b-it` (default local) via `LOCAL_LLM_MODEL`; optional hosted Grok via `XAI_API_KEY`/`XAI_MODEL` (`LLM_PROVIDER=local|xai|auto`) | Gemma 3 4B Instruct — narrative synthesis, Four-Question reasoning, suggested actions, Ask Athena; `text-generation` task; Q4-quantized for CPU. Optional xAI Grok (JSON-Schema structured outputs, privacy-gated). Provider chain: Gemma → Grok → BART degraded factual mode |
 | **Batch Summarizer** | `facebook/bart-large-cnn` via `SUMMARIZER_MODEL` env var | Fast CPU seq2seq 1-sentence summaries (< 60s/100 signals) + demo-safety fallback |
 | **Classification** | `facebook/bart-large-mnli` (zero-shot) | Signal type classification AND Red-Team contradiction entailment (one local model, two jobs) |
 | **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | 384-dim local embeddings, 80MB |
@@ -155,6 +155,19 @@ META RADAR
 | **Logging** | Loguru + /metrics endpoint | Structured logging, performance telemetry |
 | **Compliance** | `audit_log` (WORM) + dedicated PII/PHI detection & redaction pipeline | Append-only audit trail inspired by electronic-record traceability principles (design analogy — no 21 CFR Part 11 / GxP compliance claim) |
 | **Calibration** | `StakeholderCalibrationService` (HITL) | Recalibrates function-scoring weights from persona feedback (`stakeholder_feedback` → `scoring_weights`) |
+
+**Canonical Model Roles (Master Plan §13.8):**
+
+| Role | Default | Alternative |
+|---|---|---|
+| Reasoning / Four Questions / Athena | Gemma 3 4B local | Grok API |
+| Degraded factual summary | BART-large-CNN | — |
+| Batch summarization | BART-large-CNN | — |
+| NLI | BART-MNLI | — |
+| NER | spaCy | — |
+| Embeddings | MiniLM | — |
+
+BART is NEVER listed as a reasoning model.
 
 
 ---
@@ -683,7 +696,23 @@ async def detect_missing_signals(lifecycles: list[dict]) -> list[dict]:
 
 **Temporal Pattern Recognition** (`services/temporal_patterns.py`) — matches current signal sets against B.Pharm-defined timeline patterns (pre-approval surge, access crisis) and reports current stage + predicted next stage.
 
-**Narrative Synthesis** (`services/narrative_synthesizer.py`) — reasoning-LLM layer that converts all signals about a competitor/topic into a 3-part executive brief (WHAT HAPPENED / WHY IT MATTERS / RECOMMENDED ACTION), role-specific. Loaded from `LOCAL_LLM_MODEL` — default `google/gemma-3-4b-it` (Gemma 3 4B Instruct, `text-generation` task), with `google/gemma-3-1b-it` as the light-CPU option. If the reasoning LLM fails to load, the pipeline automatically falls back to `facebook/bart-large-cnn` (summarization) so the demo never hangs. Any HuggingFace-compatible text-generation model (Mistral 7B, Phi-3 Mini, TinyLlama, etc.) can be swapped in with a single config change — no code changes required, the pipeline is model-agnostic by design.
+**Narrative Synthesis** (`services/narrative_synthesizer.py`) — reasoning layer that converts all signals about a competitor/topic into a 3-part executive brief (WHAT HAPPENED / WHY IT MATTERS / RECOMMENDED ACTION), role-specific, via the **`LLMProvider` interface** below. Default provider `LocalGemmaProvider` — `LOCAL_LLM_MODEL` default `google/gemma-3-4b-it` (Gemma 3 4B Instruct, `text-generation` task), `google/gemma-3-1b-it` light-CPU option, or any HuggingFace-compatible text-generation model (Mistral 7B, Phi-3 Mini, TinyLlama, etc.) with a single config change. Optional `XAIProvider` (hosted Grok, `LLM_PROVIDER=xai|auto`, JSON-Schema structured outputs, gated by the external-LLM privacy gate). If no reasoning provider is available, `BartDegradedProvider` produces a **degraded factual summary only** (no interpretation, no reasoning-based action recommendation), so the demo does not hang on reasoning-provider failure (degraded path exercised by failure-injection tests). Every output carries model metadata (provider/model/mode/fallback_from/fallback_reason — SRS FR-2.2.3F).
+
+**Provider Abstraction — LLMProvider** (`services/llm_provider.py`, v2.3) — one interface behind synthesis and Ask Athena; LangGraph nodes never call a specific model directly:
+
+```python
+# services/llm_provider.py — v2.3 (Master Plan v5.0 §13, SRS FR-2.2.3C/2.2.3G)
+class LLMProvider(Protocol):
+    async def generate_intelligence(self, evidence, task, output_schema, metadata) -> IntelligenceResult: ...
+
+class LocalGemmaProvider(LLMProvider): ...   # LOCAL_LLM_MODEL (default google/gemma-3-4b-it)
+class XAIProvider(LLMProvider): ...          # hosted Grok; JSON-Schema structured output; privacy-gated (FR-2.2.3D/E)
+class BartDegradedProvider(LLMProvider): ... # factual summary ONLY; degraded_mode=true; never reasoning-equivalent
+```
+
+- `LLM_PROVIDER=local|xai|auto` selects the chain (Gemma → BART / Grok → BART / Gemma → Grok → BART).
+- **FULL INTELLIGENCE OUTPUT** (Gemma/Grok) vs **DEGRADED FACTUAL SUMMARY** (BART) — two schemas, never mixed (FR-2.2.3G).
+- Every result records model metadata: `provider` · `model` · `mode` · `fallback_from` · `fallback_reason` · `prompt_template_id` · `config_hash` · `temperature` · `generated_at` (FR-2.2.3F).
 
 **Ask Athena Query Engine** (`services/query_engine.py`) — RAG over pgvector: hybrid search (alpha=0.6 semantic / 0.4 keyword) → grounded answer with supporting signals + confidence.
 
@@ -1183,7 +1212,10 @@ async def query(self, question: str, role: str) -> dict:
     sem = await pg.fetch_top_semantic(q_emb)      # pgvector  <=>
     kw  = await pg.fetch_top_keyword(question)    # pg_trgm  %
     relevant = rrf_merge(sem, kw, alpha=0.6)      # rerank, role-filtered
-    answer = local_llm(build_prompt(question, role, relevant))  # reasoning LLM: LOCAL_LLM_MODEL (default google/gemma-3-4b-it) — falls back to BART if unavailable
+    answer = await llm_provider.generate_intelligence(  # LLMProvider chain: Gemma → Grok → BART degraded (FR-2.2.3C)
+        evidence=relevant, task="athena_answer",
+        output_schema=FULL_INTELLIGENCE, metadata={"role": role})
+    # provider: LOCAL_LLM_MODEL (default google/gemma-3-4b-it) or Grok; BART degraded if no reasoning provider
     return {"answer": answer, "supporting_signals": relevant[:3],
             "confidence": retrieval_confidence(relevant)}
 ```
@@ -1841,9 +1873,9 @@ RUN python -c "from transformers import pipeline; \
     pipeline('zero-shot-classification', model='facebook/bart-large-mnli')"
 RUN python -c "from sentence_transformers import SentenceTransformer; \
     SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
-# Optional (larger image): pre-download the reasoning LLM so the demo never hits
+# Optional (larger image): pre-download the local reasoning LLM so the demo never hits
 # a first-run download — if omitted, the model downloads on first run or the
-# pipeline falls back to BART on load failure:
+# pipeline falls back through the provider chain (Gemma → Grok in xai/auto → BART degraded factual mode; Master Plan §13.6):
 # RUN python -c "from transformers import pipeline; pipeline('text-generation', model='google/gemma-3-4b-it')"
 
 # Copy source

@@ -8,7 +8,7 @@
 
 > [!IMPORTANT]
 > **HISTORICAL REFERENCE DOCUMENT**  
-> *Note: This document is preserved for historical context and architectural evolution. The sole canonical and authoritative master specification for MetaRadar is [METARADAR_MASTER_PLAN_v3.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v3.0.md).*
+> *Note: This document is a secondary/historical reference and must not override the Master Plan. The sole canonical and authoritative specification for MetaRadar is [METARADAR_MASTER_PLAN_v5.0.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/METARADAR_MASTER_PLAN_v5.0.md).*
 
 ---
 
@@ -913,8 +913,9 @@ class AthenaQueryEngine:
             "'Insufficient signals in last 7 days.' Be factual and cite signals."
         )
 
-        # LOCAL_LLM_MODEL env var controls which model runs here
-        # Default: facebook/bart-large-cnn | Alternatives: Gemma, Mistral, Phi-3, etc.
+        # Reasoning provider via LLMProvider (Master Plan §13):
+        # Default: facebook/bart-large-cnn (degraded factual) | Alternatives: Gemma (local),
+        # Grok API (hosted, optional, privacy-gated), Mistral, Phi-3, etc.
         result = self.llm(answer_prompt, max_length=200, truncation=True)
         answer_text = result[0].get("generated_text") or result[0].get("summary_text", "")
 
@@ -1108,7 +1109,10 @@ BACKEND:
 NLP / AI:
 ├─ spaCy 3.7 en_core_sci_md (pharma NER, free, local)
 ├─ medspacy (optional: extends spaCy for clinical text; recommended by research report Section 2)
-├─ LLM/Summarization: ANY HuggingFace-compatible model via LOCAL_LLM_MODEL env var
+├─ Reasoning layer: provider-agnostic LLMProvider (Master Plan §13) — default local Gemma 3 4B
+│   (LOCAL_LLM_MODEL); optional hosted xAI Grok via LLM_PROVIDER=xai (privacy-gated, structured
+│   outputs); BART = degraded factual mode only, never reasoning-equivalent
+├─ Batch summarization: ANY HuggingFace-compatible model via SUMMARIZER_MODEL env var
 │   Default: facebook/bart-large-cnn (CPU-fast, seq2seq, hackathon default)
 │   Swap-in examples (zero code change, config only):
 │   ├─ google/gemma-2b              (better quality, ~2GB VRAM or slow CPU)

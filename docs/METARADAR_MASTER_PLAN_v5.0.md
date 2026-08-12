@@ -1,13 +1,15 @@
-# MetaRadar: Master Plan & Canonical Specification (v4.0)
+# MetaRadar: Master Plan & Canonical Specification (v5.0)
 
 **Project:** MetaRadar — Near-Real-Time Competitive Intelligence Radar  
-**Version:** 4.0 (Canonical Master Specification · B.Pharm Domain Research Integrated)  
+**Version:** 5.0 (Canonical Master Specification · B.Pharm Domain Research Integrated · Provider-Agnostic Reasoning Layer)  
 **Date:** August 13, 2026  
 **Target Event:** Novo Nordisk GBS Hackathon 2026 (Problem Statement #3: "From Inbox Noise to Strategic Signal | Pilot Area: Haemophilia within Rare Disease")  
 **Team:** MS Ramaiah Institute of Technology (MSRIT) — Cross-Disciplinary (2 CSE + 3 B.Pharm)  
 **Specification Status:** **SOLE AUTHORITATIVE MASTER PLAN** (All other documentation files are secondary historical references).
 
 > **v4.0 Change Note (Aug 13, 2026):** This version integrates the B.Pharm domain research reports — Sanjana (Medical Affairs & prioritisation), Ishaaq (disease/inhibitor/modality classification & trial lifecycle), Usha (evidence quality, safety, access, Red-Team) — as **domain rules**, NOT as an architecture change. The 10-node LangGraph pipeline, five intelligence mechanisms, Four-Question UI, six primary functions, and stakeholder calibration loop are **unchanged**. What is added: canonical haemophilia classification fields (disease/factor/inhibitor/population/modality), nullable clinical-evidence fields, an evidence-maturity hierarchy, access as a separate intelligence event, 19 Red-Team evidence checks, research-informed routing rules mapped into the **six primary functions**, congress/publication lifecycle logic, Watch-for-Next, a triage (not clinical) priority model, and 7 deterministic evaluation cases. See §12.
+
+> **v5.0 Change Note (Aug 13, 2026):** Final consistency + technical-accuracy pass. The reasoning layer becomes **provider-agnostic** — an internal detail of `node_synthesize` (NO new nodes, NO new agents, NO pipeline change): default **local Gemma 3 4B** (`LLM_PROVIDER=local`), **optional hosted xAI Grok** (`LLM_PROVIDER=xai` or `auto`) behind a mandatory external-LLM privacy gate, and **BART as degraded factual summary only** — never a reasoning-equivalent replacement. Adds the `LLMProvider` interface, two output schemas (FULL INTELLIGENCE vs DEGRADED FACTUAL SUMMARY), Grok JSON-Schema structured-output validation, per-output model metadata, and provider fallback acceptance tests. The 10-node pipeline, five mechanisms, six primary functions, and all §12 domain rules are unchanged. See §13.
 
 ---
 
@@ -103,6 +105,8 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
                                     ↓
                   EVIDENCE + PRIORITY (sufficiency gate)
                                     ↓
+           SYNTHESIS PROVIDER (Gemma local · Grok hosted · BART degraded)
+                                    ↓
                   FACT / INTERPRETATION / SPECULATION
                                     ↓
                     FUNCTION ROUTING (6 functions + extended)
@@ -125,7 +129,7 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 6. **`node_lifecycle`**: Advances asset state machine (`announced → in_trial → interim_result → final_result → congress_publication → regulatory_development → approved → post_market | discontinued`). Every event records **`event_type` · `event_date` · `development_id` · `source_id`** so a trial → congress abstract → oral presentation → poster → publication chain stays ONE development timeline.
 7. **`node_redteam`**: Runs pairwise NLI entailment/contradiction checks using local `facebook/bart-large-mnli`.
 8. **`node_missing_signal`**: Evaluates FSM state against max lag rules to flag absent expected milestones. Supports **stakeholder-defined WATCH RULES** (source_event → expected/interesting next event → monitoring window → responsible function → status). Statuses: `watching` → `new_evidence_detected` / `no_new_evidence` / `watch_expired` / `human_review_required`. Wording is always *"Watch for…" / "Expected/possible next evidence" / "Not observed yet"* — never a claim that the event will happen.
-9. **`node_synthesize`**: Runs the **evidence-sufficiency check** (retrieve evidence → sufficient? → YES: generate grounded interpretation; NO: restrict output to verified facts / "Insufficient evidence to support an interpretation" + request human review). Generates 1-sentence summaries (BART batch), **Fact / Interpretation / Speculation labels**, and Four-Question briefs via the Gemma 3 reasoning LLM, anchored strictly in source excerpts.
+9. **`node_synthesize`**: Runs the **evidence-sufficiency check** (retrieve evidence → sufficient? → YES: generate grounded interpretation; NO: restrict output to verified facts / "Insufficient evidence to support an interpretation" + request human review). Generates 1-sentence summaries (BART batch), **Fact / Interpretation / Speculation labels**, and Four-Question briefs via the **provider-agnostic reasoning layer (§13)** — default local Gemma 3 4B, optional hosted Grok, degraded BART factual mode — anchored strictly in source excerpts.
 10. **`node_calibrate`**: Updates function-scoring weights based on stakeholder feedback ratings (`StakeholderCalibrationService`) → improved future routing/prioritization. **Calibration scope is not limited to priority** — stakeholders can influence priority, routing, actions, watch rules, and relevance criteria (BEFORE/AFTER shown in demo).
 
 ### Technology Stack:
@@ -134,7 +138,7 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 * **Workflow Orchestration:** LangGraph 0.1+ (10-node state graph)
 * **Database & Vector Storage:** PostgreSQL 16 + `pgvector` extension
 * **Embedding Model:** `sentence-transformers/all-MiniLM-L6-v2` (**384-dimensional vector embeddings**)
-* **Reasoning LLM (default):** `google/gemma-3-4b-it` — Gemma 3 4B Instruct, a local instruction-tuned LLM (Q4-quantized for CPU) driving narrative synthesis, Four-Question reasoning, AI-suggested actions, and Ask Athena. When Gemma is unavailable the system enters a **degraded mode: BART performs factual summarization only** — it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; degraded mode is clearly marked and human review applies where necessary.
+* **Reasoning Layer (provider-agnostic, §13):** **Default local provider `google/gemma-3-4b-it`** — Gemma 3 4B Instruct, a local instruction-tuned LLM (Q4-quantized for CPU) driving narrative synthesis, Four-Question reasoning, AI-suggested actions, and Ask Athena; **optional hosted provider: xAI Grok API** (`LLM_PROVIDER=local|xai|auto`, mandatory external-LLM privacy gate, §13.5); and a safe **degraded mode: BART performs factual summarization only** when no reasoning provider is available — it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; degraded mode is clearly marked in the UI (*"AI reasoning unavailable — showing source-grounded factual summary"*) and human review applies where necessary.
 * **Batch Summarizer:** `facebook/bart-large-cnn` — fast CPU seq2seq model for 1-sentence factual signal summaries (< 60s per 100 signals target); also the safe degraded fallback (factual summarization only).
 * **Cache & Rate Limiting:** Redis 7 (2h TTL hot cache, quota-aware API rate limiting — NewsAPI Developer tier is 100 req/day)
 * **Async Workers & Scheduler:** Celery 5.3 + APScheduler (2-hour periodic fetch execution)
@@ -152,7 +156,7 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 * **Dashboard Availability:** Continuously available near-real-time radar.
 
 ### Synthetic Demo Fallback:
-* **500-Signal Pre-Curated Synthetic Dataset:** Local JSON fallback guaranteeing flawless offline demo execution even if public APIs experience rate limits or network failures.
+* **500-Signal Pre-Curated Synthetic Dataset:** Local JSON fallback designed to keep the offline demo executable when public APIs experience rate limits or network failures (an engineering target exercised in rehearsal — not an absolute guarantee).
 
 ---
 
@@ -263,6 +267,7 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 * **Data Replayability:** $100\%$ verbatim raw payload persistence in `raw_signals_bronze` before processing.
 * **Traceability:** $100\%$ of generated AI insights contain valid source links, timestamps, and quotes.
 * **Testing:** Automated unit & integration tests covering critical pipeline nodes (ingestion, entity extraction, confluence clustering, calibration service).
+* **LLM Provider Fallback (target):** the provider chain is exercised with failure-injection tests — Gemma unavailable → Grok (in `xai`/`auto` modes); Grok unavailable → BART degraded factual mode; external call blocked by the privacy gate → local Gemma / BART / source-only display; schema-invalid or semantically invalid Grok output → retry/fallback. These are acceptance targets, not guarantees (§13.6).
 
 **The Five Hackathon Success Metrics (explicit, non-negotiable):**
 1. **Source-linked summaries = 100%** — every high-priority AI insight carries source name, URL, publication date, source type, excerpt, evidence level, confidence, timestamp, AI-generated label.
@@ -284,7 +289,7 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 ## **11. KNOWN LIMITATIONS**
 
 1. **Public API Quotas:** NewsAPI Developer/free tier is capped at **100 requests/day** (development/testing use only; articles delayed up to 24h; not for production/internal deployment). Mitigated by quota-aware connectors, Redis caching, and 2-hour fetch polling; on exhaustion fall back to bronze DB / synthetic dataset. (Official pricing: https://newsapi.org/pricing.)
-2. **Local Model Capabilities:** Inference runs entirely on local CPU (`google/gemma-3-4b-it` reasoning LLM, `facebook/bart-large-cnn` batch summarizer, BART MNLI, spaCy, MiniLM embeddings). Reasoning depth and speed are bounded by CPU RAM constraints compared to commercial LLMs; when the Gemma model cannot be loaded the system enters **degraded mode — BART factual summarization only** (no reasoning-equivalent output).
+2. **Model Capabilities:** Default inference runs entirely on local CPU (`google/gemma-3-4b-it` reasoning LLM, `facebook/bart-large-cnn` batch summarizer, BART MNLI, spaCy, MiniLM embeddings). Reasoning depth and speed are bounded by CPU RAM constraints compared to commercial LLMs; an **optional hosted Grok provider** (`LLM_PROVIDER=xai|auto`) can supplement reasoning where available, gated by the external-LLM privacy gate (§13.5) — Gemma remains fully usable with zero external API calls. When no reasoning provider is available the system enters **degraded mode — BART factual summarization only** (no reasoning-equivalent output).
 3. **Stakeholder Feedback Scope:** True organizational feedback across global pharma teams is unavailable in a hackathon setting; the calibration loop is demonstrated using persona-driven simulated feedback.
 4. **Absence Alerting Precision:** Missing-signal detection relies on rule-based time lag thresholds ($t_{\text{max\_lag}}$); abnormal market delays may trigger false-positive alerts, which are strictly gated behind mandatory human review.
 
@@ -465,6 +470,111 @@ Q1–Q4 remain the core stakeholder questions. Every significant signal addition
 - FDA confirms Roctavian for eligible adults with severe haemophilia A: https://www.fda.gov/vaccines-blood-biologics/roctavian
 - FDA confirms Hemgenix for specified adults with haemophilia B: https://www.fda.gov/vaccines-blood-biologics/vaccines/hemgenix
 - WFH guidelines cover inhibitors, outcome assessment, musculoskeletal complications, and AAV gene therapy: https://guidelines.wfh.org/guidelines/
+
+---
+
+## **13. PROVIDER-AGNOSTIC REASONING LAYER (v5.0 — CANONICAL LLM PROVIDER RULES)**
+
+One shared evidence-grounded intelligence pipeline with a provider-agnostic reasoning layer: **Gemma runs locally by default, Grok can provide hosted reasoning when required, and BART provides a safe factual degraded mode if reasoning is unavailable.** The provider layer is an internal detail of `node_synthesize` (and Ask Athena's grounded answers) — **no new LangGraph nodes, no new agents, no pipeline change.**
+
+```text
+                    node_synthesize
+                           ↓
+                     LLMProvider
+                    /     |      \
+                   /      |       \
+             Gemma     Grok API    BART
+             local     hosted      degraded
+             reasoning reasoning   factual summary
+```
+
+### 13.1 Provider Modes (`LLM_PROVIDER`)
+
+| Mode | Behavior |
+|---|---|
+| `LLM_PROVIDER=local` (default) | Gemma → BART degraded mode if Gemma is unavailable |
+| `LLM_PROVIDER=xai` | Grok → BART degraded mode if Grok is unavailable |
+| `LLM_PROVIDER=auto` | Gemma → (failure/unavailable) → Grok → (failure/unavailable) → BART factual degraded mode |
+
+Gemma MUST remain fully usable without any external API key; **no deployment is forced to use Grok.**
+
+### 13.2 Provider Interface
+
+LangGraph nodes call the provider interface — never Gemma or Grok directly. Provider-specific logic stays inside the provider implementations:
+
+```python
+generate_intelligence(evidence, task, output_schema, metadata) -> IntelligenceResult
+```
+
+Providers: `LocalGemmaProvider` · `XAIProvider` · `BartDegradedProvider`. No provider-specific logic is introduced into other nodes.
+
+### 13.3 Two Output Schemas
+
+**Do not force BART to produce the same reasoning schema as Gemma/Grok.**
+
+| Schema | Providers | Fields |
+|---|---|---|
+| **A. FULL INTELLIGENCE OUTPUT** | Gemma, Grok | `what_changed` · `why_it_matters` · `primary_function` · `secondary_functions` · `routing_reason` · `suggested_action` · `evidence_level` · `confidence` · `supporting_sources` · `uncertainties` · `contradictions` · `watch_for_next` (+ relevant signal metadata) |
+| **B. DEGRADED FACTUAL SUMMARY** | BART only | `factual_summary` · `source_ids` · `source_urls` · `published_at` · `evidence_level` · `degraded_mode=true` · `reason_for_degradation` |
+
+BART MUST NOT generate: strategic interpretation · unsupported competitor conclusions · treatment recommendations · safety causality · role-specific strategic recommendations. When BART is used, the UI shows: **"AI reasoning unavailable — showing source-grounded factual summary."**
+
+**Canonical BART statement:** *"BART-large-CNN is used for batch summarization and degraded source-grounded factual summaries only. It does not perform reasoning-equivalent intelligence synthesis."* Keep **BART-MNLI** separate — it is the NLI model for signal classification and Red-Team contradiction analysis, not a summarization or reasoning model.
+
+### 13.4 Grok Structured Output & Validation
+
+- Grok calls SHALL use **JSON-Schema structured outputs** (`response_format` with `json_schema`) — relying on "please return JSON" alone is insufficient (official: https://docs.x.ai/developers/model-capabilities/text/structured-outputs).
+- The response SHALL additionally be validated at application level: required fields · enum values · evidence IDs exist · source URLs correspond to retrieved sources · confidence within valid range · evidence level valid · suggested action from the controlled vocabulary · primary/secondary functions valid · no unsupported source IDs · no fabricated entities.
+- **Even when the provider guarantees schema conformity, semantic/evidence validation is still required** (a schema-valid response can still cite non-retrieved sources or invent entities).
+- **Three distinct validation layers:** (1) **structural/schema validation** — the response conforms to the JSON Schema; (2) **semantic evidence validation** — claims map to retrieved sources (source IDs/URLs exist, no fabricated entities); (3) **evidence-sufficiency gate** (node 9 / SRS FR-2.2.7) — sufficient retrieved evidence before any interpretation is generated. Schema conformity alone does not prove factual correctness.
+
+### 13.5 External LLM Privacy Gate (mandatory for hosted providers)
+
+Before any Grok API call:
+
+```text
+PUBLIC/SYNTHETIC CHECK → PII/PHI CHECK → CONFIDENTIALITY CHECK → ALLOWED? YES → GROK / NO → BLOCK
+```
+
+NEVER send: confidential Novo Nordisk strategy · internal forecasts · launch plans · patient-level information · PII/PHI · non-public information · confidential documents. If the external call is blocked: use **local Gemma if available → otherwise BART degraded mode → otherwise source-only display.**
+
+xAI API data handling does **not** override the hackathon's stricter public/synthetic-only rule: xAI does not use API inputs/outputs for training without explicit permission, but requests/responses are normally retained ~30 days for abuse auditing (encrypted at rest, auto-deleted) unless applicable stricter retention arrangements (e.g., Zero Data Retention) are used (official: https://docs.x.ai/developers/faq/security).
+
+### 13.6 Failure / Fallback Handling
+
+Handle: missing API key · timeout · rate limit · quota exhaustion · network failure · provider unavailable · invalid provider response · schema validation failure · semantic evidence validation failure.
+
+```text
+Gemma unavailable → Grok (in xai/auto modes)
+Grok unavailable  → BART factual summary
+No reasoning provider → source-linked factual signal + human-review flag
+```
+
+**The dashboard is designed to remain available during tested provider failures** through retry, the configured provider-chain fallback, and degraded factual output. Graceful degradation across the defined failure-injection scenarios is an acceptance target, not an absolute production guarantee (§10).
+
+### 13.7 Model Metadata (every generated output)
+
+Every generated output SHALL record: `provider` · `model` · `model version/ID` · `task` · `temperature` · `prompt-template ID` · `config hash` · `timestamp` · `fallback status` · `fallback reason`.
+
+```json
+{ "provider": "xai", "model": "<configured model>", "mode": "reasoning",
+  "fallback_from": "local_gemma", "fallback_reason": "model_load_failure" }
+{ "provider": "local", "model": "facebook/bart-large-cnn", "mode": "degraded_factual",
+  "fallback_from": "xai", "fallback_reason": "api_timeout" }
+```
+
+### 13.8 Canonical Model Table (every document MUST use this)
+
+| Role | Default | Alternative |
+|---|---|---|
+| Reasoning / Four Questions / Athena | Gemma 3 4B local | Grok API |
+| Degraded factual summary | BART-large-CNN | — |
+| Batch summarization | BART-large-CNN | — |
+| NLI | BART-MNLI | — |
+| NER | spaCy | — |
+| Embeddings | MiniLM | — |
+
+BART is NEVER listed as a reasoning model.
 
 ---
 
