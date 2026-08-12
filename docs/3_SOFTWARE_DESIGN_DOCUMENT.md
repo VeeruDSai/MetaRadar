@@ -44,8 +44,9 @@ META RADAR
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                         END USERS                                 │
-│   Medical Affairs | Regulatory | Market Access | Commercial | R&D │
-│                 (+ Simulated Stakeholder Personas)                │
+│  Medical Affairs | Regulatory | Safety/PV | Market Access |       │
+│  Medical Communications | Leadership                              │
+│  (+ extended: Commercial · R&D · Simulated Personas)             │
 └────────────────────────┬─────────────────────────────────────────┘
                          │
         ┌────────────────┴────────────────┐
@@ -92,7 +93,7 @@ META RADAR
    │  │ ├─ entities table                        │  │
    │  │ ├─ trending_scores table                 │  │
    │  │ ├─ role_relevance table                  │  │
-   │  │ ├─ signal_embeddings (pgvector 768-dim)  │  │
+   │  │ ├─ signal_embeddings (pgvector 384-dim)  │  │
    │  │ ├─ confluence_events table               │  │
    │  │ ├─ lifecycle_chains table        ← NEW   │  │
    │  │ ├─ lifecycle_events table        ← NEW   │  │
@@ -112,22 +113,22 @@ META RADAR
    ┌────▼──────────────────┐
    │  DATA INGESTION       │
    │  (Celery + APScheduler)│
-   │  ├─ fetch_newsapi()   │
-   │  ├─ fetch_pubmed()    │
-   │  ├─ fetch_twitter()   │
-   │  ├─ fetch_reddit()    │
-   │  ├─ fetch_fda()       │
-   │  └─ process_signals() │
+   │  ├─ fetch_newsapi()         │
+   │  ├─ fetch_pubmed()          │
+   │  ├─ fetch_clinicaltrials()  │
+   │  ├─ fetch_reddit()          │ (adapter)
+   │  ├─ fetch_fda()             │ (adapter)
+   │  └─ process_signals()       │
    └────┬──────────────────┘
         │
    ┌────▼──────────────────┐
    │  EXTERNAL APIs        │
-   │  ├─ NewsAPI           │
-   │  ├─ PubMed            │
-   │  ├─ Twitter API v2    │
-   │  ├─ Reddit PRAW       │
-   │  ├─ FDA               │
-   │  └─ ClinicalTrials.gov │
+   │  ├─ NewsAPI            (LIVE)
+   │  ├─ PubMed             (LIVE)
+   │  ├─ ClinicalTrials.gov (LIVE)
+   │  ├─ Reddit PRAW        (ADAPTER-READY)
+   │  ├─ FDA                (ADAPTER-READY)
+   │  └─ Congress archives  (ADAPTER-READY)
    └───────────────────────┘
 ```
 
@@ -147,7 +148,7 @@ META RADAR
 | **Reasoning LLM** | `google/gemma-3-4b-it` (default) via `LOCAL_LLM_MODEL` env var | Gemma 3 4B Instruct — narrative synthesis, Four-Question reasoning, suggested actions, Ask Athena; `text-generation` task; Q4-quantized for CPU; auto-fallback to BART |
 | **Batch Summarizer** | `facebook/bart-large-cnn` via `SUMMARIZER_MODEL` env var | Fast CPU seq2seq 1-sentence summaries (< 60s/100 signals) + demo-safety fallback |
 | **Classification** | `facebook/bart-large-mnli` (zero-shot) | Signal type classification AND Red-Team contradiction entailment (one local model, two jobs) |
-| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | 768-dim local embeddings, 80MB |
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | 384-dim local embeddings, 80MB |
 | **HTTP Resilience** | `tenacity` + `httpx.AsyncClient` | Exponential backoff retry + async HTTP (research report recommendation) |
 | **Containerization** | Docker + Docker Compose | Reproducible environments |
 | **Deployment** | Vercel (frontend) + Render (backend) | Serverless, auto-scaling, free tier |
@@ -258,6 +259,8 @@ backend/
 │   │   │   ├── entities.py      # GET /api/v1/entities
 │   │   │   ├── feedback.py      # POST /api/v1/feedback + GET /api/v1/feedback/summary (HITL)
 │   │   │   ├── calibrate.py     # POST /api/v1/calibrate (Stakeholder Calibration)
+│   │   │   ├── digest.py        # GET /api/v1/digest (weekly digest, function filter)
+│   │   │   ├── watchlist.py     # GET/POST/DELETE /api/v1/watchlist (entity focus)
 │   │   │   └── health.py        # GET /api/v1/health
 │   │   └── routers.py           # API router aggregation
 │   └── auth.py                   # JWT token validation
@@ -282,12 +285,16 @@ backend/
 │   ├── lifecycle_tracker.py     # Lifecycle state machine + timelines (Analysis 2)
 │   ├── red_team_engine.py       # NLI contradiction detection + red-team review (Analysis 3)
 │   ├── missing_signal_detector.py # Expected-event state machine + confidence-by-silence (Analysis 4)
+│   ├── watch_service.py         # Watch-for-Next: stakeholder watch rules → watch_items (FR-2.3C.1A)
+│   ├── routing_service.py       # relevance-based routing: primary/secondary functions + routing_reason (FR-2.5.1)
 │   ├── ontology_service.py      # Pharma ontology enrichment/validation
 │   ├── narrative_synthesizer.py # Executive brief generation
 │   ├── temporal_patterns.py     # Competitive timeline matching
 │   ├── traceability.py          # Evidence chain / audit trail
 │   ├── query_engine.py          # RAG "Ask Athena" over pgvector
 │   ├── calibration_service.py   # StakeholderCalibrationService.recalibrate(role) (Analysis 5, HITL)
+│   ├── evidence_service.py      # evidence-sufficiency gate + F-I-S labelling (FR-2.2.6/2.2.7)
+│   ├── digest_service.py        # weekly digest generation (reuses brief agents)
 │   ├── api_fetcher.py           # Multi-source data fetch
 │   ├── cache_service.py         # Redis operations
 │   └── db_service.py            # PostgreSQL operations
@@ -303,7 +310,8 @@ backend/
 │   ├── red_team_scan.py         # Celery task for NLI contradiction scan
 │   ├── missing_signal_scan.py   # Celery task for expected-event scan
 │   ├── trends_aggregation.py    # Celery task for aggregates
-│   └── calibration_worker.py    # Celery task for async weight recalibration
+│   ├── calibration_worker.py    # Celery task for async weight recalibration
+│   └── digest_worker.py         # Celery task for nightly digest generation
 ├── entities/
 │   └── pharma_ontology.py       # B.Pharm-authored ontology (JSON)
 ├── utils/
@@ -320,6 +328,7 @@ backend/
     ├── test_missing_signal_detector.py
     ├── test_ontology_service.py
     ├── test_stakeholder_calibration.py  # HITL weight recalibration tests
+    ├── test_fis_evidence.py             # F-I-S classification + evidence-sufficiency gate
     ├── test_api_endpoints.py
     └── test_integration.py
 ```
@@ -432,6 +441,8 @@ class IntelligenceState(TypedDict):
     lifecycle_chains: list[dict]        # Analysis 2 (lifecycle state machine)
     contradictions: list[dict]          # Analysis 3 (red-team NLI)
     missing_signal_alerts: list[dict]   # Analysis 4 (expected-event detector)
+    watch_items: list[dict]             # Watch-for-Next (extends Analysis 4)
+    signal_routing: list[dict]          # primary/secondary functions + routing_reason
     role_briefs: dict[str, list]
     calibration_weights: dict[str, float]   # from stakeholder_feedback (Analysis 5, HITL)
 
@@ -440,12 +451,18 @@ graph.add_node("ingest", ingestion_agent)        # 6 APIs parallel + dedup
 graph.add_node("validate", validation_agent)     # quality score > 0.5
 graph.add_node("nlp", nlp_agent)                 # spaCy NER + BART (batch)
 graph.add_node("confluence", confluence_agent)   # cross-source convergence (Analysis 1)
-graph.add_node("lifecycle", lifecycle_agent)     # lifecycle state machine (Analysis 2)
+                                                 # + development-link decision:
+                                                 #   congress/publication → existing development
+                                                 #   (new_evidence) vs new_development
+graph.add_node("lifecycle", lifecycle_agent)     # lifecycle state machine (Analysis 2); records
+                                                 # event_type · event_date · development_id · source_id
 graph.add_node("red_team", red_team_agent)       # NLI contradiction scan (Analysis 3)
 graph.add_node("missing_signal", missing_signal_agent)  # expected-event detector (Analysis 4)
+                                                 # + stakeholder watch rules → watch_items
 graph.add_node("synthesize", synthesis_agent)    # narrative briefs
-graph.add_node("brief", brief_agent)             # role-specific formatting
-graph.add_node("calibrate", calibration_agent)   # HITL: feedback → weight update (Analysis 5)
+graph.add_node("brief", brief_agent)             # role-specific formatting (routing_reason)
+graph.add_node("calibrate", calibration_agent)   # HITL: feedback → weight update (Analysis 5);
+                                                 # scope: priority, routing, action, watch rules, relevance
 
 graph.add_edge("ingest", "validate")
 graph.add_edge("validate", "nlp")
@@ -527,14 +544,15 @@ class StakeholderCalibrationService:
 
 Calibration affects scoring for the *next* ingestion cycle: `scoring_service` loads `scoring_weights` fresh each batch, so a recalibration is visible in the next Q3 role-routing confidence scores. Every recalibration is written to `audit_log` (WORM).
 
-**Signal Lifecycle Tracker** (`services/lifecycle_tracker.py` + `agents/lifecycle_agent.py`) — Analysis 2 of the Five. Maintains a chronological state machine per tracked development (entity + modality + indication): `announced → in_trial → results_in → under_review → approved → post_market | discontinued`. Each signal is assigned to a lifecycle chain; the agent advances the current state and computes the expected next event:
+**Signal Lifecycle Tracker** (`services/lifecycle_tracker.py` + `agents/lifecycle_agent.py`) — Analysis 2 of the Five. Maintains a chronological state machine per tracked development (entity + modality + indication): `announced → in_trial → interim_result → final_result → congress_publication → regulatory_development → approved → post_market | discontinued`. Each signal is assigned to a lifecycle chain; the agent advances the current state and computes the expected next event:
 
 ```python
 # services/lifecycle_tracker.py
 class SignalLifecycleTracker:
     LIFECYCLE_STATES = [
-        "announced", "in_trial", "results_in",
-        "under_review", "approved", "post_market", "discontinued",
+        "announced", "in_trial", "interim_result", "final_result",
+        "congress_publication", "regulatory_development", "approved",
+        "post_market", "discontinued",
     ]
 
     async def advance(self, signal, entity) -> dict:
@@ -618,7 +636,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- Signals table (core)
 CREATE TABLE signals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source VARCHAR(50) NOT NULL,      -- 'newsapi', 'pubmed', 'twitter'
+    source VARCHAR(50) NOT NULL,      -- 'newsapi', 'pubmed', 'clinicaltrials'
     original_url TEXT,
     title TEXT NOT NULL,
     summary TEXT,
@@ -630,10 +648,37 @@ CREATE TABLE signals (
     quality_score FLOAT DEFAULT 0.5,  -- 0.0-1.0 validation score
     relevance_score FLOAT DEFAULT 0.5, -- Overall importance
     velocity_score FLOAT DEFAULT 0.0,  -- Change rate
-    signal_type VARCHAR(30),           -- gene_therapy_milestone |
-                                       -- non_factor_therapy_update | inhibitor_development_signal |
-                                       -- regulatory_milestone | congress_publication |
-                                       -- patient_access_signal | competitive_pipeline_move
+    signal_type VARCHAR(30),           -- canonical 11: clinical_trial | publication | congress |
+                                       -- regulatory | safety | access | market | patient_advocacy |
+                                       -- company_news | pipeline | other
+                                       -- CONGRESS + PUBLICATION are first-class types (not news):
+                                       -- congress subtypes: congress_abstract | oral_presentation |
+                                       --   poster | new_congress_data | updated_congress_analysis |
+                                       --   presentation_of_previously_known_data |
+                                       --   congress_related_safety_signal | congress_related_efficacy_signal |
+                                       --   congress_related_pro | congress_related_mechanism_dosing
+                                       -- publication subtypes: peer_reviewed_publication | preprint |
+                                       --   real_world_evidence | post_hoc_analysis |
+                                       --   long_term_follow_up | safety_publication |
+                                       --   patient_reported_outcomes | mechanistic_publication
+    signal_subtype VARCHAR(40),        -- domain: gene_therapy_milestone | non_factor_therapy_update |
+                                       -- inhibitor_development_signal | regulatory_milestone |
+                                       -- congress_publication | patient_access_signal |
+                                       -- competitive_pipeline_move (or congress/publication subtype)
+    disease VARCHAR(20),               -- haemophilia_a | haemophilia_b | both | unknown
+    patient_type VARCHAR(20),          -- with_inhibitors | without_inhibitors | unknown
+    company VARCHAR(255),              -- ontology-normalized
+    asset VARCHAR(255),                -- ontology-normalized
+    asset_type VARCHAR(30),            -- bispecific_antibody | anti_tfpi | rnai | gene_therapy |
+                                       -- factor_replacement | ehl_factor | other
+    priority VARCHAR(10),              -- high | medium | low
+    impacted_functions JSONB,          -- {"primary": "medical_affairs", "secondary": ["regulatory"]}
+    development_id UUID,              -- lifecycle chain this signal belongs to; NULL = NEW DEVELOPMENT
+    event_date TIMESTAMP,             -- underlying event date (congress presentation, publication...)
+    source_id UUID,                   -- canonical source reference (FK to raw_signals_bronze,
+                                       -- applied in migration order after bronze table)
+    fis_label VARCHAR(20),             -- fact | interpretation | speculation
+    evidence_sufficient BOOLEAN DEFAULT FALSE,  -- evidence-sufficiency gate result
     confluence_level VARCHAR(10),      -- CRITICAL | HIGH | MEDIUM | LOW (if part of confluence)
     
     -- Extracted metadata (JSONB for flexibility)
@@ -644,8 +689,8 @@ CREATE TABLE signals (
     -- Role-specific relevance (JSONB indexed)
     role_relevance JSONB DEFAULT '{}',  -- {"medical_affairs": 0.92, "regulatory": 0.65, ...}
     
-    -- Embedding (pgvector, 768-dim for all-MiniLM-L6-v2)
-    embedding vector(768),
+    -- Embedding (pgvector, 384-dim for all-MiniLM-L6-v2)
+    embedding vector(384),
     
     -- Status tracking
     status VARCHAR(20) DEFAULT 'active',  -- 'active', 'archived', 'duplicate'
@@ -687,6 +732,9 @@ CREATE TABLE confluence_events (
     signal_types JSONB NOT NULL,          -- ["regulatory", "clinical", ...]
     window_hours INT DEFAULT 48,
     story_summary TEXT,
+    development_id UUID,                 -- link decision: NEW DEVELOPMENT (NULL) vs
+                                         -- NEW EVIDENCE for existing development (set)
+    link_decision VARCHAR(30),           -- 'new_development' | 'new_evidence_existing_development'
     status VARCHAR(20) DEFAULT 'active',
     detected_at TIMESTAMP DEFAULT NOW(),
     created_at TIMESTAMP DEFAULT NOW()
@@ -716,12 +764,21 @@ CREATE TABLE lifecycle_chains (
 CREATE INDEX idx_lifecycle_entity ON lifecycle_chains(entity, current_state);
 
 -- Individual events in each chain (temporal links)
+-- Every event records event_type · event_date · development_id · source_id so a
+-- trial → congress abstract → oral presentation → poster → publication chain
+-- stays ONE development timeline (NEW EVIDENCE ABOUT EXISTING DEVELOPMENT).
 CREATE TABLE lifecycle_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chain_id UUID REFERENCES lifecycle_chains(id) ON DELETE CASCADE,
+    development_id UUID,                   -- same as chain_id (explicit per kickoff schema)
     signal_id UUID REFERENCES signals(id) ON DELETE CASCADE,
+    event_type VARCHAR(40) NOT NULL,       -- announced | in_trial | interim_result | final_result |
+                                           -- congress_abstract | oral_presentation | poster |
+                                           -- publication | regulatory_development | approved | ...
+    event_date TIMESTAMP NOT NULL,         -- date of the underlying event (not fetch date)
+    source_id UUID,                        -- source record reference
     state VARCHAR(30) NOT NULL,
-    ordered_date TIMESTAMP NOT NULL,        -- published_at of the signal
+    ordered_date TIMESTAMP NOT NULL,       -- published_at of the signal
     created_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX idx_lifecycle_events_chain ON lifecycle_events(chain_id, ordered_date);
@@ -762,10 +819,96 @@ CREATE TABLE missing_signal_alerts (
     days_since_last_signal INT NOT NULL,
     max_lag_days INT NOT NULL,
     confidence FLOAT NOT NULL,              -- confidence-by-silence (0.4 + days*0.02, capped 0.95)
-    status VARCHAR(20) DEFAULT 'open',      -- open | resolved (new signal arrived)
+    status VARCHAR(20) DEFAULT 'watch',     -- watch (monitoring signal, NOT a claim) | resolved
     created_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX idx_missing_alerts_entity ON missing_signal_alerts(entity, status);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- CONTROLLED ACTION RECOMMENDATIONS (FR-2.6.1, kickoff-aligned)
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE action_recommendations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    signal_id UUID REFERENCES signals(id) ON DELETE CASCADE,
+    action VARCHAR(40) NOT NULL,        -- monitor | review | prepare_internal_briefing |
+                                        -- prepare_scientific_faq | escalate |
+                                        -- request_stakeholder_review | no_immediate_action
+    reason TEXT NOT NULL,
+    relevant_function VARCHAR(50) NOT NULL,
+    evidence JSONB,                     -- evidence chain backing this action
+    confidence FLOAT,
+    human_review_required BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- SIGNAL ROUTING (relevance-based routing, FR-2.5.1)
+-- "Not every signal goes to everyone" — explainable per-signal routing.
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE signal_routing (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    signal_id UUID REFERENCES signals(id) ON DELETE CASCADE UNIQUE,
+    primary_function VARCHAR(50) NOT NULL,      -- medical_affairs | regulatory | safety_pv |
+                                                -- market_access | medical_communications | leadership
+    secondary_functions JSONB NOT NULL DEFAULT '[]',  -- ["medical_communications", "regulatory"]
+    function_relevance_scores JSONB NOT NULL,   -- {"medical_affairs": 0.91, ...} (calibrated)
+    routing_reason TEXT NOT NULL,               -- "why this function, why now" (explainable)
+    suggested_action VARCHAR(60),               -- controlled vocabulary (FR-2.6.1)
+    calibrated_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_signal_routing_signal ON signal_routing(signal_id);
+CREATE INDEX idx_signal_routing_primary ON signal_routing(primary_function);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- WATCH ITEMS (stakeholder-defined Watch-for-Next, FR-2.3C.1A)
+-- Extends Missing-Signal — NO separate watch engine.
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE watch_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    watch_id VARCHAR(50) NOT NULL UNIQUE,       -- e.g. 'watch-fr4-congress'
+    source_event_id UUID REFERENCES signals(id) ON DELETE CASCADE,  -- trial/development signal
+    expected_event_type VARCHAR(60) NOT NULL,   -- e.g. 'congress_disclosure' | 'publication' |
+                                                -- 'regulatory_submission'
+    monitoring_window_days INT NOT NULL DEFAULT 180,
+    responsible_function VARCHAR(50) NOT NULL,  -- function(s) to notify
+    status VARCHAR(30) NOT NULL DEFAULT 'watching',  -- watching | new_evidence_detected |
+                                                -- no_new_evidence | watch_expired |
+                                                -- human_review_required
+    created_by TEXT,                            -- stakeholder / persona id
+    created_at TIMESTAMP DEFAULT NOW(),
+    resolved_at TIMESTAMP,
+    last_message TEXT                          -- "Watch for upcoming congress disclosures ·
+                                                -- Expected/possible next evidence · Not observed yet"
+);
+CREATE INDEX idx_watch_items_status ON watch_items(status);
+CREATE INDEX idx_watch_items_source ON watch_items(source_event_id);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- WATCHLISTS (entity focus, MR-WATCH-1)
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE watchlists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_watchlist_user ON watchlists(user_id, created_at DESC);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- WEEKLY DIGESTS (function-filtered, reuses brief agents)
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE digests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    function VARCHAR(50) NOT NULL,      -- medical_affairs | regulatory | safety_pv | ...
+    week_start DATE NOT NULL,
+    week_end DATE NOT NULL,
+    items JSONB NOT NULL,               -- ranked developments: what_changed / why / action /
+                                        -- evidence / confidence (F-I-S labeled)
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_digests_function_week ON digests(function, week_start DESC);
 
 -- ─────────────────────────────────────────────────────────────────────
 -- STAKEHOLDER CALIBRATION LOOP (HITL) — NEW in v2.0
@@ -774,7 +917,9 @@ CREATE INDEX idx_missing_alerts_entity ON missing_signal_alerts(entity, status);
 CREATE TABLE stakeholder_feedback (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     signal_id UUID REFERENCES signals(id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL,          -- medical_affairs | regulatory | market_access | commercial | rd
+    role VARCHAR(50) NOT NULL,          -- medical_affairs | regulatory | safety_pv | market_access |
+                                        -- medical_communications | leadership (primary);
+                                        -- commercial | rd (extended)
     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     reason TEXT,
     user_id TEXT,                       -- real user OR simulated persona id (hackathon)
@@ -918,7 +1063,7 @@ Weaviate was **replaced with pgvector** (see Refined Architecture) — vector se
 
 **Schema:**
 ```sql
--- Already defined in 2.5: signals.embedding vector(768)
+-- Already defined in 2.5: signals.embedding vector(384)
 -- + idx_signals_embedding (ivfflat) + idx_signals_title_trgm (gin_trgm_ops)
 ```
 
@@ -1114,12 +1259,12 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
 
 ```
 1. FETCH (Every 2 hours, async parallel)
-   ├─ fetch_newsapi()          → 500 articles
-   ├─ fetch_pubmed()           → 100 papers
-   ├─ fetch_twitter()          → 1000 tweets
-   ├─ fetch_reddit()           → 200 posts
-   └─ fetch_fda()              → 10 documents
-   = 1810 raw signals
+   ├─ fetch_newsapi()          → 500 articles        (LIVE)
+   ├─ fetch_pubmed()           → 100 papers          (LIVE)
+   ├─ fetch_clinicaltrials()   → 50 trial updates    (LIVE)
+   ├─ fetch_reddit()           → 200 posts           (ADAPTER-READY)
+   └─ fetch_fda()              → 10 documents        (ADAPTER-READY)
+   = 860 raw signals (live) + 500 synthetic fallback
 
 2. VALIDATE (Reject low-quality)
    ├─ Check required fields
@@ -1158,26 +1303,37 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
    ├─ Pharma keyword density
    └─ Final score: 0.0-1.0
    
-8. COMPUTE ROLE RELEVANCE
-   ├─ For Medical Affairs: weight clinical + safety
-   ├─ For Regulatory: weight regulatory filings
-   ├─ For Commercial: weight competitor + access
-   └─ Result: role_relevance = {"medical_affairs": 0.92, ...}
+8. COMPUTE FUNCTION RELEVANCE (relevance-based routing — "not every signal goes to everyone")
+   ├─ For Medical Affairs: weight clinical + congress + safety
+   ├─ For Regulatory: weight regulatory filings + safety
+   ├─ For Safety/PV: weight safety signals highest
+   ├─ For Market Access: weight access + market signals
+   ├─ For Medical Communications: weight congress + publication + company_news
+   ├─ For Leadership: weight strategic/pipeline + escalation triggers
+   └─ Result: function_relevance = {"medical_affairs": 0.92, "regulatory": 0.71, ...}
+   + primary/secondary function assignment + **routing_reason** (why this function, why now)
+   + role-specific suggested action (controlled vocabulary) — stored in signal_routing table
+   (initial routing matrix is seed-only; calibration adjusts weights — all share one evidence chain)
 
 9. EMBED (Create vectors for semantic search)
-   ├─ title + summary → 768-dim vector (all-MiniLM-L6-v2, local)
+   ├─ title + summary → 384-dim vector (all-MiniLM-L6-v2, local)
    └─ Store in pgvector column (same PostgreSQL DB)
 
 10. DETECT CONFLUENCE (LangGraph confluence agent — Analysis 1)
     ├─ Group signals by entity within 48h window
-    ├─ ≥ 2 signal types on same entity → confluence event
+    ├─ ≥ 3 signal types on same entity → confluence event (per-pattern configurable)
     ├─ Apply matrix → CRITICAL / HIGH / MEDIUM / LOW alert
-    └─ Store consolidated alert in confluence_events table
+    ├─ **Development-link decision:** congress/publication signal matching an existing
+    │   development_id → link into that chain (new_evidence_existing_development),
+    │   NOT a new card; otherwise new_development
+    └─ Store consolidated alert in confluence_events table (+ development_id, link_decision)
 
 10A. TRACK LIFECYCLES (LangGraph lifecycle agent — Analysis 2)
     ├─ Assign each signal to its lifecycle chain (entity + modality + indication)
     ├─ Advance state: announced → in_trial → results_in → under_review → ...
-    ├─ Compute expected next event + temporal links
+    ├─ Every event records: event_type · event_date · development_id · source_id
+    ├─ Distinguish NEW DEVELOPMENT vs NEW EVIDENCE ABOUT EXISTING DEVELOPMENT
+    ├─ Compute expected next event + temporal links (trial → congress abstract → oral → poster → publication stays ONE chain)
     └─ Store in lifecycle_chains + lifecycle_events
 
 10B. RED-TEAM CONTRADICTION SCAN (LangGraph red_team agent — Analysis 3)
@@ -1186,13 +1342,22 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
     ├─ Attach devil's-advocate red-team note
     └─ Store in contradictions table (both evidence chains shown)
 
-10C. MISSING-SIGNAL SCAN (LangGraph missing_signal agent — Analysis 4)
+10C. MISSING-SIGNAL SCAN + WATCH-FOR-NEXT (LangGraph missing_signal agent — Analysis 4)
     ├─ For each lifecycle: expected-next-event overdue (> max_lag_days)?
     ├─ Confidence grows with silence (0.4 + days*0.02, capped 0.95)
     ├─ Configurable windows prevent over-warning
-    └─ Store in missing_signal_alerts table
+    ├─ **Stakeholder-defined WATCH RULES:** source_event → expected_event_type (e.g.,
+    │   congress_disclosure) → monitoring window → responsible function → status
+    │   (watching / new_evidence_detected / no_new_evidence / watch_expired /
+    │   human_review_required); wording: "Watch for… / Expected/possible next evidence /
+    │   Not observed yet"; absence → "No subsequent congress evidence observed during the
+    │   configured monitoring window." (never proof that nothing happened)
+    └─ Store in missing_signal_alerts + watch_items tables
 
-11. SYNTHESIZE NARRATIVES (LangGraph synthesis agent)
+11. EVIDENCE SUFFICIENCY + SYNTHESIZE (LangGraph synthesis agent)
+    ├─ Evidence-sufficiency gate: sufficient? → grounded interpretation
+    │   → insufficient? → "Insufficient evidence to support an interpretation" + human review
+    ├─ F-I-S label assigned to every output: FACT / INTERPRETATION / SPECULATION
     ├─ Confluence alert → 2-sentence executive alert
     ├─ Weekly per-entity → WHAT / WHY / ACTION brief (Four-Question wiring)
     ├─ Red-team contradiction + missing-signal flags folded into Q2/Q4
@@ -1217,12 +1382,17 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
     ├─ Load stakeholder_feedback for this role batch
     ├─ StakeholderCalibrationService.recalibrate(role)
     ├─ Update scoring_weights + calibration_history + audit_log (WORM)
+    ├─ Scope: priority · routing · action · watch rules · relevance criteria
+    ├─ Watch rules: stakeholder comment like "monitor this competitor trial for future
+    │   congress disclosures" creates a watch_items row (Watch-for-Next)
     └─ Next ingestion cycle uses the recalibrated weights
 
 15. DONE
     ✅ 800 signals + confluence alerts + lifecycle chains + contradiction flags
-       + missing-signal alerts + narrative briefs + calibrated weights ready
+       + missing-signal alerts + watch items + narrative briefs + calibrated weights ready
     ✅ Every insight passed all FIVE advanced analyses before reaching the brief
+    ✅ Every congress/publication signal linked to its development (or flagged new)
+    ✅ Every high-priority signal has explainable routing (primary/secondary + routing_reason)
 ```
 
 ### 3.2 Dashboard Request Flow
@@ -1540,6 +1710,16 @@ def test_traceable_insight():
     assert result["source_count"] == 2
     assert all(s["url"] for s in result["sources"])
 
+# Unit test: F-I-S classification + evidence-sufficiency gate (kickoff-aligned)
+def test_fis_and_evidence_sufficiency():
+    fact_signal = signal("Company X announced a Phase III trial", evidence=[source_a])
+    assert classify_fis(fact_signal) == "fact"
+    weak_signal = signal("Public discussion may indicate increasing interest", evidence=[])
+    assert classify_fis(weak_signal) == "speculation"
+    assert evidence_sufficiency_check(weak_signal) is False
+    assert generate_grounded_interpretation(weak_signal) == \
+        "Insufficient evidence to support an interpretation."
+
 # E2E test: Dashboard API call
 def test_dashboard_api_response():
     response = client.get("/api/v1/signals?role=medical_affairs")
@@ -1658,6 +1838,9 @@ volumes:
 # Business metrics
 - Signals ingested/day
 - Entity extraction accuracy (B.Pharm QA-validated)
+- F-I-S label accuracy (B.Pharm-validated ground truth)
+- Evidence-sufficiency gate triggers/day (insufficient → facts-only + human review)
+- Digest items/week + per-function coverage (six primary functions)
 - Confluence events/day + alert-level distribution
 - Lifecycle chains tracked + state transition accuracy (B.Pharm-validated)
 - Contradiction flags/day + precision (human-confirmed false positive rate)

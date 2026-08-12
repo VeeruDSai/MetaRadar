@@ -21,12 +21,12 @@ MetaRadar is an intelligence radar that converts fragmented public signals into 
 Unlike conventional AI systems that merely summarize documents, MetaRadar builds an evidence story around every key development, formatting intelligence into a **Four-Question Framework**:
 - **Q1 WHAT CHANGED?** — Signal detection and event understanding, supported by multi-source confluence
 - **Q2 WHY DOES IT MATTER?** — Clinical/commercial significance, lifecycle stage, competitive context, and contradiction analysis
-- **Q3 WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?** — Role relevance and stakeholder-calibrated routing (Medical Affairs / Regulatory / Market Access / Commercial / R&D)
+- **Q3 WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?** — Function relevance and stakeholder-calibrated routing (Medical Affairs / Regulatory / Safety-PV / Market Access / Medical Communications / Leadership; extended: Commercial, R&D)
 - **Q4 WHAT INTERNAL ACTION MAY BE REQUIRED?** — AI-suggested actions based on evidence, lifecycle, and missing-signal context (human review required)
 
 ### 1.2 Scope
 **MVP Scope (Weeks 1-4):**
-- 5 Business Roles: Medical Affairs, Regulatory, Market Access, Commercial, R&D
+- 6 Primary Functions: Medical Affairs, Regulatory, Safety / Pharmacovigilance, Market Access, Medical Communications, Leadership (ONE engine routes to all six; Commercial & R&D retained as extended/future roles)
 - Therapy Area: **Haemophilia within Rare Disease (Haemophilia A + Haemophilia B)**
 - Scope includes: current and emerging treatment approaches, competitor activity, regulatory changes, trial milestones, congress updates, publications, patient/access narratives, future pipeline developments (emerging competitor assets)
 - Multi-Source Public Ingestion: PubMed Central, NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, Congress Abstract archives (ASH, ISTH, WFH, EHA), 500-signal synthetic demo fallback
@@ -36,7 +36,7 @@ Unlike conventional AI systems that merely summarize documents, MetaRadar builds
 ### 1.3 Definitions & Acronyms
 - **Signal:** Any piece of public information (article, clinical trial result, regulatory filing, patient forum post) relevant to haemophilia CI
 - **Entity:** Named drug, company, trial phase, mechanism, or indication (e.g., emicizumab, mim8, concizumab, Hemgenix, Roctavian)
-- **Role:** Functional team (Medical Affairs, Regulatory, Market Access, Commercial, R&D)
+- **Function (also "role"):** Internal team. Primary six (kickoff 2026): Medical Affairs, Regulatory, Safety / Pharmacovigilance, Market Access, Medical Communications, Leadership. Extended: Commercial, R&D
 - **Four-Question Framework:** Panel 1 (What changed?), Panel 2 (Why does it matter?), Panel 3 (Which function?), Panel 4 (What action may be required?)
 - **Stakeholder Calibration Loop:** HITL feedback process recalibrating function scoring weights based on simulated or real persona ratings
 - **Confluence:** Detection that multiple independent signal types converge on the same haemophilia entity within 48h → elevated alert
@@ -132,15 +132,21 @@ HAEMOPHILIA_QUERY_TERMS = {
 - Extraction SHALL use local spaCy model (`en_core_sci_md`)
 - Extraction accuracy target: > 90%
 
-**FR-2.2.2: Signal Classification**
-- System SHALL classify each signal into one of the haemophilia taxonomy:
-  - `gene_therapy_milestone` — gene therapy trial results, approvals, or setbacks
-  - `non_factor_therapy_update` — bispecific antibodies, anti-TFPI, RNAi therapies (emicizumab, concizumab, fitusiran, mim8)
-  - `inhibitor_development_signal` — inhibitor development reports (critical safety/clinical signal)
-  - `regulatory_milestone` — FDA, EMA, NICE or other HTA body decisions
-  - `congress_publication` — data presentations at ASH, ISTH, WFH, EHA
-  - `patient_access_signal` — reimbursement decisions, access restrictions, advocacy positions
-  - `competitive_pipeline_move` — competitor assets entering clinical development or phase changes
+**FR-2.2.2: Signal Classification (Kickoff-aligned)**
+- System SHALL classify each normalized signal into the canonical 11-category `signal_type` taxonomy:
+  - `clinical_trial` — trial registrations, status changes, protocol amendments, readouts
+  - `publication` — FIRST-CLASS signal type (not generic news). Subtypes: `peer_reviewed_publication` · `preprint` · `real_world_evidence` · `post_hoc_analysis` · `long_term_follow_up` · `safety_publication` · `patient_reported_outcomes` · `mechanistic_publication`
+  - `congress` — FIRST-CLASS signal type (not generic news). Subtypes: `congress_abstract` · `oral_presentation` · `poster` · `new_congress_data` · `updated_congress_analysis` · `presentation_of_previously_known_data` · `congress_related_safety_signal` · `congress_related_efficacy_signal` · `congress_related_pro` · `congress_related_mechanism_dosing`
+  - `regulatory` — FDA, EMA, HTA decisions and filings
+  - `safety` — adverse events, safety signals, risk communications
+  - `access` — reimbursement decisions, access restrictions, pricing/HTA guidance
+  - `market` — market dynamics, share, pricing signals
+  - `patient_advocacy` — patient/advocacy positions and narratives
+  - `company_news` — press releases, investor communications, corporate announcements
+  - `pipeline` — competitor/own asset development moves
+  - `other` — relevant but uncategorized
+- System SHALL additionally assign a haemophilia domain `signal_subtype` (retained B.Pharm taxonomy, used by confluence patterns): `gene_therapy_milestone` · `non_factor_therapy_update` · `inhibitor_development_signal` · `regulatory_milestone` · `congress_publication` · `patient_access_signal` · `competitive_pipeline_move`
+- **Congress and publication signals SHALL participate in Confluence, Lifecycle, Red-Team, priority scoring, function routing, the evidence chain, and stakeholder calibration** (they are first-class signals, never isolated cards). Publications SHALL be connected to the relevant `company`, `asset`, `trial`, `development`, `disease`, and `patient population`.
 
 **FR-2.2.3: Text Summarization (Batch, Model-Agnostic)**
 - System SHALL generate 1-line (< 50 character) summary of each signal using a fast local batch summarizer selected via `SUMMARIZER_MODEL` (`SUMMARIZER_TASK` = `summarization`)
@@ -280,11 +286,40 @@ HAEMOPHILIA_QUERY_TERMS = {
 }
 ```
 
+**FR-2.2.5: Normalized Signal Dimensions (canonical schema)**
+Every normalized signal SHALL carry all of the following dimensions (added to the `signals` schema — not merely documented):
+- `disease`: `haemophilia_a` | `haemophilia_b` | `both` | `unknown`
+- `patient_type`: `with_inhibitors` | `without_inhibitors` | `unknown`
+- `company`: ontology-normalized company name (e.g., Roche, CSL Behring, Novo Nordisk)
+- `asset`: ontology-normalized asset/product name (e.g., emicizumab, mim8, Hemgenix)
+- `asset_type`: `bispecific_antibody` | `anti_tfpi` | `rnai` | `gene_therapy` | `factor_replacement` | `ehl_factor` | `other`
+- `signal_type`: one of the 11 canonical categories (FR-2.2.2) · `signal_subtype`: one of the 7 domain categories (plus congress/publication subtypes per FR-2.2.2)
+- `priority`: `high` | `medium` | `low`
+- `impacted_functions`: list of impacted functions (primary + secondary)
+- `development_id`: identifier of the development chain this signal belongs to (NULL = NEW DEVELOPMENT candidate)
+- `event_date`: date of the underlying event (e.g., congress presentation date, publication date)
+- `source_id`: canonical reference to the source record in `raw_signals_bronze`
+- `evidence_level` / `fis_label`: `fact` | `interpretation` | `speculation`
+- `evidence_sufficient`: boolean — result of the evidence-sufficiency gate (FR-2.2.7)
+
+**FR-2.2.6: Fact / Interpretation / Speculation (F-I-S) Classification (mandatory)**
+- **FACT** — directly supported by reliable source evidence.
+- **INTERPRETATION** — a reasoned interpretation of available evidence (always presented as AI interpretation, never as fact).
+- **SPECULATION** — an early/uncertain signal not sufficiently established.
+- System SHALL label every intelligence output (summaries, briefs, Q2 explanations, Q4 actions, Athena answers, digest items) with exactly one of FACT / INTERPRETATION / SPECULATION.
+- System SHALL NEVER present speculation as fact; F-I-S labels SHALL be stored in the database, rendered in UI signal cards, returned in API responses, written to the audit trail, and evaluated in the evaluation suite.
+
+**FR-2.2.7: Evidence Sufficiency Check (gate before narrative generation)**
+- Required flow: Signal → retrieve evidence → evidence sufficient? → YES: generate grounded interpretation → NO: restrict output to verified facts and/or return *"Insufficient evidence to support an interpretation."* + request human review.
+- System SHALL NOT invent an interpretation when evidence is insufficient.
+- This is consistent with current FDA thinking on AI credibility and enabling independent review of AI-supported outputs.
+
 ### 2.3 Signal Confluence Detection
 
 **FR-2.3.1: Confluence Pattern Matching**
 - System SHALL detect confluence using the configured `HAEMOPHILIA_CONFLUENCE_PATTERNS`
 - Pattern: multiple independent signals (≥ 3) mentioning the same haemophilia entity within a 48-hour window → confluence alert
+- **Development-link decision (mandatory for congress/publication signals):** before creating a new intelligence card, the system SHALL check whether the signal belongs to an existing development (`development_id` match via trial/asset/company). If yes → the signal becomes a **new evidence event in the existing development/evidence chain** (e.g., trial → congress abstract → oral presentation → poster → publication = ONE development, not four unrelated cards). If no → the signal opens a **NEW DEVELOPMENT**.
 
 **Haemophilia Confluence Patterns (excerpt):**
 ```python
@@ -322,12 +357,14 @@ HAEMOPHILIA_CONFLUENCE_PATTERNS = [
 ### 2.3A Signal Lifecycle Tracking (Analysis 2 of the Five)
 
 **FR-2.3A.1: Lifecycle State Machine**
-- System SHALL maintain a lifecycle state machine per tracked development (entity + modality + indication): `announced → in_trial → results_in → under_review → approved → post_market | discontinued`
+- System SHALL maintain a lifecycle state machine per tracked development (entity + modality + indication): `announced → in_trial → interim_result → final_result → congress_publication → regulatory_development → approved → post_market | discontinued` (legacy `results_in` maps to interim/final result)
 - System SHALL assign each new signal to the matching lifecycle chain and advance the current state
 - System SHALL order chain events chronologically and link them by entity (temporal linking)
+- **Every lifecycle event SHALL record: `event_type` · `event_date` · `development_id` · `source_id`** so evidence events (congress abstract, oral presentation, poster, additional analysis, publication) attach to ONE development timeline
+- System SHALL distinguish **NEW DEVELOPMENT** (no matching `development_id` → new chain) from **NEW EVIDENCE ABOUT EXISTING DEVELOPMENT** (matching chain → append event; confluence attempts to connect them)
 
 **FR-2.3A.2: Expected Next Event**
-- System SHALL compute the expected next event from the current state (e.g., `results_in → submission announced`)
+- System SHALL compute the expected next event from the current state (e.g., `results_in → submission announced`; trial → subsequent congress disclosures)
 - System SHALL expose `GET /api/v1/lifecycles` and `GET /api/v1/lifecycles/{entity}` returning the full timeline + current state + expected next event
 
 **Haemophilia lifecycle example (mim8):**
@@ -362,9 +399,20 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 
 ### 2.3C Missing-Signal Detection (Analysis 4 of the Five)
 
-**FR-2.3C.1: Expected-Event State Machine**
+**FR-2.3C.1: Expected-Event State Machine (WATCH items)**
 - System SHALL derive expected next events from lifecycle state + B.Pharm-authored rules (`MISSING_SIGNAL_RULES`)
-- System SHALL flag a missing signal when no event has appeared for the tracked entity beyond the configured `max_lag_days`
+- When an expected event is not observed within the configured `max_lag_days`, system SHALL create a **WATCH item** (missing-signal alert): a monitoring signal, NOT a claim that the event will definitely happen
+- WATCH items SHALL be clearly labeled as monitoring signals and require human review where appropriate
+
+**FR-2.3C.1A: Stakeholder-Defined WATCH RULES (Watch-for-Next)**
+- System SHALL support **stakeholder-defined watch expectations**: a stakeholder may request e.g. *"monitor this competitor Phase III programme for subsequent congress disclosures"*
+- Watch relationship: `source_event → expected/interesting next event → monitoring window → responsible function → status`
+- Watch statuses SHALL include: `watching` · `new_evidence_detected` · `no_new_evidence` · `watch_expired` · `human_review_required`
+- When a new matching signal is detected (e.g., a congress abstract for the watched trial), the system SHALL: link it to the existing development (confluence/lifecycle), flip the watch status to `new_evidence_detected`, and notify the responsible functions
+- If nothing appears within the monitoring window, the system SHALL report: *"No subsequent congress evidence observed during the configured monitoring window."* — absence is NEVER interpreted as proof that no activity occurred
+- Wording SHALL be limited to *"Watch for" / "Expected/possible next evidence" / "Not observed yet"* — the system never claims the next event will definitely happen
+- This extends the existing Missing-Signal mechanism (no separate watch engine)
+- System SHALL expose `GET /api/v1/watchlist` and `POST /api/v1/watchlist` (create watch rule)
 
 **FR-2.3C.2: Confidence-by-Silence + False-Positive Discipline**
 - System SHALL compute missing-signal confidence that grows with days of silence (e.g., `0.4 + days_since_last_signal * 0.02`, capped at 0.95)
@@ -388,12 +436,14 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 
 **FR-2.4.2: Role-Specific Views**
 - System SHALL display a role badge for each signal (Q3)
-- System SHALL display function-specific insight panel per role:
+- System SHALL display function-specific insight panel per function:
   - Medical Affairs: clinical evidence context, KOL opinion, congress data
   - Regulatory: filing/review context, approval timelines, label updates
+  - Safety / Pharmacovigilance: adverse events, safety signals, causality context, risk-communication watch
   - Market Access: HTA/reimbursement context, access barriers, patient impact
-  - Commercial: market share context, competitor positioning, pricing signals
-  - R&D: mechanistic context, pipeline implications, trial design signals
+  - Medical Communications: scientific FAQ / response readiness, publication plan impact, HCP communication
+  - Leadership: executive summary, strategic/portfolio impact, escalation triggers
+  - Extended (retained): Commercial — market share, competitor positioning, pricing; R&D — mechanistic context, pipeline, trial design
 
 **FR-2.4.3: Filtering & Search**
 - System SHALL support filtering by role, signal type, entity, date range, source, and confluence status
@@ -401,28 +451,50 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 
 ### 2.5 Role-Based Routing (Q3)
 
-**FR-2.5.1: Automatic Role Routing**
-- System SHALL score each signal against all 5 Novo Nordisk roles using a weighted scoring matrix
+**FR-2.5.1: Automatic Role Routing (relevance-based — "Not every signal goes to everyone")**
+- System SHALL score each signal against the 6 primary Novo Nordisk functions (plus 2 extended roles) using a weighted scoring matrix
+- Each signal SHALL identify a **primary function** and **secondary functions[]**, each with: `function_relevance_score`, role-specific explanation, role-specific impact, and role-specific suggested action — all sharing the same underlying evidence chain
+- Each signal SHALL store: `primary_function` · `secondary_functions[]` · `function_relevance_score` · **`routing_reason`** (why this function, why now) · `suggested_action`
+- **The routing decision SHALL be explainable.** Example: Signal = Competitor Phase III clinical result → Medical Affairs 91% · Medical Communications 82% · Regulatory 64%, reason: *"Clinical efficacy/safety data with potential implications for scientific understanding and future regulatory review."*
+- **Initial routing matrix is a seed, not a hard-coded universal rule:** routes for clinical trial / safety / access / regulatory decision / congress data / publication SHALL follow the initial matrix in the Master Plan §2 (e.g., safety signal → Safety/PV primary; congress data → Medical Affairs + Medical Communications; access issue → Market Access) and SHALL be adjustable through stakeholder calibration (FR-2.8)
 - Weights SHALL be dynamically recalibrated by the Stakeholder Calibration Loop (FR-2.8)
-- System SHALL display role assignment with confidence score (e.g., `Regulatory 92% · Medical Affairs 84%`)
+- System SHALL display role assignment with confidence score (e.g., `Regulatory 92% · Medical Affairs 84%`) plus the routing reason
+- System SHALL NOT create separate intelligence engines per function — one pipeline, role-specific views
 
 **Role Scoring Matrix (initial weights):**
-| Role | Clinical Trial Signal | Regulatory Signal | Congress Publication | Patient Access Signal | Pipeline Signal |
-|------|----------------------|-------------------|----------------------|----------------------|-----------------|
-| Medical Affairs | 0.9 | 0.4 | 0.8 | 0.4 | 0.6 |
-| Regulatory | 0.3 | 0.95 | 0.3 | 0.2 | 0.5 |
-| Market Access | 0.3 | 0.5 | 0.4 | 0.9 | 0.3 |
-| Commercial | 0.4 | 0.4 | 0.6 | 0.7 | 0.8 |
-| R&D | 0.7 | 0.3 | 0.5 | 0.2 | 0.85 |
+| Function | Clinical Trial | Regulatory | Congress/Publication | Patient Access | Pipeline | Safety | Market |
+|----------|----------------|------------|----------------------|----------------|----------|--------|--------|
+| Medical Affairs | 0.9 | 0.4 | 0.8 | 0.4 | 0.6 | 0.7 | 0.3 |
+| Regulatory | 0.3 | 0.95 | 0.3 | 0.2 | 0.5 | 0.8 | 0.2 |
+| Safety / Pharmacovigilance | 0.4 | 0.6 | 0.3 | 0.2 | 0.4 | 0.95 | 0.2 |
+| Market Access | 0.3 | 0.5 | 0.4 | 0.9 | 0.3 | 0.2 | 0.6 |
+| Medical Communications | 0.5 | 0.3 | 0.7 | 0.5 | 0.5 | 0.5 | 0.3 |
+| Leadership | 0.4 | 0.5 | 0.5 | 0.6 | 0.6 | 0.5 | 0.5 |
+| Commercial (extended) | 0.4 | 0.4 | 0.6 | 0.7 | 0.8 | 0.3 | 0.8 |
+| R&D (extended) | 0.7 | 0.3 | 0.5 | 0.2 | 0.85 | 0.3 | 0.3 |
 
 ### 2.6 Brief Generation (Q4)
 
-**FR-2.6.1: Action Suggestion Generation**
-- System SHALL generate action suggestions per signal, prefaced with *"Suggested — requires human review"*
+**FR-2.6.1: Action Suggestion Generation (controlled vocabulary)**
+- System SHALL suggest actions from a **controlled action vocabulary** (never only generic "review/monitor"):
+  - `monitor` · `review` · `prepare_internal_briefing` · `prepare_scientific_faq` · `escalate` · `request_stakeholder_review` · `no_immediate_action`
+- The AI may SUGGEST an action; it MUST NOT autonomously execute any action.
+- Every suggested action SHALL include: **Action · Reason · Relevant function · Evidence · Confidence · Human-review requirement** (always required).
+- Every suggestion is prefaced with *"Suggested — requires human review"*.
+- **Role-aware action mapping (suggestions must be role-specific, not generic):**
+  - **Medical Affairs:** Review scientific evidence · Prepare internal scientific briefing · Monitor new clinical evidence
+  - **Medical Communications:** Review congress/publication development · Prepare scientific FAQ · Monitor emerging scientific narrative
+  - **Regulatory:** Review regulatory implication · Monitor regulatory milestone
+  - **Safety / Pharmacovigilance:** Safety review · Request pharmacovigilance assessment · Monitor safety evidence
+  - **Market Access:** Review access/reimbursement implications · Monitor HTA/payer developments
+  - **Leadership:** Escalate material cross-functional development · Request strategic review
+- The AI only SUGGESTS actions; it never executes them (no autonomous execution).
 - Examples:
-  - Regulatory signal on competitor: *"Suggested — review mim8 label change for haemophilia B alignment"*
-  - Gene therapy durability data: *"Suggested — Medical Affairs to draft response on factor vs gene therapy durability"*
-  - Market access blocker: *"Suggested — Market Access to re-run HTA budget impact model with new inhibitor data"*
+  - Regulatory signal on competitor: *"Suggested — Review: mim8 label change for haemophilia B alignment (Regulatory; requires human review)"*
+  - Gene therapy durability data: *"Suggested — Prepare internal briefing: gene therapy durability vs factor replacement (Medical Affairs; requires human review)"*
+  - Market access blocker: *"Suggested — Prepare scientific FAQ: inhibitor data implications for HTA (Market Access; requires human review)"*
+  - Safety signal: *"Suggested — Escalate: thromboembolic event reports on fitusiran (Safety/Pharmacovigilance; requires human review)"*
+  - Congress abstract for existing trial: *"Suggested — Review congress/publication development: ISTH 2026 abstract for FRONTIER4 vs previous disclosures (Medical Communications; requires human review)"*
 
 **FR-2.6.2: Traceability & Sources**
 - Every insight SHALL include a traceable evidence chain: source URL, published date, exact excerpt, source credibility
@@ -444,13 +516,19 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 **FR-2.8.2: Feedback Summary**
 - System SHALL provide `GET /api/v1/feedback/summary` — aggregated accuracy, per-role ratings, trend
 
-**FR-2.8.3: Weight Recalibration**
+**FR-2.8.3: Weight Recalibration (expanded scope)**
 - System SHALL provide `POST /api/v1/calibrate` — triggers `StakeholderCalibrationService.recalibrate(role)`
 - Recalibration SHALL update `scoring_weights` table and persist a calibration history row (audit)
+- **Stakeholders SHALL be able to influence: priority · routing · action · watch rules · relevance criteria** (not only priority). A stakeholder comment such as *"Monitor this competitor trial specifically for upcoming congress disclosures"* SHALL produce a visible AFTER state: changed priority, changed primary/secondary functions, changed action, and a created WATCH rule
+- **Mandatory demo requirement:** the UI SHALL show a BEFORE/AFTER comparison. Example:
+  - BEFORE: Priority = Medium · Routing = Medical Affairs · Action = Monitor
+  - FEEDBACK: "Monitor this competitor trial specifically for upcoming congress disclosures"
+  - AFTER: Priority = High · Primary = Medical Affairs · Secondary = Medical Communications · Action = Monitor + prepare internal review · **Watch = upcoming congress disclosures**
 
 **FR-2.8.4: Simulated Stakeholder Personas (Hackathon Demo)**
 - System SHALL seed simulated persona feedback during the demo so calibration is demonstrable
-- Personas: Medical Affairs Lead (haemophilia), Regulatory Affairs Specialist, Market Access Manager
+- Personas (primary): Medical Affairs Lead (haemophilia), Regulatory Affairs Specialist, Safety / Pharmacovigilance Officer, Market Access Manager, Medical Communications Lead, Leadership / GBS Executive
+- Personas (extended): Commercial Strategist, R&D Scientist (optional routing)
 - Calibration loop SHALL be visible in the UI (e.g., "Weights recalibrated 3x this month — latest by Regulatory persona")
 
 **FR-2.8.5: Confidence Score Display**
@@ -484,6 +562,8 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 - System SHALL ingest only **public** or **synthetic** data — no private/patient-identifiable data
 - AI outputs SHALL be clearly labeled as AI-generated; no automated clinical decisions
 - Guardrail statement SHALL appear in docs and UI: *"MetaRadar ingests only public API and synthetic demo data, no confidential or private data, fully CDA-compliant."*
+- System SHALL be labeled **INTERNAL DECISION SUPPORT ONLY** and MUST NOT: provide treatment recommendations; make medical conclusions; claim product superiority without appropriate evidence; make unsupported competitor comparisons; determine safety causality; replace expert review; or autonomously execute business actions.
+- For safety / regulatory / high-impact signals: **AI suggests → human reviews → human decides.**
 
 ### 3.5 Model-Agnostic Local AI
 - All AI models SHALL be locally hosted (no external inference APIs)
@@ -505,6 +585,8 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | GET | `/api/v1/lifecycles/{entity}` | Single entity timeline + expected next (FR-2.3A.2) |
 | GET | `/api/v1/contradictions` | Red-team contradiction alerts (FR-2.3B.3) |
 | GET | `/api/v1/missing-signals` | Missing-signal warnings (FR-2.3C.2) |
+| GET | `/api/v1/watchlist` | Watch rules + status (FR-2.3C.1A) |
+| POST | `/api/v1/watchlist` | Create a watch rule (source_event → expected next event → window → function) |
 | GET | `/api/v1/trends` | Signal volume/trend over time |
 | GET | `/api/v1/dashboard` | Four-panel summary payload |
 | GET | `/api/v1/search` | Keyword/semantic search (Ask Athena) |
@@ -533,16 +615,22 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | `CORS_ORIGINS` | CORS allowlist | http://localhost:3000 |
 
 ### 4.3 Database Schema
-- `signals` — id, title, source, source_url, published_at, summary, entities, signal_type, quality_score, embedding
+- `signals` — id, title, source, source_url, published_at, summary, entities, signal_type (11 canonical incl. congress/publication), signal_subtype (incl. congress/publication subtypes), disease, patient_type, company, asset, asset_type, priority, impacted_functions, **development_id, event_date, source_id**, evidence_level (fact/interpretation/speculation), evidence_sufficient, quality_score, embedding
+- `signal_routing` — id, signal_id, **primary_function, secondary_functions (JSONB), function_relevance_scores (JSONB), routing_reason, suggested_action**, created_at (one row per signal; FR-2.5.1)
+- `action_recommendations` — id, signal_id, action (controlled vocabulary), reason, relevant_function, evidence, confidence, human_review_required, created_at
+- `watch_items` — id, watch_id, **source_event_id, expected_event_type, monitoring_window, responsible_function, status (watching/new_evidence_detected/no_new_evidence/watch_expired/human_review_required)**, created_at, resolved_at (stakeholder-defined watch rules; FR-2.3C.1A)
+- `missing_signal_watch_items` — id, entity, missing_event, days_since_last_signal, confidence, status (watch/resolved), created_at
+- `watchlists` — id, user_id, entity_id, created_at (entity-focus / watchlist feature)
+- `digests` — id, role/function, week_start, week_end, items JSONB, created_at
 - `signal_types` — type, label, description, confidence_threshold
 - `entities` — id, name, type, metadata (from haemophilia ontology)
 - `signal_entities` — signal_id, entity_id
 - `stakeholder_feedback` — id, signal_id, role, rating, reason, user_id, created_at (WORM)
 - `scoring_weights` — role, signal_type, weight, version, updated_by, updated_at
 - `calibration_history` — id, role, old_weights, new_weights, trigger_reason, created_at
-- `confluences` — id, entities, pattern_name, signals, created_at, severity
+- `confluences` — id, entities, pattern_name, signals, created_at, severity, **development_id** (link decision: new development vs new evidence)
 - `lifecycle_chains` — id, entity, modality, indication, current_state, expected_next, created_at, updated_at
-- `lifecycle_events` — id, chain_id, signal_id, state, ordered_date, created_at
+- `lifecycle_events` — id, chain_id, **development_id, signal_id, event_type, event_date, source_id, state**, ordered_date, created_at
 - `contradictions` — id, entity, claim_a, claim_b, contradiction_score, red_team_note, status, detected_at
 - `missing_signal_rules` — id, pattern, expected_sequence JSONB, max_lag_days, alert_message (B.Pharm-authored)
 - `missing_signal_alerts` — id, entity, missing_event, days_since_last_signal, confidence, status, created_at
@@ -584,6 +672,20 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 4. Q3 routing: Regulatory 88%, Commercial 75%
 5. Q4 action: *"Suggested — Regulatory to check for silent label/safety developments on Roctavian"*
 
+### 5.5 Scenario: Congress Abstract for an Existing Trial (NEW EVIDENCE, not new card)
+1. FRONTIER4 (denecimig, Novo Nordisk) interim data signal exists on ClinicalTrials.gov (development_id = dev-fr4)
+2. ISTH 2026 congress abstract for FRONTIER4 is ingested (congress / congress_abstract)
+3. Confluence matches `development_id` → abstract links into dev-fr4 evidence chain; lifecycle appends event (event_type=congress_abstract, event_date, source_id) — NO new unrelated card
+4. Q3 routing: Medical Affairs 91% · Medical Communications 82% · Regulatory 64% with routing reason
+5. Q4 action: *"Suggested — Review congress/publication development: ISTH 2026 abstract for FRONTIER4 vs previous disclosures (Medical Communications; requires human review)"*
+
+### 5.6 Scenario: Stakeholder-Defined Watch-for-Next
+1. Stakeholder feedback on a competitor Phase III trial: *"Monitor this competitor trial for future congress disclosures"*
+2. System creates a WATCH rule: source_event=trial update → expected_event_type=congress disclosure → window=180d → responsible function=Medical Affairs
+3. Status = `watching`; wording: "Watch for upcoming congress disclosures · Expected/possible next evidence · Not observed yet"
+4. A congress abstract for the trial arrives → linked to existing development → status flips to `new_evidence_detected` → Medical Affairs + Medical Communications notified
+5. Control: if nothing arrives in the window → *"No subsequent congress evidence observed during the configured monitoring window."* (never claims the event did not occur)
+
 ---
 
 ## **6. ACCEPTANCE CRITERIA & MVP DEMO SCRIPT**
@@ -602,6 +704,15 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | AC-6C | Missing-Signal detector flags an expected-but-silent readout with growing confidence |
 | AC-7 | Stakeholder calibration: persona submits feedback → weights recalibrate → confidence updates |
 | AC-8 | Ask Athena answers ≥ 2 demo queries with cited evidence |
+| AC-9 | 100% of high-priority signal cards carry Q1–Q4 + evidence + confidence + source + timestamp + F-I-S label |
+| AC-10 | ≥85% classification accuracy (disease / patient type / signal type / priority / function) with precision, recall, confusion matrix |
+| AC-11 | Top-signal discovery ≤ 5 minutes on a 100-signal weekly batch |
+| AC-12 | Evidence-sufficiency gate: insufficient evidence → "Insufficient evidence to support an interpretation", never fabrication |
+| AC-13 | Weekly digest generates function-filtered variants for the six primary functions |
+| AC-14 | Stakeholder calibration demo shows a visible BEFORE/AFTER change (priority, function routing, and/or action) |
+| AC-15 | Congress and publication are first-class signal types with subtypes; a congress abstract for an existing trial links into that development chain (NEW EVIDENCE), not a new card |
+| AC-16 | Every high-priority signal carries routing_reason + primary/secondary functions + per-function relevance scores (explainable routing) |
+| AC-17 | Watch-for-Next: stakeholder-defined watch rule created → status transitions → new evidence linked to existing development → functions notified; absence returns the "no subsequent congress evidence" wording |
 
 ### 6.2 MVP Demo Script (15 minutes)
 1. Open dashboard → Q1 feed shows live haemophilia signals (synthetic + live)

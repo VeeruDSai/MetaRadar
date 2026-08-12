@@ -230,7 +230,7 @@ Low score:
 - Depends on APIs that Novo Nordisk can't legally access
 - Assumes IT integration that would take 2 years
 
-**For MetaRadar:** Emphasize free APIs, Docker, local ML models (no GPU needed), and the path from MVP (1 role) to full deployment (all 5 roles).
+**For MetaRadar:** Emphasize free APIs, Docker, local ML models (no GPU needed), and the path from MVP (six functions, one engine) to full deployment (all functions).
 
 **Presentation (15%) — What Judges Actually Look For:**
 
@@ -252,9 +252,9 @@ Beyond a news feed, MetaRadar's value is five analyses that no competing tool wi
 | Analysis | What It Answers | Demo Hook |
 |---|---|---|
 | **1. Confluence Detection** | "Is this a one-off or a converging story?" | ASH abstract + CSL PR + r/Hemophilia = 1 CRITICAL alert |
-| **2. Signal Lifecycle Tracking** | "Where is this development, what's next?" | mim8: results_in → NEXT: submission announced |
+| **2. Signal Lifecycle Tracking** | "Where is this development, what's next?" | mim8: final_result → NEXT: regulatory submission |
 | **3. Red-Team Contradiction** | "Does the evidence contradict itself?" | ASH "sustained durability" vs real-world "waning expression" |
-| **4. Missing-Signal Detection** | "What *should* have happened but didn't?" | Roctavian durability follow-up silent for 150 days |
+| **4. Missing-Signal Detection** | "What *should* have happened but didn't?" | Roctavian durability follow-up silent for 150 days → WATCH item (monitoring signal, not a claim) |
 | **5. Stakeholder Learning Loop (HITL)** | "Does the system get smarter with use?" | persona rating recalibrates routing weights live |
 
 **NEW v2.0 — "Stakeholder Learning Plan" (the calibration angle):**
@@ -264,7 +264,7 @@ Given the kickoff focus on the Stakeholder Calibration Loop, judges are likely t
 | Question | MetaRadar's Answer |
 |---|---|
 | How does the system get smarter after the demo? | Stakeholder feedback (⭐ 1-5 per signal, per role) recalibrates `scoring_weights`; routing confidence improves on next cycle |
-| Who calibrates it? | Simulated personas for the hackathon (Medical Affairs Lead, Regulatory Specialist, Market Access Manager) + real users in production |
+| Who calibrates it? | Simulated personas for the hackathon (Medical Affairs Lead, Regulatory Specialist, Safety/PV Officer, Market Access Manager, Medical Communications Lead, Leadership/GBS Executive; extended: Commercial, R&D) + real users in production |
 | Is it auditable? | Every recalibration written to `calibration_history` + WORM `audit_log` |
 | What improves measurably? | Q3 role-routing accuracy (per-role avg rating), confidence uplift pre- vs post-calibration, weight drift per signal type |
 
@@ -356,7 +356,7 @@ The 2025 winning project was:
 | **Data** | Static (NFHS-5, hardcoded) | Live APIs (NewsAPI, PubMed, Reddit, FDA, ClinicalTrials.gov, Congress) |
 | **AI** | None (pandas + plotly) | NLP, LLM summarization, ML scoring, vector search |
 | **Architecture** | Single Streamlit app | Multi-agent LangGraph + FastAPI + Next.js + PostgreSQL + Redis |
-| **Users** | Single user | Multi-role (Medical Affairs, Regulatory, Market Access, Commercial, R&D) |
+| **Users** | Single user | Multi-function (Medical Affairs, Regulatory, Safety/PV, Market Access, Medical Communications, Leadership; extended: Commercial, R&D) |
 | **Scope** | 1 drug, 1 market | Entire haemophilia rare disease competitive landscape (A + B, inhibitors, gene therapy) |
 | **Update frequency** | Manual (run script) | Automated (every 2 hours) |
 | **Production readiness** | Streamlit Cloud | Docker Compose + Vercel + Railway |
@@ -375,6 +375,8 @@ These are statements directly tied to their current business reality that will s
 
 **Opening statement (Innovation criterion):**
 > "Haemophilia is undergoing its most significant paradigm shift in decades—from IV factor replacement to subcutaneous bispecific antibodies and single-administration gene therapies like Hemgenix and Roctavian. Critical signals about this shift are scattered across congress abstracts, PubMed publications, FDA/EMA filings, patient forums, and competitor announcements. MetaRadar runs **five advanced analyses** on that noise — confluence detection, lifecycle tracking, red-team contradiction checks, missing-signal early-warning, and a stakeholder learning loop — so Novo Nordisk's response is instant, coordinated, and learning from its users."
+
+> "Every MetaRadar output is labeled **Fact, Interpretation, or Speculation** — speculation is never presented as fact — and every high-priority claim is source-linked with its evidence chain."
 
 **On business impact (NEW v2.0 — mim8 vs emicizumab + gene therapy):**
 > "Roche's Hemlibra (emicizumab) established non-factor prophylaxis in Haemophilia A, and gene-therapy durability data (Hemgenix 3-year, Roctavian) is now challenging the lifelong-prophylaxis model itself. MetaRadar flags when clinical data, HTA decisions, and patient sentiment converge — giving Novo Nordisk's Medical Affairs and Commercial teams early clarity on how to position mim8 and concizumab against both, before analysts make the case publicly."
@@ -413,24 +415,24 @@ These are statements directly tied to their current business reality that will s
    - *Technical:* Redis 7 provides an in-memory key-value cache (2h TTL), API rate-limiting counter (500 req/day cap), and pub/sub broker for Celery async tasks.
 
 4. **How does confluence work?**
-   - *Non-Technical:* It checks if three or more independent sources — like a publication, a trial registry, and a news report — mention the same drug within 48 hours.
-   - *Technical:* Scans rolling 48h window for entity IDs. When $\ge 3$ distinct `signal_type` categories intersect on an entity, a `confluence_event` is created with an aggregated severity score.
+   - *Non-Technical:* It checks if three or more independent sources — like a publication, a trial registry, and a news report — mention the same drug within 48 hours; for congress/publication signals it first asks whether they belong to an existing development.
+   - *Technical:* Scans rolling 48h window for entity IDs. When $\ge 3$ distinct `signal_type` categories intersect on an entity, a `confluence_event` is created with an aggregated severity score. Congress/publication signals matching an existing `development_id` are linked into that chain (`link_decision = new_evidence_existing_development`) instead of becoming new cards.
 
 5. **How does lifecycle tracking work?**
-   - *Non-Technical:* It places every new update on a chronological step-by-step timeline that tracks a drug from its first announcement to final approval.
-   - *Technical:* Uses a deterministic finite-state machine (`announced → in_trial → results_in → under_review → approved → post_market | discontinued`), tracking transitions in `lifecycle_chains` and computing `expected_next_event`.
+   - *Non-Technical:* It places every new update on a chronological step-by-step timeline that tracks a drug from its first announcement to final approval — a trial, its congress abstract, oral presentation, poster and publication stay ONE story.
+   - *Technical:* Uses a deterministic finite-state machine (`announced → in_trial → interim_result → final_result → congress_publication → regulatory_development → approved → post_market | discontinued`), tracking transitions in `lifecycle_chains` and computing `expected_next_event`. Every event records `event_type · event_date · development_id · source_id`; the system distinguishes NEW DEVELOPMENT from NEW EVIDENCE ABOUT AN EXISTING DEVELOPMENT.
 
 6. **How does contradiction detection work?**
    - *Non-Technical:* It uses a specialized AI model that compares two claims about the same drug to see if they conflict with each other.
    - *Technical:* Runs zero-shot NLI via local `facebook/bart-large-mnli`. Pairwise premise-hypothesis checks scoring `contradiction` $> 0.60$ trigger `contradictions` entries with linked evidence chains.
 
 7. **How does missing-signal detection work?**
-   - *Non-Technical:* It calculates when a follow-up step should have happened and alerts us if an expected milestone stays silent for too long.
-   - *Technical:* Evaluates `lifecycle_chains` against rules (`missing_signal_rules`). If $\Delta t_{\text{last\_signal}} > t_{\text{max\_lag}}$, an alert is triggered with confidence $C_{missing} = \min(0.40 + 0.002 \times \Delta t_{\text{silence}}, 0.95)$, requiring human review.
+   - *Non-Technical:* It calculates when a follow-up step should have happened and alerts us if an expected milestone stays silent for too long; stakeholders can also define what to watch for next (e.g., upcoming congress disclosures for a competitor trial).
+   - *Technical:* Evaluates `lifecycle_chains` against rules (`missing_signal_rules`). If $\Delta t_{\text{last\_signal}} > t_{\text{max\_lag}}$, an alert is triggered with confidence $C_{missing} = \min(0.40 + 0.002 \times \Delta t_{\text{silence}}, 0.95)$, requiring human review. Stakeholder-defined WATCH RULES live in `watch_items` (source_event → expected_event_type → monitoring window → responsible function → status: watching/new_evidence_detected/no_new_evidence/watch_expired/human_review_required); absence returns *"No subsequent congress evidence observed during the configured monitoring window"* — never proof that nothing happened.
 
 8. **How does stakeholder calibration work?**
-   - *Non-Technical:* When experts rate how relevant a signal was, MetaRadar adjusts its scoring formulas so future signals match expert judgment.
-   - *Technical:* `StakeholderCalibrationService` receives ratings via `POST /api/v1/feedback`, executes online gradient updates on scoring weights in `scoring_weights`, and logs audit rows in `calibration_history`.
+   - *Non-Technical:* When experts rate how relevant a signal was, MetaRadar adjusts its scoring formulas so future signals match expert judgment — including priority, routing, actions and watch rules.
+   - *Technical:* `StakeholderCalibrationService` receives ratings via `POST /api/v1/feedback`, executes online gradient updates on scoring weights in `scoring_weights`, and logs audit rows in `calibration_history`. Calibration scope: priority · routing · action · watch rules · relevance criteria; the demo shows a visible BEFORE/AFTER (incl. watch-rule creation from a stakeholder comment).
 
 9. **How is hallucination controlled?**
    - *Non-Technical:* Every single claim in MetaRadar must link directly to a verified public source quote, and AI never generates facts on its own.

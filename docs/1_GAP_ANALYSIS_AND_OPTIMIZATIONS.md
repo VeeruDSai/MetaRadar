@@ -16,7 +16,7 @@
 TIER 1 (Weeks 1-2): FREE ONLY
 ├─ NewsAPI: 500 free requests/day ✅  (haemophilia query terms)
 ├─ PubMed: Free API ✅
-├─ Twitter: Academic research tier (free) ✅
+├─ ClinicalTrials.gov: Free public API ✅
 ├─ Reddit: Free PRAW library ✅
 ├─ FDA: Free API ✅
 └─ NO OpenAI calls yet
@@ -146,9 +146,11 @@ async def fetch_with_fallback(source_name: str, fetch_fn):
 **Resolution: STRICT MVP SCOPE (aligned with Refined Architecture plan)**
 ```
 MVP (Weeks 1-3):
-├─ Primary Role: Medical Affairs
+├─ Six Functions, One Engine: Medical Affairs · Regulatory · Safety/PV ·
+│  Market Access · Medical Communications · Leadership (extended: Commercial, R&D)
 ├─ Therapy Area: Haemophilia within Rare Disease (Haemophilia A + Haemophilia B)
-├─ Data Sources: NewsAPI + PubMed (+ parallel ingestion agents ready for more)
+├─ Data Sources: LIVE PubMed + NewsAPI + ClinicalTrials.gov · ADAPTER FDA/EMA/
+│  Congress/Reddit · SYNTHETIC 500-signal fallback
 ├─ Intelligence Core:
 │  ├─ LangGraph multi-agent orchestration (ingest → validate → NLP → confluence → lifecycle → red-team → missing-signal → synthesize → brief → calibrate)
 │  ├─ Pharma Ontology enrichment (B.Pharm-built: haemophilia drugs → company → indication → competitor)
@@ -161,15 +163,15 @@ MVP (Weeks 1-3):
 │  ├─ Signal fetch ✅
 │  ├─ Entity extraction (drugs, companies) ✅
 │  ├─ Role-relevance scoring + traceable reasoning ✅
-│  ├─ Medical Affairs dashboard ✅
+│  ├─ Six-function dashboard (one engine) ✅
 │  ├─ Four-Question Framework UI (What Changed / Why It Matters / Which Function / What Action) ✅
 │  └─ Trend visualization ✅
 │
 Week 4: Integrate the Five Advanced Analyses + Bonus
 ├─ Option A: Reddit sentiment
-├─ Option B: Add Regulatory role
+├─ Option B: Activate extended roles (Commercial / R&D) — primary six are core
 ├─ Option C: Conversational search ("Ask Athena" RAG)
-└─ Option D: Narrative synthesis briefs
+└─ Option D: Narrative synthesis briefs + weekly function-filtered digest
 ```
 
 **Why:** 3 weeks = bulletproof MVP. Week 4 = impressive bonus.
@@ -335,7 +337,7 @@ class RateLimiter:
 # Apply limits
 API_LIMITS = {
     "newsapi": (500, 1440),      # 500/day
-    "twitter": (300, 15),        # 300/15min
+    "clinicaltrials": (100, 1440),  # 100/day (conservative)
     "pubmed": (10000, 1440),     # 10K/day
 }
 
@@ -702,7 +704,7 @@ signals_archive/
 # BEFORE (sequential, 8 seconds)
 newsapi = await fetch_newsapi()        # 2s
 pubmed = await fetch_pubmed()          # 2s
-twitter = await fetch_twitter()        # 2s
+clinicaltrials = await fetch_clinicaltrials()  # 2s
 reddit = await fetch_reddit()          # 2s
 # Total: 8s ❌
 
@@ -710,7 +712,7 @@ reddit = await fetch_reddit()          # 2s
 results = await asyncio.gather(
     fetch_newsapi(),
     fetch_pubmed(),
-    fetch_twitter(),
+    fetch_clinicaltrials(),
     fetch_reddit(),
 )
 # Total: 2s (time of slowest) ✅
@@ -1344,7 +1346,7 @@ WEEK 1: Foundation + Error Handling + Domain Architecture
 ├─ Graceful fallback + caching
 ├─ Logging from day 1
 ├─ First unit tests
-├─ Strict MVP: Medical Affairs + NewsAPI + PubMed
+├─ Strict MVP: six functions (one engine) + NewsAPI + PubMed + ClinicalTrials.gov
 ├─ Rate limiter implemented
 ├─ LangGraph skeleton (4 agents, no NLP yet)
 ├─ B.Pharm: Haemophilia taxonomy + signal types for Haemophilia A and B
@@ -1359,7 +1361,7 @@ WEEK 2: Core Features + Testing + Intelligence
 ├─ Pharma Ontology JSON integration (enrich entities)
 ├─ Signal classification (zero-shot BART-MNLI) + BART batch summarization + Gemma 3 reasoning LLM
 ├─ PostgreSQL + pgvector + Redis caching
-├─ Medical Affairs dashboard (1st complete role)
+├─ Six-function dashboard (Medical Affairs, Regulatory, Safety/PV, Market Access, Medical Communications, Leadership)
 ├─ Signal Confluence Engine (core differentiator)
 ├─ Four-Question Framework panels v1 (Q1-Q4 on signal card)
 ├─ Integration test suite + Database indexing optimization
@@ -1425,7 +1427,7 @@ Presentation Risks:
 ☐ Tie demo to Novo Nordisk pain: gene therapy disruption + Roche emicizumab competition (Business Impact criterion)
 
 Judge Scenarios:
-☐ "Make it pull live Twitter data" → Already can
+☐ "Make it pull live ClinicalTrials.gov data" → Already can (third LIVE source)
 ☐ "Filter by this new role" → Already architected
 ☐ "How does it scale?" → Caching + indexing explanation
 ☐ "Show the code" → Well-commented, GitHub ready
@@ -1444,3 +1446,30 @@ Judge Scenarios:
 > "All data used in MetaRadar is sourced exclusively from public APIs, academic publications, and synthetic/mock records. No confidential Novo Nordisk strategy, patient-level data, internal forecasts, or non-public information is used at any point. This is compliant with the Novo Nordisk GBS Hackathon 2026 data guardrails and the signed Confidentiality Agreement."
 
 > "AI-generated action suggestions are provided for discussion and consideration only. All final decisions and actions require review and approval by qualified Novo Nordisk professionals. MetaRadar does not automate any clinical, regulatory, or commercial decisions."
+
+> **INTERNAL DECISION SUPPORT ONLY:** MetaRadar must NOT provide treatment recommendations, make medical conclusions, claim product superiority without appropriate evidence, make unsupported competitor comparisons, determine safety causality, replace expert review, or autonomously execute business actions. For safety/regulatory/high-impact signals: **AI suggests → human reviews → human decides.**
+
+---
+
+## LATEST KICKOFF ALIGNMENT — NEW GAPS & RESOLUTIONS (Aug 12, 2026)
+
+The following gaps were identified against the latest Novo Nordisk kickoff requirements and are resolved in SRS/SDD/UI/Master Plan. Full canonical definitions live in `docs/2_SRS_Software_Requirements_Specification.md` (FR-2.2.2, FR-2.2.5–2.2.7, FR-2.6.1, AC-9..AC-14).
+
+| # | New Gap | Resolution | Where |
+|---|---|---|---|
+| G18 | Function routing not aligned with kickoff (six functions: Medical Affairs, Regulatory, Safety/PV, Market Access, Medical Communications, Leadership) | ONE engine → one signal → one evidence chain → one prioritization → six function-specific interpretations; Commercial & R&D retained as extended/future roles | SRS §2.5 matrix (8 rows) · Master Plan §2/§3 · UI sidebar |
+| G19 | No Fact / Interpretation / Speculation (F-I-S) classification | F-I-S labels on every output; schema, UI badge, API, audit, evaluation; speculation never presented as fact | SRS FR-2.2.6 · SDD `fis_label` · UI §4.3 |
+| G20 | No evidence-sufficiency gate | Signal → retrieve evidence → sufficient? → YES grounded interpretation / NO "Insufficient evidence to support an interpretation" + human review | SRS FR-2.2.7 · SDD data flow step 11 · `evidence_service.py` |
+| G21 | Generic "review/monitor" actions | Controlled action vocabulary: monitor · review · prepare_internal_briefing · prepare_scientific_faq · escalate · request_stakeholder_review · no_immediate_action; each action carries reason/function/evidence/confidence/human-review | SRS FR-2.6.1 · SDD `action_recommendations` table |
+| G22 | No labelled validation dataset | 20–30 B.Pharm-labelled examples (disease · patient type · signal type · priority · function); ≥85% accuracy with precision/recall/confusion matrix | SRS AC-10 · `data/evaluation/` · §5 B.Pharm workstream |
+| G23 | Missing-signal presented as definitive | Expected-but-absent events become **WATCH items** (monitoring signals, not claims), labeled, human review | SRS FR-2.3C.1 · SDD `missing_signal_alerts.status='watch'` |
+| G24 | Dashboard-only; no digest | Weekly Intelligence Digest, function-filtered (six functions), reusing the same brief agents | SRS AC-13 · SDD `digests` table · UI §3.4A |
+| G25 | Success metrics not explicit | The five hackathon success metrics: 100% source-linked · ≥85% classification · ≤5 min discovery · 0 confidential/patient data · calibrated improvement | Master Plan §10 · SRS AC-9..14 · README |
+| G26 | Calibration not visibly demonstrable | Mandatory BEFORE/AFTER comparison (priority/function/action change visible from feedback) | SRS AC-14 · UI §15.3 |
+| G27 | Risk register absent | `docs/9_RISK_AND_GUARDRAILS.md` — Risk/Cause/Detection/Mitigation/Human review per risk | New document |
+| G28 | B.Pharm ownership not assigned | Sanjana (Medical Affairs/priority/routing/actions) · Ishaaq (treatment map/disease/inhibitor/lifecycle/signal types/expected-event rules) · Usha (evidence quality/F-I-S/red-team/safety/access/human-review triggers); their output = labelled dataset + domain rules | README Team · SRS §2.8.4 · §11 roadmap |
+| G29 | No relevance-based routing principle | "Not every signal goes to everyone" — understand → classify → determine relevance → route → role-specific explanation/action; store primary_function, secondary_functions[], function_relevance_score, routing_reason, suggested_action; initial routing matrix is seed, adjustable via calibration | Master Plan §2 · SRS FR-2.5.1 · SDD `signal_routing` table |
+| G30 | Congress/publication treated as generic news | CONGRESS and PUBLICATION as first-class signal types with subtypes (congress abstract/oral/poster/new data/updated analysis/known-data presentation/safety/efficacy/PRO/mechanism-dosing; publication peer-reviewed/preprint/RWE/post-hoc/LTFU/safety/PRO/mechanistic); participate in all five mechanisms; congress/publication link to existing development (NEW EVIDENCE vs NEW DEVELOPMENT) | SRS FR-2.2.2 · SDD signals subtypes · Master Plan §3 |
+| G31 | Missing-Signal only checks generic milestones | Stakeholder-defined WATCH RULES (source_event → expected next event → window → function → status: watching/new_evidence_detected/no_new_evidence/watch_expired/human_review_required); wording "Watch for…/Expected/possible next evidence/Not observed yet"; absence → "No subsequent congress evidence observed during the configured monitoring window" | SRS FR-2.3C.1A · SDD `watch_items` table · UI §3.2C |
+| G32 | Actions not role-specific | Role-aware action mapping per function (MA: review evidence/brief/FAQ; MedComms: congress/publication review/FAQ; Regulatory: regulatory implication/milestone; Safety/PV: safety review/PV assessment; Market Access: HTA/payer; Leadership: escalate/strategic review); AI suggests only, never executes | SRS FR-2.6.1 · Master Plan §2 · UI §4.3 |
+| G33 | Calibration scope too narrow (priority only) | Stakeholders influence priority · routing · action · watch rules · relevance criteria; demo shows BEFORE/AFTER incl. watch-rule creation ("monitor this competitor trial for upcoming congress disclosures") | SRS FR-2.8.3 · UI §15.3 · Master Plan §9 |

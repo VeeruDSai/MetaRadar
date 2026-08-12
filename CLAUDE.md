@@ -31,7 +31,7 @@ MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feed
 - **Celery 5.3 + APScheduler**: Asynchronous ingestion pipeline and 2-hour periodic fetch scheduler.
 ### NLP & AI Models (All Local, Free)
 - **spaCy 3.7 (en_core_sci_md)**: Local Named Entity Recognition (NER) for pharmaceutical entity extraction (drugs, companies, trial phases, indications).
-- **DistilBART (sshleifer/distilbart-cnn-12-6)**: Local signal summarization (310MB).
+- **BART (facebook/bart-large-cnn)**: Local signal summarization (CPU-friendly); also the demo-safety fallback when the reasoning LLM is unavailable.
 - **BART MNLI (cross-encoder/nli-MiniLM2-L6-H768)**: Zero-shot classification for haemophilia signal types (120MB).
 - **Sentence-Transformers (sentence-transformers/all-MiniLM-L6-v2)**: Local 384-dim vector embeddings (80MB).
 - **RAG Interface**: "Ask Athena" semantic search over saved signals via pgvector + local LLM.

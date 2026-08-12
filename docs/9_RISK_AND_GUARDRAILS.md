@@ -1,0 +1,82 @@
+# MetaRadar — Risk Register & Guardrails (INTERNAL DECISION SUPPORT ONLY)
+
+**Document:** 9 of the MetaRadar doc set · v1.1 · Aug 12, 2026 (latest stakeholder brief)
+**Scope:** Risks of the AI-assisted competitive-intelligence prototype, with detection, mitigation, and human-review requirements. Companion to SRS §3 (Non-Functional / Guardrails), SRS FR-2.2.6/FR-2.2.7 (F-I-S and evidence sufficiency), and the v1.2 additions: relevance-based routing (FR-2.5.1), Congress/Publication first-class signal types (FR-2.2.2), Watch-for-Next (FR-2.3C.1A), and role-aware actions (FR-2.6.1).
+
+---
+
+## 1. GUARDRAIL POLICY (non-negotiable)
+
+### 1.1 Data boundaries
+
+**Allowed:** public information, public APIs, public scientific publications, public company announcements, mock data, synthetic data (labeled `is_synthetic=true`).
+
+**Prohibited:** confidential Novo Nordisk strategy, internal forecasts, patient-level data, patient-identifiable data (PII/PHI — scrubbed before persistence), non-public information, confidential documents, promotional/external-facing content.
+
+### 1.2 System role
+
+> **MetaRadar is INTERNAL DECISION SUPPORT ONLY.**
+
+The system MUST NOT:
+- provide treatment recommendations
+- make medical conclusions
+- claim product superiority without appropriate evidence
+- make unsupported competitor comparisons
+- determine safety causality
+- replace expert review
+- autonomously execute business actions
+
+For safety / regulatory / high-impact signals: **AI suggests → human reviews → human decides.**
+
+### 1.3 Evidence rules
+
+- Every high-priority AI output carries: source name, source URL, publication date, source type, supporting excerpt (where available), evidence level, confidence, timestamp, AI-generated label.
+- Every output is labeled **FACT / INTERPRETATION / SPECULATION**. Speculation is never presented as fact.
+- Evidence-sufficiency gate: insufficient evidence → *"Insufficient evidence to support an interpretation."* + request human review. The system never fabricates an interpretation.
+- Suggested actions come from a controlled vocabulary (monitor · review · prepare_internal_briefing · prepare_scientific_faq · escalate · request_stakeholder_review · no_immediate_action); the AI suggests, never executes.
+
+---
+
+## 2. RISK REGISTER (Risk · Cause · Detection · Mitigation · Human review)
+
+| # | Risk | Cause | Detection | Mitigation | Human review |
+|---|---|---|---|---|---|
+| R1 | **Hallucination** — AI generates claims not in the sources | LLM free-form generation; weak grounding | F-I-S label check; evidence-sufficiency gate; every claim mapped to `source_id`/`excerpt`; retrieval confidence < threshold blocks generation | RAG grounded only in retrieved signals; temperature 0.0; prompts require verbatim-excerpt anchoring; insufficiency guardrail text | Human reviews any output with confidence below threshold; red-team flags |
+| R2 | **Unsupported claim risk** — conclusion exceeds evidence | Over-synthesis; single-source amplification | Source-count/platform checks; F-I-S = INTERPRETATION or SPECULATION when evidence is thin; EV-1 source-linking checker | Enforce 100% source-linked summaries; gate narrative on `evidence_sufficient`; multi-source corroboration rule for FACT | Human review before any use in briefings; B.Pharm evidence-quality QA (Usha) |
+| R3 | **Source quality risk** — low-credibility or adversarial sources (e.g., unverified forums) | Reddit/advocacy or unknown domains weighted like primary literature | Per-domain credibility scores; quality_score ≥ threshold; source tier shown in UI | Weighted credibility in confidence; low-credibility signals labeled and demoted; ontology validation | B.Pharm QA on source selection; analysts decide whether a source is usable |
+| R4 | **Conflicting evidence** — sources disagree | Genuine scientific/regulatory disagreement; different cohorts | Red-Team NLI contradiction scan (dual evidence chains) | Contradictions surfaced, never hidden; both claims shown; devil's-advocate note; Q2 flags | Human reconciles before use (e.g., HTA engagement) |
+| R5 | **Stale information** — aged data presented as current | Long cache TTL; infrequent fetch; discontinued sources | Data-freshness indicators (<5min/2h/24h/>24h); source-status footer; last-verified timestamps | Redis 2h TTL; 2-hour polling; staleness banners; bronze replay for re-processing | Analysts check publication dates before acting |
+| R6 | **Model uncertainty** — local models (Gemma 3 4B, BART) produce weaker reasoning | CPU-bound small models; quantization | Confidence scores; F-I-S labels; auto-fallback to BART logged and surfaced in UI | Model-agnostic config; known capability envelope documented; fallback chain (Gemma → BART) | Human review required for all AI-generated briefs |
+| R7 | **Classification errors** — wrong disease/patient type/signal type/priority/function | NER/zero-shot limits; ambiguous text | EV-2/EV-2b/EV-13 metric harness; B.Pharm-labelled validation set; confusion matrix review | ≥85% classification target; ontology validation layer; false-positive test cases (cardiac "gene therapy", engineering "mim8") | B.Pharm manual QA on flagged signals (Ishaaq labels, Usha reviews) |
+| R8 | **Missing-signal false positives** — silence flagged when nothing is wrong | Delayed disclosure; incomplete coverage; changed strategy | Confidence-by-silence threshold; configurable `max_lag_days`; status = WATCH (monitoring, not a claim) | WATCH items clearly labeled; never presented as confirmed events; human review gate | Human verifies against other sources before escalating |
+| R9 | **Duplicate / confluence errors** — same event counted as independent confluence | Press-wire syndication; near-duplicate articles | Deduplication (>80% similarity); confluence requires ≥3 distinct signal types; control tests (duplicate wires ≠ confluence) | Dedup before confluence; severity formula; EV-8 control scenarios | Analysts review confluence alerts before acting |
+| R10 | **Stakeholder bias** — calibration overfits to one persona's preferences | Sparse feedback; single-user dominance | Feedback counts per persona; weight-drift monitoring; per-role agreement metrics; WORM history | Minimum feedback threshold before recalibration; damped weight updates; simulated-persona diversity | Calibration changes audited; stakeholders review weight changes |
+| R11 | **Data-source outages / rate limits** — live APIs fail or throttle | Network, quotas, upstream changes | tenacity retries; per-source health status in UI; rate-limit counters | Fallback cascade: Redis cache → bronze → 500-signal synthetic; zero dashboard crashes; quota-aware connectors | Operators see degraded-mode banners and decide whether to re-fetch |
+| R12 | **Function-routing error** — signal routed to wrong function | Matrix weights mis-set; calibration noise; ambiguous signal type | Q3 confidence + "why this score"; calibration feedback; per-function precision | Six-function matrix with B.Pharm-validated weights (Sanjana); extended roles toggleable | Stakeholder feedback loop corrects routing; human review of high-impact misroutes |
+| R13 | **Action-suggestion error** — wrong/unsafe action suggested | Template gaps; missing context; escalation logic errors | Controlled vocabulary conformance (EV-14); action↔evidence linkage check | Vocabulary-only suggestions; no autonomous execution; reason + evidence on every action | Human approves every action; safety/regulatory actions require designated reviewers |
+| R14 | **PII / confidential-data leak** — patient or private data enters the pipeline | Scraped content containing names/case data | spaCy PII/PHI scrubber before persistence; audit scan (EV-4 = 0) | Redaction `[REDACTED:LABEL]`; public/synthetic source whitelist; `.env` secrets never in repo | Security review of any flagged content; CDA compliance maintained |
+| R15 | **Prompt / ontology drift** — rules or ontology become outdated or wrong | Manual ontology edits; model/prompt changes; new assets | Ontology versioning (`updated_by`); calibration/audit history; B.Pharm QA rows (incl. fitusiran/Alhemo error class) | Versioned ontology + prompts; regression tests on evaluation set; change log in `audit_log` | B.Pharm reviews ontology changes before promotion |
+| R16 | **Routing misjudgement (relevance-based)** — signal routed to too many/too few functions | Broadcast-style seed matrix; calibration noise; ambiguous signal type | Q3 shows routing_reason + per-function scores; routing agreement metric (EV-6); feedback loop | Relevance-based routing principle ("not every signal goes to everyone"); seed matrix adjustable via calibration; routing_reason explains every decision | Stakeholders review routing on high-impact signals; calibration corrects future routing |
+| R17 | **Congress/publication miscoupling** — new evidence wrongly linked to (or detached from) a development | development_id match errors; same drug different trial; press-wire noise | `link_decision` audit field; lifecycle event record (event_type/event_date/development_id/source_id); control scenarios (EV-9/AC-15) | Confluence requires entity+development match; congress/publication subtype classification; human-review flag on ambiguous links | Analysts verify congress card relationships before acting |
+| R18 | **Watch-for-Next false expectations** — stakeholder watch rules create misleading monitoring | Ambiguous stakeholder instructions; window too short/long; expected event never plausible | Watch statuses (watching/new_evidence_detected/no_new_evidence/watch_expired/human_review_required); absence wording guardrail | Wording limited to "Watch for / Expected/possible next evidence / Not observed yet"; absence never claimed as fact; human review on watch expiry | Stakeholders confirm watch rules; analysts review watch-expired items |
+| R19 | **Role-action mismatch** — role-aware action inappropriate for the function | Template gaps; wrong function mapping; escalation logic errors | EV-14 conformance; action↔function↔evidence linkage check; calibration feedback | Controlled + role-specific vocabulary (FR-2.6.1, MR-ACT-2); no autonomous execution; reason+evidence on every action | Human approves every action; designated reviewers for safety/regulatory |
+
+---
+
+## 3. AUDIT & RECONSTRUCTION
+
+For every AI-generated intelligence output, the system preserves enough metadata to answer: *"What information did the system use to produce this, and with what model?"*
+
+- `evidence_chain` JSONB (source, URL, published_at, excerpt, credibility, sha256)
+- `model_metadata` (model name/version, task, temperature, prompt-template id, config hash)
+- WORM `audit_log` (append-only; no UPDATE/DELETE; 21 CFR Part 11 / GxP aligned)
+- Append-only `stakeholder_feedback` and `calibration_history`
+- `raw_signals_bronze` verbatim payloads with timestamps (full replay)
+
+## 4. RESPONSIBLE-AI COMPLIANCE NOTE
+
+These guardrails align with current FDA thinking on AI credibility in drug development and EMA AI principles: AI supports, humans decide; outputs are independently reviewable; models carry version/credibility metadata; and hallucination is controlled by grounding AI to verified evidence sets. [WEB-VERIFIED]
+
+---
+
+*Risk Register v1.0 · August 12, 2026 · Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 · Team: MSRIT Aura Pharmers*

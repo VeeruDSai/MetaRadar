@@ -42,11 +42,17 @@ ENTITY & EVENT UNDERSTANDING
 FIVE INTELLIGENCE ANALYSES
    │ (1. Confluence → 2. Lifecycle → 3. Red-Team → 4. Missing-Signal → 5. Stakeholder HITL)
    ▼
+FACT / INTERPRETATION / SPECULATION
+   │ (evidence-sufficiency gate; never present speculation as fact)
+   ▼
+FUNCTION ROUTING (six functions + extended)
+   ▼
 FOUR-QUESTION DECISION INTERFACE
    │ (Q1: What changed? → Q2: Why matters? → Q3: Which function? → Q4: What action?)
    ▼
-ROLE-SPECIFIC INTELLIGENCE
-   (Medical Affairs | Regulatory | Market Access | Commercial | R&D)
+FUNCTION-SPECIFIC INTELLIGENCE
+   (Medical Affairs | Regulatory | Safety/PV | Market Access |
+    Medical Communications | Leadership; extended: Commercial, R&D)
 ```
 
 ---
@@ -79,7 +85,7 @@ Do **NOT** present these as five unrelated AI features. Present them as **five q
 ### Analysis 2: LIFECYCLE TRACKING
 * **Question Asked:** *"Where is this development in its overall journey?"*
 * **Progression Chain:**  
-  `Announced → In Trial → Results → Regulatory Review → Approved → Post-Market / Discontinued`
+  `Announced → In Trial → Interim Result → Final Result → Congress/Publication → Regulatory Development → Approved → Post-Market / Discontinued`
 * **Explanation:** MetaRadar connects isolated updates into a chronological development story so an analyst immediately sees where an asset sits and where it is going next.
 * **Haemophilia Example:** mim8 (Novo Nordisk bispecific): Phase 3 trial initiation (2024) → Primary endpoint readout (Jan 2026) → Regulatory submission expected (Q3 2026).
 
@@ -91,7 +97,7 @@ Do **NOT** present these as five unrelated AI features. Present them as **five q
 ### Analysis 4: MISSING-SIGNAL DETECTION
 * **Question Asked:** *"What should have happened next, and has it actually happened?"*
 * **Explanation:** Absence of an expected milestone after a trial or readout is automatically flagged. Absence is **not** automatically treated as proof of a problem; it becomes an alert requiring human review.
-* **Haemophilia Example:** Phase 3 trial completed → expected regulatory submission within 180 days → 120 days pass with zero public filings → Missing-Signal Alert triggered: *"Prolonged silence on expected submission — potential clinical query or manufacturing delay."*
+* **Haemophilia Example:** Phase 3 trial completed → expected regulatory submission within 180 days → 120 days pass with zero public filings → **WATCH item** created (monitoring signal, NOT a claim): *"Prolonged silence on expected submission — potential clinical query or manufacturing delay. Human review required."*
 
 ### Analysis 5: STAKEHOLDER LEARNING / HITL CALIBRATION
 * **Question Asked:** *"Does the system's understanding of relevance match how the intended function actually thinks?"*
@@ -108,7 +114,7 @@ The Five Intelligence Mechanisms directly feed the Four-Question Decision Interf
 |---|---|---|
 | **Q1 — WHAT CHANGED?** | Entity/Event Extraction + **Confluence** | Real-time signal feed, entity tags, signal type badges, converged multi-source alerts |
 | **Q2 — WHY DOES IT MATTER?** | **Lifecycle** + **Red-Team Contradiction** + Ontology | Evidence strength, position on lifecycle timeline, competitive impact on Novo Nordisk portfolio, contradicting evidence & devil's advocate review |
-| **Q3 — WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?** | **Stakeholder Calibration (HITL)** + Matrix Routing | Calibrated role relevance badges with confidence percentages (Medical Affairs, Regulatory, Market Access, Commercial, R&D) |
+| **Q3 — WHICH NOVO NORDISK FUNCTION SHOULD REVIEW IT?** | **Stakeholder Calibration (HITL)** + Matrix Routing | Calibrated function badges with confidence percentages (Medical Affairs, Regulatory, Safety/PV, Market Access, Medical Communications, Leadership; extended: Commercial, R&D) |
 | **Q4 — WHAT INTERNAL ACTION MAY BE REQUIRED?** | **Missing-Signal** + Synthesized Evidence | AI-generated action suggestions based on evidence, lifecycle stage, and missing-signal alerts, prefaced *"Suggested — requires human review"* |
 
 ---
@@ -230,6 +236,8 @@ Public Data Sources (PubMed, NewsAPI, ClinicalTrials.gov, FDA, EMA, Reddit, Cong
 >
 > Stakeholder Learning uses feedback from functions such as Medical Affairs and Regulatory to improve future prioritization.
 >
+> Every output is labeled Fact, Interpretation, or Speculation — speculation is never presented as fact, and when evidence is insufficient we say so.
+>
 > All of this feeds our Four-Question interface:
 >
 > What changed?
@@ -280,7 +288,7 @@ Every answer follows a strict 2-part structure:
 
 ### Q5: How does lifecycle tracking work?
 * **Non-Technical Answer:** It places every new update on a chronological step-by-step timeline that tracks a drug from its first announcement to final approval.
-* **Technical Implementation:** Lifecycle tracking uses a deterministic finite-state machine (FSM) defined per asset: `announced → in_trial → results_in → under_review → approved → post_market | discontinued`. The Lifecycle Agent maps extracted signal event metadata to transitions in `lifecycle_chains` and `lifecycle_events` tables, automatically computing `expected_next_event` and `expected_timeline_days`.
+* **Technical Implementation:** Lifecycle tracking uses a deterministic finite-state machine (FSM) defined per asset: `announced → in_trial → interim_result → final_result → congress_publication → regulatory_development → approved → post_market | discontinued`. The Lifecycle Agent maps extracted signal event metadata to transitions in `lifecycle_chains` and `lifecycle_events` tables, automatically computing `expected_next_event` and `expected_timeline_days`.
 
 ---
 
@@ -380,21 +388,21 @@ To ensure judges understand that MetaRadar is an **evidence-to-decision system**
 4. **Step 4: Red-Team Contradiction Analysis**
    * *Presenter:* "Here is where conventional AI fails and MetaRadar excels. Our **Red-Team Contradiction Agent** compares the positive ASH abstract claim (*'Sustained Factor IX expression'*) with a real-world patient cohort publication (*'15% of patients show declining factor expression at 36 months'*). It surfaces BOTH evidence chains with a devil's-advocate review note."
 
-5. **Step 5: Missing-Signal Detection**
-   * *Presenter:* "Simultaneously, MetaRadar checks expected follow-ups. A competitor gene therapy trial completed 150 days ago, but no regulatory filing has appeared. MetaRadar flags a **Missing-Signal Alert**: *Prolonged silence on expected submission — potential manufacturing or safety query.*"
+5. **Step 5: Missing-Signal Detection + Watch-for-Next**
+   * *Presenter:* "Simultaneously, MetaRadar checks expected follow-ups. A competitor gene therapy trial completed 150 days ago, but no regulatory filing has appeared. MetaRadar flags a **Missing-Signal Alert** as a WATCH item — *'monitoring signal, not a claim'*. It also honours stakeholder-defined watch rules: a stakeholder asked us to *'monitor this competitor Phase III programme for subsequent congress disclosures'* — a WATCH rule is created (status: watching), and when the next congress abstract arrives it links into the SAME development chain and notifies Medical Affairs + Medical Communications."
 
-6. **Step 6: The Four-Question Decision Interface**
+6. **Step 6: The Four-Question Decision Interface (relevance-based routing)**
    * *Presenter:* "All five mechanisms feed directly into our Four-Question Interface:
-     * **Q1 What changed?** Hemgenix 3-year durability data & real-world cohort discrepancy (Confluence alert).
+     * **Q1 What changed?** Hemgenix 3-year durability data & real-world cohort discrepancy (Confluence alert); ISTH 2026 FRONTIER4 abstract linked as NEW EVIDENCE for the existing trial development.
      * **Q2 Why does it matter?** Directly impacts Novo Nordisk's mim8 subcutaneous positioning vs single-dose gene therapy.
-     * **Q3 Who should review it?** Medical Affairs (94% confidence) & Commercial Strategy (82% confidence).
-     * **Q4 What action may be required?** *Suggested — Medical Affairs to draft briefing note on gene therapy durability vs subcutaneous prophylaxis.*"
+     * **Q3 Who should review it?** Not everyone — relevance-based routing. Medical Affairs (primary, 91%), Medical Communications (82%), Regulatory (64%), with an explicit routing reason: *'Clinical efficacy/safety data with potential implications for scientific understanding and future regulatory review.'*
+     * **Q4 What action may be required?** Role-aware actions: *Suggested — Medical Affairs to draft briefing note; Medical Communications to prepare scientific FAQ.* (AI suggests, never executes; human review required.)"
 
-7. **Step 7: Stakeholder Calibration (HITL)**
-   * *Presenter:* "Finally, watch Dr. Meera from Medical Affairs click 'Highly Relevant' on this signal. `StakeholderCalibrationService` processes this feedback, recalibrates Medical Affairs weightings, and instantly updates future signal routing confidence."
+7. **Step 7: Stakeholder Calibration (HITL) with visible BEFORE/AFTER**
+   * *Presenter:* "Finally, watch Dr. Meera from Medical Affairs rate this signal. The demo shows a visible BEFORE/AFTER: priority Medium → High, routing Medical Affairs → Medical Affairs (primary) + Medical Communications (secondary), action Monitor → Monitor + prepare internal review, and a WATCH rule created for upcoming congress disclosures. `StakeholderCalibrationService` processes this feedback, recalibrates the weights, and instantly updates future routing confidence — calibration changes output, not just a feedback form."
 
 *Closing Presenter Statement:*  
-> **"You have just seen MetaRadar convert three raw news items into one evidence-backed development, complete with history, evidence challenges, missing milestone alerts, and role-calibrated actions. That is the power of MetaRadar."**
+> **"You have just seen MetaRadar convert scattered public items into one evidence-backed development, complete with history, evidence challenges, missing milestone alerts, stakeholder-defined watch rules, and role-calibrated actions — never broadcasting everything to everyone. That is the power of MetaRadar."**
 
 ---
 

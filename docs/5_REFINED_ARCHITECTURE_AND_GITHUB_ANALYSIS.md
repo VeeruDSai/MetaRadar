@@ -303,8 +303,9 @@ NEW MENTAL MODEL:
   Narrative Synthesis Agent
   ("Hemgenix 3-year durability strengthening: 3 convergent signals in 48h, one contradiction flagged")
          ↓
-  Role-Specific Intelligence Brief
-  (Medical Affairs: clinical durability implications / Regulatory: labeling & HTA impact)
+  Function-Specific Intelligence Brief
+  (Medical Affairs: clinical · Regulatory: labeling · Safety/PV: watch ·
+   Market Access: HTA · Medical Communications: FAQ · Leadership: escalation)
          ↓
   Stakeholder Calibration Agent (HITL)
   (Persona feedback recalibrates role-scoring weights → routing confidence improves)
@@ -760,7 +761,7 @@ Reasoning: Derived from 3 independent sources across 3 platforms. Confidence: 84
 
 ### **Upgrade 6: Competitive Narrative Synthesis (LLM Layer)**
 
-The final layer: Take all signals about a competitor/topic and synthesize them into a 3-sentence executive brief.
+The final layer: Take all signals about a competitor/topic and synthesize them into a 3-sentence executive brief. Every brief is labeled **FACT / INTERPRETATION / SPECULATION**; when evidence is insufficient the system returns *"Insufficient evidence to support an interpretation."*
 
 ```python
 # services/narrative_synthesizer.py
@@ -936,8 +937,9 @@ Signals are stitched into chronological state machines per development, so an an
 ```python
 # services/lifecycle_tracker.py
 LIFECYCLE_STATES = [
-    "announced", "in_trial", "results_in",
-    "under_review", "approved", "post_market", "discontinued",
+    "announced", "in_trial", "interim_result", "final_result",
+    "congress_publication", "regulatory_development", "approved",
+    "post_market", "discontinued",
 ]
 
 class SignalLifecycleTracker:
@@ -952,18 +954,31 @@ class SignalLifecycleTracker:
 
     def advance(self, signal, entity) -> dict:
         chain = self.get_or_create_chain(entity)     # entity + modality + indication
-        chain.events.append(signal)
+        # Every event records event_type · event_date · development_id · source_id
+        chain.events.append({
+            **signal,
+            "event_type": signal["signal_type"],   # congress_abstract | oral_presentation |
+                                                    # poster | publication | regulatory_development ...
+            "event_date": signal.get("event_date") or signal["published_at"],
+            "development_id": chain.id,
+            "source_id": signal["source_id"],
+        })
         chain.current_state = self._infer_state(signal)   # B.Pharm-validated rules
         chain.expected_next = self._expected_next(chain)
+        # NEW DEVELOPMENT vs NEW EVIDENCE ABOUT EXISTING DEVELOPMENT:
+        # a matching development_id means the congress/publication signal APPENDS to
+        # this chain (one development), never spawning an unrelated intelligence card.
         return {"chain": chain, "state": chain.current_state,
-                "expected_next": chain.expected_next}
+                "expected_next": chain.expected_next,
+                "link_decision": "new_evidence_existing_development"
+                                if chain.events else "new_development"}
 
     def timeline(self, entity) -> list[dict]:
         """Chronological, temporally-linked events for the entity."""
-        return sorted(self.chains[entity].events, key=lambda e: e["published_at"])
+        return sorted(self.chains[entity].events, key=lambda e: e["event_date"])
 ```
 
-**Why this matters:** "Results are in" is only useful if you also know "submission is expected next" and can detect when that next step silently doesn't arrive.
+**Why this matters:** "Results are in" is only useful if you also know "submission is expected next" and can detect when that next step silently doesn't arrive. A trial → congress abstract → oral presentation → poster → publication chain (e.g., FRONTIER4/denecimig at ISTH 2026) stays ONE development because every event carries `development_id`.
 
 ---
 
@@ -1050,7 +1065,28 @@ async def detect_missing_signals(lifecycles: list[dict]) -> list[dict]:
 
 **Guardrail:** Missing-signal alerts only fire after the configured `max_lag_days` window, and confidence grows with silence — the false-positive discipline that judges score on Feasibility.
 
-**Demo:** `🕳 MISSING SIGNAL — mim8 submission announced expected 90d ago (last signal: Jan 2026)` — MetaRadar flags the silence.
+**Demo:** `🕳 WATCH — mim8 submission announced expected 90d ago (last signal: Jan 2026)` — MetaRadar flags the silence as a monitoring signal (a WATCH item, not a claim that the event will happen); human review required.
+
+**Watch-for-Next (stakeholder-defined watch rules, v3.1):** a stakeholder can request *"monitor this competitor Phase III programme for subsequent congress disclosures."* The detector stores a WATCH RULE — `source_event → expected_event_type (e.g., congress_disclosure) → monitoring_window_days → responsible_function → status` — with statuses `watching / new_evidence_detected / no_new_evidence / watch_expired / human_review_required`. When a matching congress signal is ingested, it links into the existing development (confluence/lifecycle), the watch flips to `new_evidence_detected`, and the responsible functions are notified. If nothing appears in the window: *"No subsequent congress evidence observed during the configured monitoring window."* — absence is NEVER presented as proof that no activity occurred; wording is limited to "Watch for… / Expected/possible next evidence / Not observed yet". This extends the existing missing-signal mechanism (no separate watch engine).
+
+```python
+# services/watch_service.py (extends missing_signal_detector.py)
+WATCH_STATUSES = ["watching", "new_evidence_detected", "no_new_evidence",
+                  "watch_expired", "human_review_required"]
+
+async def create_watch_rule(source_event_id, expected_event_type,
+                            monitoring_window_days, responsible_function) -> dict:
+    # e.g. source_event_id=competitor Phase III update, expected_event_type=congress_disclosure
+    return {"status": "watching",
+            "message": "Watch for upcoming congress disclosures · "
+                       "Expected/possible next evidence · Not observed yet"}
+
+async def on_new_signal(signal):
+    for watch in active_watches(expected_event_type=signal["signal_type"]):
+        if signal["development_id"] == watch.source_event.development_id:
+            watch.status = "new_evidence_detected"      # linked into same development
+            notify(watch.responsible_function)          # Medical Affairs + Medical Communications
+```
 
 
 ---
@@ -1087,7 +1123,7 @@ NLP / AI:
 DATA:
 ├─ PostgreSQL 16 + pgvector (primary + vector in one DB)
 │   ↑ Replace Weaviate entirely — eliminates one Docker container
-│   ├─ pgvector: 768-dim vectors, native hybrid search in PostgreSQL
+│   ├─ pgvector: 384-dim vectors, native hybrid search in PostgreSQL
 │   ├─ raw_signals_bronze: raw API JSON, pre-processing (replay layer)
 │   ├─ audit_log: WORM append-only compliance table (21 CFR Part 11)
 │   ├─ stakeholder_feedback: append-only routing ratings (Analysis 5, HITL)
@@ -1111,7 +1147,9 @@ CALIBRATION (Analysis 5, HITL):
 │   └─ recalibrate(role): stakeholder_feedback → scoring_weights update
 ├─ calibration_agent.py (10th LangGraph node, between brief and END)
 ├─ Endpoints: POST /api/v1/feedback · GET /api/v1/feedback/summary · POST /api/v1/calibrate
-└─ Simulated personas for demo: Medical Affairs Lead, Regulatory Specialist, Market Access Manager
+└─ Simulated personas for demo: Medical Affairs Lead · Regulatory Specialist ·
+   Safety/PV Officer · Market Access Manager · Medical Communications Lead ·
+   Leadership/GBS Executive (extended: Commercial Strategist, R&D Scientist)
 
 FRONTEND:
 ├─ Next.js 15 (App Router + Server Components)
@@ -1290,20 +1328,31 @@ Milestone: NLP pipeline working — signals have entities, summaries, role score
 
 WEEK 3: Five Advanced Analyses + Dashboard Polish
 CSE:
-├─ Signal Confluence Engine (Analysis 1, core differentiator)
-├─ Signal Lifecycle Tracker (Analysis 2: state machine + event chains)
+├─ Signal Confluence Engine (Analysis 1, core differentiator) + development-link
+│   decision (congress/publication → existing development_id vs new development)
+├─ Signal Lifecycle Tracker (Analysis 2: state machine + event chains; events record
+│   event_type · event_date · development_id · source_id)
 ├─ Red-Team Contradiction Engine (Analysis 3: NLI entailment on bart-large-mnli)
 ├─ Missing-Signal Detector (Analysis 4: expected-event state machine)
+├─ Watch-for-Next (Analysis 4 extension): stakeholder watch rules → watch_items
+│   (statuses: watching/new_evidence_detected/no_new_evidence/watch_expired/
+│   human_review_required)
+├─ Relevance-based routing (Analysis output): signal_routing table — primary/secondary
+│   functions + function_relevance_scores + routing_reason (seed matrix, calibration-adjustable)
+├─ Congress + Publication as first-class signal types with subtypes (participate in all five mechanisms)
 ├─ pgvector embeddings + hybrid search
 ├─ "Ask Athena" lite (RAG query interface)
-├─ Dashboard: Four-Question panels (Q1-Q4) + Role filter + analysis flags
-├─ Signal cards: Expandable, traceable sources, lifecycle/contradiction/missing badges
+├─ Dashboard: Four-Question panels (Q1-Q4) + Function filter (six functions) + analysis flags
+├─ Signal cards: Expandable, traceable sources, lifecycle/contradiction/missing badges,
+│   routing reason + development-connection block (Development · Event · Relationship)
 ├─ Framer Motion animations (subtle entrance effects)
 └─ Virtual scrolling (react-window)
 
 B.Pharm:
 ├─ Confluence rule validation (do the patterns make clinical sense?)
 ├─ Lifecycle + missing-signal rules authorship (expected-event sequences, max_lag_days)
+├─ Watch-rule authorship (expected next events per pattern, e.g., competitor trial → congress disclosure)
+├─ Routing matrix validation (initial routes per signal type — MA/MedComms/Regulatory/Safety/PV/Market Access)
 ├─ Contradiction pair QA (seeded ASH vs real-world examples)
 ├─ Signal taxonomy v2 (refined from Week 2 QA)
 └─ Prepare domain explanation slides (2-3 slides)
@@ -1317,10 +1366,11 @@ CSE:
 ├─ Narrative Synthesis Agent (LLM-generated intelligence briefs)
 ├─ Temporal pattern matching (gene therapy milestone, regulatory filing patterns)
 ├─ Stakeholder Learning Loop (Analysis 5, HITL): feedback endpoints + recalibrate service
-├─ Simulated persona feedback seeding for demo
+│   (scope: priority · routing · action · watch rules · relevance criteria)
+├─ Simulated persona feedback seeding for demo (BEFORE/AFTER incl. watch-rule creation)
 ├─ Error handling hardening (all fallback paths tested)
 ├─ Performance optimization (< 500ms cached dashboard)
-├─ Unit + integration tests (60% coverage minimum, incl. lifecycle/red-team/missing-signal/calibration)
+├─ Unit + integration tests (60% coverage minimum, incl. lifecycle/red-team/missing-signal/calibration/watch/routing)
 └─ Demo recording (backup if live internet fails)
 
 B.Pharm:

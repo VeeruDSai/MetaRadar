@@ -31,6 +31,9 @@
 13. **Devil's-Advocate Transparency (v2.1):** Contradicting claims are surfaced with both evidence chains and a red-team note — MetaRadar shows uncertainty, never hides it
 14. **Silence Is a Signal (v2.1):** Expected-but-absent milestones render as missing-signal warnings with growing confidence — the dashboard surfaces what did *not* happen
 15. **Five-to-Four Visual Convergence:** The UI visually presents five underlying intelligence mechanisms (Confluence, Lifecycle, Red-Team Contradiction, Missing-Signal, Stakeholder HITL) feeding directly into the four decision panels (Q1-Q4).
+16. **Fact/Interpretation/Speculation Transparency (v3.0):** Every intelligence output carries a visible F-I-S label; speculation is never presented as fact; insufficient evidence renders "Insufficient evidence to support an interpretation."
+17. **Internal Decision Support Only (v3.0):** The UI never implies clinical, regulatory, or safety decisions are being made autonomously; every suggested action is a suggestion requiring human review.
+18. **Relevance-Based Routing (v3.1):** *"Not every signal needs to go to everyone."* The UI shows primary/secondary function routing with a routing reason — never a bare broadcast. Congress and publication signals render a Development Connection block (Development · Event · Relationship · Related evidence) so judges see Confluence/Lifecycle working. Watch-for-Next rules render on the Missing-Signals page with explicit statuses.
 
 ### 1.2 Color Palette
 
@@ -153,13 +156,14 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │ • Medical   │ └──────────────────────────────────────────────────┘ │  Alerts
 │   Affairs   │                                                       │
 │ • Regulatory│ ┌──────────────────────────────────────────────────┐ │
-│ • Market Acc│ │  Q1  WHAT CHANGED?      Q3  WHICH FUNCTION?      │ │
-│ • Commercial│ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
-│ • R&D       │ │  │ Signal Feed        │ │ Role Routing         │ │ │
-│             │ │  │ [haemophilia tags] │ │ MedAff 92% · Reg 84% │ │ │ Four-
-│             │ │  │ [⏱ lifecycle]     │ │ Commercial 65%       │ │ │ Question
-│  Settings   │ │  │ [⚔ contradiction] │ │ [feedback ⭐ widget] │ │ │ Panels
-│  Logout     │ │  │ [🕳 missing]       │ │                      │ │ │ (Q1-Q4)
+│ • Safety/PV │ │  Q1  WHAT CHANGED?      Q3  WHICH FUNCTION?      │ │
+│ • Market Acc│ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
+│ • Med Comms │ │  │ Signal Feed        │ │ Function Routing     │ │ │
+│ • Leadership│ │  │ [haemophilia tags] │ │ MedAff 92% · Reg 71% │ │ │
+│             │ │  │ [⏱ lifecycle]     │ │ Safety/PV 52%        │ │ │ Four-
+│             │ │  │ [⚔ contradiction] │ │ MedComms 64%         │ │ │ Question
+│  Settings   │ │  │ [🕳 missing]       │ │ [feedback ⭐ widget] │ │ │ Panels
+│  Logout     │ │  │                      │ │                      │ │ │ (Q1-Q4)
 │             │ ├──────────────────────────┴──────────────────────┤ │ │
 │             │ │ Q2  WHY DOES IT MATTER?   Q4  WHAT ACTION?      │ │ │
 │             │ │  ┌────────────────────┐ ┌──────────────────────┐ │ │
@@ -193,6 +197,9 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │ [▼] [High] Hemgenix 3-year Factor IX expression data shows │
 │     sustained efficacy at ASH 2026                        │
 │     Source: CSL Behring | 2h ago | Score: 0.92            │
+│     Evidence: FACT · Disease: Haemophilia B · Patient:     │
+│     Without inhibitors · Company: CSL Behring · Asset:     │
+│     Hemgenix · Signal: congress · Priority: HIGH           │
 ├────────────────────────────────────────────────────────────┤
 │ Q1 · WHAT CHANGED?  (panel tint #F0F4FF)                   │
 │ "CSL Behring/UniQure present 3-year durability for         │
@@ -202,7 +209,8 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │           📋 Haemophilia B · 📊 FDA-approved (2022)        │
 ├────────────────────────────────────────────────────────────┤
 │ Q2 · WHY DOES IT MATTER?  (panel tint #FFF4E6)             │
-│ Relevance: Medical Affairs 0.92 · R&D 0.78 · Commercial 0.65│
+│ Relevance: Medical Affairs 0.92 · Regulatory 0.71 ·         │
+│ MedComms 0.64 · Safety/PV 0.52 · Market Access 0.38        │
 │ AI: "Sustained 3-year gene-therapy durability strengthens  │
 │  the curative narrative vs lifelong prophylaxis — impacts  │
 │  mim8/concizumab positioning and HTA arguments."           │
@@ -213,29 +221,38 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │   vs "waning expression in subset" (real-world) · score 0.81│
 │   [View evidence A] [View evidence B] · Human review req.  │
 ├────────────────────────────────────────────────────────────┤
+│ 🔍 WHY WAS THIS FLAGGED?  (explainable priority, v3.0)     │
+│ ✓ 3 independent sources in 48h (confluence)                │
+│ ✓ Relevant competitor (CSL Behring · gene therapy)         │
+│ ✓ Lifecycle: results_in → next: durability follow-up       │
+│ ✓ Regulatory + HTA implication · Priority: 91/100          │
+├────────────────────────────────────────────────────────────┤
 │ Q3 · WHICH FUNCTION SHOULD REVIEW IT?  (panel tint #F0FFF4)│
-│ Medical Affairs  ██████████ 0.92  (Very Relevant)          │
-│ R&D              ████████░░ 0.78  (Relevant)               │
-│ Commercial       ██████░░░░ 0.65  (Somewhat Relevant)      │
-│ Regulatory       ████░░░░░░ 0.42  (Low)                    │
+│ Medical Affairs        ██████████ 0.92  (Primary)          │
+│ Regulatory             ████████░░ 0.71  (Secondary)        │
+│ Medical Communications ██████░░░░ 0.64  (Secondary)        │
+│ Safety/PV              ████░░░░░░ 0.52  (Low)              │
+│ Market Access          ███░░░░░░░ 0.38  (Low)              │
+│ Leadership             ██░░░░░░░░ 0.25  (Low)              │
+│ ROUTING REASON: "Clinical efficacy/safety data with         │
+│  potential implications for scientific understanding and   │
+│  future regulatory review." (explainable, v3.1)           │
 │ ┌────────────────────────────────────────────────────────┐ │
 │ │ ⭐ Stakeholder Review (HITL calibration):              │ │
 │ │ Was this routing correct?  ★★★★★ (1-5)               │ │
-│ │ [Submit] — recalibrates scoring_weights, confidence   │ │
+│ │ [Submit] — recalibrates priority/routing/action/watch  │ │
 │ │ badges update next cycle                              │ │
 │ └────────────────────────────────────────────────────────┘ │
 ├────────────────────────────────────────────────────────────┤
 │ Q4 · WHAT ACTION MAY BE REQUIRED?  (panel tint #FFF0F0)    │
-│ Suggested — requires human review:                         │
-│  [ ] Medical Affairs to brief Haemophilia team on          │
-│      gene-therapy durability vs prophylaxis positioning    │
-│  [ ] Commercial to re-run budget impact with 3-yr          │
-│      durability evidence                                   │
-│  [ ] R&D to assess Hemgenix effect on mim8 trial           │
-│      endpoints/durability expectations                     │
-│  [ ] Medical Affairs to reconcile contradiction:           │
-│      sustained vs waning durability before HTA engagement  │
-│      (v2.1 · ⚔ flagged above)                              │
+│ Suggested — requires human review (controlled vocabulary)  │
+│  [PREPARE INTERNAL BRIEFING] Medical Affairs — gene-       │
+│      therapy durability vs prophylaxis positioning         │
+│      (reason · evidence: sources 1-3 · confidence 84%)     │
+│  [REVIEW] Regulatory — label/durability claim consistency  │
+│  [ESCALATE] Safety/PV — waning-expression subset watch     │
+│  [MONITOR] Market Access — HTA budget-impact implication   │
+│      (v2.1 · ⚔ contradiction flagged above)                │
 ├────────────────────────────────────────────────────────────┤
 │ ⛓ Evidence Chain (traceable reasoning):                    │
 │ [1] ASH 2026 Abstract · Dec → "Hemgenix 3-yr data"         │
@@ -245,6 +262,14 @@ The dashboard is re-organized around the Four-Question Framework (Q1→Q4). Each
 │ [3] Reddit r/Hemophilia · Dec → patient discussion         │
 │     https://reddit.com/...  (excerpt preview)              │
 │ Confidence: 84% (3 independent sources, 3 platforms)       │
+├────────────────────────────────────────────────────────────┤
+│ 🔗 DEVELOPMENT CONNECTION (congress/publication signals,   │
+│    v3.1)                                                   │
+│ Development: FRONTIER4 · Event: ISTH 2026 abstract         │
+│ Relationship: "New evidence for existing development"     │
+│   (NOT a new card — linked via development_id)             │
+│ Related evidence: [ClinicalTrials.gov] [previous           │
+│   publication] [congress presentation]                     │
 ├────────────────────────────────────────────────────────────┤
 │ Original Source:                                           │
 │ "Etranacogene dezaparvovec (Hemgenix) demonstrated         │
@@ -505,6 +530,20 @@ Analysis 4 (Missing-Signal Detection) output. Silence is surfaced as intelligenc
 │ └───────────────────────────────────────────────────────────┘ │
 │ Note: false-positive discipline — alerts only after the       │
 │ configured max_lag window; confidence grows with silence.     │
+│                                                               │
+│ 👁 WATCH-FOR-NEXT (stakeholder-defined watch rules, v3.1)    │
+│ ┌───────────────────────────────────────────────────────────┐ │
+│ │ WATCH #fr4 · Competitor Phase III → upcoming congress     │ │
+│ │ disclosures · Window: 180d · Responsible: Medical Affairs │ │
+│ │ Status: ● WATCHING — "Watch for upcoming congress         │ │
+│ │   disclosures · Expected/possible next evidence · Not     │ │
+│ │   observed yet"                                           │ │
+│ │ [Create watch rule] [Extend window] [Mark human review]   │ │
+│ └───────────────────────────────────────────────────────────┘ │
+│ Statuses: watching · new_evidence_detected · no_new_evidence │
+│ · watch_expired · human_review_required. Absence wording:    │
+│ "No subsequent congress evidence observed during the         │
+│ configured monitoring window." (never proof nothing happened)│
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -519,7 +558,7 @@ Natural-language query interface (Week 4 RAG feature). Judging hook: "we don't j
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │ 🔍 What is the latest on mim8?                           │  │
 │  └───────────────────────────────────────────────────────────┘  │
-│  [Ask]  (role-scoped: Medical Affairs)                          │
+│  [Ask]  (function-scoped: Medical Affairs)                      │
 ├─────────────────────────────────────────────────────────────────┤
 │  Answer (grounded in 4 signals, last 7 days):                    │
 │  "Novo Nordisk's mim8 Phase 3 programme in Haemophilia A       │
@@ -536,10 +575,11 @@ Natural-language query interface (Week 4 RAG feature). Judging hook: "we don't j
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Behavior:**
-- Empty/hallucination guard: if insufficient signals → `"Insufficient signals in last 7 days"` (never make things up)
-- Every answer cites supporting signals + retrieval confidence
-- Answers are role-scoped (Medical Affairs cannot see Commercial-only queries)
+**Behavior (v3.0):**
+- Required answer schema: **Answer · Evidence · Sources · Confidence · Relevant entities · Lifecycle context · Contradicting evidence (if present)**
+- Empty/hallucination guard: if evidence is insufficient → `"Insufficient evidence to support an interpretation."` (never make things up)
+- Every answer carries an F-I-S label and cites supporting signals + retrieval confidence
+- Answers are function-scoped (e.g., Medical Affairs cannot see queries scoped to another function)
 
 ### 3.4 Narrative Briefs View (`/briefs`)
 
@@ -557,6 +597,27 @@ Natural-language query interface (Week 4 RAG feature). Judging hook: "we don't j
 │ Source counts: 5 · Confidence: 84% · Full evidence chain ↓      │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### 3.4A Weekly Intelligence Digest (`/digest`)
+
+Function-filtered weekly digest reusing the SAME intelligence pipeline (no second architecture). Top developments first, ranked by explainable priority; each item is a mini Four-Question card.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Weekly Haemophilia Intelligence Digest — [Function tabs:        │
+│  Medical Affairs | Regulatory | Safety/PV | Market Access |     │
+│  Medical Communications | Leadership]        [Export MD/PDF/JSON]│
+├─────────────────────────────────────────────────────────────────┤
+│  1. Hemgenix 3-yr durability @ ASH (FACT · conf 84%)           │
+│     WHAT CHANGED: ...   WHY IT MATTERS: ...                     │
+│     FUNCTION: Medical Affairs (primary) · Regulatory            │
+│     ACTION: Prepare internal briefing · EVIDENCE: [1][2][3]     │
+│  2. mim8 submission silence (WATCH · conf 0.66)                │
+│     ...                                                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Behavior:** each digest item includes What changed · Why it matters · Function · Suggested action (controlled vocabulary) · Evidence · Confidence · F-I-S label. Role/filter tabs produce the Medical Affairs Digest, Regulatory Digest, Safety Digest, etc. from the same generated content.
 
 ### 3.5 Authentication Pages
 
@@ -697,6 +758,21 @@ Date Range: [Last 7d ▼]
 **Evidence Chain Indicator**
 ```
 ⛓ Evidence: 3 sources     Click to expand source → URL → excerpt audit trail
+```
+
+**F-I-S Label (v3.0)**
+```
+FACT (green)          — directly supported by reliable source evidence
+INTERPRETATION (blue) — reasoned interpretation, always labeled as AI interpretation
+SPECULATION (amber)   — early/uncertain signal, never presented as fact
+INSUFFICIENT          — "Insufficient evidence to support an interpretation." + human review
+```
+
+**Action Vocabulary Chip (v3.0)**
+```
+[MONITOR] [REVIEW] [PREPARE INTERNAL BRIEFING] [PREPARE SCIENTIFIC FAQ]
+[ESCALATE] [REQUEST STAKEHOLDER REVIEW] [NO IMMEDIATE ACTION]
+Each chip: action + reason + relevant function + evidence + confidence + human review
 ```
 
 **Data Freshness Indicators**
@@ -1112,6 +1188,9 @@ Modal fade:    0.2s opacity transition
 - `ContradictionPanel` (NEW v2.1) — dual evidence chain display (claim A vs claim B) + red-team note; renders `GET /api/v1/contradictions`
 - `MissingSignalCard` (NEW v2.1) — expected-but-absent event + confidence-by-silence meter; renders `GET /api/v1/missing-signals`
 - `ConfidenceBySilenceMeter` (NEW v2.1) — visual meter that grows with days of silence (0.4 → 0.95)
+- `RoutingBadges` (NEW v3.1) — primary + secondary function badges with per-function relevance scores AND the routing reason line (explainable routing; renders `GET /api/v1/signals/{id}` routing block)
+- `DevelopmentLinkCard` (NEW v3.1) — congress/publication connection block: Development · Event · Relationship ("New evidence for existing development") · Related evidence links
+- `WatchRuleCard` (NEW v3.1) — stakeholder-defined watch: source event → expected next event → window → responsible function → status (watching / new_evidence_detected / no_new_evidence / watch_expired / human_review_required); renders `GET /api/v1/watchlist`
 
 **Installation:**
 ```bash
@@ -1218,6 +1297,25 @@ export const RoleBadge = ({ role, confidence }: { role: Role; confidence: number
 ### 15.3 Stakeholder Feedback Widget (Q3)
 
 Inline on the Q3 panel of every signal card. Posted to `POST /api/v1/feedback` (`{signal_id, role, rating, reason, user_id}`). After N feedback rows for a role, `POST /api/v1/calibrate` is triggered; confidence badges show the updated score on the next dashboard load.
+
+**Mandatory demo requirement (v3.0):** the UI MUST render a visible BEFORE/AFTER comparison for at least one signal:
+```
+BEFORE:  Priority = 78 · Function = Regulatory · Action = Review
+FEEDBACK: Regulatory persona corrects → "Safety/PV is the primary function"
+AFTER:   Priority = 84 · Function = Safety/PV · Action = Escalate
+Changed: function routing + action + relevance score
+```
+The feedback must visibly change priority, function routing, action, relevance score, or explanation logic — a feedback form alone is not sufficient.
+
+**Watch-for-Next calibration demo (v3.1):** a stakeholder comment such as *"Monitor this competitor trial specifically for upcoming congress disclosures"* MUST produce a visible watch-rule change alongside the routing change:
+```
+BEFORE:  Priority = Medium · Routing = Medical Affairs · Action = Monitor · (no watch)
+FEEDBACK: "Monitor this competitor trial for future congress disclosures"
+AFTER:   Priority = High · Primary = Medical Affairs · Secondary = Medical Communications
+         Action = Monitor + prepare internal review · WATCH = upcoming congress disclosures
+Changed: priority + routing + action + watch rule created (status = watching)
+```
+The watch rule then appears on the Missing-Signals page (§3.2C) and flips to `new_evidence_detected` when the next congress signal links into the same development.
 
 ```tsx
 // components/StakeholderFeedbackWidget.tsx
