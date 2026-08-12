@@ -6,7 +6,7 @@
 
 [![Hackathon](https://img.shields.io/badge/Novo%20Nordisk%20GBS%20Hackathon-2026-blue)](#)
 [![Pilot](https://img.shields.io/badge/Pilot-Haemophilia%20A%20%26%20B-red)](#)
-[![Status](https://img.shields.io/badge/Status-Hackathon%20Prototype-orange)](#)
+[![Status](https://img.shields.io/badge/Status-Pre-Implementation-blue)](#)
 [![Data](https://img.shields.io/badge/Data-Public%20%7C%20Synthetic-green)](#)
 
 > **A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development.**
@@ -17,8 +17,21 @@ The prototype is designed for the **Novo Nordisk GBS Hackathon 2026 — Problem 
 
 ---
 
+## Current Status
+
+> **Documentation complete — implementation begins with Week 1 of the build plan.**
+
+The canonical specification is **[`METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md)** (content version **5.1** — pre-implementation architecture hardening, Aug 13 2026). Everything that would be expensive to change after coding starts is already locked: six functions from one engine, the 10-node LangGraph pipeline, the five intelligence mechanisms, the provider-agnostic reasoning layer (local Gemma 3 4B → Grok → BART degraded), and the operational surface (Alembic entity schema, `/api/v1/`, single in-process APScheduler, Docker `/models` volume).
+
+**Next up — Week 1 · Foundation:** Docker Compose (FastAPI · Next.js 15 · PostgreSQL 16 + pgvector · Redis 7), the PubMed / NewsAPI / ClinicalTrials.gov connectors, and the canonical entity schema → *live signals appear on the dashboard.*
+
+See [Four-Week Development Plan](#four-week-development-plan) for the full phase table.
+
+---
+
 ## Table of Contents
 
+- [Current Status](#current-status)
 - [Problem](#problem)
 - [Solution](#solution)
 - [How MetaRadar Is Different](#how-metaradar-is-different)
@@ -466,18 +479,21 @@ The following are outside the locked MVP:
 | Workflow               | LangGraph                                |
 | Database               | PostgreSQL 16                            |
 | Vector search          | pgvector                                 |
-| **Role** | **Default** | **Alternative** |
-|---|---|---|
+| Cache                  | Redis 7                                  |
+| Scheduler              | APScheduler (single, in-process)         |
+| HTTP                   | httpx                                    |
+| Deployment             | Docker Compose                           |
+
+### Model Allocation (canonical — Master Plan §13.8)
+
+| Role | Default | Alternative |
+| --- | --- | --- |
 | Reasoning / Four Questions / Athena | `google/gemma-3-4b-it` (Gemma 3 4B Instruct, **local GPU** — RTX 3050 4 GB VRAM, Q4/int4) | xAI Grok API (`LLM_PROVIDER=xai`; privacy-gated) |
 | Degraded factual summary | `facebook/bart-large-cnn` | — |
 | Batch summarization | `facebook/bart-large-cnn` | — |
 | NLI | `facebook/bart-large-mnli` | — |
 | NER | spaCy `en_core_sci_md` | — |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` | — |
-| Cache                  | Redis 7                                  |
-| Scheduler              | APScheduler (single, in-process)         |
-| HTTP                   | httpx                                    |
-| Deployment             | Docker Compose                           |
 
 The architecture intentionally keeps vector search inside PostgreSQL rather than introducing a separate vector database.
 
@@ -695,7 +711,7 @@ metaradar/
 └── README.md
 ```
 
-Adjust this structure to the actual repository before committing it.
+> **Repo state:** the repository currently contains planning and specification documents only (no code yet). The scaffold above is created during **Week 1 — Foundation** of the [Four-Week Development Plan](#four-week-development-plan).
 
 ---
 
@@ -971,53 +987,43 @@ Potential extensions include:
 
 # Four-Week Development Plan
 
-## Week 1 — Foundation
+Locked in [`METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §8. **Next up: Week 1 — Foundation.**
 
-* Docker Compose
-* FastAPI
-* Next.js
-* PostgreSQL + pgvector
-* Redis
-* NCBI PubMed (E-utilities) connector
-* NewsAPI connector
-* Raw signal persistence
-* Basic dashboard
-* Haemophilia ontology foundation
+## Week 1 — Foundation (Make Live Signals Appear)
+
+* Docker Compose: FastAPI · Next.js 15 · PostgreSQL 16 + pgvector · Redis 7 (4 services; model weights in a mounted `/models` volume)
+* Connectors via the shared `SourceConnector` interface (`httpx` async + `tenacity`): NCBI PubMed (E-utilities) · NewsAPI · ClinicalTrials.gov
+* **Alembic-managed schema migrations** — canonical entity layer (`sources · companies · assets · trials · developments · events · evidence · signals · calibration · audit`)
+* Raw signal persistence (`raw_signals_bronze`) · basic dashboard · haemophilia ontology foundation
 
 **Milestone:** Live signals appear on the dashboard.
 
-## Week 2 — Intelligence Core
+## Week 2 — Intelligence Core (Connect Signals into Stories)
 
-* Entity extraction
-* Ontology enrichment
-* Deduplication
-* Confluence detection
-* Lifecycle tracking
-* Four-Question interface
+* spaCy NER entity extraction (`en_core_sci_md`) + haemophilia ontology enrichment
+* Deterministic deduplication + source-independence classification (before Confluence)
+* Confluence detection (48h rolling window) · Lifecycle FSM tracking (`event_type`/`event_date`/`development_id`/`source_id`)
+* Four-Question UI panel
 
 **Milestone:** Multiple documents become one development story.
 
-## Week 3 — Differentiation
+## Week 3 — Differentiation (Add Challenge & Calibration)
 
-* Red-Team contradiction analysis
-* Missing-signal detection
-* Stakeholder calibration
+* Red-Team contradiction analysis (`facebook/bart-large-mnli` zero-shot NLI)
+* Missing-signal detection + stakeholder-defined Watch-for-Next rules
+* `StakeholderCalibrationService` (HITL) — visible BEFORE/AFTER changes to priority/routing/action/watch
 * Evidence-chain display
 
-**Milestone:** MetaRadar challenges, tracks and prioritizes its own intelligence.
+**Milestone:** MetaRadar challenges, tracks silence, and calibrates its own intelligence.
 
-## Week 4 — Hardening
+## Week 4 — Hardening & Rehearsal (Harden, Don't Expand)
 
-* API fallback
-* Synthetic demo mode
-* Testing
-* Logging
-* Performance tuning
-* UI polish
-* Citation verification
-* End-to-end demo rehearsal
+* Fallback chain testing: Redis cache → Bronze DB → 500-signal synthetic dataset
+* Performance tuning (<500 ms cached dashboard) · logging · UI polish · citation checks
+* Role-filtered weekly digest · labelled evaluation run (≥85% classification, 100% source-linked summaries)
+* End-to-end demo rehearsal → submission package (Docker Compose, deck, 2-page report, recorded demo video)
 
-**Milestone:** Reliable hackathon demonstration.
+**Milestone:** Bulletproof submission package.
 
 ---
 
@@ -1027,7 +1033,7 @@ The repository contains deeper documentation for different audiences.
 
 | Document                              | Purpose                                           |
 | ------------------------------------- | ------------------------------------------------- |
-| `METARADAR_MASTER_PLAN_v5.0.md`       | Canonical project specification                   |
+| `METARADAR_MASTER_PLAN_v5.0.md`       | Canonical project specification (content v5.1)      |
 | `SRS.md`                              | Functional and non-functional requirements        |
 | `SDD.md`                              | Detailed software architecture and implementation |
 | `GAP_ANALYSIS_AND_OPTIMIZATIONS.md`   | Architectural decisions, risks and resolutions    |
