@@ -360,7 +360,7 @@ To keep the project executable within four weeks, the MVP is intentionally locke
 |                  | Market Access · Medical Communications ·    |
 |                  | Leadership (one engine; extended:           |
 |                  | Commercial, R&D)                            |
-| Live sources     | PubMed Central API + NewsAPI +              |
+| Live sources     | NCBI PubMed (E-utilities) + NewsAPI +       |
 |                  | ClinicalTrials.gov (LIVE); FDA/EMA/Congress/ |
 |                  | Reddit ADAPTER-READY                        |
 | Offline fallback | 500-signal synthetic dataset (SYNTHETIC)     |
@@ -487,13 +487,14 @@ The architecture intentionally keeps vector search inside PostgreSQL rather than
 
 | Tier | Sources | Status |
 | --- | --- | --- |
-| **LIVE** | PubMed / PubMed Central · NewsAPI · ClinicalTrials.gov | Actually fetched on demo day (≥3 live, per SRS AC-1) |
+| **LIVE** | NCBI PubMed (E-utilities) · NewsAPI · ClinicalTrials.gov | Actually fetched on demo day (≥3 live, per SRS AC-1) |
+| **OPTIONAL/EXTENSION** | PubMed Central (PMC) full-text services | Not an MVP source; only where full-text is genuinely needed |
 | **ADAPTER-READY** | FDA (openFDA) · EMA · Congress archives (ASH/ISTH/WFH/EHA) · Reddit/advocacy | Connector scaffold + rate limits; may be seeded from synthetic for demo; never claimed as fully live unless it is |
 | **SYNTHETIC-DEMO** | 500 curated, deterministic, labelled haemophilia signals | Offline demonstrations, API failure, rate-limit protection, reproducible testing; `is_synthetic=true`, never presented as real |
 
-### PubMed Central API (LIVE)
+### NCBI PubMed / E-utilities (LIVE)
 
-Used for: scientific publications, clinical evidence, trial readouts, reviews, emerging treatment evidence.
+Used for: PubMed literature retrieval — scientific publications, clinical evidence, trial readouts, reviews, emerging treatment evidence. **PubMed Central (PMC) APIs/services for eligible full-text content are an optional extension**, not the same endpoint as PubMed literature retrieval.
 
 ### NewsAPI (LIVE)
 
@@ -851,7 +852,7 @@ The prototype should be evaluated at both technical and intelligence levels.
 1. **Source-linked summaries = 100%** — every high-priority AI insight carries source name, URL, publication date, source type, excerpt, evidence level, confidence, timestamp, AI-generated label.
 2. **Classification accuracy ≥ 85%** — on a B.Pharm-labelled dataset (disease · patient type · signal type · priority · impacted function) with accuracy, precision, recall, confusion matrix.
 3. **Top-signal discovery time ≤ 5 minutes** — reproducible test on a 100-signal weekly batch vs a manual browsing baseline.
-4. **Confidential / patient data = 0** — public and synthetic data only; PII scrubber; audit scan.
+4. **Confidential / patient data = 0 (evaluation target)** — public and synthetic data only; a dedicated PII/PHI detection + redaction layer runs before persistence (spaCy NER contributes to entity detection but is not a guaranteed scrubber; low-confidence content is rejected/quarantined); audit scan. A target, not a mathematical guarantee.
 5. **Stakeholder-calibrated improvement** — measurable routing/priority improvement before vs after feedback.
 
 These are the primary success metrics; engineering latency targets support them, they do not replace them.
@@ -892,7 +893,7 @@ NewsAPI has request limits. Redis caching and periodic polling reduce unnecessar
 
 ### Local model limitations
 
-Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware. MetaRadar defaults to Gemma 3 4B Instruct for reasoning and automatically falls back to BART (batch summarization) when the larger model cannot be loaded, so the demo degrades gracefully.
+Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware. MetaRadar defaults to Gemma 3 4B Instruct for reasoning; when Gemma cannot be loaded the system enters **degraded mode — BART performs factual summarization only** (it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated). Degraded mode is clearly marked and human review applies where necessary.
 
 ### Stakeholder feedback
 
@@ -928,7 +929,7 @@ MetaRadar is a hackathon prototype and is not a production pharmaceutical intell
 * Six functions (Medical Affairs, Regulatory, Safety/PV, Market Access, Medical Communications, Leadership) from one engine
 * Relevance-based routing (primary/secondary functions + routing reason; seed matrix adjustable via calibration)
 * Congress + Publication as first-class signal types with subtypes, linked to development lifecycles
-* LIVE sources: PubMed · NewsAPI · ClinicalTrials.gov (+ adapters, + synthetic)
+* LIVE sources: NCBI PubMed (E-utilities) · NewsAPI · ClinicalTrials.gov (+ adapters, + synthetic; PMC full-text optional)
 * Haemophilia ontology
 * Fact / Interpretation / Speculation labeling + evidence-sufficiency gate
 * Confluence · Lifecycle · Red-Team · Missing-Signal (WATCH items + stakeholder watch rules)
@@ -959,7 +960,7 @@ Potential extensions include:
 * Next.js
 * PostgreSQL + pgvector
 * Redis
-* PubMed connector
+* NCBI PubMed (E-utilities) connector
 * NewsAPI connector
 * Raw signal persistence
 * Basic dashboard

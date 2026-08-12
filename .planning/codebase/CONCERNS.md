@@ -30,7 +30,7 @@
 **PII / confidential-data leak (R14) — HIGHEST PRIORITY:**
 - Risk: Scraped content containing patient names/case data entering the pipeline
 - Files: ingestion connectors (planned in `backend/app/agents/`), [`docs/9_RISK_AND_GUARDRAILS.md`](docs/9_RISK_AND_GUARDRAILS.md) R14
-- Current mitigation: prescribed spaCy PII/PHI scrubber before persistence, redaction `[REDACTED:LABEL]`, public/synthetic source whitelist, EV-4 audit scan = 0
+- Current mitigation: prescribed **dedicated PII/PHI detection + redaction layer** before persistence (spaCy NER contributes to entity detection; it is not claimed as a guaranteed scrubber), redaction `[REDACTED:LABEL]`, reject/quarantine on low detection confidence, public/synthetic source whitelist, EV-4 audit target = 0 (evaluation target, not a mathematical guarantee)
 - Recommendations: `.env` must stay gitignored; run secret scan before any commit
 
 **Secrets in repo:**
@@ -46,7 +46,7 @@
 ## Performance Bottlenecks
 
 **Local CPU model inference:**
-- Problem: Gemma 3 4B (Q4, ~2.6GB weights, ~4.5–7.5GB RAM) on constrained hardware is the slowest link
+- Problem: Gemma 3 4B (Q4, **estimated** ~2.6 GB weights / ~4.5–7.5 GB RAM — estimates, not guaranteed; actual use depends on runtime, quantization, context length, config) is the slowest link on constrained hardware
 - Files: [`docs/2_SRS_Software_Requirements_Specification.md`](docs/2_SRS_Software_Requirements_Specification.md), `docs/9_RISK_AND_GUARDRAILS.md` R6
 - Cause: CPU-bound transformer inference + quantization trade-offs
 - Improvement path: BART fallback for batch summarization (< 60s/100 signals); lighter Gemma 3 1B option; cache hot signals (Redis 2h TTL)
@@ -75,10 +75,10 @@
 
 ## Scaling Limits
 
-**NewsAPI quota:**
-- Current capacity: 500 requests/day free tier
-- Limit: hard ceiling for live news ingestion
-- Scaling path: Redis 2h-TTL cache, quota-aware polling, degrade to synthetic; adapter-ready sources (FDA/EMA/congress/Reddit) are scaffolded but not fully live
+**NewsAPI quota (Developer/free tier):**
+- Current capacity: **100 requests/day** (Developer plan; development/testing use only, NOT production/internal deployment — per https://newsapi.org/pricing)
+- Limit: hard ceiling for live news ingestion; Developer articles carry up to a 24-hour delay (never described as real-time)
+- Scaling path: quota-aware connector; on exhaustion fall back Redis 2h-TTL cache → bronze DB → 500-signal synthetic dataset; adapter-ready sources (FDA/EMA/congress/Reddit) are scaffolded but not fully live
 
 **Local model capability envelope:**
 - Current capacity: 4B-parameter reasoning on CPU
@@ -119,8 +119,8 @@
 - Risk: the core judged metric is unverifiable until the B.Pharm-labelled dataset + harness exist
 - Priority: High
 
-**Resilience/fallback tests:**
-- What's not tested: API 429/500 → cache/bronze/synthetic cascade; network-off demo mode; PII scrubber unit test
+**Resilience/fallback tests (planned, not yet run):**
+- What's not tested (to be verified by failure-injection tests): API 429/500 → cache/bronze/synthetic cascade; network-off demo mode; Gemma-unavailable → BART factual-summarization degraded mode; dedicated PII/PHI detection + redaction layer unit tests
 - Files: `docs/8_CORRECTED_UNIFIED_PLAN.md` §11
 - Risk: demo-day failure from unexercised fallbacks
 - Priority: High

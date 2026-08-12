@@ -124,7 +124,7 @@ META RADAR
    ┌────▼──────────────────┐
    │  EXTERNAL APIs        │
    │  ├─ NewsAPI            (LIVE)
-   │  ├─ PubMed             (LIVE)
+   │  ├─ NCBI PubMed (E-utilities) (LIVE)
    │  ├─ ClinicalTrials.gov (LIVE)
    │  ├─ Reddit PRAW        (ADAPTER-READY)
    │  ├─ FDA                (ADAPTER-READY)
@@ -153,7 +153,7 @@ META RADAR
 | **Containerization** | Docker + Docker Compose | Reproducible environments |
 | **Deployment** | Vercel (frontend) + Render (backend) | Serverless, auto-scaling, free tier |
 | **Logging** | Loguru + /metrics endpoint | Structured logging, performance telemetry |
-| **Compliance** | `audit_log` (WORM) + PII detection pipeline | 21 CFR Part 11 / GxP audit trail |
+| **Compliance** | `audit_log` (WORM) + dedicated PII/PHI detection & redaction pipeline | Append-only audit trail inspired by electronic-record traceability principles (design analogy — no 21 CFR Part 11 / GxP compliance claim) |
 | **Calibration** | `StakeholderCalibrationService` (HITL) | Recalibrates function-scoring weights from persona feedback (`stakeholder_feedback` → `scoring_weights`) |
 
 
@@ -819,7 +819,8 @@ CREATE TABLE confluence_events (
     story_summary TEXT,
     development_id UUID,                 -- link decision: NEW DEVELOPMENT (NULL) vs
                                          -- NEW EVIDENCE for existing development (set)
-    link_decision VARCHAR(30),           -- 'new_development' | 'new_evidence_existing_development'
+    link_decision VARCHAR(30),           -- 'linked' | 'possibly_linked' | 'unlinked'
+                                       -- (ambiguous matches: 'possibly_linked' + requires_human_review TRUE)
     status VARCHAR(20) DEFAULT 'active',
     detected_at TIMESTAMP DEFAULT NOW(),
     created_at TIMESTAMP DEFAULT NOW()
@@ -1123,8 +1124,8 @@ CREATE INDEX idx_bronze_unprocessed
 
 -- ─────────────────────────────────────────────────────────────────────
 -- COMPLIANCE AUDIT LOG: WORM-enforced append-only audit trail
--- Meets FDA 21 CFR Part 11 / GxP requirements
--- (research report Section 2 & 6 recommendation)
+-- (engineering design analogy inspired by electronic-record traceability
+--  principles; MetaRadar does NOT claim 21 CFR Part 11 or GxP compliance)
 -- IMPORTANT: REVOKE UPDATE, DELETE ON audit_log FROM app_user;
 -- ─────────────────────────────────────────────────────────────────────
 CREATE TABLE audit_log (
@@ -1271,7 +1272,10 @@ This section covers three compliance requirements identified in the deep researc
 
 ```python
 # services/pii_scrubber.py
-# Runs as the FIRST step after raw API fetch, BEFORE any storage
+# Dedicated PII/PHI detection and redaction layer — runs as the FIRST step
+# after raw API fetch, BEFORE any storage. spaCy NER contributes to entity
+# detection but is NOT a guaranteed scrubber: when detection confidence is
+# insufficient the content is REJECTED or QUARANTINED rather than persisted.
 import spacy
 
 _nlp = spacy.load("en_core_web_sm")  # lightweight, fast
@@ -1281,7 +1285,8 @@ PII_LABELS = {"PERSON", "ORG", "EMAIL", "PHONE", "ID"}
 def scrub_pii(text: str) -> str:
     """Detect and redact PII/PHI from scraped content before storage.
     Unexpected PII (e.g., a patient name in a clinical report) is replaced
-    with [REDACTED:<LABEL>] and the event is logged for audit."""
+    with [REDACTED:<LABEL>] and the event is logged for audit.
+    Low-confidence detections must be rejected/quarantined by the caller."""
     doc = _nlp(text)
     scrubbed = text
     for ent in reversed(doc.ents):
@@ -1297,7 +1302,8 @@ def scrub_pii(text: str) -> str:
 ```python
 # services/audit_logger.py
 # Append-only, never updates or deletes — WORM enforcement
-# Meets FDA 21 CFR Part 11 / GxP requirements
+# (design analogy inspired by electronic-record traceability principles;
+#  no 21 CFR Part 11 / GxP compliance claim)
 
 class ComplianceAuditLogger:
     """Write-once audit trail. DB-level WORM enforced via REVOKE."""
@@ -1344,7 +1350,7 @@ Displayed as a muted label on every signal card summary, confluence alert, and n
 
 ```
 1. FETCH (Every 2 hours, async parallel)
-   ├─ fetch_newsapi()          → 500 articles        (LIVE)
+   ├─ fetch_newsapi()          → ≤100 articles/day    (LIVE; Developer quota)
    ├─ fetch_pubmed()           → 100 papers          (LIVE)
    ├─ fetch_clinicaltrials()   → 50 trial updates    (LIVE)
    ├─ fetch_reddit()           → 200 posts           (ADAPTER-READY)

@@ -10,7 +10,8 @@
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
 │                     PUBLIC EXTERNAL SIGNALS                        │
-│  LIVE: PubMed/PMC · NewsAPI · ClinicalTrials.gov                  │
+│  LIVE: NCBI PubMed (E-utilities) · NewsAPI · ClinicalTrials.gov  │
+│  OPTIONAL/EXTENSION: PMC full-text services                        │
 │  ADAPTER-READY: FDA · EMA · Congress (ASH/ISTH/WFH/EHA) · Reddit  │
 │  SYNTHETIC-DEMO: 500 curated labelled haemophilia signals          │
 └───────────────────────────────┬──────────────────────────────────┘
@@ -86,12 +87,12 @@
 
 ### Primary Request Path (signal → intelligence card)
 
-1. Signal fetch — `node_ingest` pulls raw JSON via `httpx` from PubMed/NewsAPI/ClinicalTrials.gov; persists verbatim to `raw_signals_bronze` (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4 node 1)
-2. Validation — `node_validate` filters short (<50 chars), non-English, out-of-scope content; PII scrub (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4 node 2)
+1. Signal fetch — `node_ingest` pulls raw JSON via `httpx` from NCBI PubMed (E-utilities) / NewsAPI / ClinicalTrials.gov; persists verbatim to `raw_signals_bronze` (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4 node 1)
+2. Validation — `node_validate` filters short (<50 chars), non-English, out-of-scope content; **PII/PHI detection + redaction/rejection layer** runs before persistence (spaCy NER contributes to entity detection; a dedicated PII/PHI detection and redaction layer is responsible for preventing sensitive information from being persisted — spaCy alone is not a guaranteed scrubber). If detection confidence is insufficient, content is rejected or quarantined (`docs/METARADAR_MASTER_PLAN_v3.0.md` §4 node 2)
 3. Extraction — `node_nlp_extract` spaCy `en_core_sci_md` NER (drugs, companies, indications, trial IDs) (`node 3`)
 4. Ontology enrichment — `node_ontology_enrich` maps entities (e.g., Hemlibra → emicizumab → Roche → bispecific) (`node 4`)
 5. Intelligence — Confluence (48h window, ≥3 signal types; congress/publication link to existing development), Lifecycle FSM advance, Red-Team NLI contradiction, Missing-Signal WATCH evaluation (`nodes 5–8`)
-6. Synthesis — evidence-sufficiency gate → F-I-S labels → Four-Question brief via Gemma 3 4B (`node 9`)
+6. Synthesis — evidence-sufficiency gate → F-I-S labels → Four-Question brief via Gemma 3 4B (`node 9`). **Degraded mode (Gemma unavailable):** BART performs factual summarization only — no interpretation, no reasoning-based action recommendation; degraded mode is clearly marked in the UI and human review applies where necessary
 7. Calibration — stakeholder feedback updates scoring weights via `StakeholderCalibrationService`, WORM-logged (`node 10`)
 
 ### Ask Athena (RAG Q&A)
@@ -117,11 +118,17 @@
 
 **F-I-S Label:**
 - Purpose: Honest epistemic status of every AI claim
-- Pattern: FACT requires multi-source corroboration; speculation never presented as fact (`docs/9_RISK_AND_GUARDRAILS.md` R1/R2)
+- Pattern: FACT = statement directly supported by an authoritative or sufficiently reliable source (e.g., an FDA approval announcement can be FACT on the FDA source alone; a ClinicalTrials.gov status can be FACT on the registry alone; a peer-reviewed publication can establish facts directly supported by it). Multi-source corroboration increases confidence and helps resolve conflicts — preferred for important interpretations, but NOT mandatory for every factual statement. Speculation is never presented as fact (`docs/9_RISK_AND_GUARDRAILS.md` R1/R2)
+- Source authority is contextual (never "source X is always true"): regulatory source → high authority for regulatory facts; registry → status facts; peer-reviewed → published findings; congress → potentially preliminary; company announcement → sponsor-originated; media → discovery; social → signal/discovery only. The AI preserves the distinction between "source says X" and "MetaRadar interprets X as Y" (Master Plan §12.9A, SRS FR-2.2.6A)
 
 **WATCH Rule (Watch-for-Next):**
 - Purpose: Stakeholder-defined monitoring expectation (`source_event → expected next event → window → responsible function → status`)
 - Statuses: `watching · new_evidence_detected · no_new_evidence · watch_expired · human_review_required` (`docs/METARADAR_MASTER_PLAN_v3.0.md` §3)
+
+**Congress/Publication Link Decision (tri-state):**
+- Purpose: Decide whether a congress/publication signal belongs to an existing development — never force a link when evidence is insufficient
+- Values: `linked` (confident match → append as NEW EVIDENCE to the existing chain, not a new card) · `possibly_linked` (ambiguous match → `requires_human_review` flag; never auto-linked, never auto-created) · `unlinked` (candidate NEW DEVELOPMENT, human-reviewable). Repeated information → marked low-novelty, no new event
+- Stored: `development_id · event_id · source_id · link_decision` (Master Plan §12.6, SRS FR-2.3.1)
 
 ## Entry Points
 
@@ -141,11 +148,11 @@
 
 ## Architectural Constraints
 
-- **Threading:** Async-first (`httpx` async, FastAPI ASGI); local model inference runs CPU-bound (Gemma Q4 ~2.6GB, ~4.5–7.5GB RAM) (`docs/2_SRS_Software_Requirements_Specification.md`)
+- **Threading:** Async-first (`httpx` async, FastAPI ASGI); local model inference runs CPU-bound. **Estimated** Gemma 3 4B footprint: ~2.6 GB weights (Q4) and roughly 4.5–7.5 GB RAM — planning estimates, not guaranteed requirements; actual usage depends on runtime, quantization, context length, and system config (`docs/2_SRS_Software_Requirements_Specification.md`)
 - **Global state:** LangGraph shared workflow state; no module-level singletons prescribed
-- **Fallback chain:** Redis cache → bronze DB → 500-signal synthetic dataset; 100% graceful degradation, zero dashboard crashes (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10)
+- **Fallback chain (target, to be verified by failure-injection tests):** Redis cache → bronze DB → 500-signal synthetic dataset. **Target: graceful degradation during tested connector/model failures** — resilience is an acceptance target, not a tested guarantee (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10)
 - **No autonomous decisions:** AI suggests → human reviews → human decides; controlled action vocabulary (`docs/9_RISK_AND_GUARDRAILS.md` §1.2)
-- **Data boundaries:** public + synthetic only; PII/PHI scrubbed before persistence; `.env` secrets never committed (`docs/9_RISK_AND_GUARDRAILS.md` §1.1)
+- **Data boundaries:** public + synthetic only; dedicated PII/PHI detection and redaction layer before persistence (with reject/quarantine on low confidence); `.env` secrets never committed (`docs/9_RISK_AND_GUARDRAILS.md` §1.1)
 
 ## Anti-Patterns
 
@@ -172,13 +179,13 @@
 **Strategy:** `tenacity` exponential backoff (2s/4s/8s) on external APIs; fallback cascade (Redis → bronze → synthetic) on failure; per-source health status surfaced in UI (`docs/9_RISK_AND_GUARDRAILS.md` R11).
 
 **Patterns:**
-- 100% ingestion resilience — external API failure never crashes dashboard
+- **Target: graceful degradation during tested connector/model failures** — external API failure should serve cached/bronze/synthetic fallback; verified with failure-injection tests, not asserted as an untested guarantee
 - Verbatim replay from `raw_signals_bronze` for re-processing
 - Evidence-sufficiency gate blocks generation when retrieval confidence is low (R1)
 
 ## Cross-Cutting Concerns
 
-**Logging:** application logs; WORM `audit_log` for calibration/ontology changes; source-status footers (`docs/9_RISK_AND_GUARDRAILS.md`)
+**Logging:** application logs; append-only/WORM `audit_log` (inspired by electronic-record traceability principles — no 21 CFR Part 11/GxP compliance claim) for calibration/ontology changes; source-status footers (`docs/9_RISK_AND_GUARDRAILS.md`)
 **Validation:** `node_validate` quality filters; B.Pharm-labelled evaluation dataset (≥85% classification); confusion matrix review (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10)
 **Authentication:** lightweight API token (hackathon scope) (`docs/3_SOFTWARE_DESIGN_DOCUMENT.md`)
 **Traceability:** 100% of high-priority AI insights carry source name, URL, publication date, source type, excerpt, evidence level, confidence, timestamp, AI label (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10)

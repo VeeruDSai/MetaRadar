@@ -55,7 +55,7 @@ To guarantee execution discipline within a 4-week hackathon window, the MVP scop
 
 * **Six Functions, One Engine:** Medical Affairs · Regulatory · Safety / Pharmacovigilance · Market Access · Medical Communications · Leadership (Commercial & R&D retained as extended/future roles)
 * **One Disease Area:** Haemophilia within Rare Disease (Haemophilia A & Haemophilia B)
-* **Three Primary Live Sources:** PubMed Central API + NewsAPI + ClinicalTrials.gov (LIVE) · FDA/EMA/Congress/Reddit ADAPTER-READY · 500-signal synthetic demo fallback (SYNTHETIC-DEMO)
+* **Three Primary Live Sources:** NCBI PubMed (E-utilities) + NewsAPI + ClinicalTrials.gov (LIVE) · PMC full-text OPTIONAL/EXTENSION · FDA/EMA/Congress/Reddit ADAPTER-READY · 500-signal synthetic demo fallback (SYNTHETIC-DEMO)
 * **Five Intelligence Mechanisms:**
   1. Confluence Detection
   2. Signal Lifecycle Tracking
@@ -134,9 +134,9 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 * **Workflow Orchestration:** LangGraph 0.1+ (10-node state graph)
 * **Database & Vector Storage:** PostgreSQL 16 + `pgvector` extension
 * **Embedding Model:** `sentence-transformers/all-MiniLM-L6-v2` (**384-dimensional vector embeddings**)
-* **Reasoning LLM (default):** `google/gemma-3-4b-it` — Gemma 3 4B Instruct, a local instruction-tuned LLM (Q4-quantized for CPU) driving narrative synthesis, Four-Question reasoning, AI-suggested actions, and Ask Athena. Auto-falls back to BART if unavailable.
-* **Batch Summarizer:** `facebook/bart-large-cnn` — fast CPU seq2seq model for 1-sentence signal summaries (< 60s per 100 signals); also the demo-safety fallback.
-* **Cache & Rate Limiting:** Redis 7 (2h TTL hot cache, 500 req/day API rate limiting)
+* **Reasoning LLM (default):** `google/gemma-3-4b-it` — Gemma 3 4B Instruct, a local instruction-tuned LLM (Q4-quantized for CPU) driving narrative synthesis, Four-Question reasoning, AI-suggested actions, and Ask Athena. When Gemma is unavailable the system enters a **degraded mode: BART performs factual summarization only** — it is NOT a reasoning-equivalent replacement; no unsupported interpretation and no reasoning-based action recommendation are generated; degraded mode is clearly marked and human review applies where necessary.
+* **Batch Summarizer:** `facebook/bart-large-cnn` — fast CPU seq2seq model for 1-sentence factual signal summaries (< 60s per 100 signals target); also the safe degraded fallback (factual summarization only).
+* **Cache & Rate Limiting:** Redis 7 (2h TTL hot cache, quota-aware API rate limiting — NewsAPI Developer tier is 100 req/day)
 * **Async Workers & Scheduler:** Celery 5.3 + APScheduler (2-hour periodic fetch execution)
 
 ---
@@ -144,8 +144,8 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 ## **5. DATA SOURCES**
 
 ### Live Ingestion Sources (MVP):
-1. **PubMed Central API:** Clinical literature, Phase 2/3 trial readouts, academic reviews (Free REST API).
-2. **NewsAPI:** Industry news, press releases, competitor corporate announcements (500 free requests/day).
+1. **NCBI PubMed / E-utilities:** PubMed literature retrieval for clinical literature, Phase 2/3 trial readouts, academic reviews (keyless REST via NCBI E-utilities). **PubMed Central (PMC) APIs/services for eligible full-text content are an OPTIONAL/EXTENSION** — not the same endpoint as PubMed literature retrieval and not claimed as implemented unless they are.
+2. **NewsAPI:** Industry news, press releases, competitor corporate announcements (**Developer/free tier: 100 requests/day**, development/testing use only, articles delayed up to 24 hours — NOT real-time, NOT for production/internal deployment; official pricing https://newsapi.org/pricing). Quota-aware connector; on exhaustion fall back to Redis cache → bronze DB → synthetic dataset.
 
 ### System Data Polling & Availability:
 * **Source Polling Frequency:** Every 2 hours (via Celery + APScheduler).
@@ -221,7 +221,7 @@ The UI is strictly subordinate to the intelligence. Rather than presenting raw n
 ## **8. IMPLEMENTATION TIMELINE (REVISED 4-WEEK PLAN)**
 
 ### Week 1 — Foundation (Make Live Signals Appear)
-* **Engineering Tasks:** Docker Compose environment setup (FastAPI, Next.js 15, PostgreSQL 16 + pgvector, Redis 7). Implement PubMed Central & NewsAPI connectors with `httpx` async fetching. Database schema initialization (`signals`, `entities`, `raw_signals_bronze`).
+* **Engineering Tasks:** Docker Compose environment setup (FastAPI, Next.js 15, PostgreSQL 16 + pgvector, Redis 7). Implement NCBI PubMed (E-utilities) & NewsAPI connectors with `httpx` async fetching. Database schema initialization (`signals`, `entities`, `raw_signals_bronze`).
 * **Milestone:** Live signals appear on basic dashboard screen.
 
 ### Week 2 — Intelligence Core (Connect Signals into Stories)
@@ -259,7 +259,7 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 
 **Engineering targets (retained):**
 * **Dashboard Response Time:** $< 500\text{ ms}$ for cached signal views.
-* **Ingestion Resilience:** $100\%$ graceful degradation (zero dashboard crashes) when external APIs fail or return 429/500 errors.
+* **Ingestion Resilience (target):** graceful degradation during **tested** connector/model failures when external APIs fail or return 429/500 errors — verified by failure-injection tests, not claimed as an untested guarantee.
 * **Data Replayability:** $100\%$ verbatim raw payload persistence in `raw_signals_bronze` before processing.
 * **Traceability:** $100\%$ of generated AI insights contain valid source links, timestamps, and quotes.
 * **Testing:** Automated unit & integration tests covering critical pipeline nodes (ingestion, entity extraction, confluence clustering, calibration service).
@@ -268,7 +268,7 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 1. **Source-linked summaries = 100%** — every high-priority AI insight carries source name, URL, publication date, source type, excerpt, evidence level, confidence, timestamp, AI-generated label.
 2. **Classification accuracy ≥ 85%** — on a B.Pharm-labelled validation dataset (disease · patient type · signal type · priority · impacted function), reporting accuracy, precision, recall, confusion matrix.
 3. **Top-signal discovery time ≤ 5 minutes** — reproducible test on a 100-signal weekly batch vs a manual browsing baseline.
-4. **Confidential / patient data = 0** — public and synthetic data only; PII scrubber; audit scan.
+4. **Confidential / patient data = 0 (evaluation target)** — public and synthetic data only; dedicated PII/PHI detection + redaction layer before persistence (spaCy NER contributes to entity detection but is not a guaranteed scrubber; low-confidence content is rejected/quarantined); audit scan. This is an evaluation target, not a mathematical guarantee.
 5. **Stakeholder-calibrated improvement** — measurable routing/priority improvement before vs after feedback (e.g., agreement uplift ≥ 10 points).
 
 **F-I-S compliance:** 100% of high-priority outputs carry a Fact / Interpretation / Speculation label; speculation is never presented as fact; insufficient evidence yields "Insufficient evidence to support an interpretation."
@@ -283,8 +283,8 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 
 ## **11. KNOWN LIMITATIONS**
 
-1. **Public API Quotas:** NewsAPI free tier is capped at 500 requests/day. Mitigated by Redis caching and 2-hour fetch polling.
-2. **Local Model Capabilities:** Inference runs entirely on local CPU (`google/gemma-3-4b-it` reasoning LLM, `facebook/bart-large-cnn` batch summarizer, BART MNLI, spaCy, MiniLM embeddings). Reasoning depth and speed are bounded by CPU RAM constraints compared to commercial LLMs; the system automatically falls back to BART when the Gemma model cannot be loaded.
+1. **Public API Quotas:** NewsAPI Developer/free tier is capped at **100 requests/day** (development/testing use only; articles delayed up to 24h; not for production/internal deployment). Mitigated by quota-aware connectors, Redis caching, and 2-hour fetch polling; on exhaustion fall back to bronze DB / synthetic dataset. (Official pricing: https://newsapi.org/pricing.)
+2. **Local Model Capabilities:** Inference runs entirely on local CPU (`google/gemma-3-4b-it` reasoning LLM, `facebook/bart-large-cnn` batch summarizer, BART MNLI, spaCy, MiniLM embeddings). Reasoning depth and speed are bounded by CPU RAM constraints compared to commercial LLMs; when the Gemma model cannot be loaded the system enters **degraded mode — BART factual summarization only** (no reasoning-equivalent output).
 3. **Stakeholder Feedback Scope:** True organizational feedback across global pharma teams is unavailable in a hackathon setting; the calibration loop is demonstrated using persona-driven simulated feedback.
 4. **Absence Alerting Precision:** Missing-signal detection relies on rule-based time lag thresholds ($t_{\text{max\_lag}}$); abnormal market delays may trigger false-positive alerts, which are strictly gated behind mandatory human review.
 
@@ -374,10 +374,14 @@ Congress and publication signals SHALL NOT automatically become independent inte
 Clinical trial → Congress abstract/presentation → Company announcement → Peer-reviewed publication → Regulatory event → Long-term follow-up
 ```
 
-Connect via `development_id` · `trial_id` · `product_id` · `source_id` · `event_id`. Decision logic:
-- Same trial ID/product/programme as an existing development → **link to existing development** (NEW EVIDENCE, not a new card)
-- Genuinely new information → **create a new lifecycle event** within the chain
+Connect via `development_id` · `trial_id` · `product_id` · `source_id` · `event_id`. Decision logic uses a **tri-state link decision** — do not force a link when evidence is insufficient:
+- Same trial ID/product/programme as an existing development → **`linked`** (NEW EVIDENCE, not a new card; append to the existing chain)
+- Genuinely new information → **create a new lifecycle event** within the chain (`linked`)
 - Only repeats known information → **mark as repeated / low novelty** (deduplication, not a new event)
+- **Ambiguous match** (partial overlap, same drug different trial, press-wire noise) → **`possibly_linked`** + **`requires_human_review` flag** — never auto-linked, never auto-created as a new development
+- No plausible match → **`unlinked`** (candidate NEW DEVELOPMENT, still human-reviewable)
+
+`link_decision` values: `linked` · `possibly_linked` · `unlinked` (with `requires_human_review` on ambiguous cases). Stored with `development_id` · `event_id` · `source_id`.
 
 This feeds Confluence + Lifecycle + Priority. Publication/registry results later confirmed by peer-reviewed publication upgrade evidence maturity (never counted as two independent findings). Trial registries are live timelines: status changes (recruiting → terminated), protocol/endpoint/population changes, and recruitment variance are lifecycle signals with reason classification (safety-driven termination ≫ recruitment issue).
 
@@ -422,6 +426,22 @@ Priority = 0.25 novelty + 0.20 seriousness/actionability + 0.15 source authority
 ```
 
 **Automatic CRITICAL/HIGH triggers (regardless of score):** serious safety warning · regulatory rejection/approval/major label change · trial termination for safety · major unexpected benefit-risk change · major treatment-landscape change (new modality/paradigm) · major access restriction. Safety and regulatory events may trigger automatic high-priority escalation. Safety findings can override an otherwise positive efficacy classification. Stakeholder calibration can modify the effective relevance/priority logic (mechanism 5).
+
+### 12.9A Source Authority Model
+
+Authority is contextual — **never a simplistic "source X is always true" rule**. The evidence model combines: `source type` + `source authority` + `publication/event date` + `evidence maturity` + `corroboration` + `contradictory evidence`.
+
+| Source | Authority framing |
+|---|---|
+| Authoritative regulatory source (FDA/EMA) | High authority for **regulatory facts** (e.g., an approval can be FACT on the FDA source alone) |
+| Clinical trial registry (ClinicalTrials.gov) | High authority for **registry/status facts** |
+| Peer-reviewed publication | High authority for **published study findings** |
+| Congress | Important but **potentially preliminary** (evidence maturity MEDIUM/HIGH) |
+| Company announcement | Important primary source but **sponsor-originated** (not independent confirmation) |
+| Secondary media | Useful **discovery** source, lower authority |
+| Social/community discussion | **Signal/discovery** source, not strong evidence by itself |
+
+**The AI must preserve the distinction between "source says X" and "MetaRadar interprets X as Y"** — outputs always carry the source claim and the system's own interpretation separately (F-I-S labeling plus `source_authority` and `evidence_maturity` fields).
 
 ### 12.10 Four-Question Output + Evidence Context
 

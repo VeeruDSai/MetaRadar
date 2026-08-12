@@ -2,7 +2,7 @@
 
 **Analysis Date:** 2026-08-13
 
-> **Status note:** No test code exists yet (specification-first repo). Testing strategy below is **prescribed** by the SDD, SRS, and Gap Analysis docs. A B.Pharm-labelled evaluation dataset is a core deliverable of the hackathon (≥85% classification accuracy target).
+> **Status note:** No test code exists yet (specification-first repo). Every statement below is **planned / prescribed / a target / an acceptance test** — nothing here describes an existing test, measured coverage, or verified behavior. A B.Pharm-labelled evaluation dataset is a core deliverable of the hackathon (≥85% classification accuracy target).
 
 ## Test Framework
 
@@ -45,7 +45,7 @@ pytest tests/ -v --cov=services --cov-report=html   # Coverage report
 
 **Patterns:**
 - Mock external APIs (`httpx` responses) for connector tests — never hit live APIs in unit tests
-- Mock the reasoning LLM; test the fallback chain explicitly (Gemma unavailable → BART path) (`docs/9_RISK_AND_GUARDRAILS.md` R6)
+- Mock the reasoning LLM; test the degraded path explicitly (Gemma unavailable → BART factual summarization only — no reasoning-equivalent output, degraded mode flagged) (`docs/9_RISK_AND_GUARDRAILS.md` R6)
 - Mock stakeholder feedback for calibration service tests
 
 **What to Mock:**
@@ -66,10 +66,12 @@ pytest tests/ -v --cov=services --cov-report=html   # Coverage report
 
 ## Coverage
 
-**Requirements:**
-- Gap Analysis: **> 80%** test coverage target (`docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md` line ~1331)
-- Refined Architecture: **≥ 60% minimum** for unit + integration (`docs/5_REFINED_ARCHITECTURE_AND_GITHUB_ANALYSIS.md`)
-- SDD: 70% unit / 25% integration split
+**Requirements (two distinct metrics — not contradictory):**
+- **Overall project target: > 80% total test coverage** across the test suite (`docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md` line ~1331)
+- **Critical-path minimum: ≥ 60% unit + integration coverage** on the critical pipeline components (ingestion, entity extraction, confluence clustering, calibration, lifecycle, red-team, missing-signal, watch/routing) (`docs/5_REFINED_ARCHITECTURE_AND_GITHUB_ANALYSIS.md`)
+- SDD: prescribed 70% unit / 25% integration split of the suite
+
+> All coverage figures are **targets to be demonstrated by the implementation** — the repository currently contains specifications only, no tests exist yet.
 
 **View Coverage:**
 ```bash
@@ -85,13 +87,13 @@ pytest tests/ -v --cov=services
 - Full signal processing path (ingest → validate → extract → enrich → intelligence → synthesize) on synthetic fixtures (SDD sample)
 - Database integration (PostgreSQL + pgvector, WORM audit log append-only behavior)
 
-**E2E Tests:**
-- Fallback-cascade demo rehearsal: network off → synthetic fallback; `docker-compose up` on clean machine; 1000-signal load test (`docs/8_CORRECTED_UNIFIED_PLAN.md` §11)
+**E2E Tests (planned/rehearsal):**
+- Fallback-cascade demo rehearsal (planned): network off → synthetic fallback; `docker-compose up` on clean machine; 1000-signal load test (`docs/8_CORRECTED_UNIFIED_PLAN.md` §11)
 - Not a formal framework (Playwright/Selenium not prescribed)
 
 ## Evaluation Metrics (Hackathon-Specific, Prescribed)
 
-**The five hackathon success metrics** (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10) double as acceptance tests:
+**The five hackathon success metrics** (`docs/METARADAR_MASTER_PLAN_v3.0.md` §10) double as acceptance tests — **targets to be demonstrated by the implementation, not current results**:
 1. **Source-linked summaries = 100%** (EV-1) — every high-priority insight carries source name/URL/date/type/excerpt/evidence level/confidence/timestamp/label
 2. **Classification accuracy ≥ 85%** (EV-2/EV-2b/EV-13) — B.Pharm-labelled validation set; report accuracy, precision, recall, confusion matrix; false-positive test cases (cardiac "gene therapy", engineering "mim8")
 3. **Top-signal discovery ≤ 5 min** — reproducible 100-signal batch vs manual baseline
@@ -111,10 +113,10 @@ async def test_full_signal_processing():
     assert result.evidence_sufficient is True
 ```
 
-**Error/Resilience Testing:**
-- Simulate API 429/500 → assert graceful fallback to cache/synthetic, zero crashes (R11)
-- Simulate LLM load failure → assert BART fallback engaged and logged (R6)
-- Simulate PII-containing input → assert redaction `[REDACTED:LABEL]` before persistence (R14)
+**Error/Resilience Testing (planned failure-injection tests — targets, not existing results):**
+- Simulate API 429/500 → assert graceful fallback to cache → bronze → synthetic (R11); the acceptance target is graceful degradation during tested connector failures, not an untested "never crashes" guarantee
+- Simulate LLM load failure → assert **degraded mode**: BART performs factual summarization ONLY; no unsupported interpretation; no reasoning-based action recommendation; degraded mode flagged and logged (R6)
+- Simulate PII-containing input → assert the dedicated PII/PHI detection + redaction layer produces `[REDACTED:LABEL]` before persistence, or rejects/quarantines on low detection confidence (R14)
 
 ---
 

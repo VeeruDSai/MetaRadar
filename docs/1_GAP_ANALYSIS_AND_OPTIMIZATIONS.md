@@ -14,7 +14,7 @@
 **Resolution:**
 ```
 TIER 1 (Weeks 1-2): FREE ONLY
-├─ NewsAPI: 500 free requests/day ✅  (haemophilia query terms)
+├─ NewsAPI: 100 free requests/day (Developer tier) ✅  (haemophilia query terms; dev/testing only, 24h article delay)
 ├─ PubMed: Free API ✅
 ├─ ClinicalTrials.gov: Free public API ✅
 ├─ Reddit: Free PRAW library ✅
@@ -965,13 +965,13 @@ async def ingest_and_persist_raw(source_name: str, raw_data: dict):
 
 ---
 
-### **Gap 12: No Compliance / GxP Audit Trail**
-**Problem:** Pharma regulatory teams (Regulatory role in dashboard) operate under FDA 21 CFR Part 11 and GxP requirements. Insights without audit trails are not usable in regulated workflows.
+### **Gap 12: No Traceable Audit Trail**
+**Problem:** Pharma regulatory teams (Regulatory role in dashboard) value audit-trail traceability (FDA 21 CFR Part 11 / GxP requirements apply to regulated production systems). Insights without audit trails are not usable in regulated workflows.
 
 **Resolution:**
 ```python
 # services/audit_logger.py — WORM-style audit trail
-# (research report Section 2: "FDA 21 CFR Part 11 requires audit trails")
+# (research report Section 2: audit trails for traceability)
 
 import json
 from datetime import datetime
@@ -1019,7 +1019,7 @@ CREATE INDEX idx_audit_entity ON audit_log(entity, timestamp DESC);
 -- REVOKE UPDATE, DELETE ON audit_log FROM app_user;  -- enforce WORM
 ```
 
-**Result:** Every insight, taxonomy change, and score adjustment is traceable with user + timestamp — meets 21 CFR Part 11 / GxP audit requirements.
+**Result:** Every insight, taxonomy change, and score adjustment is traceable with user + timestamp — append-only audit trail **inspired by** electronic-record traceability principles (MetaRadar does NOT claim 21 CFR Part 11 / GxP compliance; the prototype is not validated for regulated production use).
 
 ### **Optimization 11: Signal Confluence Engine (Core Differentiator)**
 
@@ -1297,7 +1297,7 @@ Every engineering decision above maps to a scored judging criterion (see Novo No
 | **No Audit Trail** | Regulatory unusable | Traceable Reasoning | Evidence chain | **Regulatory-grade** |
 | **No Prediction** | Reactive only | Temporal Pattern Matching | Timeline stages | **Predictive edge** |
 | **No Raw Data Replay** | Data loss on failure | Bronze `raw_signals` table | Re-process from raw | **Zero data loss** |
-| **No GxP Compliance** | Unusable in regulated workflow | Append-only `audit_log` + WORM | 21 CFR Part 11 trail | **Pharma-grade audit** |
+| **No audit trail** | Unusable in regulated workflow | Append-only `audit_log` + WORM | Traceability-inspired audit trail (no compliance claim) | **Pharma-grade audit** |
 | **No Stakeholder Learning** | Static scoring | Stakeholder Calibration Loop (HITL) | Simulated personas + weight recalibration | **Self-improving** |
 | **Four Questions Buried** | Missed purpose | Four-Question Framework panels (Q1-Q4) | Panel mapping to signal card + API | **Framework-driven UI** |
 | **No Lifecycle View** | Isolated readouts | Signal Lifecycle Tracker (Gap 15) | State machine + event chains per development | **Timeline per asset** |
@@ -1319,10 +1319,10 @@ RESPONSE TIMES:
 
 RESOURCE USAGE:
 ├─ Frontend bundle:                < 50KB gzipped    ✅
-├─ Backend memory:                 < 500MB (API core; Gemma LLM adds ~4.5–7.5GB while loaded) ✅
+├─ Backend memory:                 < 500MB (API core; Gemma LLM adds est. ~4.5–7.5GB while loaded — planning estimate) ✅
 ├─ Database:                       < 100ms per query ✅
 ├─ Redis hit rate:                 > 80%             ✅
-└─ Total Docker image size:        < 2GB base (Gemma Q4 adds ~2.6GB if pre-downloaded) ✅
+└─ Total Docker image size:        < 2GB base (Gemma Q4 adds est. ~2.6GB if pre-downloaded — planning estimate) ✅
 
 RELIABILITY:
 ├─ Uptime:                         > 99%             ✅

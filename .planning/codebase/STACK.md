@@ -48,8 +48,8 @@ This repository is currently **specification-first**: it contains only documenta
 ## AI / ML Models (All Local, Free — Zero API Cost)
 
 **Prescribed by `CLAUDE.md` and `docs/2_SRS_Software_Requirements_Specification.md` §3/§4.2:**
-- **Reasoning LLM:** `google/gemma-3-4b-it` (Gemma 3 4B Instruct, Q4-quantized for CPU) — narrative synthesis, Four-Question briefs, AI-suggested actions, Ask Athena. Configured via `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` env vars; model-agnostic by design (any HuggingFace text-generation model swap-in). Auto-fallback to BART if unavailable (`docs/2_SRS_Software_Requirements_Specification.md` FR-2.2.3A/B)
-- **Batch Summarizer:** `facebook/bart-large-cnn` — CPU-fast seq2seq 1-sentence summaries (< 60s per 100 signals); also the demo-safety fallback (`SUMMARIZER_MODEL` / `SUMMARIZER_TASK`)
+- **Reasoning LLM:** `google/gemma-3-4b-it` (Gemma 3 4B Instruct, Q4-quantized for CPU) — Four-Question reasoning, narrative synthesis, AI-suggested actions, Ask Athena. Configured via `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` env vars; model-agnostic by design (any HuggingFace text-generation model swap-in). When Gemma is unavailable the system enters a **degraded mode**: BART performs factual summarization only — it is NOT a reasoning-equivalent replacement, no unsupported interpretation is generated, and no AI action recommendation requiring reasoning is produced (`docs/2_SRS_Software_Requirements_Specification.md` FR-2.2.3A/B)
+- **Batch Summarizer:** `facebook/bart-large-cnn` — CPU-fast seq2seq 1-sentence factual summaries (< 60s per 100 signals target); also the **safe degraded fallback: factual summarization only** when the reasoning LLM is unavailable (`SUMMARIZER_MODEL` / `SUMMARIZER_TASK`)
 - **Contradiction Analysis:** `facebook/bart-large-mnli` — zero-shot NLI entailment/contradiction checks, flag threshold > 0.60 (`docs/METARADAR_MASTER_PLAN_v3.0.md` §6)
 - **NER:** spaCy 3.7 `en_core_sci_md` — pharmaceutical entity extraction (drugs, companies, trial phases, indications); also PII/PHI scrubber
 - **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` — 384-dim vectors via pgvector (`CLAUDE.md`)
@@ -82,7 +82,7 @@ This repository is currently **specification-first**: it contains only documenta
 
 **Development:**
 - Git, Docker Desktop, Docker Compose, Node.js 20.9+, Python 3.11+ (`README.md` "Prerequisites")
-- ~4.5–7.5 GB RAM to run Gemma 3 4B (Q4-quantized ~2.6GB weights) on CPU (`docs/2_SRS_Software_Requirements_Specification.md`)
+- **Estimated** memory requirement to run Gemma 3 4B on CPU: ~2.6 GB weights (Q4-quantized) and roughly 4.5–7.5 GB RAM — planning estimates only; actual usage depends on the runtime, quantization implementation, context length, and system configuration (`docs/2_SRS_Software_Requirements_Specification.md`). Lighter alternative: `google/gemma-3-1b-it`; BART fallback for summarization
 
 **Production:**
 - Docker Compose stack: frontend `:3000`, backend `:8000`, PostgreSQL `:5432`, Redis `:6379` (`README.md` "Running with Docker")

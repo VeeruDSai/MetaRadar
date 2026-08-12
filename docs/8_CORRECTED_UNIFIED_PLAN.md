@@ -52,7 +52,7 @@ Every material gap found in the current documentation, classified by severity. "
 | G15 | **Document contradictions unresolved** (768 vs 384-dim embeddings; Twitter remnants; confluence ≥2 vs ≥3; 100 vs 500 synthetic; ontology factual errors like fitusiran→"Alhemo"). | SDD, Doc 1, SRS ontology | **MEDIUM** | Resolve per §2; edit the weaker docs. | §2, §11 P0 |
 | G16 | **Ontology factual QA gap.** `fitusiran` listed with brand "Alhemo" (Alhemo = concizumab) and approval status "FDA approved 2023"; `marstacimab` listed "Phase 3" (approved Dec 2024, verify). These errors would be caught by the planned B.Pharm validation layer — the layer must actually run before demo. | SRS §2.2.4 ontology | **MEDIUM** | Ontology v2 QA pass by B.Pharm; versioned ontology with `updated_by` audit. | §3 (MR-ONT-1), §11 P2 |
 | G17 | **Model/version metadata missing from AI outputs.** Auditability requires reconstructing "what produced this" (model, version, prompt template, config hash, temperature) on every AI output. | SDD §2.9 (audit exists), traceability.py | **MEDIUM** | Add `model_metadata` to every insight; log in audit trail. | §3 (MR-SEC-1), §6, §9 |
-| G18 | **NewsAPI quota assumption unchecked.** Docs assume 500 req/day; free-tier quotas are modest and changeable. Connector must be quota-aware and degrade to cache/synthetic. | All docs (500/day) | **MEDIUM** | Quota-aware connector design + documented degradation. | §5, §11 P1 |
+| G18 | **NewsAPI quota assumption.** Docs historically assumed 500 req/day; the verified Developer/free tier is **100 req/day** (dev/testing only, 24h article delay — not real-time, not production). Connector must be quota-aware and degrade to cache/synthetic on exhaustion. | All docs (now corrected to 100/day) | **MEDIUM** | Quota-aware connector design + documented degradation (Redis → bronze → synthetic). | §5, §11 P1 |
 | G19 | **2-page concept note deadline (within 48h of Aug 12 kickoff) is untracked** as a deliverable with owner and source material. | Doc 1 timeline | **MEDIUM** | Add to deliverable checklist with owner + content outline sourced from this plan. | §11 P0, §13 |
 | G20 | Minor naming inconsistency: summarizer "DistilBART (sshleifer)" in stack vs "facebook/bart-large-cnn" in master plan/SRS. | CLAUDE.md stack vs Master Plan | **LOW** | Unify on `facebook/bart-large-cnn`. | §2 |
 | G21 | README Roadmap "Phase 2 — Future Expansion" lists 5 roles + ClinicalTrials.gov as future, contradicting the corrected scope. | README | **LOW** | Update README roadmap to match corrected plan. | §2, §11 P0 |
@@ -105,7 +105,7 @@ Supersedes conflicting SRS statements. Existing SRS FR IDs remain valid where un
 ## 3.2 Data sources
 
 - **MR-SRC-1 [SOURCE-DERIVED]:** The MVP MUST demonstrate **≥3 genuinely live public sources** (SRS AC-1). Core live set:
-  1. **PubMed / PubMed Central** (E-utilities REST, free) — literature, trial readouts.
+  1. **NCBI PubMed / E-utilities** (E-utilities REST, free) — PubMed literature retrieval, trial readouts. (PMC full-text services = optional extension.)
   2. **NewsAPI** (free tier, quota-aware) — industry news, press releases.
   3. **ClinicalTrials.gov** (public v2 API, free, keyless) — trial registrations, status changes, protocol amendments.
 - **MR-SRC-2 [SOURCE-DERIVED]:** Additional sources are **ADAPTER-READY** (connector scaffold + rate limits + graceful degradation; may be seeded from synthetic for demo): FDA openFDA, EMA RSS, congress abstract archives (ASH, ISTH, WFH, EHA), patient/access sources (Reddit PRAW via public subreddits, advocacy feeds). No adapter is described as "live production-integrated" unless it actually fetches live data on demo day.
@@ -118,8 +118,8 @@ Supersedes conflicting SRS statements. Existing SRS FR IDs remain valid where un
 - **MR-EVAL-1 — Source-linked summaries [SOURCE-DERIVED+WEB-VERIFIED]:** Target **100%**. Every high-priority AI-generated insight MUST contain: source, URL, publication date, supporting excerpt, evidence chain, confidence, and an explicit "AI-generated" label. If evidence is insufficient, the system MUST NOT fabricate a conclusion (output the insufficiency guardrail). *Web-verified: traceability to named primary sources is the industry non-negotiable for audit-ready CI.*
 - **MR-EVAL-2 — Signal classification [SOURCE-DERIVED]:** Target **≥85% overall accuracy** on a labelled validation dataset (25 curated examples, B.Pharm-reviewed ground truth). Report: accuracy, per-class precision/recall, and confusion matrix. Entity-extraction accuracy separately ≥90% (SRS FR-2.2.1) on a 20-example extraction set.
 - **MR-EVAL-3 — Top-signal discovery time [ARCHITECTURAL]:** Target **≤5 minutes**. Reproducible protocol: 100 weekly signals (deterministic synthetic week) → task: "identify the top 5 priority developments" → measure time to decision. Baseline: same task with a manual search/browse tool. Acceptance: MetaRadar median ≤5 min AND ≥50% faster than baseline.
-- **MR-EVAL-4 — Confidential / patient data [SOURCE-DERIVED]:** Target **0**. Only public or synthetic data. PII/PHI scrubber runs before persistence; audit check asserts zero private data rows.
-- **MR-EVAL-5 — Source-failure resilience [SOURCE-DERIVED]:** 100% graceful degradation: any/all live sources down → cached/bronze/synthetic fallback, zero dashboard crashes (Master Plan §10 retained).
+- **MR-EVAL-4 — Confidential / patient data [SOURCE-DERIVED]:** Evaluation target **0** (not a mathematical guarantee). Only public or synthetic data. A dedicated PII/PHI detection + redaction layer runs before persistence (spaCy NER contributes to entity detection; it is not claimed as a guaranteed scrubber; low-confidence content is rejected/quarantined); audit check asserts zero private data rows.
+- **MR-EVAL-5 — Source-failure resilience [SOURCE-DERIVED]:** **Target**: graceful degradation during tested connector/model failures — any/all live sources down → cached/bronze/synthetic fallback, verified with failure-injection tests (not an untested guarantee; Master Plan §10 retained).
 - **MR-EVAL-6 — Stakeholder calibration improvement [SOURCE-DERIVED+ARCHITECTURAL]:** Measure whether role-routing agreement improves pre vs post calibration on the 5-scenario calibration set: **top-1 role agreement ≥10 points uplift** (e.g., 60% → ≥70%) AND confidence uplift >0 on corrected routes. Also report per-role avg rating trend and weight drift (SDD §9.1 already tracks these — now with an acceptance threshold).
 - **MR-EVAL-7 — Four-Question completeness [SOURCE-DERIVED]:** Target **100%** of high-priority signal cards contain Q1–Q4 + evidence + confidence + source + timestamp (see MR-Q-1).
 
@@ -157,7 +157,7 @@ Supersedes conflicting SRS statements. Existing SRS FR IDs remain valid where un
 
 ## 3.12 Guardrails (explicit, enforced)
 
-- **MR-GRD-1 [SOURCE-DERIVED]:** public/synthetic data only · no confidential data · no patient-identifiable data (PII scrubber before persistence) · no automated clinical/regulatory/commercial decisions · AI-generated content clearly labeled (non-suppressible `DisclaimerBadge`) · human review required for recommended actions · evidence required for claims · source failures must not crash the system (fallback cascade: Redis → bronze → synthetic) · synthetic fallback always available · secrets never enter source control (`.env` gitignored; env vars only).
+- **MR-GRD-1 [SOURCE-DERIVED]:** public/synthetic data only · no confidential data · no patient-identifiable data (dedicated PII/PHI detection + redaction layer before persistence; spaCy NER contributes but is not a guaranteed scrubber; low-confidence content rejected/quarantined) · no automated clinical/regulatory/commercial decisions · AI-generated content clearly labeled (non-suppressible `DisclaimerBadge`) · human review required for recommended actions · evidence required for claims · target: graceful degradation during tested source failures (fallback cascade: Redis → bronze → synthetic) · synthetic fallback always available · secrets never enter source control (`.env` gitignored; env vars only).
 - **MR-ONT-1 [SOURCE-DERIVED+ARCHITECTURAL]:** Ontology v2 QA by B.Pharm corrects factual errors (C8), adds version + `updated_by` metadata, and is validated by an ontology-QA evaluation row. (C8 fixes: fitusiran ≠ Alhemo; verify fitusiran/marstacimab approval status.)
 
 ## 3.13 Security / auditability (retained and strengthened)
@@ -319,7 +319,7 @@ Every high-priority card renders Q1–Q4 + evidence + **F-I-S badge** (FACT / IN
 | EV-2 | Signal classification | **≥85% accuracy** | Classifier vs ground truth; report accuracy, per-class precision/recall, confusion matrix | 25 labelled examples (B.Pharm-reviewed) | Acc ≥85%; worst-class recall ≥0.6 |
 | EV-2b | Entity extraction | **≥90%** | NER vs ground truth (drug/company/indication/phase) | 20 labelled texts | ≥90% exact-match accuracy |
 | EV-3 | Top-signal discovery time | **≤5 min** | 100-signal deterministic week; task: identify top-5 priorities; measure TTD; same task vs manual browsing baseline | Synthetic week (100) | Median ≤5 min AND ≥50% faster than baseline |
-| EV-4 | Confidential/patient data | **0** | Audit scan: no non-public data rows; PII scrubber unit test; `.env` not in repo | Repo + DB scan | 0 violations |
+| EV-4 | Confidential/patient data | **0 (evaluation target)** | Audit scan: no non-public data rows; dedicated PII/PHI detection + redaction layer unit tests (incl. reject/quarantine on low confidence); `.env` not in repo | Repo + DB scan | 0 violations (target) |
 | EV-5 | Source-failure resilience | **100% graceful** | Kill each live source (simulate 429/500/timeout) → dashboard still renders from fallback | Synthetic + cache | Zero 5xx; data freshness banner |
 | EV-6 | Calibration improvement | **Agreement +≥10 pts** | Pre-calibration top-1 function agreement vs post-calibration on the 5-scenario set; confidence uplift on corrected routes | 5 calibration scenarios | Agreement 60% → ≥70%; uplift >0 |
 | EV-7 | Four-Question completeness | **100%** | `test_four_question_completeness` over all HIGH+ cards | Demo + live/fallback | 100% pass |
@@ -390,7 +390,7 @@ Every mechanism demo points at its scenario: *"This scenario was deliberately co
 | Stakeholder calibration | feedback → weights → BEFORE/AFTER display | SRS FR-2.8, AC-14 | Calibration beat (priority/function/action change) | EV-6 agreement uplift ≥10 pts | Sanjana |
 | Cross-functional usefulness | Six-function routing + function views + digest | SRS §2.4.2/2.5, MR-DIGEST-1 | Role switcher + six digest variants | Q3 badges on ≥90% of signals; 6 digest variants | Sanjana + CSE |
 | Dashboard UX | Four-Question panels, F-I-S badge, WHY checklist | UI doc §2.2/§15 | Dashboard beat | EV-7 completeness 100%; <500ms | CSE |
-| Compliance/safety/governance | WORM audit, PII scrub, INTERNAL DECISION SUPPORT ONLY, F-I-S, evidence gate, risk register | SRS §3, docs/9_RISK_AND_GUARDRAILS.md | Guardrail slide + audit export | EV-4 = 0; EV-1/12 | Usha |
+| Compliance/safety/governance | WORM audit (traceability-analogy), dedicated PII/PHI layer, INTERNAL DECISION SUPPORT ONLY, F-I-S, evidence gate, risk register | SRS §3, docs/9_RISK_AND_GUARDRAILS.md | Guardrail slide + audit export | EV-4 = 0 (target); EV-1/12 | Usha |
 | Scalability | One engine → matrix rows; Celery/Redis; roadmap | SDD §10, MR-ROLE-4 | Feasibility slide + load test | 1000 signals w/o degradation | CSE |
 
 | Requirement (rubric/deliverable) | Current status | Gap | Required change | Implementation location | Demo evidence | Validation metric |
@@ -504,7 +504,7 @@ Kickoff = Aug 12, 2026. Team = 2 CSE + 3 B.Pharm. **Phase 0 completes by Aug 14 
 
 ## PHASE 9 — Demo hardening (Week 4)
 - **Objective:** Bulletproof submission (Master Plan §8 preserved).
-- **Tasks:** Offline rehearsal (network off → synthetic fallback); docker-compose up on clean machine; load test 1000 signals; fallback cascade tests; recorded demo video; demo dataset finalized; risk/guardrail summary doc; demo script doc (§12 rehearsed); PII/secret scan; `pytest` green.
+- **Tasks:** Offline rehearsal (network off → synthetic fallback); docker-compose up on clean machine; load test 1000 signals; **failure-injection tests** (API 429/500 → cache/bronze/synthetic; Gemma unavailable → BART factual-summarization degraded mode); recorded demo video; demo dataset finalized; risk/guardrail summary doc; demo script doc (§12 rehearsed); PII/secret scan; `pytest` green.
 - **Dependencies:** Phase 8.
 - **Acceptance criteria:** Rehearsal passes end-to-end twice; fallback works with 0 internet; video backup ready.
 - **Demo outcome:** The §12 script runs flawlessly.

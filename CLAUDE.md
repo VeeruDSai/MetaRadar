@@ -31,13 +31,13 @@ MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feed
 - **Celery 5.3 + APScheduler**: Asynchronous ingestion pipeline and 2-hour periodic fetch scheduler.
 ### NLP & AI Models (All Local, Free)
 - **spaCy 3.7 (en_core_sci_md)**: Local Named Entity Recognition (NER) for pharmaceutical entity extraction (drugs, companies, trial phases, indications).
-- **BART (facebook/bart-large-cnn)**: Local signal summarization (CPU-friendly); also the demo-safety fallback when the reasoning LLM is unavailable.
+- **BART (facebook/bart-large-cnn)**: Local factual signal summarization (CPU-friendly); also the safe degraded fallback when the reasoning LLM is unavailable — **factual summarization only, NOT a reasoning-equivalent replacement**.
 - **BART MNLI (`facebook/bart-large-mnli`)**: Zero-shot classification for haemophilia signal types AND Red-Team contradiction entailment (one local model, two jobs; canonical per SRS `NLI_MODEL`).
 - **Sentence-Transformers (sentence-transformers/all-MiniLM-L6-v2)**: Local 384-dim vector embeddings (80MB).
 - **RAG Interface**: "Ask Athena" semantic search over saved signals via pgvector + local LLM.
 ### Data Sources (All Public)
-- **PubMed Central API**: Clinical literature & Phase 2/3 trial readouts.
-- **NewsAPI**: Industry news & competitor press releases (500 free/day).
+- **NCBI PubMed / E-utilities**: PubMed literature retrieval (clinical literature & Phase 2/3 trial readouts). PubMed Central (PMC) full-text services are an OPTIONAL/EXTENSION, not the same endpoint.
+- **NewsAPI**: Industry news & competitor press releases (Developer/free tier: 100 req/day, development/testing only, 24h article delay — not real-time, not for production).
 - **ClinicalTrials.gov API**: Trial status changes & new registrations.
 - **FDA OpenFDA API**: Approvals & adverse event communications.
 - **EMA RSS**: European approval decisions & CHMP opinions.
@@ -47,8 +47,8 @@ MetaRadar includes a **Stakeholder Calibration Prototype (HITL)** that uses feed
 ### Resilience & Calibration
 - **StakeholderCalibrationService**: HITL learning loop adjusting function relevance scoring weights based on stakeholder feedback ratings.
 - **tenacity + httpx**: Exponential backoff retry logic (3 retries: 2s, 4s, 8s) for external APIs.
-- **WORM Audit Trail**: Append-only `audit_log` PostgreSQL table compliant with GxP & 21 CFR Part 11 standards.
-- **PII Scrubber**: spaCy-based PII/PHI detection and redaction before persistence.
+- **WORM Audit Trail**: Append-only `audit_log` PostgreSQL table inspired by electronic-record traceability principles (engineering design analogy — MetaRadar does NOT claim 21 CFR Part 11 or GxP regulatory compliance).
+- **PII/PHI Layer**: dedicated PII/PHI detection and redaction before persistence (spaCy NER contributes to entity detection but is not a guaranteed scrubber; low-confidence content is rejected/quarantined).
 ### Frontend Dashboard
 - **Next.js 15 (React 19, TypeScript)**: App Router with Server Components, streaming, and Four-Question Panel layout.
 - **TailwindCSS 4 + shadcn/ui**: Modern component design system.

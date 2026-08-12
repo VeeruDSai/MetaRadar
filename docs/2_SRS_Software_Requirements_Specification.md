@@ -30,7 +30,7 @@ Unlike conventional AI systems that merely summarize documents, MetaRadar builds
 - 6 Primary Functions: Medical Affairs, Regulatory, Safety / Pharmacovigilance, Market Access, Medical Communications, Leadership (ONE engine routes to all six; Commercial & R&D retained as extended/future roles)
 - Therapy Area: **Haemophilia within Rare Disease (Haemophilia A + Haemophilia B)**
 - Scope includes: current and emerging treatment approaches, competitor activity, regulatory changes, trial milestones, congress updates, publications, patient/access narratives, future pipeline developments (emerging competitor assets)
-- Multi-Source Public Ingestion: PubMed Central, NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, Congress Abstract archives (ASH, ISTH, WFH, EHA), 500-signal synthetic demo fallback
+- Multi-Source Public Ingestion: NCBI PubMed (E-utilities), NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, Congress Abstract archives (ASH, ISTH, WFH, EHA), 500-signal synthetic demo fallback (PubMed Central/PMC full-text is an OPTIONAL/EXTENSION, not an MVP source)
 - 10-Agent LangGraph Pipeline: Ingestion → Validation → NLP → Signal Confluence → **Signal Lifecycle Tracking → Red-Team Contradiction → Missing-Signal Detection** → Narrative Synthesis → Brief → **Stakeholder Calibration Agent**
 - Core Features: Entity extraction, B.Pharm Haemophilia ontology, **the Five Advanced Analyses** (Confluence Detection, Signal Lifecycle Tracking, Red-Team Contradiction Analysis, Missing-Signal Detection, Stakeholder Learning Loop), Four-Question UX, Ask Athena RAG conversational search
 
@@ -74,9 +74,9 @@ Unlike conventional AI systems that merely summarize documents, MetaRadar builds
 ### 2.1 Signal Ingestion & Aggregation
 
 **FR-2.1.1: Multi-Source Data Fetch**
-- System SHALL fetch signals from PubMed, NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, and Congress abstract repositories using haemophilia query terms
+- System SHALL fetch signals from NCBI PubMed (E-utilities), NewsAPI, ClinicalTrials.gov, FDA OpenFDA, EMA RSS, Reddit PRAW, and Congress abstract repositories using haemophilia query terms
 - System SHALL support async parallel fetching
-- System SHALL implement rate limiting per source (500/day for NewsAPI)
+- System SHALL implement rate limiting per source (NewsAPI Developer/free tier = 100 requests/day, development/testing use only; articles delayed up to 24h; NOT real-time, NOT for production/internal deployment — quota-aware connector; on exhaustion fall back to Redis cache → bronze DB → synthetic dataset)
 - System SHALL cache fetched data for 2 hours minimum
 - System SHALL maintain a 500-signal synthetic dataset for offline demo fallback
 
@@ -158,12 +158,12 @@ HAEMOPHILIA_QUERY_TERMS = {
 
 **FR-2.2.3A: Reasoning & Generation (Gemma 3 Default)**
 - System SHALL power narrative synthesis, Four-Question reasoning, AI-suggested actions (Q4), and Ask Athena grounded answers with a modern instruction-tuned LLM loaded via `LOCAL_LLM_MODEL` (`LOCAL_LLM_TASK` = `text-generation`)
-- Default (hackathon/CPU): `google/gemma-3-4b-it` (Gemma 3 4B Instruct — local, Q4-quantized ~2.6GB weights, ~4.5–7.5GB RAM)
+- Default (hackathon/CPU): `google/gemma-3-4b-it` (Gemma 3 4B Instruct — local, Q4-quantized; **estimated** ~2.6GB weights / ~4.5–7.5GB RAM — planning estimates, actual usage depends on runtime, quantization, context length, and system configuration)
 - Light-hardware alternative: `google/gemma-3-1b-it`; other supported swaps: `mistralai/Mistral-7B-Instruct`, `microsoft/phi-3-mini-4k-instruct`, `TinyLlama/TinyLlama-1.1B-Chat`, or any HuggingFace-compatible text-generation model
 - LLM outputs SHALL remain strictly grounded in retrieved source excerpts (temperature locked, "INSUFFICIENT EVIDENCE" guardrail when no source supports the answer)
 
 **FR-2.2.3B: Automatic Model Fallback (Demo Safety)**
-- If `LOCAL_LLM_MODEL` fails to load or exceeds its latency budget, the system SHALL automatically degrade to `facebook/bart-large-cnn` (summarization task) so the dashboard never hangs
+- If `LOCAL_LLM_MODEL` fails to load or exceeds its latency budget, the system SHALL automatically enter **degraded mode** using `facebook/bart-large-cnn` for factual summarization only (no interpretation, no reasoning-based action recommendation), so the dashboard remains available during tested failures (degraded mode SHALL be flagged in the UI)
 - The fallback SHALL be logged and surfaced in the UI (e.g., "running in BART fallback mode")
 
 **FR-2.2.4: Pharma Ontology Enrichment**
@@ -327,6 +327,11 @@ Every normalized signal SHALL carry all of the following dimensions (added to th
 - System SHALL label every intelligence output (summaries, briefs, Q2 explanations, Q4 actions, Athena answers, digest items) with exactly one of FACT / INTERPRETATION / SPECULATION.
 - System SHALL NEVER present speculation as fact; F-I-S labels SHALL be stored in the database, rendered in UI signal cards, returned in API responses, written to the audit trail, and evaluated in the evaluation suite.
 
+**FR-2.2.6A: Source Authority Model (v4.0)**
+- System SHALL evaluate evidence using: `source type` + `source authority` + `publication/event date` + `evidence maturity` + `corroboration` + `contradictory evidence` (never a simplistic "source X is always true" rule)
+- Authority framing SHALL be contextual: authoritative regulatory source (high authority for regulatory facts) · trial registry (high authority for registry/status facts) · peer-reviewed publication (high authority for published findings) · congress (important but potentially preliminary) · company announcement (important primary source but sponsor-originated) · secondary media (discovery, lower authority) · social/community (signal/discovery, not strong evidence by itself)
+- System SHALL preserve the distinction between "source says X" and "MetaRadar interprets X as Y": outputs SHALL separate the source claim from the system's own interpretation (F-I-S labels + `source_authority` + `evidence_maturity`)
+
 **FR-2.2.7: Evidence Sufficiency Check (gate before narrative generation)**
 - Required flow: Signal → retrieve evidence → evidence sufficient? → YES: generate grounded interpretation → NO: restrict output to verified facts and/or return *"Insufficient evidence to support an interpretation."* + request human review.
 - System SHALL NOT invent an interpretation when evidence is insufficient.
@@ -337,7 +342,7 @@ Every normalized signal SHALL carry all of the following dimensions (added to th
 **FR-2.3.1: Confluence Pattern Matching**
 - System SHALL detect confluence using the configured `HAEMOPHILIA_CONFLUENCE_PATTERNS`
 - Pattern: multiple independent signals (≥ 3) mentioning the same haemophilia entity within a 48-hour window → confluence alert
-- **Development-link decision (mandatory for congress/publication signals):** before creating a new intelligence card, the system SHALL check whether the signal belongs to an existing development (`development_id` match via trial/asset/company). If yes → the signal becomes a **new evidence event in the existing development/evidence chain** (e.g., trial → congress abstract → oral presentation → poster → publication = ONE development, not four unrelated cards). If no → the signal opens a **NEW DEVELOPMENT**.
+- **Development-link decision (mandatory for congress/publication signals, tri-state — v4.0):** before creating a new intelligence card, the system SHALL check whether the signal belongs to an existing development (`development_id` match via trial/asset/company). The decision SHALL be one of: **`linked`** (confident match → new evidence event in the existing development/evidence chain; e.g., trial → congress abstract → oral presentation → poster → publication = ONE development, not four unrelated cards), **`possibly_linked`** (ambiguous/partial match → attach **`requires_human_review`** flag; never auto-linked, never auto-created as new), or **`unlinked`** (no plausible match → candidate NEW DEVELOPMENT, human-reviewable). A signal that only repeats known information SHALL be marked repeated/low novelty rather than creating a new event. The link SHALL NOT be forced when evidence is insufficient. Stored: `development_id` · `event_id` · `source_id` · `link_decision`.
 
 **Haemophilia Confluence Patterns (excerpt):**
 ```python
@@ -569,14 +574,14 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 - System SHALL handle 1,000 signals without degradation
 
 ### 3.2 Security & Compliance
-- System SHALL redact PII/PHI before persistence (spaCy-based PII scrubber)
+- System SHALL run a **dedicated PII/PHI detection and redaction layer** before persistence (spaCy NER contributes to entity detection but is NOT claimed as a guaranteed scrubber); when detection confidence is insufficient, content SHALL be rejected or quarantined and NOT persisted
 - System SHALL support CORS with configurable allowlist (`CORS_ORIGINS`)
 - All external API calls SHALL be HTTPS with credentials via `.env` (never in code)
 - No secrets SHALL be committed to the repository (validate `.env` is gitignored)
-- System SHALL maintain append-only `audit_log` (WORM) compliant with GxP / 21 CFR Part 11 for traceability
+- System SHALL maintain an append-only/WORM `audit_log` **inspired by electronic-record traceability principles** (engineering design analogy). **MetaRadar does NOT claim 21 CFR Part 11 or GxP regulatory compliance**, and is not validated for regulated production use
 
 ### 3.3 Availability & Reliability
-- Data sources SHALL be treated as unreliable; system SHALL never crash on source failure
+- Data sources SHALL be treated as unreliable; **target: graceful degradation during tested connector/model failures** (verified by failure-injection tests) — resilience is an acceptance target, not an untested guarantee
 - Fallback to synthetic demo dataset SHALL always be available offline
 - tenacity + httpx retry: 3 retries (2s, 4s, 8s) with exponential backoff
 

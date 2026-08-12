@@ -277,7 +277,7 @@ Every answer follows a strict 2-part structure:
 
 ### Q3: Why Redis?
 * **Non-Technical Answer:** Redis provides ultra-fast memory storage so repeated user views load instantly without re-processing data.
-* **Technical Implementation:** Redis 7 serves as an in-memory key-value cache with a 2-hour TTL for processed hot signals, rate-limiting counter for public API endpoints (e.g. 500 requests/day cap on NewsAPI), and transient pub/sub broker for Celery async tasks.
+* **Technical Implementation:** Redis 7 serves as an in-memory key-value cache with a 2-hour TTL for processed hot signals, quota-aware rate-limiting counter for public API endpoints (e.g. NewsAPI Developer tier = 100 requests/day, dev/testing only, 24h article delay), and transient pub/sub broker for Celery async tasks.
 
 ---
 
@@ -324,7 +324,7 @@ Every answer follows a strict 2-part structure:
 ---
 
 ### Q11: What happens when an API fails?
-* **Non-Technical Answer:** If a public data source breaks or goes offline, MetaRadar retries automatically, uses recent cached data, or switches to a backup dataset so the app never crashes.
+* **Non-Technical Answer:** If a public data source breaks or goes offline, MetaRadar is designed to retry automatically, use recent cached data, or switch to a backup dataset so the app keeps working during tested failures (graceful-degradation target).
 * **Technical Implementation:** Ingestion calls use `tenacity` exponential backoff (3 attempts: 2s, 4s, 8s timeout). If an external API fails, the backend seamlessly falls back to Redis hot cache (TTL 24h), then PostgreSQL `raw_signals_bronze` historical data, and finally to our pre-seeded 500-signal synthetic haemophilia demo dataset without throwing 500 errors.
 
 ---

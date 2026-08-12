@@ -45,8 +45,8 @@
 ## Error Handling
 
 **Patterns (prescribed):**
-- **External API failures:** `tenacity` exponential backoff (3 retries: 2s, 4s, 8s); fallback cascade Redis cache → bronze DB → 500-signal synthetic dataset; 100% graceful degradation, zero dashboard crashes (`CLAUDE.md` "Resilience & Calibration", `docs/9_RISK_AND_GUARDRAILS.md` R11)
-- **LLM load failure:** auto-fallback from Gemma 3 4B → BART summarizer, logged and surfaced in UI (`docs/9_RISK_AND_GUARDRAILS.md` R6)
+- **External API failures:** `tenacity` exponential backoff (3 retries: 2s, 4s, 8s); fallback cascade Redis cache → bronze DB → 500-signal synthetic dataset. **Target: graceful degradation during tested connector/model failures** (resilience is an acceptance target verified by failure-injection tests — do not claim untested guarantees) (`CLAUDE.md` "Resilience & Calibration", `docs/9_RISK_AND_GUARDRAILS.md` R11)
+- **LLM load failure:** safe **degraded mode** — Gemma 3 4B unavailable → BART factual summarization ONLY (no unsupported interpretation, no reasoning-based action recommendation), clearly marked degraded in the UI, human review where necessary (`docs/9_RISK_AND_GUARDRAILS.md` R6)
 - **Low-confidence retrieval:** evidence-sufficiency gate blocks generation — return *"Insufficient evidence to support an interpretation."* (R1)
 - **API auth errors:** raise `HTTPException(401, "Invalid credentials")` (SDD line ~1543)
 
@@ -55,14 +55,16 @@
 **Framework:** Standard library logging (prescribed; no external logger).
 
 **Patterns:**
-- Log fallback events (Gemma → BART) so degradation is visible (`docs/9_RISK_AND_GUARDRAILS.md` R6)
-- WORM `audit_log` table (append-only, 21 CFR Part 11-style) for calibration history and ontology changes — never overwrite/delete audit rows (`CLAUDE.md`, `docs/9_RISK_AND_GUARDRAILS.md` R10/R15)
+- Log degraded-mode events (Gemma unavailable → BART factual summarization) so degradation is visible and reviewable (`docs/9_RISK_AND_GUARDRAILS.md` R6)
+- Append-only/WORM `audit_log` table (engineering design analogy **inspired by electronic-record traceability principles** — MetaRadar does NOT claim 21 CFR Part 11 or GxP regulatory compliance) for calibration history and ontology changes — never overwrite/delete audit rows (`CLAUDE.md`, `docs/9_RISK_AND_GUARDRAILS.md` R10/R15)
 - Data-freshness + source-health status surfaced in UI, not just logs (R5/R11)
 
 ## Comments
 
 **When to Comment:**
-- Document AI/domain decisions that are non-obvious (F-I-S labeling rules, WATCH wording guardrails, fallback chains)
+- Document AI/domain decisions that are non-obvious (F-I-S labeling rules, WATCH wording guardrails, degraded-mode fallback, tri-state congress/publication link decisions, source-authority framing)
+- Source authority is contextual: regulatory → regulatory facts; registry → status facts; peer-reviewed → published findings; congress → potentially preliminary; company announcement → sponsor-originated; media → discovery; social → signal/discovery. Always preserve "source says X" vs "MetaRadar interprets X as Y" (Master Plan §12.9A)
+- Congress/publication link decisions use `linked | possibly_linked | unlinked` — never force a link; ambiguous matches get a human-review flag (Master Plan §12.6)
 - Spec docs already encode the rationale — implementation comments should reference them
 
 **JSDoc/TSDoc:**
@@ -92,7 +94,7 @@
 ## Guardrail Conventions (non-negotiable)
 
 - **No secrets in code** — env vars only, `.env` gitignored (SRS NFR, `docs/9_RISK_AND_GUARDRAILS.md` R14)
-- **Public + synthetic data only** — no confidential/patient data; PII/PHI scrubbed before persistence (R14)
+- **Public + synthetic data only** — no confidential/patient data; dedicated PII/PHI detection and redaction layer before persistence (spaCy NER contributes to entity detection but is NOT a guaranteed scrubber; low-confidence content is rejected/quarantined) (R14)
 - **F-I-S labeling on every AI output** — speculation never presented as fact (R1/R2)
 - **Controlled action vocabulary only** — monitor · review · prepare_internal_briefing · prepare_scientific_faq · escalate · request_stakeholder_review · no_immediate_action (R13)
 - **Human review required** — AI suggests, human decides (R13/R19)

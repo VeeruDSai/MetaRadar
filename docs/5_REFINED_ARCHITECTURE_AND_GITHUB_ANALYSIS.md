@@ -1125,7 +1125,7 @@ DATA:
 │   ↑ Replace Weaviate entirely — eliminates one Docker container
 │   ├─ pgvector: 384-dim vectors, native hybrid search in PostgreSQL
 │   ├─ raw_signals_bronze: raw API JSON, pre-processing (replay layer)
-│   ├─ audit_log: WORM append-only compliance table (21 CFR Part 11)
+│   ├─ audit_log: WORM append-only traceability table (analogy to electronic-record principles; no compliance claim)
 │   ├─ stakeholder_feedback: append-only routing ratings (Analysis 5, HITL)
 │   ├─ scoring_weights + calibration_history: calibrated role weights (HITL)
 │   ├─ lifecycle_chains + lifecycle_events: state machines + event links (Analysis 2)
@@ -1183,7 +1183,7 @@ MONITORING:
 | Model-agnostic LLM via env var (Section 8) | `LOCAL_LLM_MODEL` + `LOCAL_LLM_TASK` env vars |
 | medspacy for pharma NER (Section 2) | Added to NLP stack (optional, drop-in spaCy extension) |
 | pgvector replaces Weaviate (Section 3) | ✅ Done — entire Upgrade 7 (Ask Athena) re-implemented |
-| WORM audit log / 21 CFR Part 11 (Section 6) | `audit_log` table + `ComplianceAuditLogger` service |
+| WORM audit log (traceability analogy; Section 6) | `audit_log` table + `ComplianceAuditLogger` service (no 21 CFR Part 11 compliance claim) |
 | PII detection before storage (Section 6) | `pii_scrubber.py` pipeline step |
 | Medical accuracy disclaimer (Section 6) | `DisclaimerBadge` UI component (non-suppressible) |
 | SLI/SLO targets (Section 5) | Documented in SRS Section 4.1 |
@@ -1297,7 +1297,7 @@ CSE:
 ├─ PostgreSQL + pgvector setup (single DB, simpler than Weaviate)
 ├─ LangGraph skeleton (4 agents, no NLP yet)
 ├─ Docker Compose (4 services: frontend, backend, postgres, redis)
-└─ NewsAPI + PubMed integration (two working sources)
+└─ NewsAPI + NCBI PubMed (E-utilities) integration (two working sources)
 
 B.Pharm:
 ├─ Signal taxonomy document (7 haemophilia signal types, keywords, examples)

@@ -7,8 +7,8 @@
 ## APIs & External Services
 
 **Live data sources (MVP — 3 must be live on demo day, per SRS AC-1):**
-- **PubMed Central API** — scientific publications, clinical evidence, trial readouts. Keyless REST. Used by `node_ingest`.
-- **NewsAPI** — industry news, press releases, competitor announcements. **Free tier: 500 requests/day** — quota-aware connector; degrades to cache/synthetic. Auth: `NEWSAPI_KEY` env var.
+- **NCBI PubMed / E-utilities** — PubMed literature retrieval via NCBI E-utilities (esearch/efetch/esummary), for scientific publications, clinical evidence, trial readouts. Keyless REST. Used by `node_ingest`. **PubMed Central (PMC) APIs/services for eligible full-text content are an OPTIONAL/EXTENSION** — they are not the same endpoint as PubMed literature retrieval and are not claimed as implemented unless they are.
+- **NewsAPI** — industry news, press releases, competitor announcements. **Developer/free tier: 100 requests/day** — quota-aware connector; **development/testing use only** (NewsAPI's Developer plan is not for production/internal deployment); articles on the Developer plan have a **24-hour delay** (do NOT claim real-time). Auth: `NEWSAPI_KEY` env var. Official pricing: https://newsapi.org/pricing. If the quota is exhausted: fall back to Redis cache → bronze DB → synthetic dataset.
 - **ClinicalTrials.gov API (v2)** — trial registrations, status changes, protocol amendments. Free, keyless. (`README.md` "Data Sources")
 
 **Adapter-ready sources (connector scaffolds + rate limits; not claimed as fully live):**
@@ -26,7 +26,7 @@
 - PostgreSQL 16 + pgvector extension — single DB for relational + 384-dim vector search (`CLAUDE.md`)
   - Connection: `DATABASE_URL` (e.g. `postgresql://metauser:metapass@postgres:5432/metaradar`)
   - Client: SQLAlchemy/asyncpg (prescribed by SDD `docs/3_SOFTWARE_DESIGN_DOCUMENT.md`)
-  - Key tables (planned): `signals`, `entities`, `raw_signals_bronze` (verbatim replay), `calibration_history`, WORM `audit_log` (21 CFR Part 11-style append-only)
+  - Key tables (planned): `signals`, `entities`, `raw_signals_bronze` (verbatim replay), `calibration_history`, WORM `audit_log` (append-only, **inspired by electronic-record traceability principles** — an engineering design analogy; MetaRadar does NOT claim 21 CFR Part 11 or GxP regulatory compliance)
 
 **File Storage:**
 - Local filesystem only (planned) — no object storage service
@@ -72,6 +72,11 @@
 
 **Secrets location:**
 - `.env` (gitignored) — never committed; `.env.example` committed as template (`docs/9_RISK_AND_GUARDRAILS.md` R14, EV-4)
+
+## Source Freshness & Delay Notes
+
+- **NewsAPI Developer tier:** articles are delayed by up to 24 hours; the 2-hour polling schedule does NOT eliminate source-side delay. Source freshness (`published_at`, fetch timestamp) must be displayed in the UI. NewsAPI is one source among several — critical regulatory/trial information should preferably come from authoritative sources (FDA/EMA/ClinicalTrials.gov) when available.
+- **NCBI PubMed / E-utilities:** literature indexing lag applies; `source_date` reflects the publication/event date, `fetched_at` the ingestion time.
 
 ## Webhooks & Callbacks
 

@@ -361,7 +361,7 @@ The 2025 winning project was:
 | **Update frequency** | Manual (run script) | Automated (every 2 hours) |
 | **Production readiness** | Streamlit Cloud | Docker Compose + Vercel + Railway |
 | **Innovation** | Market analysis dashboard | **The Five Advanced Analyses** (confluence, lifecycle, red-team contradiction, missing-signal, stakeholder learning) + pharma ontology + traceable intelligence |
-| **Compliance/Audit** | None | WORM audit log (21 CFR Part 11), PII detection, medical disclaimer, calibration_history audit, contradiction + missing-signal audit |
+| **Compliance/Audit** | None | WORM audit log (traceability analogy — no compliance claim), dedicated PII/PHI detection + redaction layer, medical disclaimer, calibration_history audit, contradiction + missing-signal audit |
 | **AI Model Flexibility** | Hardcoded pandas | Model-agnostic: any HuggingFace model via config (BART → Gemma → Mistral, zero code change) |
 
 
@@ -412,7 +412,7 @@ These are statements directly tied to their current business reality that will s
 
 3. **Why Redis?**
    - *Non-Technical:* Redis provides ultra-fast memory storage so repeated user views load instantly without re-processing data.
-   - *Technical:* Redis 7 provides an in-memory key-value cache (2h TTL), API rate-limiting counter (500 req/day cap), and pub/sub broker for Celery async tasks.
+   - *Technical:* Redis 7 provides an in-memory key-value cache (2h TTL), quota-aware API rate-limiting counter (NewsAPI Developer tier = 100 req/day), and pub/sub broker for Celery async tasks.
 
 4. **How does confluence work?**
    - *Non-Technical:* It checks if three or more independent sources — like a publication, a trial registry, and a news report — mention the same drug within 48 hours; for congress/publication signals it first asks whether they belong to an existing development.
@@ -443,7 +443,7 @@ These are statements directly tied to their current business reality that will s
     - *Technical:* Every database row maintains an immutable `evidence_chain` JSONB object containing `source_name`, `source_url`, `published_at`, `extracted_quote`, credibility score, and SHA-256 hash.
 
 11. **What happens when an API fails?**
-    - *Non-Technical:* If a public data source breaks or goes offline, MetaRadar retries automatically, uses recent cached data, or switches to a backup dataset so the app never crashes.
+    - *Non-Technical:* If a public data source breaks or goes offline, MetaRadar is designed to retry automatically, use recent cached data, or switch to a backup dataset so the app keeps working during tested failures (graceful-degradation target).
     - *Technical:* Uses `tenacity` exponential backoff (3 attempts: 2s, 4s, 8s). Fallback cascade: Redis cache (TTL 24h) $\rightarrow$ PostgreSQL `raw_signals_bronze` $\rightarrow$ 500-signal synthetic demo fallback dataset.
 
 12. **How does the architecture scale?**
