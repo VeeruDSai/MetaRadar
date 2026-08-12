@@ -24,10 +24,10 @@ TIER 1 (Weeks 1-2): FREE ONLY
 TIER 2 (Week 3): Pluggable Local Models (zero API cost)
 ├─ spaCy NLP (local, no API calls)
 ├─ Embeddings: sentence-transformers (local)
-└─ Summarization/LLM: ANY HuggingFace-compatible model — configured
-   via LOCAL_LLM_MODEL env var. Default: "facebook/bart-large-cnn".
-   Swap to Gemma, Mistral, Phi-3, TinyLlama or any seq2seq/decoder
-   model with a single config change — no code change required.
+├─ Reasoning LLM: google/gemma-3-4b-it (Gemma 3 4B Instruct — default)
+│  → narrative synthesis, Four-Question reasoning, Ask Athena
+└─ Batch summarizer: facebook/bart-large-cnn (fast CPU seq2seq)
+   → 1-sentence summaries + automatic fallback if Gemma unavailable
 ```
 
 **Query Terms (haemophilia domain, B.Pharm-authored):**
@@ -64,23 +64,32 @@ HAEMOPHILIA_QUERY_TERMS = {
 import os
 from transformers import pipeline
 
-# Model controlled by environment variable — swap without code changes
-# Examples:
-#   LOCAL_LLM_MODEL=facebook/bart-large-cnn        (seq2seq, fast CPU)
-#   LOCAL_LLM_MODEL=google/gemma-2b                (decoder, better quality)
-#   LOCAL_LLM_MODEL=mistralai/Mistral-7B-Instruct  (decoder, near-GPT4 quality)
+# Reasoning LLM (synthesis, briefs, Ask Athena) — default Gemma 3 4B Instruct:
+#   LOCAL_LLM_MODEL=google/gemma-3-4b-it        (default: modern instruction LLM)
+#   LOCAL_LLM_MODEL=google/gemma-3-1b-it        (light-CPU option)
+#   LOCAL_LLM_MODEL=mistralai/Mistral-7B-Instruct  (near-GPT4 quality)
 #   LOCAL_LLM_MODEL=microsoft/phi-3-mini-4k-instruct (tiny, 3.8B)
-LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "facebook/bart-large-cnn")
-LOCAL_LLM_TASK  = os.getenv("LOCAL_LLM_TASK",  "summarization")  # or "text-generation"
+LOCAL_LLM_MODEL  = os.getenv("LOCAL_LLM_MODEL",  "google/gemma-3-4b-it")
+LOCAL_LLM_TASK   = os.getenv("LOCAL_LLM_TASK",   "text-generation")
+# Batch summarizer + demo-safety fallback (fast CPU seq2seq):
+SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "facebook/bart-large-cnn")
+SUMMARIZER_TASK  = os.getenv("SUMMARIZER_TASK",  "summarization")
 
-summarizer = pipeline(
+# Reasoning LLM loader (Gemma 3 4B Instruct by default)
+llm = pipeline(
     LOCAL_LLM_TASK,
     model=LOCAL_LLM_MODEL,
     device=0 if torch.cuda.is_available() else -1
 )
+# Batch summarizer loader (fast CPU seq2seq + demo-safety fallback)
+batch_summarizer = pipeline(
+    SUMMARIZER_TASK,
+    model=SUMMARIZER_MODEL,
+    device=-1
+)
 ```
 
-> **Research Report alignment (Section 8 — Model Comparison):** The report shows that modern small LLMs (Gemma, Mistral 7B, Phi-3) approach GPT-4 quality at a fraction of the cost. By making the model fully configurable, MetaRadar can start with BART (CPU-fast, hackathon default) and graduate to any stronger model as hardware allows — without touching application code.
+> **Research Report alignment (Section 8 — Model Comparison):** The report shows that modern small LLMs (Gemma, Mistral 7B, Phi-3) approach GPT-4 quality at a fraction of the cost. MetaRadar ships **Gemma 3 4B Instruct as the default reasoning LLM** (narrative synthesis, Four-Question briefs, Ask Athena) while keeping **BART-large-CNN as the CPU-fast batch summarizer and automatic fallback** — quality where it matters, demo stability on any hardware, zero code changes.
 
 **Cost Savings:** $500/month → $0
 
@@ -1308,10 +1317,10 @@ RESPONSE TIMES:
 
 RESOURCE USAGE:
 ├─ Frontend bundle:                < 50KB gzipped    ✅
-├─ Backend memory:                 < 500MB           ✅
+├─ Backend memory:                 < 500MB (API core; Gemma LLM adds ~4.5–7.5GB while loaded) ✅
 ├─ Database:                       < 100ms per query ✅
 ├─ Redis hit rate:                 > 80%             ✅
-└─ Total Docker image size:        < 2GB             ✅
+└─ Total Docker image size:        < 2GB base (Gemma Q4 adds ~2.6GB if pre-downloaded) ✅
 
 RELIABILITY:
 ├─ Uptime:                         > 99%             ✅
@@ -1348,7 +1357,7 @@ WEEK 2: Core Features + Testing + Intelligence
 ├─ NewsAPI + PubMed integration (haemophilia query terms)
 ├─ Entity extraction (local spaCy)
 ├─ Pharma Ontology JSON integration (enrich entities)
-├─ Signal classification (zero-shot BART-MNLI) + BART summarization
+├─ Signal classification (zero-shot BART-MNLI) + BART batch summarization + Gemma 3 reasoning LLM
 ├─ PostgreSQL + pgvector + Redis caching
 ├─ Medical Affairs dashboard (1st complete role)
 ├─ Signal Confluence Engine (core differentiator)

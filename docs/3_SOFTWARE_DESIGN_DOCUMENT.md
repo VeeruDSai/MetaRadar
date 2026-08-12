@@ -144,7 +144,8 @@ META RADAR
 | **Primary DB** | PostgreSQL 16 + pgvector | ACID, JSONB, vector search in one DB (replaces Weaviate) |
 | **Cache** | Redis 7 | Sub-millisecond access, rate limiting |
 | **NLP/NER** | spaCy 3.7 (`en_core_sci_md`) + medspacy | Entity extraction, pharma-grade NER; medspacy extends coverage |
-| **LLM/Summarization** | Any HuggingFace model via `LOCAL_LLM_MODEL` env var | Configurable: BART (default/CPU), Gemma, Mistral, Phi-3, etc. — swapped without code changes |
+| **Reasoning LLM** | `google/gemma-3-4b-it` (default) via `LOCAL_LLM_MODEL` env var | Gemma 3 4B Instruct — narrative synthesis, Four-Question reasoning, suggested actions, Ask Athena; `text-generation` task; Q4-quantized for CPU; auto-fallback to BART |
+| **Batch Summarizer** | `facebook/bart-large-cnn` via `SUMMARIZER_MODEL` env var | Fast CPU seq2seq 1-sentence summaries (< 60s/100 signals) + demo-safety fallback |
 | **Classification** | `facebook/bart-large-mnli` (zero-shot) | Signal type classification AND Red-Team contradiction entailment (one local model, two jobs) |
 | **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | 768-dim local embeddings, 80MB |
 | **HTTP Resilience** | `tenacity` + `httpx.AsyncClient` | Exponential backoff retry + async HTTP (research report recommendation) |
@@ -598,7 +599,7 @@ async def detect_missing_signals(lifecycles: list[dict]) -> list[dict]:
 
 **Temporal Pattern Recognition** (`services/temporal_patterns.py`) — matches current signal sets against B.Pharm-defined timeline patterns (pre-approval surge, access crisis) and reports current stage + predicted next stage.
 
-**Narrative Synthesis** (`services/narrative_synthesizer.py`) — configurable LLM layer that converts all signals about a competitor/topic into a 3-part executive brief (WHAT HAPPENED / WHY IT MATTERS / RECOMMENDED ACTION), role-specific. The model is loaded from the `LOCAL_LLM_MODEL` environment variable — default `facebook/bart-large-cnn` for CPU/hackathon, but any HuggingFace-compatible seq2seq or instruction-tuned model (Gemma 2B, Mistral 7B, Phi-3 Mini, TinyLlama, etc.) can be swapped in with a single config change. No code changes required — the pipeline is model-agnostic by design.
+**Narrative Synthesis** (`services/narrative_synthesizer.py`) — reasoning-LLM layer that converts all signals about a competitor/topic into a 3-part executive brief (WHAT HAPPENED / WHY IT MATTERS / RECOMMENDED ACTION), role-specific. Loaded from `LOCAL_LLM_MODEL` — default `google/gemma-3-4b-it` (Gemma 3 4B Instruct, `text-generation` task), with `google/gemma-3-1b-it` as the light-CPU option. If the reasoning LLM fails to load, the pipeline automatically falls back to `facebook/bart-large-cnn` (summarization) so the demo never hangs. Any HuggingFace-compatible text-generation model (Mistral 7B, Phi-3 Mini, TinyLlama, etc.) can be swapped in with a single config change — no code changes required, the pipeline is model-agnostic by design.
 
 **Ask Athena Query Engine** (`services/query_engine.py`) — RAG over pgvector: hybrid search (alpha=0.6 semantic / 0.4 keyword) → grounded answer with supporting signals + confidence.
 
@@ -951,7 +952,7 @@ async def query(self, question: str, role: str) -> dict:
     sem = await pg.fetch_top_semantic(q_emb)      # pgvector  <=>
     kw  = await pg.fetch_top_keyword(question)    # pg_trgm  %
     relevant = rrf_merge(sem, kw, alpha=0.6)      # rerank, role-filtered
-    answer = local_llm(build_prompt(question, role, relevant))
+    answer = local_llm(build_prompt(question, role, relevant))  # reasoning LLM: LOCAL_LLM_MODEL (default google/gemma-3-4b-it) — falls back to BART if unavailable
     return {"answer": answer, "supporting_signals": relevant[:3],
             "confidence": retrieval_confidence(relevant)}
 ```
@@ -1569,6 +1570,10 @@ RUN python -c "from transformers import pipeline; \
     pipeline('zero-shot-classification', model='facebook/bart-large-mnli')"
 RUN python -c "from sentence_transformers import SentenceTransformer; \
     SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+# Optional (larger image): pre-download the reasoning LLM so the demo never hits
+# a first-run download — if omitted, the model downloads on first run or the
+# pipeline falls back to BART on load failure:
+# RUN python -c "from transformers import pipeline; pipeline('text-generation', model='google/gemma-3-4b-it')"
 
 # Copy source
 COPY . .

@@ -142,14 +142,22 @@ HAEMOPHILIA_QUERY_TERMS = {
   - `patient_access_signal` — reimbursement decisions, access restrictions, advocacy positions
   - `competitive_pipeline_move` — competitor assets entering clinical development or phase changes
 
-**FR-2.2.3: Text Summarization (Model-Agnostic)**
-- System SHALL generate 1-line (< 50 character) summary of each signal
-- Summarization SHALL use a **locally-hosted, configurable model** — no external API calls
-- The model is selected via the `LOCAL_LLM_MODEL` environment variable; the system MUST NOT hard-code any specific model name
-- Default (hackathon/CPU): `facebook/bart-large-cnn` (seq2seq summarization)
-- Supported alternatives (swap via config, zero code change): `google/gemma-2b`, `mistralai/Mistral-7B-Instruct`, `microsoft/phi-3-mini-4k-instruct`, `TinyLlama/TinyLlama-1.1B-Chat`, or any HuggingFace-compatible sequence-to-sequence or text-generation model
+**FR-2.2.3: Text Summarization (Batch, Model-Agnostic)**
+- System SHALL generate 1-line (< 50 character) summary of each signal using a fast local batch summarizer selected via `SUMMARIZER_MODEL` (`SUMMARIZER_TASK` = `summarization`)
+- Default (hackathon/CPU): `facebook/bart-large-cnn` (seq2seq — CPU-friendly, meets the < 60s/100-signal target)
+- Summarization SHALL use a **locally-hosted, configurable model** — no external API calls; the system MUST NOT hard-code any specific model name
 - Summary SHALL preserve key entities and metrics
 - Every AI-generated summary SHALL carry a disclaimer: *"Auto-generated — verify clinically before use"*
+
+**FR-2.2.3A: Reasoning & Generation (Gemma 3 Default)**
+- System SHALL power narrative synthesis, Four-Question reasoning, AI-suggested actions (Q4), and Ask Athena grounded answers with a modern instruction-tuned LLM loaded via `LOCAL_LLM_MODEL` (`LOCAL_LLM_TASK` = `text-generation`)
+- Default (hackathon/CPU): `google/gemma-3-4b-it` (Gemma 3 4B Instruct — local, Q4-quantized ~2.6GB weights, ~4.5–7.5GB RAM)
+- Light-hardware alternative: `google/gemma-3-1b-it`; other supported swaps: `mistralai/Mistral-7B-Instruct`, `microsoft/phi-3-mini-4k-instruct`, `TinyLlama/TinyLlama-1.1B-Chat`, or any HuggingFace-compatible text-generation model
+- LLM outputs SHALL remain strictly grounded in retrieved source excerpts (temperature locked, "INSUFFICIENT EVIDENCE" guardrail when no source supports the answer)
+
+**FR-2.2.3B: Automatic Model Fallback (Demo Safety)**
+- If `LOCAL_LLM_MODEL` fails to load or exceeds its latency budget, the system SHALL automatically degrade to `facebook/bart-large-cnn` (summarization task) so the dashboard never hangs
+- The fallback SHALL be logged and surfaced in the UI (e.g., "running in BART fallback mode")
 
 **FR-2.2.4: Pharma Ontology Enrichment**
 - System SHALL maintain a local pharma ontology (JSON) mapping: drug → brand names → mechanism → manufacturer → indications → competitor drugs (haemophilia ontology)
@@ -454,10 +462,10 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 
 ### 3.1 Performance
 - Signal fetch: < 3 minutes for full multi-source run
-- Signal processing: < 60 seconds per 100 signals (BART, CPU)
+- Signal processing: < 60 seconds per 100 signals (batch summarizer, CPU)
 - Cold start (no cache): < 3 seconds
 - Cached start: < 500 ms
-- Ask Athena response: < 30 seconds (local inference)
+- Ask Athena response: < 30 seconds (local inference; Gemma 3 4B Q4 on CPU — auto-falls back to BART per FR-2.2.3B if the latency budget is exceeded)
 - System SHALL handle 1,000 signals without degradation
 
 ### 3.2 Security & Compliance
@@ -480,7 +488,7 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 ### 3.5 Model-Agnostic Local AI
 - All AI models SHALL be locally hosted (no external inference APIs)
 - Model names SHALL be configurable via environment variables (never hard-coded)
-- Default models: spaCy `en_core_sci_md`, BART `facebook/bart-large-cnn` (summarization), zero-shot classifier, MiniLM embeddings
+- Default models: spaCy `en_core_sci_md` (NER), Gemma 3 4B Instruct `google/gemma-3-4b-it` (reasoning/generation), BART `facebook/bart-large-cnn` (batch summarization + fallback), zero-shot classifier `facebook/bart-large-mnli`, MiniLM embeddings
 
 ---
 
@@ -514,7 +522,10 @@ Score: 0.81 · [View evidence A] [View evidence B] · Requires human review
 | `NEWSAPI_KEY` | NewsAPI key | (empty) |
 | `REDDIT_CLIENT_ID/SECRET` | Reddit API creds | (empty) |
 | `SPACY_MODEL` | spaCy NER model | en_core_sci_md |
-| `LOCAL_LLM_MODEL` | Local summarization/QA model | facebook/bart-large-cnn |
+| `LOCAL_LLM_MODEL` | Reasoning/generation LLM (synthesis, briefs, Ask Athena) | google/gemma-3-4b-it |
+| `LOCAL_LLM_TASK` | Pipeline task for the reasoning LLM | text-generation |
+| `SUMMARIZER_MODEL` | Fast batch summarizer (also automatic fallback) | facebook/bart-large-cnn |
+| `SUMMARIZER_TASK` | Pipeline task for the batch summarizer | summarization |
 | `NLI_MODEL` | Zero-shot NLI for classification + red-team contradiction | facebook/bart-large-mnli |
 | `CONTRADICTION_WINDOW_DAYS` | Red-team rolling entailment window | 90 |
 | `MISSING_SIGNAL_MIN_LAG` | Minimum silence before missing-signal alert | 120 |

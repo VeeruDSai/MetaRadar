@@ -429,6 +429,8 @@ The following are outside the locked MVP:
 | Vector search          | pgvector                                 |
 | Embeddings             | `sentence-transformers/all-MiniLM-L6-v2` |
 | NLP                    | spaCy                                    |
+| Reasoning LLM          | `google/gemma-3-4b-it` (Gemma 3 4B Instruct) |
+| Batch summarizer       | `facebook/bart-large-cnn` (CPU + fallback) |
 | Contradiction analysis | `facebook/bart-large-mnli`               |
 | Cache                  | Redis 7                                  |
 | Workers                | Celery                                   |
@@ -675,8 +677,13 @@ REDIS_URL=redis://redis:6379
 # Public data sources
 NEWSAPI_KEY=your_newsapi_key
 
-# Optional model configuration
-LOCAL_LLM_MODEL=facebook/bart-large-cnn
+# Model configuration (all local, zero API cost)
+# Reasoning LLM: narrative synthesis, Four-Question briefs, Ask Athena
+LOCAL_LLM_MODEL=google/gemma-3-4b-it
+LOCAL_LLM_TASK=text-generation
+# Fast batch summarizer (also the automatic fallback if Gemma is unavailable)
+SUMMARIZER_MODEL=facebook/bart-large-cnn
+SUMMARIZER_TASK=summarization
 ```
 
 Never commit real API keys or secrets.
@@ -806,7 +813,7 @@ NewsAPI has request limits. Redis caching and periodic polling reduce unnecessar
 
 ### Local model limitations
 
-Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware.
+Local models may provide lower-quality generation than larger commercial models, particularly on constrained hardware. MetaRadar defaults to Gemma 3 4B Instruct for reasoning and automatically falls back to BART (batch summarization) when the larger model cannot be loaded, so the demo degrades gracefully.
 
 ### Stakeholder feedback
 

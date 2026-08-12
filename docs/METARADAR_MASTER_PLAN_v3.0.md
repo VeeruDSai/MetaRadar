@@ -97,7 +97,7 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 6. **`node_lifecycle`**: Advances asset state machine (`announced → in_trial → results_in → under_review → approved → post_market | discontinued`).
 7. **`node_redteam`**: Runs pairwise NLI entailment/contradiction checks using local `facebook/bart-large-mnli`.
 8. **`node_missing_signal`**: Evaluates FSM state against max lag rules to flag absent expected milestones.
-9. **`node_synthesize`**: Generates 1-sentence summaries and Four-Question briefs anchored strictly in source excerpts.
+9. **`node_synthesize`**: Generates 1-sentence summaries (BART batch) and Four-Question briefs via the Gemma 3 reasoning LLM, anchored strictly in source excerpts.
 10. **`node_calibrate`**: Updates role-scoring weights based on stakeholder feedback ratings (`StakeholderCalibrationService`).
 
 ### Technology Stack:
@@ -106,6 +106,8 @@ MetaRadar implements a **10-Node LangGraph Workflow** orchestrating data flow fr
 * **Workflow Orchestration:** LangGraph 0.1+ (10-node state graph)
 * **Database & Vector Storage:** PostgreSQL 16 + `pgvector` extension
 * **Embedding Model:** `sentence-transformers/all-MiniLM-L6-v2` (**384-dimensional vector embeddings**)
+* **Reasoning LLM (default):** `google/gemma-3-4b-it` — Gemma 3 4B Instruct, a local instruction-tuned LLM (Q4-quantized for CPU) driving narrative synthesis, Four-Question reasoning, AI-suggested actions, and Ask Athena. Auto-falls back to BART if unavailable.
+* **Batch Summarizer:** `facebook/bart-large-cnn` — fast CPU seq2seq model for 1-sentence signal summaries (< 60s per 100 signals); also the demo-safety fallback.
 * **Cache & Rate Limiting:** Redis 7 (2h TTL hot cache, 500 req/day API rate limiting)
 * **Async Workers & Scheduler:** Celery 5.3 + APScheduler (2-hour periodic fetch execution)
 
@@ -229,7 +231,7 @@ To maintain absolute technical honesty, system performance is evaluated strictly
 ## **11. KNOWN LIMITATIONS**
 
 1. **Public API Quotas:** NewsAPI free tier is capped at 500 requests/day. Mitigated by Redis caching and 2-hour fetch polling.
-2. **Local Model Capabilities:** Inference runs entirely on local CPU (`facebook/bart-large-cnn`, BART MNLI, MiniLM embeddings). Model summarization quality is bounded by CPU RAM constraints compared to multi-billion parameter commercial LLMs.
+2. **Local Model Capabilities:** Inference runs entirely on local CPU (`google/gemma-3-4b-it` reasoning LLM, `facebook/bart-large-cnn` batch summarizer, BART MNLI, spaCy, MiniLM embeddings). Reasoning depth and speed are bounded by CPU RAM constraints compared to commercial LLMs; the system automatically falls back to BART when the Gemma model cannot be loaded.
 3. **Stakeholder Feedback Scope:** True organizational feedback across global pharma teams is unavailable in a hackathon setting; the calibration loop is demonstrated using persona-driven simulated feedback.
 4. **Absence Alerting Precision:** Missing-signal detection relies on rule-based time lag thresholds ($t_{\text{max\_lag}}$); abnormal market delays may trigger false-positive alerts, which are strictly gated behind mandatory human review.
 
