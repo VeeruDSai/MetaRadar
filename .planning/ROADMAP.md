@@ -32,6 +32,7 @@ Phase 5: Calibration & End-to-End Verification
 ## Phase Details & Document Alignment
 
 ### Phase 0: Baseline Stabilization & Governance (Status: COMPLETED)
+
 - **Goal**: Reconcile Next.js 16 + FastAPI 0.115 stack, enforce strict typecheck/lint/build quality gates, build 18-point pytest suite, author Dockerfiles, establish Alembic async scaffold, unify OpenAPI contract at `frontend/types/api.ts`, and set CI governance.
 - **Specification Alignment**:
   - `docs/rules/ENGINEERING_STANDARDS.md`
@@ -41,6 +42,7 @@ Phase 5: Calibration & End-to-End Verification
 - **Verification**: `pytest -v` (18/18 passed), `tsc` (0 errors), `eslint` (0 errors), `next build` (compiled), `git push origin feature/stabilization-baseline`.
 
 ### Phase 1: Ingestion Connectors & Data Pipeline (Status: PLANNED)
+
 - **Goal**: Implement concrete `SourceConnector` adapters for PubMed, ClinicalTrials.gov, NewsAPI, OpenFDA, and EMA RSS. Build bronze-layer verbatim payload storage (`raw_signals_bronze`) and deterministic deduplication (`generate_fingerprint`).
 - **Specification Alignment**:
   - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§4.1 Ingestion & Validation)
@@ -49,6 +51,7 @@ Phase 5: Calibration & End-to-End Verification
 - **Key Deliverables**: `backend/app/connectors/pubmed.py`, `clinical_trials.py`, `newsapi.py`, `fda.py`, `ema.py`, deduplication integration, and ingest tests.
 
 ### Phase 2: LangGraph 10-Node Intelligence Engine (Status: PLANNED)
+
 - **Goal**: Build stateful 10-node LangGraph pipeline (`node_ingest` through `node_calibrate -> END`) managing `IntelligenceState`.
 - **Specification Alignment**:
   - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§4 Pipeline & §12 Domain Rules)
@@ -57,6 +60,7 @@ Phase 5: Calibration & End-to-End Verification
 - **Key Deliverables**: `backend/app/workflows/` package, node functions, state reducers, and workflow unit tests.
 
 ### Phase 3: Vector Search & LLM Provider Execution (Status: PLANNED)
+
 - **Goal**: Integrate 384-dim sentence-transformers embedding generation, pgvector HNSW similarity queries (`signals_embedding_hnsw`), and ProviderFactory execution (Local Gemma 3 4B -> Grok privacy-gated fallback -> BART degraded mode).
 - **Specification Alignment**:
   - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§13 Reasoning Layer & §14 Hardening)
@@ -65,6 +69,7 @@ Phase 5: Calibration & End-to-End Verification
 - **Key Deliverables**: Embedding service, vector query service, provider execution integration, and retrieval tests.
 
 ### Phase 4: Frontend API Integration & Real-Time Workspace (Status: PLANNED)
+
 - **Goal**: Connect Next.js App Router UI (`frontend/lib/api.ts`) to backend `/api/v1` REST endpoints (`/signals`, `/overview`, `/athena`). Render real signals, Ask Athena answers, and portfolio momentum.
 - **Specification Alignment**:
   - `docs/4_UI_DESIGN_DOCUMENT.md` (§3 Component Hierarchy & §4 Data Flow)
@@ -73,6 +78,7 @@ Phase 5: Calibration & End-to-End Verification
 - **Key Deliverables**: Live REST client in `frontend/lib/api.ts`, component state updates, and end-to-end UI verification.
 
 ### Phase 5: Calibration & End-to-End Verification (Status: PLANNED)
+
 - **Goal**: Implement `StakeholderCalibrationService` for rating feedback, execute the haemophilia demo story (mim8 / emicizumab / Hemgenix durability data), and perform final Definition of Done audit.
 - **Specification Alignment**:
   - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§3 MVP Scope & §12 Domain Research)
