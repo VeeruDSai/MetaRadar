@@ -1,0 +1,12 @@
+{
+  "mode": "auto",
+  "parallel_agents": true,
+  "git_branch_workflow": "feature",
+  "quality_gates": {
+    "pytest": true,
+    "tsc": true,
+    "eslint": true,
+    "next_build": true,
+    "contract_sync": true
+  }
+}
