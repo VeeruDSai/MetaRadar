@@ -15,8 +15,9 @@ ENV/
 .coverage
 htmlcov/
 
-# Local LLM Models & Weights Cache
-models/
+# Local LLM Models & Weights Cache (root-anchored: matches only ./models,
+# NOT backend/app/models which holds the ORM schema)
+/models/
 .cache/
 
 # Node / Frontend
