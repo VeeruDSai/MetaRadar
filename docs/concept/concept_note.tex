@@ -23,11 +23,11 @@
 \definecolor{Muted}{HTML}{68767E}
 
 \hypersetup{colorlinks=true,urlcolor=Blue,pdftitle={MetaRadar Concept Note},pdfauthor={Aura Pharmers}}
-\setlength{\parindent}{0pt}\setlength{\parskip}{2.0pt}
+\setlength{\parindent}{0pt}\setlength{\parskip}{1.8pt}
 \setlist[itemize]{leftmargin=12pt,itemsep=0.5pt,topsep=1pt,parsep=0pt}
-\setlist[enumerate]{leftmargin=15pt,itemsep=0.6pt,topsep=1pt,parsep=0pt}
+\setlist[enumerate]{leftmargin=15pt,itemsep=0.5pt,topsep=1pt,parsep=0pt}
 \titleformat{\section}{\color{Navy}\bfseries\fontsize{10}{10.8}\selectfont}{\thesection.}{4pt}{}
-\titlespacing*{\section}{0pt}{4.5pt}{1.8pt}
+\titlespacing*{\section}{0pt}{4pt}{1.5pt}
 \titleformat{\subsection}{\color{Blue}\bfseries\fontsize{8.8}{9.8}\selectfont}{}{0pt}{}
 \titlespacing*{\subsection}{0pt}{2pt}{1pt}
 
@@ -37,7 +37,7 @@
 \fancyfoot[C]{\fontsize{6.5}{7}\selectfont\textcolor{Muted}{Concept Note | Page \thepage\ of 2}}
 \renewcommand{\headrulewidth}{0.35pt}\renewcommand{\footrulewidth}{0.35pt}
 
-\newcommand{\band}[1]{\par\vspace{1pt}\noindent\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}\vspace{1.8pt}#1\vspace{1.8pt}\end{minipage}}\par\vspace{1.8pt}}
+\newcommand{\band}[1]{\par\vspace{1pt}\noindent\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}\vspace{1.6pt}#1\vspace{1.6pt}\end{minipage}}\par\vspace{1.6pt}}
 \newcommand{\mh}[1]{\textbf{\color{Navy}#1}}
 
 \begin{document}
@@ -45,12 +45,12 @@
 
 \begin{center}
 {\fontsize{17.5}{18.5}\selectfont\bfseries\color{Navy}HAEMOPHILIA INTELLIGENCE RADAR}\\[-1pt]
-{\fontsize{9.2}{10.2}\selectfont\color{Blue}\bfseries MetaRadar}\quad {\fontsize{7.8}{8.8}\selectfont\color{Muted}From Scattered Signals to Strategic Intelligence}\\[2.5pt]
+{\fontsize{9.5}{10.5}\selectfont\color{Blue}\bfseries MetaRadar}\quad {\fontsize{7.8}{8.8}\selectfont\color{Muted}From Scattered Signals to Strategic Intelligence}\\[2.5pt]
 {\fontsize{7}{7.8}\selectfont Novo Nordisk GBS Hackathon 2026 | Problem Statement \#3 | Rare Disease Pilot}
 \end{center}
 \vspace{-2pt}
 \par\noindent{\fontsize{7}{8.5}\selectfont
-\renewcommand{\arraystretch}{1.4}
+\renewcommand{\arraystretch}{1.35}
 \begin{tabularx}{\textwidth}{|p{2.1cm}|X|p{2.1cm}|X|}
 \hline
 \textbf{\color{Navy}Institute} & M. S. Ramaiah Institute of Technology & \textbf{\color{Navy}Team} & Aura Pharmers\\
@@ -87,14 +87,7 @@ MetaRadar is an AI-enabled intelligence radar that ingests relevant external upd
 \bottomrule
 \end{tabularx}
 
-\textbf{Technology Stack \& Architecture:}
-\begin{itemize}
-\item \textbf{Frontend}: Next.js 16 App Router, React 19, TailwindCSS, and Lucide Icons for high-density executive dashboards.
-\item \textbf{Backend API}: Python 3.11 with FastAPI, Pydantic v2 schemas, and AsyncSQLAlchemy ORM.
-\item \textbf{Database \& Storage}: PostgreSQL 16 with pgvector for semantic retrieval, relational indexing, and evidence deduplication.
-\item \textbf{AI/LLM Engine}: Local Gemma 2 / Llama 3 for private, evidence-grounded summarization, entity extraction, and priority classification.
-\end{itemize}
-The dashboard is designed as an intelligence workflow: users can move from a priority signal to its supporting evidence, interpretation, responsible function, and suggested next step without searching multiple feeds independently.
+\textbf{Technology Stack \& Architecture:} Next.js 16 App Router (React 19, TailwindCSS) frontend; Python 3.11 FastAPI backend; PostgreSQL 16 with pgvector for relational/vector storage; Local Gemma 2 / Llama 3 for evidence-grounded RAG summarization and classification.
 
 \section{Haemophilia focus, data boundary, signal types, and out of scope}
 \par\noindent\begin{tabularx}{\textwidth}{@{}p{2.0cm}X@{}}
@@ -134,7 +127,6 @@ Stakeholder input improves AI output by giving structured feedback on whether a 
 \mh{Stakeholder-calibrated} & \textbf{Priority: High.} Review by Medical Affairs and Competitive Intelligence; monitor subsequent efficacy, safety, and regulatory developments.\\
 \bottomrule
 \end{tabularx}
-The example uses only public/mock information and demonstrates how expert feedback changes relevance and routing rather than authorizing autonomous action.
 
 \par\noindent\begin{tabularx}{\textwidth}{@{}p{2.0cm}X@{}}
 \toprule
@@ -159,16 +151,46 @@ The example uses only public/mock information and demonstrates how expert feedba
 \end{tabularx}
 
 \section{Four-week prototype plan}
-\par\noindent\begin{tabularx}{\textwidth}{@{}p{1.0cm}p{2.4cm}X@{}}
-\toprule
-\textbf{Week} & \textbf{Focus} & \textbf{Deliverables \& Milestone Scope}\\
-\midrule
-1 & \textbf{Foundation \& Data Setup} & Finalize haemophilia taxonomy, source mapping, database schema (PostgreSQL 16), FastAPI core setup, Next.js UI shell, and public/mock connectors.\\
-2 & \textbf{Ingestion \& AI Logic} & Build source connectors (ClinicalTrials, PubMed, NewsAPI, OpenFDA), signal detection, entity normalization, deduplication, and evidence linking.\\
-3 & \textbf{Prototype Building} & Implement grounded summarization, priority scoring engine, functional routing logic, stakeholder calibration feedback loop, role views, and signal cards.\\
-4 & \textbf{Testing \& Demo Prep} & End-to-end integration testing, source-link provenance verification, calibration tuning, UI polish, and final prototype demonstration.\\
-\bottomrule
-\end{tabularx}
+\par\noindent{\fontsize{7.2}{8.8}\selectfont
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|p{0.7cm}|p{2.8cm}|X|}
+\hline
+\textbf{\color{Navy}Week} & \textbf{\color{Navy}Focus} & \textbf{\color{Navy}Deliverables \& Milestone Scope}\\
+\hline
+1 & \textbf{Foundation \& Setup} & Finalize taxonomy, DB schema (PostgreSQL 16), FastAPI core, Next.js UI shell, public/mock connectors.\\
+\hline
+2 & \textbf{Ingestion \& AI Pipeline} & Build connectors (ClinicalTrials, PubMed, NewsAPI, OpenFDA), detection, normalization, deduplication.\\
+\hline
+3 & \textbf{Prototype Building} & Grounded summarization, priority scoring, routing logic, calibration loop, role views, signal cards.\\
+\hline
+4 & \textbf{Testing \& Demo Prep} & End-to-end integration, source-link provenance verification, calibration tuning, UI polish, final demo.\\
+\hline
+\end{tabularx}}
+
+\vspace{3pt}
+\par\noindent
+\begin{minipage}[t]{0.485\textwidth}
+\centering{\fontsize{7.5}{8.5}\selectfont\textbf{\color{Navy}System Architecture Diagram}}\\[1.5pt]
+\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}\fontsize{6.4}{7.4}\selectfont\centering
+\textbf{Data Ingestion} (ClinicalTrials, PubMed, OpenFDA, News)\\
+$\downarrow$\\
+\textbf{FastAPI Engine} + \textbf{PostgreSQL 16 / pgvector}\\
+$\downarrow$\\
+\textbf{Local LLM RAG} (Entity Normalization \& Scoring)\\
+$\downarrow$\\
+\textbf{Next.js 16 UI} (Role Views, Signal Cards \& Calibration)
+\end{minipage}}
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering{\fontsize{7.5}{8.5}\selectfont\textbf{\color{Navy}4-Week Phase Timeline}}\\[1.5pt]
+\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}\fontsize{6.4}{7.4}\selectfont\centering
+\textbf{W1}: Taxonomy, PostgreSQL Schema \& Next.js Shell\\
+$\rightarrow$ \textbf{W2}: Connectors, Deduplication \& Intelligence Pipeline\\
+$\rightarrow$ \textbf{W3}: Grounded Summarization, Scoring \& Role Views\\
+$\rightarrow$ \textbf{W4}: Provenance Verification, UI Polish \& Demo
+\end{minipage}}
+\end{minipage}
 
 \section{Clarifications and stakeholder input requested from Novo Nordisk}
 \begin{enumerate}
