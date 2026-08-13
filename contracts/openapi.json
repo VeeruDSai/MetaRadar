@@ -77,7 +77,7 @@
           "Health & Diagnostics"
         ],
         "summary": "Get Health Connectors",
-        "description": "Reports individual connector health, last success, last error, quota status.",
+        "description": "Reports each live connector's honest status (D-22).\n\nReads the latest ConnectorState row per source for accurate\nlast_success / quota_remaining in ONE batched query (avoids one DB\nconnection attempt per connector); degrades to in-memory state when the\nDB is unavailable so the endpoint never fabricates values or 500s on\nauxiliary failure (fail-degrade pattern per signals.py).",
         "operationId": "get_health_connectors_api_v1_health_connectors_get",
         "responses": {
           "200": {
