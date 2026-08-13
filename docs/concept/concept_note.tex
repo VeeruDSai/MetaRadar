@@ -9,7 +9,7 @@
 \renewcommand{\familydefault}{\sfdefault}
 
 \usepackage{xcolor}
-\usepackage[top=0.7cm,bottom=0.8cm,left=0.9cm,right=0.9cm,footskip=12pt]{geometry}
+\usepackage[top=0.6cm,bottom=0.8cm,left=0.9cm,right=0.9cm,footskip=12pt]{geometry}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{titlesec}
@@ -71,8 +71,8 @@
     {\color{SlateBlue}\scriptsize\bfseries}
     {\thesubsection}{0.3em}{}
 
-\titlespacing*{\section}{0pt}{2.2pt}{1.2pt}
-\titlespacing*{\subsection}{0pt}{1.2pt}{0.8pt}
+\titlespacing*{\section}{0pt}{2.5pt}{1.2pt}
+\titlespacing*{\subsection}{0pt}{1.5pt}{0.8pt}
 
 \setlist{
     noitemsep,
@@ -90,37 +90,40 @@
 \begin{document}
 
 % ============================================================
-% HEADER BLOCK
+% HEADER BLOCK (ORGANIZED & SPACIOUS)
 % ============================================================
 \fcolorbox{NavyBlue}{NavyBlue}{%
 \begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}
-\vspace{1pt}
-\begin{minipage}[t]{0.62\textwidth}
-{\color{white}\normalsize\bfseries META RADAR\par}
-\vspace{1pt}
-{\color{CyanAccent}\small\bfseries From Scattered Signals to Strategic Intelligence | Pilot Area: Haemophilia A \& B\par}
-{\color{white}\tiny\textbf{Novo Nordisk GBS Hackathon 2026} --- Problem Statement \#3: From Inbox Noise to Strategic Signal\par}
+\vspace{2pt}
+\begin{minipage}[t]{0.54\textwidth}
+{\color{white}\Large\bfseries META RADAR\par}
+\vspace{2pt}
+{\color{CyanAccent}\small\bfseries From Scattered Signals to Strategic Intelligence\par}
+\vspace{1.5pt}
+{\color{white}\tiny\textbf{Pilot Area:} Haemophilia A \& B (Rare Disease)\par}
+{\color{white}\tiny\textbf{Novo Nordisk GBS Hackathon 2026} --- Problem Statement \#3\par}
 \end{minipage}%
-\begin{minipage}[t]{0.38\textwidth}
+\begin{minipage}[t]{0.46\textwidth}
 \raggedleft
 {\color{white}\tiny
 \textbf{Institute:} M. S. Ramaiah Institute of Technology (MSRIT)\par
-\textbf{Team Name:} Aura Pharmers \quad|\quad \textbf{Student Lead:} Sanjana Rathore\par
-\textbf{Members:} Omprakash Panda, Veerendra Desai, Usha Rathore, Ishaaq Ahmed Khan, Sanjana Rathore\par
-\textbf{Faculty Sponsor:} [TBD --- DO NOT INVENT] \quad|\quad \textbf{Contact Email:} [TBD --- DO NOT INVENT]\par
+\textbf{Team Name:} Aura Pharmers \quad|\quad \textbf{Lead:} Sanjana Rathore\par
+\textbf{Faculty Sponsor:} Dr. Basavaraj\par
+\textbf{Email:} \href{mailto:sanjanarathore510@gmail.com}{\color{CyanAccent}sanjanarathore510@gmail.com} \quad|\quad \textbf{Phone:} +91 8305734831\par
+\textbf{Team:} Omprakash Panda, Veerendra Desai, Usha Rathore, Ishaaq Ahmed Khan, Sanjana Rathore\par
 }
 \end{minipage}
-\vspace{1pt}
+\vspace{2pt}
 \end{minipage}%
 }
 
-\vspace{2pt}
+\vspace{3pt}
 
 % ============================================================
 % 1. PROBLEM & RELEVANCE
 % ============================================================
 \section{Problem \& Relevance to Novo Nordisk}
-Haemophilia care (Haemophilia A \& B) is undergoing a major market shift from replacement factors to non-factor bispecifics (\textit{emicizumab}, \textit{concizumab}, \textit{mim8}), RNAi therapeutics (\textit{fitusiran}), tissue factor pathway inhibitors (\textit{marstacimab}), and single-dose AAV gene therapies (\textit{Hemgenix}, \textit{Roctavian}). Critical external signals are fragmented across scientific literature, clinical trial registries, press releases, regulatory announcements, safety advisories, and medical congress readouts. Cross-functional teams spend hours scouring scattered feeds and receiving generic document summaries rather than connected development insights.
+The haemophilia treatment landscape is evolving rapidly across replacement factors, non-factor therapies (\textit{emicizumab}, \textit{concizumab}, investigational \textit{denecimig [Mim8]}), RNAi approaches (\textit{fitusiran}), tissue factor pathway inhibitors (\textit{marstacimab}), and gene therapies such as \textit{Hemgenix}, alongside the evolving gene-therapy landscape. Critical external signals are fragmented across scientific literature, clinical trial registries, press releases, regulatory announcements, safety advisories, and medical congress readouts. Cross-functional teams spend hours scouring scattered feeds and receiving generic document summaries rather than connected development insights.
 
 \textbf{MetaRadar} solves this challenge by converting raw external signals into source-linked, prioritized, role-relevant intelligence. It is \textbf{NOT a standard news dashboard}. Instead of broadcasting every headline to everyone, MetaRadar frames intelligence around four decision-first questions:
 \begin{center}
@@ -140,7 +143,7 @@ MetaRadar is an AI-enabled competitive intelligence radar that ingests scattered
     \item \textbf{Evidence Linking \& Summarization:} Aggregates related signals across sources into connected evidence chains and generates source-grounded summaries with explicit \textbf{FACT / INTERPRETATION / SPECULATION} labeling.
     \item \textbf{Prioritization \& Functional Routing:} Computes role-specific relevance scores to direct insights to relevant functions (\textit{"not every signal goes to everyone"}) while keeping high-impact cards visible to Leadership.
     \item \textbf{Lifecycle Awareness \& Watch-for-Next:} Tracks asset progressions (\textit{Trial $\rightarrow$ Congress Readout $\rightarrow$ Publication $\rightarrow$ Regulatory Filing $\rightarrow$ Access Event}) and flags expected upcoming milestones for human review.
-    \item \textbf{Stakeholder Calibration (HITL):} Incorporates structured expert feedback to continuously refine relevance scoring, priority assignment, and functional routing over time.
+    \item \textbf{Stakeholder Calibration (HITL):} Uses structured expert feedback to calibrate relevance scoring, priority assignment, and functional routing.
 \end{itemize}
 
 % ============================================================
@@ -151,7 +154,7 @@ MetaRadar is an AI-enabled competitive intelligence radar that ingests scattered
     \item \textbf{Primary Focus:} Haemophilia A and Haemophilia B within Rare Disease.
     \item \textbf{Data Boundary:} \textbf{Public data, mock data, and synthetic data ONLY}. Zero confidential Novo Nordisk information and zero patient-identifiable private health information (PII/PHI) are processed or used.
     \item \textbf{Signal Categories:} Clinical trial updates, scientific publications, company press releases, regulatory decisions, safety advisories, congress presentations (ASH, ISTH, WFH, EHA), and market/access updates.
-    \item \textbf{Live vs. Planned/Simulated Distinctions:} The prototype integrates live public connectors for PubMed (NCBI), ClinicalTrials.gov, and NewsAPI. Extended categories (EMEA RSS, OpenFDA, medical congresses, market access) are configured via adapter-ready or synthetic demo feeds for hackathon demonstration.
+    \item \textbf{Live vs. Planned/Simulated Distinctions:} The prototype integrates live public connectors for PubMed (NCBI), ClinicalTrials.gov, and NewsAPI. Extended categories (EMA RSS feeds, OpenFDA, medical congresses, market access) are configured via adapter-ready or synthetic demo feeds for hackathon demonstration.
 \end{itemize}
 
 % ============================================================
@@ -182,15 +185,15 @@ MetaRadar synthesizes data across three operational source tiers:
 % 6. INTELLIGENCE PIPELINE
 % ============================================================
 \section{Intelligence Pipeline}
-MetaRadar processes information through a decision-centric 9-step workflow:
+MetaRadar processes information through a decision-centric workflow:
 \begin{center}
 \vspace{-1pt}
 {\scriptsize\bfseries\color{SlateBlue}
-Source Ingestion $\rightarrow$ Signal Detection $\rightarrow$ Classification $\rightarrow$ Deduplication / Provenance $\rightarrow$ Evidence-Linked Summarization \\
-$\rightarrow$ Priority Assessment $\rightarrow$ Functional Routing $\rightarrow$ Human Review $\rightarrow$ Stakeholder Feedback / Calibration}
+Source Ingestion $\rightarrow$ Signal Detection $\rightarrow$ Classification $\rightarrow$ Deduplication $\rightarrow$ Evidence Summarization \\
+$\rightarrow$ Priority Assessment $\rightarrow$ Functional Routing $\rightarrow$ Human Review $\rightarrow$ Stakeholder Calibration}
 \vspace{-1pt}
 \end{center}
-Raw payloads are deduplicated via stable fingerprints (\texttt{pmid:}, \texttt{nct:}, \texttt{reg:}), scrubbed for privacy, and normalized against a haemophilia domain ontology. High-level orchestrators (built using LangGraph, FastAPI, and PostgreSQL) link incoming signals into evidence chains, assess triage priority, and generate function-routed decision cards.
+Raw payloads are deduplicated via stable source keys, scrubbed for privacy, and normalized against a haemophilia domain ontology. High-level orchestrators link incoming signals into evidence chains, assess triage priority, and generate function-routed decision cards for expert review.
 
 \clearpage
 % ============================================================
@@ -203,9 +206,9 @@ Raw payloads are deduplicated via stable fingerprints (\texttt{pmid:}, \texttt{n
 \section{Source Traceability \& Trust}
 Trust is paramount in pharma competitive intelligence. MetaRadar enforces strict auditability:
 \begin{itemize}[leftmargin=9pt]
-    \item \textbf{Source-Linked Outputs:} Every summary item, headline, and action recommendation includes direct clickable citations to underlying external sources (PMID, NCT ID, press release URL, regulatory filing ID).
+    \item \textbf{Source-Linked Evidence:} Every intelligence card maintains direct links to the underlying evidence supporting its factual claims and context (PMID, NCT ID, press release URL, regulatory filing ID).
+    \item \textbf{Decision-Support Hypotheses:} Suggested next steps are clearly identified as AI-generated decision-support hypotheses requiring human review, rather than prescriptive corporate actions.
     \item \textbf{Fact vs. Interpretation vs. Speculation:} Intelligence outputs explicitly categorize statements as \textbf{FACT} (verifiable source excerpt), \textbf{INTERPRETATION} (AI-reasoned contextual implication), or \textbf{SPECULATION} (forward-looking hypothesis).
-    \item \textbf{Evidence-Based Confidence:} Confidence scores reflect underlying evidence strength and source agreement, not artificial certainty. AI interpretations are presented as decision-support hypotheses, never as unverified ground truth.
     \item \textbf{Human-in-the-Loop Supervision:} Sensitive medical, regulatory, and safety insights explicitly require human expert review before internal action is taken.
 \end{itemize}
 
@@ -226,7 +229,7 @@ MetaRadar incorporates a structured Human-in-the-Loop (HITL) feedback mechanism 
 \hline
 \textbf{AI Baseline Output} & "Clinical trial activity increased around a competing haemophilia therapy (Phase III readout)." \\
 \hline
-\textbf{Calibrated Output} & \textbf{High Medical Relevance} (92\%); monitor trial phase transition, bleed rate endpoint comparisons, and safety updates; route to Medical Affairs and Competitive Intelligence for strategic review. \\
+\textbf{Calibrated Output} & \textbf{Priority: High | Medical Relevance: High}; monitor trial phase transition, bleed rate endpoint comparisons, and safety updates; route to Medical Affairs and Competitive Intelligence for strategic review. \\
 \hline
 \end{tabularx}
 }
@@ -239,8 +242,8 @@ Stakeholder calibration adjusts scoring weights, routing rules, and action promp
 \section{User Interface \& Decision Panels}
 The MetaRadar user interface focuses on decision-first clarity through key prototype screens:
 \begin{itemize}[leftmargin=9pt]
-    \item \textbf{Radar Overview Dashboard:} Displays active competitive signals, high-confluence clusters, and portfolio momentum indicators across Haemophilia A \& B.
-    \item \textbf{Interactive Signal Cards:} Present high-priority developments clearly answering: (1) What changed?, (2) Why it matters?, (3) Triage Priority (High/Medium/Low), (4) Suggested function review, (5) Recommended internal action, and (6) Traceable source evidence links with confidence strength.
+    \item \textbf{Radar Overview Dashboard:} Displays active competitive signals, high-confluence clusters, and strategic updates across Haemophilia A \& B.
+    \item \textbf{Interactive Signal Cards:} Present high-priority developments clearly answering: (1) What changed?, (2) Why it matters?, (3) Triage Priority (High/Medium/Low), (4) Suggested function review, (5) Suggested next step for expert review, and (6) Traceable source evidence links with confidence strength.
     \item \textbf{Search, Filters \& Role-Oriented Views:} Allows filtering by drug modality (bispecific, gene therapy, factor replacement), company, source, priority, and functional views tailored for \textbf{Medical Affairs, Regulatory, Safety / PV, Market Access, and Leadership}.
 \end{itemize}
 
@@ -262,7 +265,7 @@ MetaRadar follows a disciplined, realistic 4-week prototype timeline tailored fo
 \hline
 \textbf{WEEK 3} \newline Prioritization \& UI & Evidence-linked summarization; priority scoring; functional role routing; stakeholder calibration loop; dashboard \& interactive signal cards. \\
 \hline
-\textbf{WEEK 4} \newline Validation \& Demo & End-to-end integration testing; calibration refinement; UX polishing; final validation; demo deck \& presentation preparation. \\
+\textbf{WEEK 4} \newline Validation \& Demo & End-to-end validation, stakeholder calibration, usability refinement, and final demonstration. \\
 \hline
 \end{tabularx}
 }
