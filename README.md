@@ -6,7 +6,9 @@
 
 [![Hackathon](https://img.shields.io/badge/Novo%20Nordisk%20GBS%20Hackathon-2026-blue)](#)
 [![Pilot](https://img.shields.io/badge/Pilot-Haemophilia%20A%20%26%20B-red)](#)
-[![Status](https://img.shields.io/badge/Status-Pre-Implementation-blue)](#)
+[![Status](https://img.shields.io/badge/Status-Phase%202%20Completed%20(33%25)-success)](#)
+[![Tests](https://img.shields.io/badge/Tests-51%2F51%20Passing-brightgreen)](#)
+[![Contract](https://img.shields.io/badge/OpenAPI%203.1-Synchronized-blue)](#)
 [![Data](https://img.shields.io/badge/Data-Public%20%7C%20Synthetic-green)](#)
 
 > **A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development.**
@@ -19,11 +21,21 @@ The prototype is designed for the **Novo Nordisk GBS Hackathon 2026 — Problem 
 
 ## Current Status
 
-> **Documentation complete — implementation begins with Week 1 of the build plan.**
+> **Phase 0 (Baseline Stabilization), Phase 1 (Ingestion Connectors), and Phase 2 (LangGraph 10-Node Intelligence Engine) are fully implemented, verified, and merged into `main`.**
 
-The canonical specification is **[`METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md)** (content version **5.1** — pre-implementation architecture hardening, Aug 13 2026). Everything that would be expensive to change after coding starts is already locked: six functions from one engine, the 10-node LangGraph pipeline, the five intelligence mechanisms, the provider-agnostic reasoning layer (local Gemma 3 4B → Grok → BART degraded), and the operational surface (Alembic entity schema, `/api/v1/`, single in-process APScheduler, Docker `/models` volume).
+- **Active Executable Verification:**
+  - `pytest -v` → **51/51 Passed** (100% clean suite across foundation, ingestion, and intelligence nodes)
+  - `npx tsc --noEmit` → **0 Errors** (Strict TypeScript mode)
+  - `npx eslint .` → **0 Errors / Warnings**
+  - `npx next build` → **Compiled Cleanly** (Turbopack static page generation)
+  - `python scripts/export_openapi.py` → **0 Contract Drift** (Canonical at `frontend/types/api.ts`)
 
-**Next up — Week 1 · Foundation:** Docker Compose (FastAPI · Next.js 15 · PostgreSQL 16 + pgvector · Redis 7), the PubMed / NewsAPI / ClinicalTrials.gov connectors, and the canonical entity schema → *live signals appear on the dashboard.*
+- **Completed Core Architecture:**
+  - **Phase 0**: FastAPI 0.115 + Next.js 16 + PostgreSQL 16 pgvector async foundation, Docker Compose stack, PII/PHI scrubber, and Red-Team 19-rule registry.
+  - **Phase 1**: 5 concrete `SourceConnector` adapters (PubMed, ClinicalTrials.gov, NewsAPI, OpenFDA, EMA RSS), immutable bronze persistence (`raw_signals_bronze`), and deterministic deduplication.
+  - **Phase 2**: 10-node stateful LangGraph engine (`node_ingest` → `node_calibrate` → `END`), 5-dimension biomedical NLP extraction, 9-stage asset lifecycle FSM, silence lag alerts, Four-Question briefs (Q1–Q4) with epistemic tags (`[FACT]`/`[INTERPRETATION]`/`[SPECULATION]`), dynamic stakeholder calibration, and REST API `POST /api/v1/pipeline/run`.
+
+**Next up — Phase 3 · Vector Search & LLM Provider Execution:** Real 384-dimensional `sentence-transformers/all-MiniLM-L6-v2` embeddings, pgvector HNSW similarity queries (`signals.embedding`), Local Gemma 3 4B execution, and hosted Grok privacy-gated fallback.
 
 See [Four-Week Development Plan](#four-week-development-plan) for the full phase table.
 
