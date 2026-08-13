@@ -1,60 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 360" width="100%" height="100%" style="background-color: #FFFFFF; font-family: system-ui, -apple-system, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 460" width="100%" height="100%" style="background-color: #FFFFFF; font-family: system-ui, -apple-system, sans-serif;">
   <defs>
-    <linearGradient id="headerGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="hdrGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#143B5D"/>
       <stop offset="100%" stop-color="#087EA4"/>
     </linearGradient>
-    <filter id="shadow2" x="-4%" y="-4%" width="108%" height="108%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#143B5D" flood-opacity="0.08"/>
+    <filter id="cardShadow2" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#143B5D" flood-opacity="0.10"/>
     </filter>
-    <marker id="arrow2" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="blueArrow2" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#087EA4"/>
     </marker>
   </defs>
 
-  <!-- Title Card -->
-  <rect x="15" y="12" width="470" height="38" rx="6" fill="url(#headerGrad2)"/>
-  <text x="250" y="36" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700" letter-spacing="0.5">4-WEEK PROTOTYPE DEVELOPMENT TIMELINE</text>
+  <!-- Title Banner -->
+  <rect x="15" y="12" width="490" height="38" rx="6" fill="url(#hdrGrad2)"/>
+  <text x="260" y="36" text-anchor="middle" fill="#FFFFFF" font-size="13.5" font-weight="700" letter-spacing="0.5">4-WEEK PROTOTYPE DEVELOPMENT TIMELINE</text>
 
-  <!-- Week 1 Block -->
-  <g filter="url(#shadow2)">
-    <rect x="25" y="65" width="450" height="55" rx="8" fill="#EEF5F8" stroke="#C8D7DE" stroke-width="1.5"/>
-    <rect x="35" y="73" width="75" height="20" rx="4" fill="#143B5D"/>
-    <text x="72.5" y="87" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="700">WEEK 1</text>
-    <text x="265" y="87" text-anchor="middle" fill="#143B5D" font-size="11.5" font-weight="700">Foundation &amp; Environment Setup</text>
-    <text x="260" y="107" text-anchor="middle" fill="#68767E" font-size="9.5">Haemophilia Taxonomy • DB Schema (PostgreSQL 16) • FastAPI Core • Next.js Shell</text>
+  <!-- Week 1 -->
+  <g filter="url(#cardShadow2)">
+    <rect x="20" y="65" width="480" height="74" rx="7" fill="#EEF5F8" stroke="#C8D7DE" stroke-width="1.5"/>
+    <rect x="20" y="65" width="480" height="22" rx="7" fill="#143B5D"/>
+    <rect x="20" y="77" width="480" height="10" fill="#143B5D"/>
+    <text x="32" y="80" fill="#FFFFFF" font-size="10" font-weight="700" letter-spacing="0.3">WEEK 1: FOUNDATION &amp; DATA SETUP</text>
+    <text x="260" y="102" text-anchor="middle" fill="#143B5D" font-size="11" font-weight="700">Architecture, Taxonomy &amp; Environment Baseline</text>
+    <text x="260" y="123" text-anchor="middle" fill="#68767E" font-size="9.5">Haemophilia Taxonomy • PostgreSQL 16 Schema • FastAPI Core • Next.js UI Shell</text>
   </g>
 
-  <line x1="250" y1="120" x2="250" y2="137" stroke="#087EA4" stroke-width="2.5" marker-end="url(#arrow2)"/>
+  <line x1="260" y1="139" x2="260" y2="154" stroke="#087EA4" stroke-width="2.5" marker-end="url(#blueArrow2)"/>
 
-  <!-- Week 2 Block -->
-  <g filter="url(#shadow2)">
-    <rect x="25" y="142" width="450" height="55" rx="8" fill="#EEF5F8" stroke="#C8D7DE" stroke-width="1.5"/>
-    <rect x="35" y="150" width="75" height="20" rx="4" fill="#143B5D"/>
-    <text x="72.5" y="164" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="700">WEEK 2</text>
-    <text x="265" y="164" text-anchor="middle" fill="#143B5D" font-size="11.5" font-weight="700">Data Connectors &amp; Ingestion Engine</text>
-    <text x="260" y="184" text-anchor="middle" fill="#68767E" font-size="9.5">ClinicalTrials, PubMed, NewsAPI, OpenFDA Connectors • Deduplication • Entity Linker</text>
+  <!-- Week 2 -->
+  <g filter="url(#cardShadow2)">
+    <rect x="20" y="159" width="480" height="74" rx="7" fill="#EEF5F8" stroke="#C8D7DE" stroke-width="1.5"/>
+    <rect x="20" y="159" width="480" height="22" rx="7" fill="#143B5D"/>
+    <rect x="20" y="171" width="480" height="10" fill="#143B5D"/>
+    <text x="32" y="174" fill="#FFFFFF" font-size="10" font-weight="700" letter-spacing="0.3">WEEK 2: INGESTION &amp; AI PIPELINE</text>
+    <text x="260" y="196" text-anchor="middle" fill="#143B5D" font-size="11" font-weight="700">Connectors &amp; Deduplication Engine</text>
+    <text x="260" y="217" text-anchor="middle" fill="#68767E" font-size="9.5">ClinicalTrials, PubMed, NewsAPI, OpenFDA Connectors • Entity Normalizer • Deduplication</text>
   </g>
 
-  <line x1="250" y1="197" x2="250" y2="214" stroke="#087EA4" stroke-width="2.5" marker-end="url(#arrow2)"/>
+  <line x1="260" y1="233" x2="260" y2="248" stroke="#087EA4" stroke-width="2.5" marker-end="url(#blueArrow2)"/>
 
-  <!-- Week 3 Block -->
-  <g filter="url(#shadow2)">
-    <rect x="25" y="219" width="450" height="55" rx="8" fill="#EEF5F8" stroke="#087EA4" stroke-width="1.8"/>
-    <rect x="35" y="227" width="75" height="20" rx="4" fill="#087EA4"/>
-    <text x="72.5" y="241" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="700">WEEK 3</text>
-    <text x="265" y="241" text-anchor="middle" fill="#087EA4" font-size="11.5" font-weight="700">AI Intelligence &amp; Executive Prototype</text>
-    <text x="260" y="261" text-anchor="middle" fill="#263238" font-size="9.5">Grounded Summarizer • Priority Scoring • Functional Routing • Calibration Feedback</text>
+  <!-- Week 3 -->
+  <g filter="url(#cardShadow2)">
+    <rect x="20" y="253" width="480" height="74" rx="7" fill="#EEF5F8" stroke="#087EA4" stroke-width="1.8"/>
+    <rect x="20" y="253" width="480" height="22" rx="7" fill="#087EA4"/>
+    <rect x="20" y="265" width="480" height="10" fill="#087EA4"/>
+    <text x="32" y="268" fill="#FFFFFF" font-size="10" font-weight="700" letter-spacing="0.3">WEEK 3: PROTOTYPE BUILDING</text>
+    <text x="260" y="290" text-anchor="middle" fill="#087EA4" font-size="11" font-weight="700">AI Intelligence &amp; Executive Interface</text>
+    <text x="260" y="311" text-anchor="middle" fill="#263238" font-size="9.5">Grounded RAG Summarization • Strategic Priority Scoring • Role Views • Calibration Loop</text>
   </g>
 
-  <line x1="250" y1="274" x2="250" y2="291" stroke="#087EA4" stroke-width="2.5" marker-end="url(#arrow2)"/>
+  <line x1="260" y1="327" x2="260" y2="342" stroke="#087EA4" stroke-width="2.5" marker-end="url(#blueArrow2)"/>
 
-  <!-- Week 4 Block -->
-  <g filter="url(#shadow2)">
-    <rect x="25" y="296" width="450" height="52" rx="8" fill="#143B5D" stroke="#143B5D" stroke-width="1.5"/>
-    <rect x="35" y="304" width="75" height="20" rx="4" fill="#087EA4"/>
-    <text x="72.5" y="318" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="700">WEEK 4</text>
-    <text x="265" y="318" text-anchor="middle" fill="#FFFFFF" font-size="11.5" font-weight="700">Integration, Verification &amp; Final Demo</text>
-    <text x="260" y="337" text-anchor="middle" fill="#EEF5F8" font-size="9.5">End-to-End Validation • Source Provenance Audit • Calibration Tuning • Hackathon Demo</text>
+  <!-- Week 4 -->
+  <g filter="url(#cardShadow2)">
+    <rect x="20" y="347" width="480" height="76" rx="7" fill="#143B5D" stroke="#143B5D" stroke-width="1.5"/>
+    <rect x="20" y="347" width="480" height="22" rx="7" fill="#087EA4"/>
+    <rect x="20" y="359" width="480" height="10" fill="#087EA4"/>
+    <text x="32" y="362" fill="#FFFFFF" font-size="10" font-weight="700" letter-spacing="0.3">WEEK 4: TESTING &amp; DEMO PREPARATION</text>
+    <text x="260" y="385" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">Verification, Tuning &amp; Final Hackathon Demo</text>
+    <text x="260" y="406" text-anchor="middle" fill="#EEF5F8" font-size="9.5">End-to-End Integration • Provenance Traceability Verification • Calibration Polish</text>
   </g>
 </svg>
