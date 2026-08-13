@@ -38,6 +38,50 @@ class FunctionConfig(BaseModel):
     name: str
 
 
+class ConnectorQueryProfile(BaseModel):
+    """A single config-driven query profile for a source connector.
+
+    Connectors execute config — they never invent queries (D-08/D-10).
+    Field set is the union across the five Phase 1 sources; unused fields
+    are simply omitted per source.
+    """
+
+    id: str
+    queries: Optional[List[str]] = None          # PubMed: boolean queries
+    conditions: Optional[List[str]] = None       # ClinicalTrials.gov: condition terms
+    interventions: Optional[List[str]] = None    # ClinicalTrials.gov: intervention terms
+    sponsor_keywords: Optional[List[str]] = None # ClinicalTrials.gov: sponsor keywords
+    query: Optional[str] = None                  # NewsAPI: single query string
+    language: Optional[str] = None               # NewsAPI: language code
+    search_terms: Optional[List[str]] = None     # OpenFDA: substance/search terms
+    keywords: Optional[List[str]] = None         # EMA RSS: keyword filter
+
+
+class ConnectorConfig(BaseModel):
+    """Per-source connector configuration (query blocks + window/quota policy)."""
+
+    freshness_class: str
+    backfill_days: int
+    rolling_window_days: int
+    max_results_per_profile: Optional[int] = None
+    quota_per_day: Optional[int] = None
+    base_url: Optional[str] = None
+    rss_url: Optional[str] = None
+    profiles: List[ConnectorQueryProfile]
+
+
+class CrossSourceGroupConfig(BaseModel):
+    """Rules for the cross-source source-independence classifier (D-17)."""
+
+    title_similarity_threshold: float
+    date_window_hours: int
+    entity_overlap_min: int
+
+
+class CrossSourceConfig(BaseModel):
+    group_assignment: CrossSourceGroupConfig
+
+
 class DomainConfig(BaseModel):
     domain_config_version: str = "v5.1.0"
     disease_area: str
@@ -52,6 +96,10 @@ class DomainConfig(BaseModel):
     confluence: ConfluenceConfig
     functions: List[FunctionConfig]
     baseline_routing_matrix: Dict[str, Dict[str, Any]]
+    # Phase 1 ingestion extensions — optional & backward compatible:
+    # existing configs without these keys load without error.
+    connectors: Dict[str, ConnectorConfig] = Field(default_factory=dict)
+    cross_source: Optional[CrossSourceConfig] = None
 
 
 _domain_config_cache: Optional[DomainConfig] = None
