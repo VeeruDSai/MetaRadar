@@ -2,7 +2,7 @@
   "name": "metaradar-frontend",
   "version": "5.1.0",
   "private": true,
-  "packageManager": "pnpm@11.21.0",
+  "packageManager": "pnpm@9.15.5",
   "engines": {
     "node": ">=20.9.0"
   },

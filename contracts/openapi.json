@@ -77,7 +77,7 @@
           "Health & Diagnostics"
         ],
         "summary": "Get Health Connectors",
-        "description": "Reports individual connector health, last success, last error, quota status.",
+        "description": "Reports each live connector's honest status (D-22).\n\nReads the latest ConnectorState row per source for accurate\nlast_success / quota_remaining in ONE batched query (avoids one DB\nconnection attempt per connector); degrades to in-memory state when the\nDB is unavailable so the endpoint never fabricates values or 500s on\nauxiliary failure (fail-degrade pattern per signals.py).",
         "operationId": "get_health_connectors_api_v1_health_connectors_get",
         "responses": {
           "200": {
@@ -182,6 +182,100 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AthenaQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pipeline/run": {
+      "post": {
+        "tags": [
+          "Pipeline Execution"
+        ],
+        "summary": "Trigger LangGraph 10-Node Intelligence Engine Run",
+        "description": "Executes the full 10-node stateful LangGraph pipeline (node_ingest -> node_calibrate -> END).",
+        "operationId": "trigger_pipeline_run_api_v1_pipeline_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PipelineRunRequestSchema"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineRunResponseSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pipeline/status/{pipeline_run_id}": {
+      "get": {
+        "tags": [
+          "Pipeline Execution"
+        ],
+        "summary": "Get Pipeline Run Status",
+        "description": "Retrieves execution status and telemetry for a specific pipeline_run_id.",
+        "operationId": "get_pipeline_run_status_api_v1_pipeline_status__pipeline_run_id__get",
+        "parameters": [
+          {
+            "name": "pipeline_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pipeline Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Pipeline Run Status Api V1 Pipeline Status  Pipeline Run Id  Get"
                 }
               }
             }
@@ -462,6 +556,104 @@
         },
         "type": "object",
         "title": "HealthResponse"
+      },
+      "PipelineRunRequestSchema": {
+        "properties": {
+          "batch_size": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "description": "Max bronze signals to process",
+            "default": 50
+          },
+          "calibration_weights": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Weights",
+            "description": "Optional runtime role weight overrides"
+          }
+        },
+        "type": "object",
+        "title": "PipelineRunRequestSchema"
+      },
+      "PipelineRunResponseSchema": {
+        "properties": {
+          "pipeline_run_id": {
+            "type": "string",
+            "title": "Pipeline Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "signals_processed": {
+            "type": "integer",
+            "title": "Signals Processed"
+          },
+          "role_briefs_count": {
+            "type": "integer",
+            "title": "Role Briefs Count"
+          },
+          "developments_count": {
+            "type": "integer",
+            "title": "Developments Count"
+          },
+          "confluence_stories_count": {
+            "type": "integer",
+            "title": "Confluence Stories Count"
+          },
+          "contradictions_count": {
+            "type": "integer",
+            "title": "Contradictions Count"
+          },
+          "missing_signals_count": {
+            "type": "integer",
+            "title": "Missing Signals Count"
+          },
+          "node_statuses": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Node Statuses"
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pipeline_run_id",
+          "status",
+          "signals_processed",
+          "role_briefs_count",
+          "developments_count",
+          "confluence_stories_count",
+          "contradictions_count",
+          "missing_signals_count",
+          "node_statuses"
+        ],
+        "title": "PipelineRunResponseSchema"
       },
       "ValidationError": {
         "properties": {

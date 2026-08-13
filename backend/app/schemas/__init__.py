@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class ModelMetadataSchema(BaseModel):
@@ -109,7 +113,7 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     service: str = "MetaRadar API"
     version: str = "5.1.0"
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
 
 class HealthReadyResponse(BaseModel):
@@ -117,7 +121,7 @@ class HealthReadyResponse(BaseModel):
     database: bool
     redis: bool
     redis_warning: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
 
 class HealthModelsResponse(BaseModel):
@@ -143,4 +147,24 @@ class ConnectorHealthStatus(BaseModel):
 
 class HealthConnectorsResponse(BaseModel):
     connectors: List[ConnectorHealthStatus]
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
+
+
+class PipelineRunRequestSchema(BaseModel):
+    batch_size: int = Field(default=50, ge=1, le=500, description="Max bronze signals to process")
+    calibration_weights: Optional[Dict[str, float]] = Field(default=None, description="Optional runtime role weight overrides")
+
+
+class PipelineRunResponseSchema(BaseModel):
+    pipeline_run_id: str
+    status: str
+    signals_processed: int
+    role_briefs_count: int
+    developments_count: int
+    confluence_stories_count: int
+    contradictions_count: int
+    missing_signals_count: int
+    node_statuses: Dict[str, str]
+    errors: List[Dict[str, Any]] = Field(default_factory=list)
+    timestamp: datetime = Field(default_factory=utc_now)
+

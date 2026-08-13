@@ -2,13 +2,16 @@ name: MetaRadar v5.1 CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature/* ]
   pull_request:
     branches: [ main, develop ]
 
 jobs:
   test-and-verify:
+    name: Backend Pytest, Contract Sync & Frontend Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -23,29 +26,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run Foundation Verification Tests
+      - name: Run Backend Pytest Suite
+        env:
+          PYTHONPATH: backend:.
         run: |
-          python tests/test_foundation.py
+          pytest -v
 
       - name: Verify OpenAPI to TypeScript Contract Sync
+        env:
+          PYTHONPATH: backend:.
         run: |
           python scripts/export_openapi.py
-          git diff --exit-code frontend/src/types/api.ts || (echo "TypeScript API contract is out of sync! Run python scripts/export_openapi.py" && exit 1)
-
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+          git diff --exit-code frontend/types/api.ts || (echo "TypeScript API contract is out of sync! Run python scripts/export_openapi.py" && exit 1)
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
-          version: 11
+          version: 9
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Frontend Typecheck, Lint & Build
         run: |
           cd frontend
-          pnpm install
+          pnpm install --frozen-lockfile=false
           pnpm exec tsc --noEmit
           pnpm lint
           pnpm build

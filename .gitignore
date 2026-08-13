@@ -15,8 +15,9 @@ ENV/
 .coverage
 htmlcov/
 
-# Local LLM Models & Weights Cache
-models/
+# Local LLM Models & Weights Cache (root-anchored: matches only ./models,
+# NOT backend/app/models which holds the ORM schema)
+/models/
 .cache/
 
 # Node / Frontend
@@ -35,3 +36,18 @@ Thumbs.db
 # Database & Docker volumes
 pgdata/
 redisdata/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.nav
+*.snm
+*.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Scratch directory
+scratch/

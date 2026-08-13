@@ -173,3 +173,83 @@ baseline_routing_matrix:
   COMMERCIAL_PATENT:
     primary: "LEADERSHIP"
     secondary: ["MARKET_ACCESS"]
+
+connectors:
+  pubmed:
+    freshness_class: batch
+    backfill_days: 180
+    rolling_window_days: 30
+    max_results_per_profile: 200
+    profiles:
+      - id: haemophilia_clinical
+        queries:
+          - "haemophilia AND (emicizumab OR fitusiran OR marstacimab OR concizumab)"
+          - "haemophilia gene therapy AND (Hemgenix OR Roctavian OR fidanacogene)"
+      - id: haemophilia_safety
+        queries:
+          - "haemophilia inhibitor safety"
+      - id: competitive_news
+        queries:
+          - "mim8 OR fitusiran OR concizumab clinical trial"
+
+  clinical_trials:
+    freshness_class: near_real_time
+    backfill_days: 365
+    rolling_window_days: 30
+    max_results_per_profile: 500
+    profiles:
+      - id: haemophilia_trials
+        conditions: ["hemophilia A", "hemophilia B", "haemophilia"]
+        interventions: ["emicizumab", "fitusiran", "marstacimab", "concizumab", "mim8", "fidanacogene", "etranacogene"]
+      - id: novo_pipeline
+        sponsor_keywords: ["Novo Nordisk"]
+        conditions: ["hemophilia A", "hemophilia B"]
+
+  newsapi:
+    freshness_class: delayed
+    quota_per_day: 100
+    backfill_days: 30
+    rolling_window_days: 7
+    profiles:
+      - id: haemophilia_market
+        query: "haemophilia OR hemophilia (Roche OR CSL OR Novo OR Sanofi OR BioMarin)"
+        language: en
+      - id: gene_therapy_news
+        query: "gene therapy haemophilia hemophilia"
+        language: en
+
+  fda:
+    freshness_class: adapter_ready
+    base_url: "https://api.fda.gov/drug/drugsfda.json"
+    backfill_days: 365
+    rolling_window_days: 30
+    profiles:
+      - id: haemophilia_approvals
+        search_terms: ["hemophilia", "haemophilia", "emicizumab", "fitusiran", "etranacogene"]
+
+  ema:
+    freshness_class: adapter_ready
+    rss_url: "https://www.ema.europa.eu/en/medicines/rss"
+    backfill_days: 365
+    rolling_window_days: 30
+    profiles:
+      - id: haemophilia_ema
+        keywords: ["haemophilia", "hemophilia", "emicizumab", "fitusiran"]
+
+cross_source:
+  group_assignment:
+    title_similarity_threshold: 0.85
+    date_window_hours: 48
+    entity_overlap_min: 2
+
+lag_thresholds:
+  announced: 120
+  in_trial: 180
+  interim_result: 120
+  final_result: 180
+  congress_publication: 90
+  regulatory_development: 270
+  approved: 365
+  post_market: 365
+  discontinued: 730
+
