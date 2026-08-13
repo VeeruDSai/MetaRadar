@@ -39,8 +39,6 @@
 
 \newcommand{\band}[1]{\par\vspace{1pt}\noindent\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}\vspace{2pt}#1\vspace{2pt}\end{minipage}}\par\vspace{2pt}}
 \newcommand{\mh}[1]{\textbf{\color{Navy}#1}}
-\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
-\newcolumntype{P}[1]{>{\RaggedRight\arraybackslash}p{#1}}
 
 \begin{document}
 \fontsize{8pt}{9.8pt}\selectfont
@@ -51,8 +49,9 @@
 {\fontsize{7.2}{8}\selectfont Novo Nordisk GBS Hackathon 2026 | Problem Statement \#3 | Rare Disease Pilot}
 \end{center}
 \vspace{-1pt}
-\par\noindent{\fontsize{7}{8}\selectfont
-\begin{tabularx}{\textwidth}{|p{1.95cm}|X|p{1.95cm}|X|}
+\par\noindent{\fontsize{7.2}{8.8}\selectfont
+\renewcommand{\arraystretch}{1.45}
+\begin{tabularx}{\textwidth}{|p{2.1cm}|X|p{2.1cm}|X|}
 \hline
 \textbf{\color{Navy}Institute} & M. S. Ramaiah Institute of Technology & \textbf{\color{Navy}Team} & Aura Pharmers\\
 \hline
@@ -88,7 +87,7 @@ MetaRadar is an AI-enabled intelligence radar that ingests relevant external upd
 The dashboard is designed as an intelligence workflow: users can move from a priority signal to its supporting evidence, interpretation, responsible function, and potential next step without searching multiple feeds independently.
 
 \section{Haemophilia focus, data boundary, signal types, and out of scope}
-\par\noindent\begin{tabularx}{\textwidth}{@{}P{2.0cm}Y@{}}
+\par\noindent\begin{tabularx}{\textwidth}{@{}p{2.0cm}X@{}}
 \toprule
 \mh{Focus} & Haemophilia A and Haemophilia B within Rare Disease.\\
 \mh{Signal types} & Clinical-trial updates and milestones; scientific publications; company/pharma developments; regulatory decisions; safety/PV signals; congress developments; market-access and reimbursement updates.\\
@@ -119,7 +118,7 @@ Signals preserve stable source identifiers and provenance. Summaries remain link
 \section{Stakeholder input and AI calibration}
 Stakeholder input improves AI output by giving structured feedback on whether a signal was appropriately summarized, prioritized, and routed. The feedback informs later calibration without giving the AI autonomous decision authority.
 \band{\centering\textbf{AI Baseline}\ $\rightarrow$\ \textbf{Expert Review}\ $\rightarrow$\ \textbf{Structured Feedback}\ $\rightarrow$\ \textbf{Calibrated Output}}
-\par\noindent\begin{tabularx}{\textwidth}{@{}P{0.17\linewidth}Y@{}}
+\par\noindent\begin{tabularx}{\textwidth}{@{}p{2.5cm}X@{}}
 \toprule
 \mh{AI baseline} & ``A competing haemophilia therapy has generated significant clinical-trial activity.''\\
 \mh{Stakeholder-calibrated} & \textbf{Priority: High.} Review by Medical Affairs and Competitive Intelligence; monitor subsequent efficacy, safety, and regulatory developments.\\
@@ -150,7 +149,7 @@ The example uses only public/mock information and demonstrates how expert feedba
 \end{tabularx}
 
 \section{Four-week prototype plan}
-\par\noindent\begin{tabularx}{\textwidth}{@{}P{0.09\linewidth}P{0.24\linewidth}Y@{}}
+\par\noindent\begin{tabularx}{\textwidth}{@{}p{1.0cm}p{2.5cm}X@{}}
 \toprule
 \textbf{Week} & \textbf{Focus} & \textbf{Plan}\\
 \midrule
