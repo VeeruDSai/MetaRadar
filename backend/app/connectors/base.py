@@ -264,15 +264,19 @@ class SourceConnector:
     async def get_status(
         self,
         session: Optional[AsyncSession] = None,
+        state: Optional[ConnectorState] = None,
     ) -> ConnectorStatus:
-        """Returns connector status; when a session is given, enriches
-        last_success / quota_remaining from the live ConnectorState table.
-        Degrades silently to in-memory state when the DB is unavailable."""
+        """Returns connector status; enriches last_success / quota_remaining
+        from the live ConnectorState table. ``state`` may be pre-loaded by a
+        batched caller (the health endpoint) to avoid one connection per
+        connector. Degrades silently to in-memory state when the DB is
+        unavailable — never fabricates values (D-22)."""
         last_success = self.last_success
         quota_remaining = self.quota_remaining
         last_error = self.last_error
 
-        if session is not None:
+        resolved = state
+        if resolved is None and session is not None:
             try:
                 result = await session.execute(
                     select(ConnectorState)
@@ -280,22 +284,23 @@ class SourceConnector:
                     .order_by(ConnectorState.updated_at.desc())
                     .limit(1)
                 )
-                state = result.scalar_one_or_none()
-                if state is not None:
-                    if state.last_success is not None:
-                        last_success = state.last_success
-                    if state.cursor:
-                        try:
-                            cursor = json.loads(state.cursor)
-                            if isinstance(cursor, dict) and cursor.get("quota_remaining") is not None:
-                                quota_remaining = int(cursor["quota_remaining"])
-                        except (ValueError, TypeError):
-                            pass
+                resolved = result.scalar_one_or_none()
             except Exception as e:
                 logger.warning(
                     "Connector %s state read failed (degrading to in-memory): %s",
                     self.source_id, e,
                 )
+
+        if resolved is not None:
+            if resolved.last_success is not None:
+                last_success = resolved.last_success
+            if resolved.cursor:
+                try:
+                    cursor = json.loads(resolved.cursor)
+                    if isinstance(cursor, dict) and cursor.get("quota_remaining") is not None:
+                        quota_remaining = int(cursor["quota_remaining"])
+                except (ValueError, TypeError):
+                    pass
 
         return ConnectorStatus(
             source_id=self.source_id,

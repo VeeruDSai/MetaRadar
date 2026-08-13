@@ -1,15 +1,25 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 from app.db.session import get_db
 from app.core.config import settings
+from app.models import ConnectorState
+from app.connectors import ALL_CONNECTORS
 from app.schemas import (
     HealthResponse, HealthReadyResponse, HealthModelsResponse, HealthConnectorsResponse, ConnectorHealthStatus
 )
 
 router = APIRouter()
+
+_CONNECTOR_NAMES = {
+    "pubmed": "NCBI PubMed",
+    "clinical_trials": "ClinicalTrials.gov",
+    "newsapi": "NewsAPI",
+    "fda": "OpenFDA / FDA Regulatory",
+    "ema": "EMA RSS / Decisions",
+}
 
 
 @router.get("", response_model=HealthResponse)
@@ -67,51 +77,47 @@ async def get_health_models():
 
 
 @router.get("/connectors", response_model=HealthConnectorsResponse)
-async def get_health_connectors():
-    """Reports individual connector health, last success, last error, quota status."""
-    connectors = [
-        ConnectorHealthStatus(
-            source_id="pubmed",
-            name="NCBI PubMed",
-            status="active",
-            freshness_class="near_real_time"
-        ),
-        ConnectorHealthStatus(
-            source_id="clinical_trials",
-            name="ClinicalTrials.gov",
-            status="active",
-            freshness_class="near_real_time"
-        ),
-        ConnectorHealthStatus(
-            source_id="newsapi",
-            name="NewsAPI",
-            status="active",
-            freshness_class="delayed",
-            quota_remaining=100
-        ),
-        ConnectorHealthStatus(
-            source_id="fda",
-            name="OpenFDA / FDA Regulatory",
-            status="adapter_ready",
-            freshness_class="batch"
-        ),
-        ConnectorHealthStatus(
-            source_id="ema",
-            name="EMA RSS / Decisions",
-            status="adapter_ready",
-            freshness_class="batch"
-        ),
-        ConnectorHealthStatus(
-            source_id="congress",
-            name="Congress Abstracts (ASH/ISTH/WFH)",
-            status="adapter_ready",
-            freshness_class="batch"
-        ),
-        ConnectorHealthStatus(
-            source_id="synthetic",
-            name="Synthetic Demo Suite",
-            status="active",
-            freshness_class="synthetic"
+async def get_health_connectors(session: AsyncSession = Depends(get_db)):
+    """Reports each live connector's honest status (D-22).
+
+    Reads the latest ConnectorState row per source for accurate
+    last_success / quota_remaining in ONE batched query (avoids one DB
+    connection attempt per connector); degrades to in-memory state when the
+    DB is unavailable so the endpoint never fabricates values or 500s on
+    auxiliary failure (fail-degrade pattern per signals.py).
+    """
+    preloaded = None  # None = DB read unavailable -> in-memory status
+    try:
+        result = await session.execute(
+            select(ConnectorState).where(
+                ConnectorState.source_id.in_([c.source_id for c in ALL_CONNECTORS])
+            )
         )
-    ]
-    return HealthConnectorsResponse(connectors=connectors)
+        preloaded = {}
+        for row in result.scalars().all():
+            prev = preloaded.get(row.source_id)
+            if prev is None or (row.updated_at or datetime.min) >= (prev.updated_at or datetime.min):
+                preloaded[row.source_id] = row
+    except Exception:
+        preloaded = None
+
+    statuses = []
+    for connector in ALL_CONNECTORS:
+        try:
+            connector_status = await connector.get_status(
+                None, preloaded.get(connector.source_id) if preloaded else None
+            )
+        except Exception:
+            connector_status = await connector.get_status(None)
+        statuses.append(
+            ConnectorHealthStatus(
+                source_id=connector_status.source_id,
+                name=_CONNECTOR_NAMES.get(connector_status.source_id, connector_status.source_id),
+                status=connector_status.status,
+                freshness_class=connector.freshness_class,
+                quota_remaining=connector_status.quota_remaining,
+                last_success=connector_status.last_success,
+                last_error=connector_status.last_error,
+            )
+        )
+    return HealthConnectorsResponse(connectors=statuses)
