@@ -11,10 +11,11 @@
 \usepackage{enumitem}
 \usepackage{titlesec}
 \usepackage{fancyhdr}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{ragged2e}
-\usepackage{tikz}
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+
+\graphicspath{{docs/concept/}}
 
 \definecolor{Navy}{HTML}{143B5D}
 \definecolor{Blue}{HTML}{087EA4}
@@ -206,36 +207,14 @@ Stakeholder input improves AI output by giving structured feedback on whether a 
 \hline
 \end{tabularx}}
 
-\vspace{4pt}
+\vspace{3pt}
 \par\noindent
 \begin{minipage}[t]{0.485\linewidth}
-\centering{\fontsize{7.5}{8.5}\selectfont\textbf{\color{Navy}System Architecture (Vector Diagram)}}\\[2pt]
-\begin{tikzpicture}[node distance=0.45cm, auto,
-  block/.style={rectangle, draw=Line, fill=Pale, rounded corners=3pt, text width=0.92\linewidth, align=center, font=\fontsize{6}{7}\selectfont, inner sep=2.5pt},
-  line/.style={draw=Blue, -{Stealth[length=3.5pt]}, thick}]
-  \node [block] (ingest) {\textbf{External Sources} (Trials, PubMed, FDA, News)};
-  \node [block, below=of ingest] (engine) {\textbf{FastAPI Backend} + \textbf{PostgreSQL 16 / pgvector}};
-  \node [block, below=of engine] (ai) {\textbf{Local LLM RAG} (Entity Extraction \& Priority Scoring)};
-  \node [block, below=of ai] (ui) {\textbf{Next.js 16 UI} (Role Dashboards \& Signal Cards)};
-  \path [line] (ingest) -- (engine);
-  \path [line] (engine) -- (ai);
-  \path [line] (ai) -- (ui);
-\end{tikzpicture}
+\centering\includegraphics[width=\linewidth]{architecture.pdf}
 \end{minipage}%
 \hfill
 \begin{minipage}[t]{0.485\linewidth}
-\centering{\fontsize{7.5}{8.5}\selectfont\textbf{\color{Navy}4-Week Phase Timeline (Vector Diagram)}}\\[2pt]
-\begin{tikzpicture}[node distance=0.45cm, auto,
-  block/.style={rectangle, draw=Line, fill=Pale, rounded corners=3pt, text width=0.92\linewidth, align=center, font=\fontsize{6}{7}\selectfont, inner sep=2.5pt},
-  line/.style={draw=Blue, -{Stealth[length=3.5pt]}, thick}]
-  \node [block] (w1) {\textbf{W1}: Architecture, DB Schema \& Next.js Shell};
-  \node [block, below=of w1] (w2) {\textbf{W2}: Connectors, Deduplication \& Signal Engine};
-  \node [block, below=of w2] (w3) {\textbf{W3}: Grounded Summarization \& Role Views};
-  \node [block, below=of w3] (w4) {\textbf{W4}: Provenance Verification, Tuning \& Demo};
-  \path [line] (w1) -- (w2);
-  \path [line] (w2) -- (w3);
-  \path [line] (w3) -- (w4);
-\end{tikzpicture}
+\centering\includegraphics[width=\linewidth]{timeline.pdf}
 \end{minipage}
 
 \section{Clarifications and stakeholder input requested from Novo Nordisk}
