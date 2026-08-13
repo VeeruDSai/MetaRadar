@@ -40,7 +40,7 @@
 \fancyfoot[C]{\fontsize{6.5}{7}\selectfont\textcolor{Muted}{Concept Note | Page \thepage\ of 2}}
 \renewcommand{\headrulewidth}{0.35pt}\renewcommand{\footrulewidth}{0.35pt}
 
-\newcommand{\band}[1]{\par\vspace{1.5pt}\noindent\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}\vspace{1.8pt}#1\vspace{1.8pt}\end{minipage}}\par\vspace{1.5pt}}
+\newcommand{\band}[1]{\par\vspace{1.5pt}\noindent\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}\vspace{1.8pt}\centering #1\par\vspace{1.8pt}\end{minipage}}\par\vspace{1.5pt}\RaggedRight}
 \newcommand{\mh}[1]{\textbf{\color{Navy}#1}}
 
 \begin{document}
@@ -73,7 +73,7 @@ The haemophilia landscape generates signals across clinical trials, scientific p
 \textbf{Relevance to Novo Nordisk:} As a global leader in haemophilia care with key therapies (such as Esperoct, Alprolix, NovoSeven, and investigational denecimig / Mim8) operating alongside evolving non-factor treatments and gene therapies, Novo Nordisk requires rapid, cross-functional intelligence synthesis to maintain clinical leadership, anticipate market shifts, and streamline internal risk review.
 
 \textbf{MetaRadar} addresses this by converting scattered external information into \textbf{source-linked, prioritized, and actionable internal intelligence}. It differs from a standard news dashboard because it does not simply broadcast headlines; it frames every important development around four decision questions:
-\band{\centering\textbf{What changed?}\quad $\rightarrow$ \quad\textbf{Why does it matter?}\quad $\rightarrow$ \quad\textbf{Who should review it?}\quad $\rightarrow$ \quad\textbf{What action may be needed?}}
+\band{\textbf{What changed?}\quad $\rightarrow$ \quad\textbf{Why does it matter?}\quad $\rightarrow$ \quad\textbf{Who should review it?}\quad $\rightarrow$ \quad\textbf{What action may be needed?}}
 \textbf{Intended users:} Medical Affairs, Regulatory, Safety/Pharmacovigilance, Market Access, and Leadership. The system is decision support for expert review, not a replacement for professional judgment.
 
 \section{Overall concept, key features, architecture, and decision improvement}
@@ -142,14 +142,14 @@ MetaRadar is an AI-enabled intelligence radar that ingests relevant external upd
 \textbf{Clinical-trial context:} the referenced Novo Nordisk material describes clinical trials as protocol-driven studies used to investigate whether an investigational medication works, its safety, and side effects, with development progressing through Phases I--IV.
 
 \section{Detection, classification, summarization, priority, and traceability}
-\band{\centering\textbf{Ingest}\ $\rightarrow$\ \textbf{Detect}\ $\rightarrow$\ \textbf{Classify}\ $\rightarrow$\ \textbf{Deduplicate}\ $\rightarrow$\ \textbf{Link Evidence}\ $\rightarrow$\ \textbf{Summarize}\ $\rightarrow$\ \textbf{Prioritize}\ $\rightarrow$\ \textbf{Route}\ $\rightarrow$\ \textbf{Human Review}}
+\band{\textbf{Ingest}\ $\rightarrow$\ \textbf{Detect}\ $\rightarrow$\ \textbf{Classify}\ $\rightarrow$\ \textbf{Deduplicate}\ $\rightarrow$\ \textbf{Link Evidence}\ $\rightarrow$\ \textbf{Summarize}\ $\rightarrow$\ \textbf{Prioritize}\ $\rightarrow$\ \textbf{Route}\ $\rightarrow$\ \textbf{Human Review}}
 Signals preserve stable source identifiers and provenance. Summaries remain linked to source evidence; the interface distinguishes source-supported facts from AI interpretation and forward-looking hypotheses. Sensitive medical, regulatory, and safety signals require human review.
 
 \newpage
 
 \section{Stakeholder input and AI calibration}
 Stakeholder input improves AI output by giving structured feedback on whether a signal was appropriately summarized, prioritized, and routed. The feedback informs later calibration without giving the AI autonomous decision authority.
-\band{\centering\textbf{AI Baseline}\ $\rightarrow$\ \textbf{Expert Review}\ $\rightarrow$\ \textbf{Structured Feedback}\ $\rightarrow$\ \textbf{Calibrated Output}}
+\band{\textbf{AI Baseline}\ $\rightarrow$\ \textbf{Expert Review}\ $\rightarrow$\ \textbf{Structured Feedback}\ $\rightarrow$\ \textbf{Calibrated Output}}
 \par\noindent{\fontsize{6.8}{8.0}\selectfont
 \renewcommand{\arraystretch}{1.25}
 \begin{tabularx}{\linewidth}{|p{2.4cm}|X|}
@@ -226,6 +226,6 @@ Stakeholder input improves AI output by giving structured feedback on whether a 
 
 \section{Expected outcome}
 MetaRadar reduces the gap between \textbf{information availability} and \textbf{decision relevance}. It does not replace experts or make decisions; it organizes relevant developments into a traceable workflow so the right function can review the right evidence at the right time.
-\band{\centering\textbf{Scattered information}\ $\rightarrow$\ \textbf{Connected evidence}\ $\rightarrow$\ \textbf{Prioritized intelligence}\ $\rightarrow$\ \textbf{Human review}\ $\rightarrow$\ \textbf{Better-informed action}}
+\band{\textbf{Scattered information}\ $\rightarrow$\ \textbf{Connected evidence}\ $\rightarrow$\ \textbf{Prioritized intelligence}\ $\rightarrow$\ \textbf{Human review}\ $\rightarrow$\ \textbf{Better-informed action}}
 
 \end{document}
