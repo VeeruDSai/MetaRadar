@@ -9,7 +9,7 @@
 \renewcommand{\familydefault}{\sfdefault}
 
 \usepackage{xcolor}
-\usepackage[top=0.6cm,bottom=0.8cm,left=0.9cm,right=0.9cm,footskip=12pt]{geometry}
+\usepackage[top=0.85cm,bottom=0.95cm,left=1.05cm,right=1.05cm,footskip=14pt]{geometry}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{titlesec}
@@ -21,14 +21,14 @@
 \usepackage{array}
 
 % ============================================================
-% COLOR PALETTE
+% ELEGANT MINIMAL COLOR PALETTE
 % ============================================================
-\definecolor{NavyBlue}{RGB}{11,25,44}
-\definecolor{SlateBlue}{RGB}{30,62,98}
-\definecolor{CyanAccent}{RGB}{14,165,233}
-\definecolor{DarkText}{RGB}{30,41,59}
-\definecolor{LightBg}{RGB}{248,250,252}
-\definecolor{BorderColor}{RGB}{226,232,240}
+\definecolor{NavyBlue}{RGB}{15,23,42}       % Slate 900 - Dark Navy Header
+\definecolor{SlateBlue}{RGB}{30,58,138}      % Blue 900 - Subtitle / Section Accent
+\definecolor{CyanAccent}{RGB}{14,165,233}    % Sky 500 - Vibrant Accent
+\definecolor{DarkText}{RGB}{51,65,85}        % Slate 700 - Body Text
+\definecolor{LightBg}{RGB}{248,250,252}      % Slate 50 - Card Fill
+\definecolor{BorderColor}{RGB}{226,232,240}  % Slate 200 - Subtle Border
 
 % ============================================================
 % PDF METADATA
@@ -49,7 +49,7 @@
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0.4pt}
-\renewcommand{\footrule}{{\color{BorderColor}\hrule width\headwidth height 0.4pt \vspace{2pt}}}
+\renewcommand{\footrule}{{\color{BorderColor}\hrule width\headwidth height 0.4pt \vspace{3pt}}}
 
 \fancyfoot[L]{%
     \scriptsize\color{DarkText}\textbf{MetaRadar} --- Concept Note \quad|\quad M. S. Ramaiah Institute of Technology --- Team Aura Pharmers
@@ -60,50 +60,51 @@
 }
 
 % ============================================================
-% SECTION STYLING
+% SECTION STYLING (MINIMAL, ELEGANT & SPACIOUS)
 % ============================================================
 \titleformat{\section}
     {\color{NavyBlue}\small\bfseries}
-    {\thesection.}{0.3em}{}
+    {\thesection.}{0.4em}{}
     [{\color{CyanAccent}\titlerule[0.5pt]}]
 
 \titleformat{\subsection}
     {\color{SlateBlue}\scriptsize\bfseries}
     {\thesubsection}{0.3em}{}
 
-\titlespacing*{\section}{0pt}{2.5pt}{1.2pt}
-\titlespacing*{\subsection}{0pt}{1.5pt}{0.8pt}
+\titlespacing*{\section}{0pt}{4.5pt}{2.2pt}
+\titlespacing*{\subsection}{0pt}{2.5pt}{1.2pt}
 
 \setlist{
     noitemsep,
-    topsep=0.5pt,
-    parsep=0.5pt,
-    leftmargin=10pt
+    topsep=1.2pt,
+    parsep=0.8pt,
+    leftmargin=11pt
 }
 
-\setlength{\parskip}{0.8pt}
+\setlength{\parskip}{1.5pt}
 \setlength{\parindent}{0pt}
 
 % ============================================================
 % DOCUMENT
 % ============================================================
 \begin{document}
+\fontsize{9pt}{11.5pt}\selectfont
 
 % ============================================================
-% HEADER BLOCK (ORGANIZED & SPACIOUS)
+% HEADER BLOCK (ORGANIZED, ELEGANT & SPACIOUS)
 % ============================================================
 \fcolorbox{NavyBlue}{NavyBlue}{%
 \begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}
-\vspace{2pt}
-\begin{minipage}[t]{0.54\textwidth}
-{\color{white}\Large\bfseries META RADAR\par}
-\vspace{2pt}
-{\color{CyanAccent}\small\bfseries From Scattered Signals to Strategic Intelligence\par}
-\vspace{1.5pt}
+\vspace{3pt}
+\begin{minipage}[t]{0.52\textwidth}
+{\color{white}\large\bfseries META RADAR\par}
+\vspace{2.5pt}
+{\color{CyanAccent}\scriptsize\bfseries From Scattered Signals to Strategic Intelligence\par}
+\vspace{2.5pt}
 {\color{white}\tiny\textbf{Pilot Area:} Haemophilia A \& B (Rare Disease)\par}
 {\color{white}\tiny\textbf{Novo Nordisk GBS Hackathon 2026} --- Problem Statement \#3\par}
 \end{minipage}%
-\begin{minipage}[t]{0.46\textwidth}
+\begin{minipage}[t]{0.48\textwidth}
 \raggedleft
 {\color{white}\tiny
 \textbf{Institute:} M. S. Ramaiah Institute of Technology (MSRIT)\par
@@ -113,11 +114,11 @@
 \textbf{Team:} Omprakash Panda, Veerendra Desai, Usha Rathore, Ishaaq Ahmed Khan, Sanjana Rathore\par
 }
 \end{minipage}
-\vspace{2pt}
+\vspace{3pt}
 \end{minipage}%
 }
 
-\vspace{3pt}
+\vspace{5pt}
 
 % ============================================================
 % 1. PROBLEM & RELEVANCE
@@ -138,7 +139,7 @@ The haemophilia treatment landscape is evolving rapidly across replacement facto
 % ============================================================
 \section{Overall Concept \& Core Capabilities}
 MetaRadar is an AI-enabled competitive intelligence radar that ingests scattered public updates, connects related evidence into unified timelines, and routes actionable insights to specific functions. Key capabilities include:
-\begin{itemize}[leftmargin=9pt]
+\begin{itemize}[leftmargin=10pt]
     \item \textbf{Signal Detection \& Classification:} Ingests external updates and classifies them across signal types (clinical trials, publications, news, regulatory, safety, congresses, market/access) and haemophilia entities (disease type, factor, inhibitor status, company, drug modality).
     \item \textbf{Evidence Linking \& Summarization:} Aggregates related signals across sources into connected evidence chains and generates source-grounded summaries with explicit \textbf{FACT / INTERPRETATION / SPECULATION} labeling.
     \item \textbf{Prioritization \& Functional Routing:} Computes role-specific relevance scores to direct insights to relevant functions (\textit{"not every signal goes to everyone"}) while keeping high-impact cards visible to Leadership.
@@ -150,7 +151,7 @@ MetaRadar is an AI-enabled competitive intelligence radar that ingests scattered
 % 3. HAEMOPHILIA SCOPE & DATA BOUNDARY
 % ============================================================
 \section{Haemophilia Scope \& Data Boundary}
-\begin{itemize}[leftmargin=9pt]
+\begin{itemize}[leftmargin=10pt]
     \item \textbf{Primary Focus:} Haemophilia A and Haemophilia B within Rare Disease.
     \item \textbf{Data Boundary:} \textbf{Public data, mock data, and synthetic data ONLY}. Zero confidential Novo Nordisk information and zero patient-identifiable private health information (PII/PHI) are processed or used.
     \item \textbf{Signal Categories:} Clinical trial updates, scientific publications, company press releases, regulatory decisions, safety advisories, congress presentations (ASH, ISTH, WFH, EHA), and market/access updates.
@@ -162,7 +163,7 @@ MetaRadar is an AI-enabled competitive intelligence radar that ingests scattered
 % ============================================================
 \section{Out of Scope}
 To maintain clear hackathon execution boundaries, the MetaRadar prototype strictly does \textbf{NOT} attempt to:
-\begin{itemize}[leftmargin=9pt]
+\begin{itemize}[leftmargin=10pt]
     \item Make autonomous clinical, medical, or regulatory decisions, or provide patient-specific medical advice.
     \item Replace healthcare professionals, medical affairs directors, regulatory leaders, or safety specialists.
     \item Access, store, or process any confidential Novo Nordisk proprietary data or private patient health data (PII/PHI).
@@ -175,7 +176,7 @@ To maintain clear hackathon execution boundaries, the MetaRadar prototype strict
 % ============================================================
 \section{Data Sources}
 MetaRadar synthesizes data across three operational source tiers:
-\begin{itemize}[leftmargin=9pt]
+\begin{itemize}[leftmargin=10pt]
     \item \textbf{Prototype-Connected Live Sources:} NCBI PubMed E-utilities (scientific literature), ClinicalTrials.gov APIv2 (trial updates), and NewsAPI (pharma news \& announcements).
     \item \textbf{Adapter-Ready Public Sources:} OpenFDA API (regulatory drug approvals) and EMA RSS feeds (European regulatory decisions).
     \item \textbf{Simulated / Synthetic Demo Feeds:} Pre-curated, labelled haemophilia signal datasets for medical congress abstracts, safety advisories, and market access events to guarantee robust offline demonstration.
@@ -205,7 +206,7 @@ Raw payloads are deduplicated via stable source keys, scrubbed for privacy, and 
 % ============================================================
 \section{Source Traceability \& Trust}
 Trust is paramount in pharma competitive intelligence. MetaRadar enforces strict auditability:
-\begin{itemize}[leftmargin=9pt]
+\begin{itemize}[leftmargin=10pt]
     \item \textbf{Source-Linked Evidence:} Every intelligence card maintains direct links to the underlying evidence supporting its factual claims and context (PMID, NCT ID, press release URL, regulatory filing ID).
     \item \textbf{Decision-Support Hypotheses:} Suggested next steps are clearly identified as AI-generated decision-support hypotheses requiring human review, rather than prescriptive corporate actions.
     \item \textbf{Fact vs. Interpretation vs. Speculation:} Intelligence outputs explicitly categorize statements as \textbf{FACT} (verifiable source excerpt), \textbf{INTERPRETATION} (AI-reasoned contextual implication), or \textbf{SPECULATION} (forward-looking hypothesis).
@@ -233,7 +234,7 @@ MetaRadar incorporates a structured Human-in-the-Loop (HITL) feedback mechanism 
 \hline
 \end{tabularx}
 }
-\vspace{1pt}
+\vspace{2pt}
 Stakeholder calibration adjusts scoring weights, routing rules, and action prompts based on expert ratings; it refines priority and relevance rather than granting autonomous execution authority to the AI.
 
 % ============================================================
@@ -241,7 +242,7 @@ Stakeholder calibration adjusts scoring weights, routing rules, and action promp
 % ============================================================
 \section{User Interface \& Decision Panels}
 The MetaRadar user interface focuses on decision-first clarity through key prototype screens:
-\begin{itemize}[leftmargin=9pt]
+\begin{itemize}[leftmargin=10pt]
     \item \textbf{Radar Overview Dashboard:} Displays active competitive signals, high-confluence clusters, and strategic updates across Haemophilia A \& B.
     \item \textbf{Interactive Signal Cards:} Present high-priority developments clearly answering: (1) What changed?, (2) Why it matters?, (3) Triage Priority (High/Medium/Low), (4) Suggested function review, (5) Suggested next step for expert review, and (6) Traceable source evidence links with confidence strength.
     \item \textbf{Search, Filters \& Role-Oriented Views:} Allows filtering by drug modality (bispecific, gene therapy, factor replacement), company, source, priority, and functional views tailored for \textbf{Medical Affairs, Regulatory, Safety / PV, Market Access, and Leadership}.
