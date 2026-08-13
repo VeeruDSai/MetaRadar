@@ -23,12 +23,12 @@
 \definecolor{Muted}{HTML}{68767E}
 
 \hypersetup{colorlinks=true,urlcolor=Blue,pdftitle={MetaRadar Concept Note},pdfauthor={Aura Pharmers}}
-\setlength{\parindent}{0pt}\setlength{\parskip}{2.2pt}
+\setlength{\parindent}{0pt}\setlength{\parskip}{2.0pt}
 \setlist[itemize]{leftmargin=12pt,itemsep=0.5pt,topsep=1pt,parsep=0pt}
 \setlist[enumerate]{leftmargin=15pt,itemsep=0.6pt,topsep=1pt,parsep=0pt}
-\titleformat{\section}{\color{Navy}\bfseries\fontsize{10.2}{11}\selectfont}{\thesection.}{4pt}{}
-\titlespacing*{\section}{0pt}{5pt}{2pt}
-\titleformat{\subsection}{\color{Blue}\bfseries\fontsize{9}{10}\selectfont}{}{0pt}{}
+\titleformat{\section}{\color{Navy}\bfseries\fontsize{10}{10.8}\selectfont}{\thesection.}{4pt}{}
+\titlespacing*{\section}{0pt}{4.5pt}{1.8pt}
+\titleformat{\subsection}{\color{Blue}\bfseries\fontsize{8.8}{9.8}\selectfont}{}{0pt}{}
 \titlespacing*{\subsection}{0pt}{2pt}{1pt}
 
 \pagestyle{fancy}\fancyhf{}
@@ -37,20 +37,20 @@
 \fancyfoot[C]{\fontsize{6.5}{7}\selectfont\textcolor{Muted}{Concept Note | Page \thepage\ of 2}}
 \renewcommand{\headrulewidth}{0.35pt}\renewcommand{\footrulewidth}{0.35pt}
 
-\newcommand{\band}[1]{\par\vspace{1pt}\noindent\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}\vspace{2pt}#1\vspace{2pt}\end{minipage}}\par\vspace{2pt}}
+\newcommand{\band}[1]{\par\vspace{1pt}\noindent\fcolorbox{Line}{Pale}{\begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}\vspace{1.8pt}#1\vspace{1.8pt}\end{minipage}}\par\vspace{1.8pt}}
 \newcommand{\mh}[1]{\textbf{\color{Navy}#1}}
 
 \begin{document}
-\fontsize{8pt}{9.8pt}\selectfont
+\fontsize{7.8pt}{9.5pt}\selectfont
 
 \begin{center}
-{\fontsize{18}{19}\selectfont\bfseries\color{Navy}HAEMOPHILIA INTELLIGENCE RADAR}\\[-1pt]
-{\fontsize{9.5}{10.5}\selectfont\color{Blue}\bfseries MetaRadar}\quad {\fontsize{8}{9}\selectfont\color{Muted}From Scattered Signals to Strategic Intelligence}\\[3pt]
-{\fontsize{7.2}{8}\selectfont Novo Nordisk GBS Hackathon 2026 | Problem Statement \#3 | Rare Disease Pilot}
+{\fontsize{17.5}{18.5}\selectfont\bfseries\color{Navy}HAEMOPHILIA INTELLIGENCE RADAR}\\[-1pt]
+{\fontsize{9.2}{10.2}\selectfont\color{Blue}\bfseries MetaRadar}\quad {\fontsize{7.8}{8.8}\selectfont\color{Muted}From Scattered Signals to Strategic Intelligence}\\[2.5pt]
+{\fontsize{7}{7.8}\selectfont Novo Nordisk GBS Hackathon 2026 | Problem Statement \#3 | Rare Disease Pilot}
 \end{center}
-\vspace{-1pt}
-\par\noindent{\fontsize{7.2}{8.8}\selectfont
-\renewcommand{\arraystretch}{1.45}
+\vspace{-2pt}
+\par\noindent{\fontsize{7}{8.5}\selectfont
+\renewcommand{\arraystretch}{1.4}
 \begin{tabularx}{\textwidth}{|p{2.1cm}|X|p{2.1cm}|X|}
 \hline
 \textbf{\color{Navy}Institute} & M. S. Ramaiah Institute of Technology & \textbf{\color{Navy}Team} & Aura Pharmers\\
@@ -64,13 +64,15 @@
 \end{tabularx}}
 
 \section{Problem, relevance, intended users, and differentiation}
-The haemophilia landscape generates signals across clinical trials, scientific publications, pharmaceutical/company news, regulatory updates, safety communications, congresses, and market-access developments. These sources are fragmented, making it difficult for teams to identify what materially changed and what deserves attention.
+The haemophilia landscape generates signals across clinical trials, scientific publications, pharmaceutical/company news, regulatory updates, safety communications, congresses, and market-access developments. These sources are fragmented, making it difficult for teams to identify what materially changed and what deserves immediate attention.
 
-\textbf{MetaRadar} addresses this by converting scattered external information into \textbf{source-linked, prioritized, and actionable internal intelligence}. It differs from a standard news dashboard because it does not simply broadcast headlines. It frames every important development around four decision questions:
+\textbf{Relevance to Novo Nordisk:} As a global leader in haemophilia care with key therapies (such as Esperoct, Alprolix, NovoSeven, and investigational denecimig / Mim8) operating alongside evolving non-factor treatments and gene therapies, Novo Nordisk requires rapid, cross-functional intelligence synthesis to maintain clinical leadership, anticipate market shifts, and streamline internal risk review.
+
+\textbf{MetaRadar} addresses this by converting scattered external information into \textbf{source-linked, prioritized, and actionable internal intelligence}. It differs from a standard news dashboard because it does not simply broadcast headlines; it frames every important development around four decision questions:
 \band{\centering\textbf{What changed?}\quad $\rightarrow$ \quad\textbf{Why does it matter?}\quad $\rightarrow$ \quad\textbf{Who should review it?}\quad $\rightarrow$ \quad\textbf{What action may be needed?}}
 \textbf{Intended users:} Medical Affairs, Regulatory, Safety/Pharmacovigilance, Market Access, and Leadership. The system is decision support for expert review, not a replacement for professional judgment.
 
-\section{Overall concept, key features, interface, and decision improvement}
+\section{Overall concept, key features, architecture, and decision improvement}
 MetaRadar is an AI-enabled intelligence radar that ingests relevant external updates, connects related evidence, summarizes developments, assigns priority, and routes signals to the functions most likely to need review.
 \par\noindent\begin{tabularx}{\textwidth}{@{}p{2.0cm}X@{}}
 \toprule
@@ -84,7 +86,15 @@ MetaRadar is an AI-enabled intelligence radar that ingests relevant external upd
 \textbf{\color{Navy}Calibrate} & Use structured stakeholder feedback to improve routing and prioritization.\\
 \bottomrule
 \end{tabularx}
-The dashboard is designed as an intelligence workflow: users can move from a priority signal to its supporting evidence, interpretation, responsible function, and potential next step without searching multiple feeds independently.
+
+\textbf{Technology Stack \& Architecture:}
+\begin{itemize}
+\item \textbf{Frontend}: Next.js 16 App Router, React 19, TailwindCSS, and Lucide Icons for high-density executive dashboards.
+\item \textbf{Backend API}: Python 3.11 with FastAPI, Pydantic v2 schemas, and AsyncSQLAlchemy ORM.
+\item \textbf{Database \& Storage}: PostgreSQL 16 with pgvector for semantic retrieval, relational indexing, and evidence deduplication.
+\item \textbf{AI/LLM Engine}: Local Gemma 2 / Llama 3 for private, evidence-grounded summarization, entity extraction, and priority classification.
+\end{itemize}
+The dashboard is designed as an intelligence workflow: users can move from a priority signal to its supporting evidence, interpretation, responsible function, and suggested next step without searching multiple feeds independently.
 
 \section{Haemophilia focus, data boundary, signal types, and out of scope}
 \par\noindent\begin{tabularx}{\textwidth}{@{}p{2.0cm}X@{}}
@@ -102,7 +112,7 @@ The dashboard is designed as an intelligence workflow: users can move from a pri
 \textbf{\color{Navy}Clinical trials} & ClinicalTrials.gov for study identifiers, phase/status, milestones, endpoints, and study information.\\
 \textbf{\color{Navy}Publications} & PubMed / NCBI scientific literature.\\
 \textbf{\color{Navy}Industry/news} & NewsAPI plus controlled public/mock news feeds.\\
-\textbf{\color{Navy}Regulatory/safety} & OpenFDA / EMA plus mock or synthetic demonstration records.\\
+\textbf{\color{Navy}Regulatory/safety} & OpenFDA / EMA RSS feeds plus mock or synthetic demonstration records.\\
 \textbf{\color{Navy}Congress} & Public or controlled data representing ASH, ISTH, WFH, EHA and similar meetings.\\
 \textbf{\color{Navy}Access} & Public/mock/synthetic reimbursement and access events.\\
 \bottomrule
@@ -149,14 +159,14 @@ The example uses only public/mock information and demonstrates how expert feedba
 \end{tabularx}
 
 \section{Four-week prototype plan}
-\par\noindent\begin{tabularx}{\textwidth}{@{}p{1.0cm}p{2.5cm}X@{}}
+\par\noindent\begin{tabularx}{\textwidth}{@{}p{1.0cm}p{2.4cm}X@{}}
 \toprule
-\textbf{Week} & \textbf{Focus} & \textbf{Plan}\\
+\textbf{Week} & \textbf{Focus} & \textbf{Deliverables \& Milestone Scope}\\
 \midrule
-1 & \textbf{Problem understanding + data setup} & Finalize haemophilia taxonomy, source map, public/mock/synthetic data setup, data model, architecture, and prototype scope.\\
-2 & \textbf{AI logic + ingestion} & Build source ingestion, signal detection, classification, normalization, deduplication, trial/status extraction, and evidence linking.\\
-3 & \textbf{Prototype building} & Implement grounded summarization, priority scoring, routing, stakeholder calibration, dashboard, filters, role views, and signal cards.\\
-4 & \textbf{Testing + demo preparation} & End-to-end validation, traceability/failure checks, calibration refinement, usability polish, and final demonstration.\\
+1 & \textbf{Foundation \& Data Setup} & Finalize haemophilia taxonomy, source mapping, database schema (PostgreSQL 16), FastAPI core setup, Next.js UI shell, and public/mock connectors.\\
+2 & \textbf{Ingestion \& AI Logic} & Build source connectors (ClinicalTrials, PubMed, NewsAPI, OpenFDA), signal detection, entity normalization, deduplication, and evidence linking.\\
+3 & \textbf{Prototype Building} & Implement grounded summarization, priority scoring engine, functional routing logic, stakeholder calibration feedback loop, role views, and signal cards.\\
+4 & \textbf{Testing \& Demo Prep} & End-to-end integration testing, source-link provenance verification, calibration tuning, UI polish, and final prototype demonstration.\\
 \bottomrule
 \end{tabularx}
 
