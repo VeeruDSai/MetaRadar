@@ -36,3 +36,18 @@ Thumbs.db
 # Database & Docker volumes
 pgdata/
 redisdata/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.nav
+*.snm
+*.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Scratch directory
+scratch/
