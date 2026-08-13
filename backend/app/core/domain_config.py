@@ -100,6 +100,18 @@ class DomainConfig(BaseModel):
     # existing configs without these keys load without error.
     connectors: Dict[str, ConnectorConfig] = Field(default_factory=dict)
     cross_source: Optional[CrossSourceConfig] = None
+    # Phase 2 intelligence extensions:
+    lag_thresholds: Dict[str, int] = Field(default_factory=lambda: {
+        "announced": 120,
+        "in_trial": 180,
+        "interim_result": 120,
+        "final_result": 180,
+        "congress_publication": 90,
+        "regulatory_development": 270,
+        "approved": 365,
+        "post_market": 365,
+        "discontinued": 730,
+    })
 
 
 _domain_config_cache: Optional[DomainConfig] = None

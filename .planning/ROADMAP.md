@@ -50,14 +50,15 @@ Phase 5: Calibration & End-to-End Verification
   - `docs/2_SRS_Software_Requirements_Specification.md` (§3.1 Data Acquisition)
 - **Key Deliverables**: `backend/app/connectors/pubmed.py`, `clinical_trials.py`, `newsapi.py`, `fda.py`, `ema.py`, deduplication integration, and ingest tests.
 
-### Phase 2: LangGraph 10-Node Intelligence Engine (Status: PLANNED)
+### Phase 2: LangGraph 10-Node Intelligence Engine (Status: COMPLETED)
 
 - **Goal**: Build stateful 10-node LangGraph pipeline (`node_ingest` through `node_calibrate -> END`) managing `IntelligenceState`.
 - **Specification Alignment**:
   - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§4 Pipeline & §12 Domain Rules)
   - `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` (§2.3 Workflow State Machine)
   - `docs/8_CORRECTED_UNIFIED_PLAN.md` (§3 Pipeline Architecture)
-- **Key Deliverables**: `backend/app/workflows/` package, node functions, state reducers, and workflow unit tests.
+- **Key Deliverables**: `backend/app/workflows/` package (state, graph, runner, 10 node modules), `backend/app/api/v1/endpoints/pipeline.py`, synthetic fallback dataset, and 17-point unit test suite.
+- **Verification**: `pytest -v` (51/51 passed), `tsc` (0 errors), `eslint` (0 errors), `next build` (compiled), `contracts/openapi.json` synchronized.
 
 ### Phase 3: Vector Search & LLM Provider Execution (Status: PLANNED)
 

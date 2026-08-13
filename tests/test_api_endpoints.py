@@ -64,3 +64,26 @@ async def test_business_endpoints():
         athena_data = res_athena.json()
         assert "answer" in athena_data
         assert athena_data["confidence"] > 0
+
+
+@pytest.mark.asyncio
+async def test_pipeline_endpoints():
+    from unittest.mock import AsyncMock
+    from app.db.session import get_db
+
+    async def mock_get_db():
+        yield None
+
+    app.dependency_overrides[get_db] = mock_get_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            res_pipe = await ac.post("/api/v1/pipeline/run", json={"batch_size": 3})
+            assert res_pipe.status_code == 200
+            data = res_pipe.json()
+            assert "pipeline_run_id" in data
+            assert data["signals_processed"] >= 1
+            assert data["role_briefs_count"] >= 1
+            assert "node_statuses" in data
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+

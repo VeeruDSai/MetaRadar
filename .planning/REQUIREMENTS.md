@@ -30,17 +30,17 @@
 
 ---
 
-## Phase 2: LangGraph 10-Node Intelligence Engine
+## Phase 2: LangGraph 10-Node Intelligence Engine (COMPLETED)
 
-- [ ] **REQ-P2-1**: Implement `IntelligenceState` TypedDict state contract with reducers.
-- [ ] **REQ-P2-2**: Build `node_ingest` and `node_validate` nodes for raw payload processing & PII scrubbing.
-- [ ] **REQ-P2-3**: Build `node_nlp_extract` and `node_ontology_enrich` nodes mapping entities against `config/haemophilia.yaml`.
-- [ ] **REQ-P2-4**: Build `node_confluence` node for 48h / ≥3 signal type alignment detection.
-- [ ] **REQ-P2-5**: Build `node_lifecycle` node executing the 9-stage asset state machine.
-- [ ] **REQ-P2-6**: Build `node_redteam` node running 19-rule pairwise contradiction checks.
-- [ ] **REQ-P2-7**: Build `node_missing_signal` node for stakeholder WATCH rule monitoring.
-- [ ] **REQ-P2-8**: Build `node_synthesize` node invoking the `ProviderFactory` (Gemma / Grok / BART) to generate Four-Question briefs.
-- [ ] **REQ-P2-9**: Build `node_calibrate` node terminating at `END` with auditable routing updates.
+- [x] **REQ-P2-1**: Implement `IntelligenceState` TypedDict state contract with reducers.
+- [x] **REQ-P2-2**: Build `node_ingest` and `node_validate` nodes for raw payload processing & PII scrubbing.
+- [x] **REQ-P2-3**: Build `node_nlp_extract` and `node_ontology_enrich` nodes mapping entities against `config/haemophilia.yaml`.
+- [x] **REQ-P2-4**: Build `node_confluence` node for 48h / ≥3 signal type alignment detection.
+- [x] **REQ-P2-5**: Build `node_lifecycle` node executing the 9-stage asset state machine.
+- [x] **REQ-P2-6**: Build `node_redteam` node running 19-rule pairwise contradiction checks.
+- [x] **REQ-P2-7**: Build `node_missing_signal` node for stakeholder WATCH rule monitoring.
+- [x] **REQ-P2-8**: Build `node_synthesize` node invoking the `ProviderFactory` (Gemma / Grok / BART) to generate Four-Question briefs.
+- [x] **REQ-P2-9**: Build `node_calibrate` node terminating at `END` with auditable routing updates.
 
 ---
 
