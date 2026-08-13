@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class ModelMetadataSchema(BaseModel):
@@ -109,7 +113,7 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     service: str = "MetaRadar API"
     version: str = "5.1.0"
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
 
 class HealthReadyResponse(BaseModel):
@@ -117,7 +121,7 @@ class HealthReadyResponse(BaseModel):
     database: bool
     redis: bool
     redis_warning: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
 
 class HealthModelsResponse(BaseModel):
@@ -143,4 +147,4 @@ class ConnectorHealthStatus(BaseModel):
 
 class HealthConnectorsResponse(BaseModel):
     connectors: List[ConnectorHealthStatus]
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
