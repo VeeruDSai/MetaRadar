@@ -1,0 +1,11 @@
+# Environment variables
+.env*.local
+
+# Node & Next.js build output
+node_modules
+.next/
+out/
+build/
+.DS_Store
+*.pem
+*.tsbuildinfo
