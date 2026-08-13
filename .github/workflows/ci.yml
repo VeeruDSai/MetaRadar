@@ -1,0 +1,33 @@
+name: MetaRadar v5.1 CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Foundation Verification Tests
+        run: |
+          python tests/test_foundation.py
+
+      - name: Verify OpenAPI to TypeScript Contract Sync
+        run: |
+          python scripts/export_openapi.py
+          git diff --exit-code frontend/src/types/api.ts || (echo "TypeScript API contract is out of sync! Run python scripts/export_openapi.py" && exit 1)

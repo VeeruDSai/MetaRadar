@@ -1,0 +1,175 @@
+domain_config_version: "v5.1.0"
+disease_area: "Haemophilia within Rare Disease"
+pilot_area: "Haemophilia A & Haemophilia B"
+
+diseases:
+  - id: "haemophilia_a"
+    name: "Haemophilia A"
+    icd10: "D66"
+    deficiency: "Factor VIII"
+    description: "X-linked recessive bleeding disorder caused by deficiency of coagulation Factor VIII."
+  - id: "haemophilia_b"
+    name: "Haemophilia B"
+    icd10: "D67"
+    deficiency: "Factor IX"
+    description: "X-linked recessive bleeding disorder caused by deficiency of coagulation Factor IX."
+
+factor_classifications:
+  - "FVIII"
+  - "FIX"
+
+inhibitor_categories:
+  - "with_inhibitors"
+  - "without_inhibitors"
+  - "all_inhibitor_statuses"
+
+patient_segments:
+  - "adult"
+  - "pediatric"
+  - "previously_treated"
+  - "previously_untreated"
+
+assets:
+  - id: "concizumab"
+    brand_name: "Alhemo"
+    generic_name: "concizumab"
+    company: "Novo Nordisk"
+    mechanism: "anti-TFPI monoclonal antibody"
+    modality: "subcutaneous monoclonal antibody"
+    indication: "Haemophilia A and B with inhibitors"
+    approval_status: "approved"
+    approval_date: "2024-12"
+    jurisdiction: "FDA"
+    is_novo_nordisk: true
+  - id: "mim8"
+    brand_name: "mim8"
+    generic_name: "mim8"
+    company: "Novo Nordisk"
+    mechanism: "FVIIIa-mimetic bispecific antibody"
+    modality: "subcutaneous bispecific antibody"
+    indication: "Haemophilia A with and without inhibitors"
+    approval_status: "in_clinical_trials"
+    jurisdiction: "Global Phase 3"
+    is_novo_nordisk: true
+  - id: "emicizumab"
+    brand_name: "Hemlibra"
+    generic_name: "emicizumab"
+    company: "Roche"
+    mechanism: "FVIIIa-mimetic bispecific antibody"
+    modality: "subcutaneous bispecific antibody"
+    indication: "Haemophilia A with and without inhibitors"
+    approval_status: "approved"
+    jurisdiction: "FDA / EMA"
+    is_novo_nordisk: false
+  - id: "etranacogene_dezaparvovec"
+    brand_name: "Hemgenix"
+    generic_name: "etranacogene dezaparvovec"
+    company: "CSL Behring"
+    mechanism: "AAV5 gene therapy expressing Factor IX-Padua"
+    modality: "single-administration AAV gene therapy"
+    indication: "Haemophilia B"
+    approval_status: "approved"
+    jurisdiction: "FDA / EMA"
+    is_novo_nordisk: false
+  - id: "valoctocogene_roxaparvovec"
+    brand_name: "Roctavian"
+    generic_name: "valoctocogene roxaparvovec"
+    company: "BioMarin"
+    mechanism: "AAV5 gene therapy expressing B-domain deleted Factor VIII"
+    modality: "single-administration AAV gene therapy"
+    indication: "Severe Haemophilia A"
+    approval_status: "approved"
+    approval_date: "2023-06"
+    jurisdiction: "FDA / EMA"
+    is_novo_nordisk: false
+  - id: "fitusiran"
+    brand_name: "Qfitlia"
+    generic_name: "fitusiran"
+    company: "Sanofi"
+    mechanism: "siRNA targeting antithrombin"
+    modality: "subcutaneous RNA interference"
+    indication: "Haemophilia A and B with and without inhibitors"
+    approval_status: "approved"
+    approval_date: "2025-03"
+    jurisdiction: "FDA"
+    is_novo_nordisk: false
+  - id: "marstacimab"
+    brand_name: "Hympavzi"
+    generic_name: "marstacimab"
+    company: "Pfizer"
+    mechanism: "anti-TFPI monoclonal antibody"
+    modality: "subcutaneous monoclonal antibody"
+    indication: "Haemophilia A and B without inhibitors (expanded 2026 to age 6+)"
+    approval_status: "approved"
+    approval_date: "2024-10"
+    jurisdiction: "FDA / EMA"
+    is_novo_nordisk: false
+
+signal_types:
+  - id: "CLINICAL_TRIAL"
+    name: "Clinical Trial Update"
+  - id: "PUBLICATIONS"
+    name: "Scientific Publication"
+  - id: "CONGRESS"
+    name: "Congress Presentation / Abstract"
+  - id: "REGULATORY"
+    name: "Regulatory Decision / Filing"
+  - id: "COMMERCIAL_PATENT"
+    name: "Commercial & Patent Activity"
+  - id: "SAFETY"
+    name: "Safety Signal / Adverse Event Communication"
+  - id: "ACCESS"
+    name: "Market Access & Reimbursement Decision"
+
+lifecycle_stages:
+  - "announced"
+  - "in_trial"
+  - "interim_result"
+  - "final_result"
+  - "congress_publication"
+  - "regulatory_development"
+  - "approved"
+  - "post_market"
+  - "discontinued"
+
+confluence:
+  emerging_threshold: 2
+  minimum_independent_signals: 3
+  time_window_hours: 48
+
+functions:
+  - id: "MEDICAL_AFFAIRS"
+    name: "Medical Affairs"
+  - id: "REGULATORY"
+    name: "Regulatory Affairs"
+  - id: "SAFETY"
+    name: "Safety / Pharmacovigilance"
+  - id: "MARKET_ACCESS"
+    name: "Market Access"
+  - id: "COMMUNICATIONS"
+    name: "Medical Communications"
+  - id: "LEADERSHIP"
+    name: "Executive Leadership"
+
+baseline_routing_matrix:
+  CLINICAL_TRIAL:
+    primary: "MEDICAL_AFFAIRS"
+    secondary: ["COMMUNICATIONS", "REGULATORY"]
+  SAFETY:
+    primary: "SAFETY"
+    secondary: ["MEDICAL_AFFAIRS", "REGULATORY"]
+  ACCESS:
+    primary: "MARKET_ACCESS"
+    secondary: ["MEDICAL_AFFAIRS"]
+  REGULATORY:
+    primary: "REGULATORY"
+    secondary: ["MEDICAL_AFFAIRS", "LEADERSHIP"]
+  CONGRESS:
+    primary: "MEDICAL_AFFAIRS"
+    secondary: ["COMMUNICATIONS", "REGULATORY"]
+  PUBLICATIONS:
+    primary: "MEDICAL_AFFAIRS"
+    secondary: ["COMMUNICATIONS"]
+  COMMERCIAL_PATENT:
+    primary: "LEADERSHIP"
+    secondary: ["MARKET_ACCESS"]

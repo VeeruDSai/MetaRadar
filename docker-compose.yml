@@ -1,0 +1,114 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: metaradar-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: metaradar
+      POSTGRES_PASSWORD: metaradar_pass
+      POSTGRES_DB: metaradar
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metaradar -d metaradar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: metaradar-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: metaradar-backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://metaradar:metaradar_pass@postgres:5432/metaradar
+      - REDIS_URL=redis://redis:6379/0
+      - LLM_PROVIDER=local
+      - LLM_DEVICE=cpu
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config:ro
+      - models_cache:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend-gpu:
+    profiles: ["gpu"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: metaradar-backend-gpu
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://metaradar:metaradar_pass@postgres:5432/metaradar
+      - REDIS_URL=redis://redis:6379/0
+      - LLM_PROVIDER=local
+      - LLM_DEVICE=cuda:0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config:ro
+      - models_cache:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: metaradar-frontend
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  redisdata:
+  models_cache:

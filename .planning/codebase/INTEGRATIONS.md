@@ -1,95 +1,73 @@
-# External Integrations
+# Integrations
 
 **Analysis Date:** 2026-08-13
 
-> **Status note:** This repository is specification-first (docs only). All integrations below are *prescribed* by the canonical spec ([`docs/METARADAR_MASTER_PLAN_v5.0.md`](docs/METARADAR_MASTER_PLAN_v5.0.md) §5) and are to be implemented with `httpx` async clients + `tenacity` retry (3 retries: 2s, 4s, 8s). No connector code exists yet.
+> **Status note:** All external data-source integrations exist only as **scaffold/planning artifacts**. The only connector code is the abstract `SourceConnector` base class ([`backend/app/connectors/base.py`](backend/app/connectors/base.py)) whose `fetch_latest()` raises `NotImplementedError`. Connector "status" currently reported is **static/hardcoded** in the health endpoint and the sources page. Database (PostgreSQL+pgvector) and Redis connections are the only *real* infrastructure integrations implemented.
 
-## APIs & External Services
+## Data Sources (External APIs)
 
-**Live data sources (MVP — 3 must be live on demo day, per SRS AC-1):**
-- **NCBI PubMed / E-utilities** — PubMed literature retrieval via NCBI E-utilities (esearch/efetch/esummary), for scientific publications, clinical evidence, trial readouts. Keyless REST. Used by `node_ingest`. **PubMed Central (PMC) APIs/services for eligible full-text content are an OPTIONAL/EXTENSION** — they are not the same endpoint as PubMed literature retrieval and are not claimed as implemented unless they are.
-- **NewsAPI** — industry news, press releases, competitor announcements. **Developer/free tier: 100 requests/day** — quota-aware connector; **development/testing use only** (NewsAPI's Developer plan is not for production/internal deployment); articles on the Developer plan have a **24-hour delay** (do NOT claim real-time). Auth: `NEWSAPI_KEY` env var. Official pricing: https://newsapi.org/pricing. If the quota is exhausted: fall back to Redis cache → bronze DB → synthetic dataset.
-- **ClinicalTrials.gov API (v2)** — trial registrations, status changes, protocol amendments. Free, keyless. (`README.md` "Data Sources")
+| Source | Status | Evidence in code | Configured via |
+|---|---|---|---|
+| NCBI PubMed / E-utilities | **Planned** | `source_id="pubmed", status="active"` hardcoded in [`backend/app/api/v1/endpoints/health.py`](backend/app/api/v1/endpoints/health.py); no connector | — (keyless) |
+| ClinicalTrials.gov (v2) | **Planned** | `source_id="clinical_trials", status="active"` hardcoded (health.py); no connector | — (keyless) |
+| NewsAPI | **Planned** | `NEWSAPI_KEY` in [`backend/app/core/config.py`](backend/app/core/config.py) + `.env.example`; `quota_remaining=100` hardcoded in health.py and `frontend/src/app/sources/page.tsx`; no connector | `NEWSAPI_KEY` |
+| FDA OpenFDA | **Planned** | `source_id="fda", status="adapter_ready", freshness_class="batch"` hardcoded (health.py); no connector | — (keyless) |
+| EMA RSS | **Planned** | `source_id="ema", status="adapter_ready"` hardcoded (health.py); no connector (no feedparser) | — |
+| Congress abstracts (ASH/ISTH/WFH/EHA) | **Planned** | `source_id="congress", status="adapter_ready"` hardcoded (health.py); no connector | — |
+| Reddit PRAW (r/hemophilia, r/raredisease) | **Planned (Master Plan only)** | **Absent from code entirely** — not in health endpoint, not in requirements, no imports | `(prescribed env, none in code)` |
+| Synthetic 500-signal dataset | **Planned** | `source_id="synthetic", status="active"` hardcoded (health.py); **no dataset file exists** in the repo | — |
 
-**Adapter-ready sources (connector scaffolds + rate limits; not claimed as fully live):**
-- **FDA openFDA API** — approvals, adverse-event communications
-- **EMA RSS** — European approval decisions, CHMP opinions
-- **Congress archives** — ASH, ISTH, WFH, EHA public abstracts
-- **Reddit (PRAW)** — patient & HCP community sentiment (`r/hemophilia`, `r/raredisease`); lowest source credibility tier, weighted accordingly
+**What feeds what (per Master Plan §5, unimplemented):** each connector would feed `node_ingest` → `RawSignalPayload` → `raw_signals_bronze` dedup → `signals`. Current code supports the *persistence half* (dedup `fingerprint` + `upsert_signal` in [`backend/app/services/deduplication.py`](backend/app/services/deduplication.py), `Signal`/`RawSignalBronze` tables in [`backend/app/models/__init__.py`](backend/app/models/__init__.py)) but has no fetch layer.
 
-**Synthetic fallback:**
-- **500-signal curated, deterministic, labelled haemophilia dataset** — offline demos, API-failure protection, rate-limit protection, reproducible testing. Flagged `is_synthetic=true`, never presented as real (`README.md` "Synthetic Fallback").
+**Sources surface (static, for reference):** `GET /api/v1/health/connectors` ([`backend/app/api/v1/endpoints/health.py`](backend/app/api/v1/endpoints/health.py)) returns hardcoded `ConnectorHealthStatus` entries; `frontend/src/app/sources/page.tsx` duplicates the same 6 cards with hardcoded text.
 
-**Optional hosted reasoning (NOT a data source):**
-- **xAI Grok API** — OPTIONAL hosted reasoning provider (Master Plan §13). Only active when `LLM_PROVIDER=xai|auto`; default `local` mode requires no external key. Every Grok call passes a mandatory **external-LLM privacy gate** — only public/synthetic prototype data may be sent; blocked content falls back to local Gemma → BART degraded → source-only. Responses use **JSON-Schema structured outputs** (https://docs.x.ai/developers/model-capabilities/text/structured-outputs) plus application-level semantic/evidence validation. Data handling: xAI does not train on API I/O without explicit permission; requests/responses are retained ~30 days (encrypted, abuse auditing) unless stricter arrangements apply (https://docs.x.ai/developers/faq/security). Auth: `XAI_API_KEY` env var. Grok is NEVER a data source — PubMed/ClinicalTrials.gov/etc. remain the pipeline inputs (Master Plan §13.4/§13.6).
+## LLM / AI Provider Integrations ("Internal Services")
 
-## Data Storage
+These are internal provider abstractions, not external data sources, but they are the only "integration-like" layer with real logic:
 
-**Databases:**
-- PostgreSQL 16 + pgvector extension — single DB for relational + 384-dim vector search (`CLAUDE.md`)
-  - Connection: `DATABASE_URL` (e.g. `postgresql://metauser:metapass@postgres:5432/metaradar`)
-  - Client: SQLAlchemy/asyncpg (prescribed by SDD `docs/3_SOFTWARE_DESIGN_DOCUMENT.md`)
-  - Key tables (planned): `signals`, `entities`, `raw_signals_bronze` (verbatim replay), `calibration_history`, WORM `audit_log` (append-only, **inspired by electronic-record traceability principles** — an engineering design analogy; MetaRadar does NOT claim 21 CFR Part 11 or GxP regulatory compliance)
+- **Local Gemma 3 4B** (`google/gemma-3-4b-it`) — **Simulated** ([`backend/app/providers/gemma.py`](backend/app/providers/gemma.py)): canned intelligence output; no model loaded. Configured via `LLM_PROVIDER=local`, `LLM_DEVICE`, `LLM_DTYPE=int4`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS`
+- **xAI Grok** (`grok-beta`) — **Simulated + real privacy gate** ([`backend/app/providers/grok.py`](backend/app/providers/grok.py)): transmission blocked unless `ENABLE_GROK_FALLBACK=true`, `XAI_API_KEY` set, and `DataClassification` ∈ {PUBLIC, SYNTHETIC}. No HTTP call made. Configured via `XAI_API_KEY`, `ENABLE_GROK_FALLBACK` (default `false`)
+- **BART degraded** (`facebook/bart-large-cnn`) — **Simulated** ([`backend/app/providers/degraded.py`](backend/app/providers/degraded.py)): naive truncation, `degraded_factual` mode, reasoning/actions explicitly disabled
+- **Fallback chain** ([`backend/app/providers/factory.py`](backend/app/providers/factory.py)): `execute_task(capability, evidence, task, classification)` → Gemma → Grok (gated) → Degraded BART; provider + mode surfaced in `ModelMetadataSchema`/`model_metadata`
+- **Contradiction analysis** — **Mocked** ([`backend/app/services/redteam.py`](backend/app/services/redteam.py)): pairwise rule-based flag (same asset, different type), in-memory cache, `rule="EVIDENCE_CONTRADICTION"`, `confidence=0.85`. Prescribed `facebook/bart-large-mnli` zero-shot NLI **not implemented**
 
-**File Storage:**
-- Local filesystem only (planned) — no object storage service
+## Internal Services / Infrastructure (Implemented)
 
-**Caching:**
-- Redis 7 — hot-signal cache (2h TTL), API rate limiting, session storage
-  - Connection: `REDIS_URL` (e.g. `redis://redis:6379`)
+**PostgreSQL 16 + pgvector** — real integration:
+- Async SQLAlchemy engine ([`backend/app/db/session.py`](backend/app/db/session.py)): `DATABASE_URL`, pool_pre_ping, advisory-lock helpers for single-execution scheduling
+- Full schema via Alembic migration [`backend/alembic/versions/001_initial_v51_schema.py`](backend/alembic/versions/001_initial_v51_schema.py) (`vector` + `pg_trgm` extensions, HNSW vector index, 17 tables, partial unique indexes on pmid/nct_id/regulatory_id/fingerprint/canonical_url)
+- Readiness check: `SELECT 1` in `GET /api/v1/health/ready`
 
-## Authentication & Identity
+**Redis 7** — partial integration:
+- Client tested in `GET /api/v1/health/ready` (`redis.asyncio`, 2s timeout, non-blocking)
+- **No caching, rate-limiting, or session code uses Redis yet** (prescribed: 2h TTL hot-signal cache)
 
-**Auth Provider:**
-- Custom lightweight auth — SDD shows an API token check raising `HTTPException(401, "Invalid credentials")` (`docs/3_SOFTWARE_DESIGN_DOCUMENT.md`); hackathon-scope, no external IdP
+## Integration Patterns
 
-**Stakeholder personas (calibration demo):**
-- Simulated personas (Medical Affairs, Regulatory, Safety/PV, Market Access, Medical Communications, Leadership) — NOT real Novo Nordisk data (`README.md` "Stakeholder Calibration")
+- **Retry:** **Not implemented** — `tenacity` is prescribed (3 retries: 2s, 4s, 8s) but absent from `backend/requirements.txt` and unused in code
+- **Auth:** env-var credentials only (`NEWSAPI_KEY`, `XAI_API_KEY`) via `pydantic-settings` ([`backend/app/core/config.py`](backend/app/core/config.py)); no API auth middleware on the FastAPI app; per-provider privacy gate for external LLM ([`backend/app/providers/grok.py`](backend/app/providers/grok.py))
+- **Cache:** schema + URL configured (`REDIS_URL`); no cache reads/writes implemented
+- **Rate limiting:** not implemented; quota is only a display field (`quota_remaining` on `Source`/`ConnectorHealthStatus`, hardcoded 100 for NewsAPI)
+- **CORS:** real middleware in [`backend/app/main.py`](backend/app/main.py) from `CORS_ORIGINS` (default `http://localhost:3000`)
+- **Health/degradation signaling:** liveness `/health`, readiness `/health/ready` (DB mandatory, Redis non-blocking), `/health/models` (provider config), `/health/connectors` (static statuses) — all in [`backend/app/api/v1/endpoints/health.py`](backend/app/api/v1/endpoints/health.py)
 
-## Monitoring & Observability
+## CI/CD & Contract Generation
 
-**Error Tracking:**
-- None prescribed (hackathon scope)
+- **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — Python 3.11, install requirements, run `tests/test_foundation.py`, verify `frontend/src/types/api.ts` stays in sync with OpenAPI via `scripts/export_openapi.py`
+- **Contract:** `contracts/openapi.json` exports 5 paths; `frontend/src/types/api.ts` is generated (hardcoded template in the script, `DO NOT EDIT DIRECTLY` header)
+- **Deployment:** docker-compose local-first only; both `backend/Dockerfile` and `frontend/Dockerfile` are **missing** (compose build is currently broken)
 
-**Logs:**
-- Application logs + per-source health status and data-freshness indicators in UI (<5min / 2h / 24h / >24h) (`docs/9_RISK_AND_GUARDRAILS.md` R5/R11)
-- WORM `audit_log` for calibration and ontology changes
+## Known Gaps
 
-## CI/CD & Deployment
-
-**Hosting:**
-- Docker Compose (local-first); services: frontend `:3000`, backend `:8000`, PostgreSQL `:5432`, Redis `:6379` (`README.md` "Running with Docker")
-
-**CI Pipeline:**
-- None yet. Gap Analysis prescribes a CI/CD pipeline with unit tests + 0-bug gate (`docs/1_GAP_ANALYSIS_AND_OPTIMIZATIONS.md` §G10 area). Not implemented.
-
-## Environment Configuration
-
-**Required env vars** (`README.md` "Configuration", `docs/2_SRS_Software_Requirements_Specification.md` §4.2):
-- `APP_ENV` — application environment
-- `DATABASE_URL` — PostgreSQL connection string
-- `REDIS_URL` — Redis connection string
-- `NEWSAPI_KEY` — NewsAPI credential (the only paid-key external *data* API)
-- `LLM_PROVIDER` — reasoning provider mode (`local` default / `xai` / `auto`)
-- `LOCAL_LLM_MODEL` / `LOCAL_LLM_TASK` — local reasoning LLM (`google/gemma-3-4b-it`, `text-generation`); `LLM_DEVICE` (GPU/cpu/auto) · `LLM_DTYPE` (int4) · `MAX_CONTEXT_TOKENS` · `MAX_OUTPUT_TOKENS` — Gemma runs Q4/int4 on the local GPU (RTX 3050, 4 GB VRAM; VRAM not guaranteed — never-crash fallback, Master Plan §14.1)
-- `XAI_API_KEY` / `XAI_MODEL` / `XAI_TIMEOUT` — optional hosted Grok (only when `LLM_PROVIDER=xai|auto`; privacy-gated)
-- `SUMMARIZER_MODEL` / `SUMMARIZER_TASK` — batch summarizer (`facebook/bart-large-cnn`, `summarization`)
-
-**Secrets location:**
-- `.env` (gitignored) — never committed; `.env.example` committed as template (`docs/9_RISK_AND_GUARDRAILS.md` R14, EV-4)
-
-## Source Freshness & Delay Notes
-
-- **NewsAPI Developer tier:** articles are delayed by up to 24 hours; the 2-hour polling schedule does NOT eliminate source-side delay. Source freshness (`published_at`, fetch timestamp) must be displayed in the UI. NewsAPI is one source among several — critical regulatory/trial information should preferably come from authoritative sources (FDA/EMA/ClinicalTrials.gov) when available.
-- **NCBI PubMed / E-utilities:** literature indexing lag applies; `source_date` reflects the publication/event date, `fetched_at` the ingestion time.
-
-## Webhooks & Callbacks
-
-**Incoming:**
-- None
-
-**Outgoing:**
-- None — the system polls public APIs on a 2-hour schedule via the single in-process APScheduler (Celery removed per `docs/METARADAR_MASTER_PLAN_v5.0.md` §14.9) rather than receiving webhooks (`docs/METARADAR_MASTER_PLAN_v5.0.md` §5)
+1. **Zero live data connectors** — PubMed, ClinicalTrials.gov, NewsAPI, OpenFDA, EMA RSS, congress, Reddit all unimplemented; `SourceConnector.fetch_latest()` raises `NotImplementedError` (base class only, [`backend/app/connectors/base.py`](backend/app/connectors/base.py))
+2. **Reddit (PRAW) entirely absent** — not even a health-status placeholder; prescribed only in the Master Plan / README
+3. **Synthetic dataset missing** — health endpoint claims the 500-signal synthetic suite is "active"; no JSON/CSV/SQL data file exists in the repo
+4. **No ingest/pipeline execution** — `pipeline_runs` table and advisory locks exist, but no scheduler (APScheduler absent) and no fetch→validate→persist code path
+5. **LLM providers simulated** — no `transformers`/model weights; Grok never makes an HTTP call; embedding generation absent (pgvector column never populated)
+6. **NewsAPI quota surface is hardcoded** — `quota_remaining=100` in health.py and the frontend sources page, not read from any live state
+7. **Dockerfiles missing** — `docker compose up --build` fails for both `backend` and `frontend` services
+8. **Retry/backoff absent** — `tenacity` not installed; external callers will have no resilience once connectors are built
+9. **No observability** — logging is stdlib `logging` only ([`backend/app/main.py`](backend/app/main.py)); no error tracking, no metrics; `audit_log` table exists in schema but nothing writes to it
 
 ---
 

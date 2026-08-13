@@ -1,0 +1,313 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MetaRadar",
+    "version": "5.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Health & Diagnostics"
+        ],
+        "summary": "Get Health",
+        "description": "Liveness check: process is alive.",
+        "operationId": "get_health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "tags": [
+          "Health & Diagnostics"
+        ],
+        "summary": "Get Health Ready",
+        "description": "Readiness check: requires DB. Redis check is non-blocking.",
+        "operationId": "get_health_ready_api_v1_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/models": {
+      "get": {
+        "tags": [
+          "Health & Diagnostics"
+        ],
+        "summary": "Get Health Models",
+        "description": "Reports provider & model initialization availability.",
+        "operationId": "get_health_models_api_v1_health_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthModelsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/connectors": {
+      "get": {
+        "tags": [
+          "Health & Diagnostics"
+        ],
+        "summary": "Get Health Connectors",
+        "description": "Reports individual connector health, last success, last error, quota status.",
+        "operationId": "get_health_connectors_api_v1_health_connectors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthConnectorsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConnectorHealthStatus": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "freshness_class": {
+            "type": "string",
+            "title": "Freshness Class"
+          },
+          "quota_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Remaining"
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "name",
+          "status",
+          "freshness_class"
+        ],
+        "title": "ConnectorHealthStatus"
+      },
+      "HealthConnectorsResponse": {
+        "properties": {
+          "connectors": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorHealthStatus"
+            },
+            "type": "array",
+            "title": "Connectors"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connectors"
+        ],
+        "title": "HealthConnectorsResponse"
+      },
+      "HealthModelsResponse": {
+        "properties": {
+          "llm_provider": {
+            "type": "string",
+            "title": "Llm Provider"
+          },
+          "gemma_available": {
+            "type": "boolean",
+            "title": "Gemma Available"
+          },
+          "grok_configured": {
+            "type": "boolean",
+            "title": "Grok Configured"
+          },
+          "grok_fallback_enabled": {
+            "type": "boolean",
+            "title": "Grok Fallback Enabled"
+          },
+          "bart_degraded_available": {
+            "type": "boolean",
+            "title": "Bart Degraded Available"
+          },
+          "embedding_model": {
+            "type": "string",
+            "title": "Embedding Model"
+          },
+          "embedding_revision": {
+            "type": "string",
+            "title": "Embedding Revision"
+          },
+          "embedding_dimension": {
+            "type": "integer",
+            "title": "Embedding Dimension"
+          }
+        },
+        "type": "object",
+        "required": [
+          "llm_provider",
+          "gemma_available",
+          "grok_configured",
+          "grok_fallback_enabled",
+          "bart_degraded_available",
+          "embedding_model",
+          "embedding_revision",
+          "embedding_dimension"
+        ],
+        "title": "HealthModelsResponse"
+      },
+      "HealthReadyResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "database": {
+            "type": "boolean",
+            "title": "Database"
+          },
+          "redis": {
+            "type": "boolean",
+            "title": "Redis"
+          },
+          "redis_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redis Warning"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "redis"
+        ],
+        "title": "HealthReadyResponse"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service",
+            "default": "MetaRadar API"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "5.1.0"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "title": "HealthResponse"
+      }
+    }
+  }
+}
