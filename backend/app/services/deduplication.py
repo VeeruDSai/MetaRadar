@@ -1,11 +1,19 @@
 import hashlib
+import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 from app.models import Signal, RawSignalBronze
 from app.core.config import settings
+
+if TYPE_CHECKING:
+    from app.connectors.base import RawSignalPayload
+
+logger = logging.getLogger(__name__)
+
+DuplicationResult = Literal["new", "duplicate"]
 
 
 def generate_fingerprint(
@@ -81,3 +89,59 @@ async def upsert_signal(
     result = await session.execute(stmt)
     await session.commit()
     return result.scalar_one()
+
+
+async def check_and_persist_bronze(
+    session: AsyncSession,
+    payload: "RawSignalPayload",
+    pipeline_run_id: Optional[Any] = None,
+) -> DuplicationResult:
+    """Attempts to insert a RawSignalBronze row (D-16/D-23/D-24).
+
+    Returns 'duplicate' (and logs the hit) on (source_id, external_id)
+    collision. Never raises on collision — the immutable original row is
+    preserved and the new payload is skipped. On success the row is written
+    with the verbatim ``payload.raw_payload`` dict and the integrity
+    ``payload.raw_hash`` (sha256 of canonical external_id + payload bytes).
+    """
+    values = {
+        "source_id": payload.source_id,
+        "external_id": payload.external_id,
+        "pipeline_run_id": pipeline_run_id,
+        "retrieved_at": payload.retrieved_at,
+        "raw_payload": _bronze_raw_payload(payload),
+        "content_hash": payload.raw_hash,
+        "connector_version": "1.0.0",
+    }
+
+    stmt = (
+        insert(RawSignalBronze)
+        .values(**values)
+        .on_conflict_do_nothing(index_elements=["source_id", "external_id"])
+        .returning(RawSignalBronze.id)
+    )
+
+    result = await session.execute(stmt)
+    await session.commit()
+
+    inserted = result.scalar_one_or_none()
+    if inserted is None:
+        logger.info(
+            "Duplicate bronze row skipped: source=%s external_id=%s",
+            payload.source_id,
+            payload.external_id,
+        )
+        return "duplicate"
+    return "new"
+
+
+def _bronze_raw_payload(payload: Any) -> Dict[str, Any]:
+    """Verbatim raw payload for bronze persistence.
+
+    Connectors attach the complete source response (or a faithful
+    JSON-encoded XML fragment for RSS/XML sources) via ``payload.raw_payload``
+    (D-23). Falls back to the canonical payload dict for legacy callers.
+    """
+    if getattr(payload, "raw_payload", None):
+        return dict(payload.raw_payload)
+    return dict(payload.model_dump()) if hasattr(payload, "model_dump") else {}
