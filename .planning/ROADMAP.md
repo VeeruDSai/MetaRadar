@@ -60,7 +60,7 @@ Phase 5: Calibration & End-to-End Verification
 - **Key Deliverables**: `backend/app/workflows/` package (state, graph, runner, 10 node modules), `backend/app/api/v1/endpoints/pipeline.py`, synthetic fallback dataset, and 17-point unit test suite.
 - **Verification**: `pytest -v` (51/51 passed), `tsc` (0 errors), `eslint` (0 errors), `next build` (compiled), `contracts/openapi.json` synchronized.
 
-### Phase 3: Vector Search & LLM Provider Execution (Status: PLANNED)
+### Phase 3: Vector Search & LLM Provider Execution (Status: IN PROGRESS — Plan 03 executed, verification pending)
 
 - **Goal**: Integrate 384-dim sentence-transformers embedding generation, pgvector HNSW similarity queries (`signals_embedding_hnsw`), and ProviderFactory execution (Local Gemma 3 4B -> Grok privacy-gated fallback -> BART degraded mode).
 - **Specification Alignment**:
@@ -68,6 +68,8 @@ Phase 5: Calibration & End-to-End Verification
   - `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` (§2.4 Provider Abstraction)
   - `docs/rules/DATA_AND_PRIVACY_STANDARDS.md`
 - **Key Deliverables**: Embedding service, vector query service, provider execution integration, and retrieval tests.
+- **Plan 03 (Tracer) — COMPLETE** (commits `ae657db`..`7278508`): fastembed EmbeddingService, `node_embed` (11-node pipeline), pgvector hybrid `VectorQueryService` + `POST /api/v1/search`, real Ollama-backed Gemma 3 4B, real xAI Grok client, honest `/health/models`, CLI backfill, Ollama docker-compose service. Gates: 61 passed + 1 skipped (live), 0 contract drift, compose validated.
+- **Remaining in phase**: Phase 3 VERIFICATION.md (live Ollama Gemma on GPU, live Grok with `LIVE_XAI_KEY`, pgvector search against running Postgres + HNSW index).
 
 ### Phase 4: Frontend API Integration & Real-Time Workspace (Status: PLANNED)
 
