@@ -89,7 +89,9 @@ async def node_embed(state: MetaRadarState) -> Dict[str, Any]:
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
         return {
-            "validated_signals": [],
+            # No "validated_signals" key: under the replace_list reducer an
+            # empty list would wipe all validated signals — omit the key so
+            # LangGraph leaves the channel unchanged on unexpected failure.
             "errors": errors,
             "node_statuses": {NODE_NAME: "FAILED"}
         }
