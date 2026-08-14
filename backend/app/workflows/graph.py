@@ -5,6 +5,7 @@ from app.workflows.state import MetaRadarState
 from app.workflows.nodes import (
     node_ingest,
     node_validate,
+    node_embed,
     node_nlp_extract,
     node_ontology_enrich,
     node_confluence,
@@ -20,17 +21,18 @@ logger = logging.getLogger(__name__)
 
 def build_graph():
     """
-    Assembles and compiles the canonical 10-node MetaRadar LangGraph intelligence pipeline.
+    Assembles and compiles the canonical 11-node MetaRadar LangGraph intelligence pipeline.
     Node execution order:
-      node_ingest -> node_validate -> node_nlp_extract -> node_ontology_enrich ->
+      node_ingest -> node_validate -> node_embed -> node_nlp_extract -> node_ontology_enrich ->
       node_confluence -> node_lifecycle -> node_redteam -> node_missing_signal ->
       node_synthesize -> node_calibrate -> END
     """
     graph = StateGraph(MetaRadarState)
 
-    # 1. Add all 10 Intelligence Nodes
+    # 1. Add all 11 Intelligence Nodes
     graph.add_node("node_ingest", node_ingest)
     graph.add_node("node_validate", node_validate)
+    graph.add_node("node_embed", node_embed)
     graph.add_node("node_nlp_extract", node_nlp_extract)
     graph.add_node("node_ontology_enrich", node_ontology_enrich)
     graph.add_node("node_confluence", node_confluence)
@@ -42,7 +44,8 @@ def build_graph():
 
     # 2. Wire Explicit Linear Pipeline Edges
     graph.add_edge("node_ingest", "node_validate")
-    graph.add_edge("node_validate", "node_nlp_extract")
+    graph.add_edge("node_validate", "node_embed")
+    graph.add_edge("node_embed", "node_nlp_extract")
     graph.add_edge("node_nlp_extract", "node_ontology_enrich")
     graph.add_edge("node_ontology_enrich", "node_confluence")
     graph.add_edge("node_confluence", "node_lifecycle")
@@ -56,5 +59,5 @@ def build_graph():
     graph.set_entry_point("node_ingest")
 
     compiled_graph = graph.compile()
-    logger.info("Compiled MetaRadar 10-node LangGraph Intelligence Pipeline successfully.")
+    logger.info("Compiled MetaRadar 11-node LangGraph Intelligence Pipeline successfully.")
     return compiled_graph

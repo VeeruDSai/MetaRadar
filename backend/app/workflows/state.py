@@ -10,6 +10,19 @@ def merge_dicts(a: Optional[Dict[str, Any]], b: Optional[Dict[str, Any]]) -> Dic
     return res
 
 
+def replace_list(a: Optional[List[Any]], b: Optional[List[Any]]) -> List[Any]:
+    """Replacement semantics for list channels that nodes re-emit whole.
+
+    ``node_validate`` and ``node_embed`` both RETURN the full
+    ``validated_signals`` list (validate produces it, embed enriches it in
+    place). A reducer is mandatory because LangGraph always applies the
+    channel reducer to the incoming value — with ``operator.add`` the enriched
+    list would be APPENDED to the already-validated list, duplicating every
+    signal. Replacement keeps exactly one copy of the canonical list.
+    """
+    return list(b) if b is not None else list(a or [])
+
+
 class MetaRadarState(TypedDict, total=False):
     """
     Canonical 10-node LangGraph IntelligenceState contract (D-02).
@@ -18,7 +31,7 @@ class MetaRadarState(TypedDict, total=False):
     """
     pipeline_run_id: str
     raw_signals: Annotated[List[Dict[str, Any]], operator.add]
-    validated_signals: Annotated[List[Dict[str, Any]], operator.add]
+    validated_signals: Annotated[List[Dict[str, Any]], replace_list]
     extracted_entities: Annotated[List[Dict[str, Any]], operator.add]
     ontology_entities: Annotated[List[Dict[str, Any]], operator.add]
     developments: Annotated[List[Dict[str, Any]], operator.add]
