@@ -72,6 +72,24 @@ async def test_case_c_gemma_unavailable_grok_enabled(monkeypatch):
     monkeypatch.setattr(settings, "ENABLE_GROK_FALLBACK", True)
 
     grok_provider = GrokProvider(api_key="mock-xai-key-for-test")
+
+    def grok_handler(request):
+        return Response(
+            200,
+            json={
+                "choices": [{
+                    "message": {
+                        "content": json.dumps({
+                            "what_changed": "External market development detected from 1 evidence sources.",
+                            "why_it_matters": "Pertains to competitor strategy.",
+                            "suggested_action": "Prepare scientific FAQ for Medical Affairs.",
+                        })
+                    }
+                }]
+            },
+        )
+
+    grok_provider._client = AsyncClient(transport=MockTransport(grok_handler), base_url="https://api.x.ai")
     factory = ProviderFactory()
     factory.grok = grok_provider
 
