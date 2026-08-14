@@ -58,6 +58,12 @@ async def search_signals(request: SearchRequest, db: AsyncSession = Depends(get_
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Search service unavailable: {e}",
         )
+    except Exception as e:
+        logger.exception("Search endpoint: unexpected failure")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Search service unavailable: database error",
+        )
 
     return SearchResponse(
         results=results,
