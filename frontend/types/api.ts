@@ -100,6 +100,7 @@ export interface HealthReadyResponse {
 
 export interface HealthModelsResponse {
   llm_provider: string;
+  ollama_host: string;
   gemma_available: boolean;
   grok_configured: boolean;
   grok_fallback_enabled: boolean;
@@ -107,6 +108,38 @@ export interface HealthModelsResponse {
   embedding_model: string;
   embedding_revision: string;
   embedding_dimension: number;
+}
+
+export interface SignalSearchResult {
+  signal_id: string;
+  title: string;
+  content: string;
+  signal_type: string;
+  disease: string;
+  priority: string;
+  similarity_score: number;
+  embedding_model_version?: string;
+  created_at?: string;
+}
+
+export interface SearchFilters {
+  signal_type?: string;
+  disease?: string;
+  priority?: string;
+}
+
+export interface SearchRequest {
+  query: string;
+  filters?: SearchFilters;
+  top_k?: number;
+  ef_search?: number;
+}
+
+export interface SearchResponse {
+  results: SignalSearchResult[];
+  total: number;
+  query: string;
+  ef_search_used: number;
 }
 
 export interface ConnectorHealthStatus {

@@ -55,7 +55,7 @@
           "Health & Diagnostics"
         ],
         "summary": "Get Health Models",
-        "description": "Reports provider & model initialization availability.",
+        "description": "Reports real provider & model initialization availability. No fabricated telemetry.",
         "operationId": "get_health_models_api_v1_health_models_get",
         "responses": {
           "200": {
@@ -293,6 +293,48 @@
         }
       }
     },
+    "/api/v1/search": {
+      "post": {
+        "tags": [
+          "Search & Retrieval"
+        ],
+        "summary": "Search Signals",
+        "description": "Hybrid vector search: embed query, apply filters, return Top-K signals by cosine similarity.\nRequires signals to have embeddings (NULL-embedding rows excluded).",
+        "operationId": "search_signals_api_v1_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -450,6 +492,10 @@
             "type": "string",
             "title": "Llm Provider"
           },
+          "ollama_host": {
+            "type": "string",
+            "title": "Ollama Host"
+          },
           "gemma_available": {
             "type": "boolean",
             "title": "Gemma Available"
@@ -482,6 +528,7 @@
         "type": "object",
         "required": [
           "llm_provider",
+          "ollama_host",
           "gemma_available",
           "grok_configured",
           "grok_fallback_enabled",
@@ -655,6 +702,183 @@
         ],
         "title": "PipelineRunResponseSchema"
       },
+      "SearchFilters": {
+        "properties": {
+          "signal_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Type"
+          },
+          "disease": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          }
+        },
+        "type": "object",
+        "title": "SearchFilters",
+        "description": "Optional metadata filters applied before cosine-similarity ranking.\n\nResult count is controlled exclusively by ``top_k`` on the search call."
+      },
+      "SearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchFilters"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 10
+          },
+          "ef_search": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Ef Search",
+            "default": 40
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "SearchRequest"
+      },
+      "SearchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SignalSearchResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "ef_search_used": {
+            "type": "integer",
+            "title": "Ef Search Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "total",
+          "query",
+          "ef_search_used"
+        ],
+        "title": "SearchResponse"
+      },
+      "SignalSearchResult": {
+        "properties": {
+          "signal_id": {
+            "type": "string",
+            "title": "Signal Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "signal_type": {
+            "type": "string",
+            "title": "Signal Type"
+          },
+          "disease": {
+            "type": "string",
+            "title": "Disease"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority"
+          },
+          "similarity_score": {
+            "type": "number",
+            "title": "Similarity Score"
+          },
+          "embedding_model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding Model Version"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signal_id",
+          "title",
+          "content",
+          "signal_type",
+          "disease",
+          "priority",
+          "similarity_score",
+          "embedding_model_version",
+          "created_at"
+        ],
+        "title": "SignalSearchResult"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -678,6 +902,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

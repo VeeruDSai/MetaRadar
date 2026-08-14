@@ -126,6 +126,7 @@ class HealthReadyResponse(BaseModel):
 
 class HealthModelsResponse(BaseModel):
     llm_provider: str
+    ollama_host: str
     gemma_available: bool
     grok_configured: bool
     grok_fallback_enabled: bool
