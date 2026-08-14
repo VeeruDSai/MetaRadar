@@ -79,13 +79,6 @@ services:
     volumes:
       - ./config:/app/config:ro
       - models_cache:/app/models
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,6 +116,13 @@ services:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
       interval: 15s
