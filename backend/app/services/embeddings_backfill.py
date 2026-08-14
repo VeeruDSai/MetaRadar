@@ -87,6 +87,13 @@ async def async_main(batch_size: int = 50, dry_run: bool = False) -> int:
                 f"(embedding_model_version={settings.EMBEDDING_MODEL_REVISION})"
             )
 
+            if batch_backfilled == 0:
+                logger.error(
+                    f"Backfill stalled: {len(rows)} signals remain NULL-embedding and "
+                    f"{len(rows) - batch_backfilled} failed; aborting to avoid infinite loop."
+                )
+                break
+
         return total_backfilled
     finally:
         await session.close()
