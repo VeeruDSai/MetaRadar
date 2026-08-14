@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     ENABLE_GROK_FALLBACK: bool = False
     XAI_API_KEY: Optional[str] = None
 
+    # Ollama Sidecar
+    OLLAMA_HOST: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "gemma3:4b"   # matches LOCAL_LLM_MODEL name in Ollama registry
+
     # Embedding Model Settings
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     EMBEDDING_MODEL_REVISION: str = "e4bb823e5956b6277b069d276b978c48a73507c7"

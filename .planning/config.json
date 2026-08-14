@@ -8,5 +8,9 @@
     "eslint": true,
     "next_build": true,
     "contract_sync": true
+  },
+  "model_profile": "inherit",
+  "workflow": {
+    "_auto_chain_active": false
   }
 }

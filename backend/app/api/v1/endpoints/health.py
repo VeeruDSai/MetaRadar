@@ -63,10 +63,20 @@ async def get_health_ready(db: AsyncSession = Depends(get_db)):
 
 @router.get("/models", response_model=HealthModelsResponse)
 async def get_health_models():
-    """Reports provider & model initialization availability."""
+    """Reports real provider & model initialization availability. No fabricated telemetry."""
+    from app.providers.gemma import GemmaProvider
+    provider = GemmaProvider()
+    try:
+        gemma_available = await provider.is_available()   # actual HTTP GET to Ollama /api/tags
+    finally:
+        # Close the lazily-created httpx.AsyncClient so the connection pool
+        # is not leaked on every /health/models poll.
+        if provider._client is not None:
+            await provider._client.aclose()
     return HealthModelsResponse(
         llm_provider=settings.LLM_PROVIDER,
-        gemma_available=True,  # Detected at runtime
+        ollama_host=settings.OLLAMA_HOST,
+        gemma_available=gemma_available,
         grok_configured=bool(settings.XAI_API_KEY),
         grok_fallback_enabled=settings.ENABLE_GROK_FALLBACK,
         bart_degraded_available=True,

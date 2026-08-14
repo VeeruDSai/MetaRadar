@@ -42,6 +42,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - LLM_PROVIDER=local
       - LLM_DEVICE=cpu
+      - OLLAMA_HOST=http://ollama:11434
     ports:
       - "8000:8000"
     volumes:
@@ -52,6 +53,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ollama:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
       interval: 10s
@@ -70,23 +73,19 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - LLM_PROVIDER=local
       - LLM_DEVICE=cuda:0
+      - OLLAMA_HOST=http://ollama:11434
     ports:
       - "8000:8000"
     volumes:
       - ./config:/app/config:ro
       - models_cache:/app/models
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ollama:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
       interval: 10s
@@ -106,7 +105,33 @@ services:
     depends_on:
       - backend
 
+  # Ollama sidecar -- hosts Gemma 3 4B (Q4 int4) for local LLM inference (D-09, D-10)
+  # On first run: docker exec metaradar-ollama ollama pull gemma3:4b
+  # VRAM budget: ~2.8 GB weights + KV cache fits RTX 3050 4 GB (MAX_CONTEXT_TOKENS=2048)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: metaradar-ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 volumes:
   pgdata:
   redisdata:
   models_cache:
+  ollama_models:
