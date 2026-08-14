@@ -205,3 +205,13 @@ def test_grok_blocks_without_api_key(monkeypatch):
             task="Evaluate FIX expression durability",
             classification=DataClassification.PUBLIC,
         ))
+
+
+def test_grok_generate_summary_blocked_by_privacy_gate(monkeypatch):
+    """generate_summary transmits with DataClassification.UNKNOWN, so the
+    privacy gate must block it before any payload reaches api.x.ai."""
+    monkeypatch.setattr(settings, "ENABLE_GROK_FALLBACK", True)
+    grok = GrokProvider(api_key="mock-key")
+
+    with pytest.raises(PermissionError):
+        asyncio.run(grok.generate_summary("Patient record user@site.com"))

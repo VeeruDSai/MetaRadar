@@ -69,14 +69,26 @@ class GrokProvider(LLMProvider):
         logger.warning(f"Grok execution BLOCKED by Privacy Gate. Data classification: '{classification}' rejected.")
         return False
 
-    async def _chat(self, messages: List[Dict[str, str]]) -> str:
+    async def _chat(
+        self,
+        messages: List[Dict[str, str]],
+        classification: DataClassification = DataClassification.UNKNOWN,
+    ) -> str:
         """POST /v1/chat/completions; returns the assistant content text.
+
+        Privacy gate (validate_privacy_gate) is enforced before ANY external
+        transmission: only PUBLIC / SYNTHETIC payloads may reach api.x.ai.
 
         Raises GrokUnavailableError on any API failure (auth, timeout, HTTP,
         malformed response) — never swallowed silently.
         """
         if not self.api_key:
             raise GrokUnavailableError("No XAI_API_KEY configured")
+
+        if not self.validate_privacy_gate(classification):
+            raise PermissionError(
+                f"Privacy gate rejected external API transmission for classification '{classification}'"
+            )
 
         try:
             client = self._ensure_client()
@@ -103,12 +115,17 @@ class GrokProvider(LLMProvider):
             raise GrokUnavailableError(f"Grok API call failed: {e}") from e
 
     async def generate_summary(self, text: str) -> str:
-        """Summarizes text via the Grok chat completions API."""
+        """Summarizes text via the Grok chat completions API.
+
+        Summaries of unclassified text default to DataClassification.UNKNOWN,
+        which the privacy gate blocks — callers must classify payloads as
+        PUBLIC/SYNTHETIC to transmit to api.x.ai.
+        """
         messages = [
             {"role": "system", "content": "You are a precise medical intelligence summarizer."},
             {"role": "user", "content": f"Summarize the following evidence concisely:\n\n{text}"},
         ]
-        return await self._chat(messages)
+        return await self._chat(messages, classification=DataClassification.UNKNOWN)
 
     async def generate_intelligence(
         self,
@@ -143,7 +160,7 @@ class GrokProvider(LLMProvider):
             },
         ]
 
-        raw = await self._chat(messages)
+        raw = await self._chat(messages, classification=classification)
         latency = int((time.time() - start_time) * 1000)
 
         metadata = ModelMetadataSchema(
