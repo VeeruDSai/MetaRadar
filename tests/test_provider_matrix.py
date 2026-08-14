@@ -1,6 +1,8 @@
+import json
 import pytest
 import sys
 from pathlib import Path
+from httpx import AsyncClient, MockTransport, Response
 
 base_dir = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(base_dir / "backend"))
@@ -16,6 +18,24 @@ from app.core.config import settings
 @pytest.mark.asyncio
 async def test_case_a_gemma_available():
     gemma = GemmaProvider()
+
+    def ollama_handler(request):
+        return Response(
+            200,
+            json={
+                "model": "gemma3:4b",
+                "response": json.dumps({
+                    "what_changed": "Significant haemophilia signal identified across 1 evidence excerpts.",
+                    "why_it_matters": "Directly impacts therapeutic landscape.",
+                    "primary_function": "MEDICAL_AFFAIRS",
+                    "suggested_action": "Escalate trial readout to Medical Affairs lead.",
+                }),
+                "done": True,
+            },
+        )
+
+    gemma._client = AsyncClient(transport=MockTransport(ollama_handler), base_url="http://ollama-test")
+
     result = await gemma.generate_intelligence(
         evidence=["Factor IX level stable at 35%"],
         task="Evaluate FIX expression durability",
