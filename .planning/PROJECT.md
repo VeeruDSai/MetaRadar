@@ -8,15 +8,39 @@
 
 ---
 
-## 1. Executive Summary
+## What This Is
 
-MetaRadar converts fragmented, multi-source competitive public signals (NCBI PubMed, ClinicalTrials.gov, NewsAPI, OpenFDA, EMA RSS, congress abstracts, and patient community discussions) into connected, evidence-backed developments and role-specific strategic actions for Novo Nordisk teams.
+MetaRadar is a near-real-time competitive intelligence platform that converts fragmented multi-source public signals (PubMed, ClinicalTrials.gov, NewsAPI, OpenFDA, EMA RSS, congress abstracts) into structured evidence stories, development timelines, and role-tailored strategic actions for Novo Nordisk cross-functional teams.
+
+## Core Value
+
+*"A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development."* — Transforming raw biomedical noise into calibrated strategic intelligence across Medical Affairs, Regulatory, Safety, Market Access, Comms, and Leadership.
+
+## Requirements
+
+### Validated
+- [x] Phase 0: Baseline Stabilization & Quality Governance (Next.js 16 + FastAPI 0.115 + Alembic + PII/PHI scrubber + Red-Team engine)
+- [x] Phase 2: LangGraph 10-Node Intelligence Engine (MetaRadarState + 10 workflow nodes + PipelineRunner + 51 unit/integration tests)
+
+### Active
+- [ ] Phase 3: Vector Search & LLM Provider Execution (fastembed 384-dim embeddings + pgvector HNSW cosine search + Ollama Gemma 3 4B + Grok privacy gate)
+- [ ] Phase 4: Frontend API Integration & Real-Time Workspace (Next.js App Router live REST client + portfolio momentum + confluence radar)
+- [ ] Phase 5: Calibration & End-to-End Verification (Stakeholder feedback loop + haemophilia demo story + Definition of Done audit)
+
+### Out of Scope
+- Fine-tuning local LLM weights (deferred to dedicated model training phase)
+- Multi-tenant cloud identity provider integration (scoped to local role-based simulation)
+- Autonomous internet scraper loops (all data acquired through governed API connectors and bronze staging)
+
+---
+
+## Executive Summary
 
 Instead of broadcasting unlinked news feeds to every user, MetaRadar processes external signals through a 10-node stateful workflow, identifies development timelines and evidence confluences, detects clinical contradictions, flags missing filings, and routes tailored intelligence to six target functions.
 
 ---
 
-## 2. Core Stakeholder Personas & Target Functions
+## Core Stakeholder Personas & Target Functions
 
 1. **Medical Affairs**: Focuses on clinical trial readouts, efficacy durability, biomarker expression (e.g. Factor IX/VIII levels), and congress abstracts.
 2. **Regulatory**: Tracks FDA/EMA submissions, CHMP opinions, orphan drug designations, and PDUFA target dates.
@@ -27,7 +51,7 @@ Instead of broadcasting unlinked news feeds to every user, MetaRadar processes e
 
 ---
 
-## 3. Technology Stack & Hardened Baseline
+## Technology Stack & Hardened Baseline
 
 - **Frontend**: Next.js 16.3.0 (App Router), React 19, TypeScript 5.7.3, Tailwind CSS v4 (CSS-first `@theme inline`), Framer Motion 13, Recharts 3, Base UI / shadcn "base-nova" UI primitives. Strict TypeScript (`ignoreBuildErrors: false`) and ESLint 10 flat config (`eslint.config.mjs`).
 - **Backend**: Python 3.11+, FastAPI `>=0.110.0`, Pydantic v2 (`>=2.6.0`), SQLAlchemy 2.0 async (`asyncpg`), Alembic async migration engine. PII/PHI scrubber (`PIIPHIScrubber`), Red-Team 19-rule registry (`RedTeamNLIService`), and an 18-point `pytest` test suite.
@@ -37,7 +61,7 @@ Instead of broadcasting unlinked news feeds to every user, MetaRadar processes e
 
 ---
 
-## 4. Five Core Intelligence Mechanisms
+## Five Core Intelligence Mechanisms
 
 1. **Confluence Detection**: Identifies independent multi-source alignment (≥3 signal types within 48h) confirming a strategic shift.
 2. **Signal Lifecycle Tracking**: Advances assets through a 9-stage finite state machine (Announced -> Preclinical -> Phase I -> Phase II -> Phase III -> Regulatory Submission -> Approved -> Post-Market / Discontinued).
@@ -47,7 +71,7 @@ Instead of broadcasting unlinked news feeds to every user, MetaRadar processes e
 
 ---
 
-## 5. Four-Question Decision Interface
+## Four-Question Decision Interface
 
 Every routed signal is presented via four structured decision panels:
 - **Q1: What changed?** (Factual evidence summary with source provenance)
