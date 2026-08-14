@@ -51,3 +51,8 @@ redisdata/
 
 # Scratch directory
 scratch/
+
+# Agent configuration & runtime (track rules/, ignore generated/runtime tools)
+.agents/*
+!.agents/rules/
+!.agents/rules/**
