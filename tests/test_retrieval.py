@@ -13,7 +13,6 @@ import httpx
 import numpy as np
 import pytest
 from httpx import AsyncClient, MockTransport
-from pydantic import ValidationError
 
 base_dir = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(base_dir / "backend"))
@@ -159,10 +158,12 @@ def test_node_embed_empty_state_returns_success():
 # ---------------------------------------------------------------------------
 
 def test_search_filters_pydantic():
-    with pytest.raises(ValidationError):
-        SearchFilters(limit=200)   # le=100 enforced
-    assert SearchFilters().limit == 10
-    assert SearchFilters(limit=5).limit == 5
+    filters = SearchFilters(signal_type="CLINICAL_TRIAL", disease="haemophilia_a", priority="HIGH")
+    assert filters.signal_type == "CLINICAL_TRIAL"
+    assert filters.disease == "haemophilia_a"
+    assert filters.priority == "HIGH"
+    # limit was removed from SearchFilters — top_k is the single result limit knob
+    assert "limit" not in SearchFilters.model_fields
 
 
 # ---------------------------------------------------------------------------

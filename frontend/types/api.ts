@@ -126,7 +126,6 @@ export interface SearchFilters {
   signal_type?: string;
   disease?: string;
   priority?: string;
-  limit?: number;
 }
 
 export interface SearchRequest {

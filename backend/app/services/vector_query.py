@@ -10,7 +10,7 @@ adjustable ``ef_search`` (SET LOCAL, default 40).
 import logging
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,12 +26,14 @@ class SearchError(Exception):
 
 
 class SearchFilters(BaseModel):
-    """Optional metadata filters applied before cosine-similarity ranking."""
+    """Optional metadata filters applied before cosine-similarity ranking.
+
+    Result count is controlled exclusively by ``top_k`` on the search call.
+    """
 
     signal_type: Optional[str] = None    # e.g. "CLINICAL_TRIAL"
     disease: Optional[str] = None        # e.g. "haemophilia_a"
     priority: Optional[str] = None       # e.g. "HIGH"
-    limit: int = Field(default=10, ge=1, le=100)
 
 
 class SignalSearchResult(BaseModel):

@@ -736,18 +736,11 @@
               }
             ],
             "title": "Priority"
-          },
-          "limit": {
-            "type": "integer",
-            "maximum": 100.0,
-            "minimum": 1.0,
-            "title": "Limit",
-            "default": 10
           }
         },
         "type": "object",
         "title": "SearchFilters",
-        "description": "Optional metadata filters applied before cosine-similarity ranking."
+        "description": "Optional metadata filters applied before cosine-similarity ranking.\n\nResult count is controlled exclusively by ``top_k`` on the search call."
       },
       "SearchRequest": {
         "properties": {
