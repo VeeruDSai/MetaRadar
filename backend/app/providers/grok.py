@@ -116,6 +116,12 @@ class GrokProvider(LLMProvider):
         task: str,
         classification: DataClassification = DataClassification.UNKNOWN
     ) -> Dict[str, Any]:
+        # Mocked CI path (D-16): no key configured -> GrokUnavailableError so
+        # the factory falls through to BART. Checked BEFORE the privacy gate so
+        # a missing key reads as provider unavailability, not a data violation.
+        if not self.api_key:
+            raise GrokUnavailableError("No XAI_API_KEY configured")
+
         if not self.validate_privacy_gate(classification):
             raise PermissionError(f"Privacy gate rejected external API transmission for classification '{classification}'")
 
