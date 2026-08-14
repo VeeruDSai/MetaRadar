@@ -66,7 +66,13 @@ async def get_health_models():
     """Reports real provider & model initialization availability. No fabricated telemetry."""
     from app.providers.gemma import GemmaProvider
     provider = GemmaProvider()
-    gemma_available = await provider.is_available()   # actual HTTP GET to Ollama /api/tags
+    try:
+        gemma_available = await provider.is_available()   # actual HTTP GET to Ollama /api/tags
+    finally:
+        # Close the lazily-created httpx.AsyncClient so the connection pool
+        # is not leaked on every /health/models poll.
+        if provider._client is not None:
+            await provider._client.aclose()
     return HealthModelsResponse(
         llm_provider=settings.LLM_PROVIDER,
         ollama_host=settings.OLLAMA_HOST,
