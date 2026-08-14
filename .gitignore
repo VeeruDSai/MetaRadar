@@ -56,3 +56,4 @@ scratch/
 .agents/*
 !.agents/rules/
 !.agents/rules/**
+.gsd/
