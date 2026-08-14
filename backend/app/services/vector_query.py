@@ -65,8 +65,13 @@ class VectorQueryService:
             logger.warning(f"VectorQueryService: query embedding failed: {e}")
             raise SearchError("Embedding failed for query") from e
 
-        # 2. Set HNSW ef_search for this transaction (D-08: adjustable ef_search)
-        await db.execute(text(f"SET LOCAL hnsw.ef_search = {ef_search}"))
+        # 2. Set HNSW ef_search for this transaction (D-08: adjustable ef_search).
+        # set_config(..., is_local=true) scopes the GUC to the transaction,
+        # matching the previous SET LOCAL semantics, with a bound parameter.
+        await db.execute(
+            text("SELECT set_config('hnsw.ef_search', :ef_search, true)"),
+            {"ef_search": str(ef_search)},
+        )
 
         # 3. Build the hybrid query: metadata filters + cosine similarity rank
         stmt = (
