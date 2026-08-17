@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'MetaRadar — Decision intelligence',
-  description: 'A synthetic decision intelligence workspace for the haemophilia landscape.',
+  description: 'A real-time decision intelligence workspace for the haemophilia landscape.',
   icons: {
     icon: [
       {

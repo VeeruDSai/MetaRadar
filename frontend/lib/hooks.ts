@@ -65,11 +65,13 @@ export function useLiveData<T>(
         setError(err instanceof Error ? err : new Error(String(err)))
       }
     } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false)
-        setIsRefreshing(false)
+      if (abortControllerRef.current === controller) {
+        inFlightRef.current = false
+        if (!controller.signal.aborted) {
+          setLoading(false)
+          setIsRefreshing(false)
+        }
       }
-      inFlightRef.current = false
     }
   }, [])
 

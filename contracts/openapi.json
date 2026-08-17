@@ -99,7 +99,7 @@
           "Signals & Intelligence"
         ],
         "summary": "List Signals",
-        "description": "Returns signals list with deterministic ordering and pagination total.",
+        "description": "Returns signals list with deterministic ordering, limit/offset pagination, and total count.",
         "operationId": "list_signals_api_v1_signals_get",
         "parameters": [
           {
@@ -112,6 +112,17 @@
               "minimum": 1,
               "default": 20,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
             }
           }
         ],
@@ -145,7 +156,7 @@
           "Signals & Intelligence"
         ],
         "summary": "Get Overview",
-        "description": "Returns workspace summary metrics, dynamic aggregations, and health overview.",
+        "description": "Returns workspace summary metrics, dynamic database aggregations, and measured health latency.",
         "operationId": "get_overview_api_v1_overview_get",
         "responses": {
           "200": {
@@ -167,7 +178,7 @@
           "Signals & Intelligence"
         ],
         "summary": "Query Athena",
-        "description": "Queries Athena intelligence synthesis layer.",
+        "description": "Queries Athena intelligence synthesis layer with prompt sanitization, privacy gating, and honest telemetry.",
         "operationId": "query_athena_api_v1_athena_post",
         "requestBody": {
           "content": {
@@ -386,6 +397,21 @@
           "evidence_count": {
             "type": "integer",
             "title": "Evidence Count"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "default": "reasoning"
+          },
+          "model_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelMetadataSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -655,19 +681,37 @@
             "title": "Stage"
           },
           "momentum": {
-            "type": "number",
-            "title": "Momentum",
-            "default": 0.0
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Momentum"
           },
           "confidence": {
-            "type": "number",
-            "title": "Confidence",
-            "default": 85.0
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
           },
           "last_changed": {
-            "type": "string",
-            "title": "Last Changed",
-            "default": "Recently"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Changed"
           },
           "signals": {
             "type": "integer",
@@ -683,6 +727,66 @@
         ],
         "title": "LifecycleSummarySchema"
       },
+      "ModelMetadataSchema": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "fallback_used": {
+            "type": "boolean",
+            "title": "Fallback Used",
+            "default": false
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "reasoning_available": {
+            "type": "boolean",
+            "title": "Reasoning Available",
+            "default": true
+          },
+          "actions_available": {
+            "type": "boolean",
+            "title": "Actions Available",
+            "default": true
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "mode",
+          "model"
+        ],
+        "title": "ModelMetadataSchema"
+      },
       "OverviewHealthSchema": {
         "properties": {
           "api": {
@@ -693,12 +797,12 @@
           "latency_ms": {
             "type": "integer",
             "title": "Latency Ms",
-            "default": 120
+            "default": 0
           },
           "source_count": {
             "type": "integer",
             "title": "Source Count",
-            "default": 5
+            "default": 0
           }
         },
         "type": "object",
@@ -724,9 +828,15 @@
             "default": 0
           },
           "weekly_change": {
-            "type": "string",
-            "title": "Weekly Change",
-            "default": "+0.0%"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Change"
           },
           "last_sync": {
             "type": "string",
@@ -862,6 +972,60 @@
         ],
         "title": "PipelineRunResponseSchema"
       },
+      "ScoreBreakdownSchema": {
+        "properties": {
+          "impact": {
+            "type": "number",
+            "title": "Impact"
+          },
+          "urgency": {
+            "type": "number",
+            "title": "Urgency"
+          },
+          "evidence_strength": {
+            "type": "number",
+            "title": "Evidence Strength"
+          },
+          "strategic_relevance": {
+            "type": "number",
+            "title": "Strategic Relevance"
+          },
+          "novelty": {
+            "type": "number",
+            "title": "Novelty"
+          },
+          "routing_relevance": {
+            "type": "number",
+            "title": "Routing Relevance"
+          },
+          "total_score": {
+            "type": "number",
+            "title": "Total Score"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "impact",
+          "urgency",
+          "evidence_strength",
+          "strategic_relevance",
+          "novelty",
+          "routing_relevance",
+          "total_score"
+        ],
+        "title": "ScoreBreakdownSchema"
+      },
       "SearchFilters": {
         "properties": {
           "signal_type": {
@@ -976,8 +1140,7 @@
         "properties": {
           "signals": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/SignalSchema"
             },
             "type": "array",
             "title": "Signals"
@@ -993,6 +1156,210 @@
           "total"
         ],
         "title": "SignalListResponse"
+      },
+      "SignalSchema": {
+        "properties": {
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "development_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Development Id"
+          },
+          "pipeline_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline Run Id"
+          },
+          "pmid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pmid"
+          },
+          "nct_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nct Id"
+          },
+          "regulatory_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regulatory Id"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "canonical_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Url"
+          },
+          "signal_type": {
+            "type": "string",
+            "title": "Signal Type"
+          },
+          "disease": {
+            "type": "string",
+            "title": "Disease"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Retrieved At"
+          },
+          "facts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "interpretation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interpretation"
+          },
+          "speculation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speculation"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority"
+          },
+          "score_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreBreakdownSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelMetadataSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scoring_model_version": {
+            "type": "string",
+            "title": "Scoring Model Version"
+          },
+          "scoring_config_version": {
+            "type": "string",
+            "title": "Scoring Config Version"
+          },
+          "embedding_model_version": {
+            "type": "string",
+            "title": "Embedding Model Version"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signal_id",
+          "source_id",
+          "fingerprint",
+          "signal_type",
+          "disease",
+          "title",
+          "content",
+          "published_at",
+          "retrieved_at",
+          "priority",
+          "scoring_model_version",
+          "scoring_config_version",
+          "embedding_model_version",
+          "prompt_version",
+          "created_at"
+        ],
+        "title": "SignalSchema"
       },
       "SignalSearchResult": {
         "properties": {

@@ -187,16 +187,16 @@ class LifecycleSummarySchema(BaseModel):
     id: str
     name: str
     stage: str
-    momentum: float = 0.0
-    confidence: float = 85.0
-    last_changed: str = "Recently"
+    momentum: Optional[float] = None
+    confidence: Optional[float] = None
+    last_changed: Optional[str] = None
     signals: int = 0
 
 
 class OverviewHealthSchema(BaseModel):
     api: str = "healthy"
-    latency_ms: int = 120
-    source_count: int = 5
+    latency_ms: int = 0
+    source_count: int = 0
 
 
 class OverviewResponse(BaseModel):
@@ -204,7 +204,7 @@ class OverviewResponse(BaseModel):
     monitored_assets: int
     confluences_detected: int
     contradictions_flagged: int = 0
-    weekly_change: str = "+0.0%"
+    weekly_change: Optional[str] = None
     last_sync: str
     confluence: ConfluenceSummarySchema
     lifecycle: List[LifecycleSummarySchema] = Field(default_factory=list)
@@ -213,7 +213,7 @@ class OverviewResponse(BaseModel):
 
 
 class SignalListResponse(BaseModel):
-    signals: List[Dict[str, Any]]
+    signals: List[SignalSchema]
     total: int
 
 
@@ -225,4 +225,6 @@ class AthenaQueryResponse(BaseModel):
     answer: str
     confidence: float
     evidence_count: int
+    mode: str = "reasoning"
+    model_metadata: Optional[ModelMetadataSchema] = None
 

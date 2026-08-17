@@ -88,22 +88,20 @@ export function mapSignal(raw: any): Signal {
 
   let detectedAt = 'Recent'
   if (raw.published_at) {
-    try {
-      detectedAt = new Date(raw.published_at).toLocaleDateString(undefined, {
+    const d = new Date(raw.published_at)
+    if (!isNaN(d.getTime())) {
+      detectedAt = d.toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
       })
-    } catch {
-      detectedAt = String(raw.published_at)
     }
   } else if (raw.created_at) {
-    try {
-      detectedAt = new Date(raw.created_at).toLocaleDateString(undefined, {
+    const d = new Date(raw.created_at)
+    if (!isNaN(d.getTime())) {
+      detectedAt = d.toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
       })
-    } catch {
-      detectedAt = String(raw.created_at)
     }
   }
 
@@ -113,25 +111,30 @@ export function mapSignal(raw: any): Signal {
           id: String(raw.source_id),
           name: String(raw.source_id).toUpperCase(),
           type: raw.signal_type || 'intelligence feed',
-          credibility: 90,
+          credibility: raw.score_breakdown?.evidence_strength
+            ? Math.round(raw.score_breakdown.evidence_strength * 100)
+            : 80,
           url: raw.canonical_url || undefined,
         },
       ]
     : []
 
+  const score = raw.score_breakdown?.total_score ?? raw.score ?? 0
+  const confidence = raw.confidence ?? (score > 0 ? score : 0)
+
   return {
+    ...raw,
     id: raw.signal_id ? String(raw.signal_id) : (raw.id ? String(raw.id) : 'SIG-UNKNOWN'),
     title: raw.title || 'Untitled Signal',
     summary: raw.content || raw.summary || 'No summary available',
     severity,
     status: raw.status || 'new',
-    score: raw.score_breakdown?.total_score ?? raw.score ?? 0,
-    confidence: raw.confidence ?? 85,
+    score,
+    confidence,
     detectedAt,
     tags: [raw.disease, raw.signal_type].filter(Boolean),
     sources,
     stakeholders: raw.stakeholders || {},
-    ...raw,
   }
 }
 
@@ -168,32 +171,48 @@ export async function getOverview(signal?: AbortSignal): Promise<DashboardOvervi
     monitored_assets: overviewRaw.monitored_assets ?? 0,
     confluences_detected: overviewRaw.confluences_detected ?? 0,
     contradictions_flagged: overviewRaw.contradictions_flagged ?? 0,
+    weekly_change: overviewRaw.weekly_change,
     signals: mappedSignals,
-    confluence: overviewRaw.confluence || {
-      score: 0,
-      label: 'No confluence calculated',
-      drivers: [],
-      updatedAt: 'Just now',
-    },
-    lifecycle: overviewRaw.lifecycle || [],
+    confluence: overviewRaw.confluence
+      ? {
+          score: overviewRaw.confluence.score ?? 0,
+          label: overviewRaw.confluence.label ?? 'No confluence calculated',
+          drivers: overviewRaw.confluence.drivers || [],
+          updatedAt: overviewRaw.confluence.updated_at || 'Just now',
+        }
+      : {
+          score: 0,
+          label: 'No confluence calculated',
+          drivers: [],
+          updatedAt: 'Just now',
+        },
+    lifecycle: (overviewRaw.lifecycle || []).map((l: any) => ({
+      id: String(l.id),
+      name: l.name,
+      stage: l.stage,
+      momentum: l.momentum ?? 0,
+      confidence: l.confidence ?? 0,
+      lastChanged: l.last_changed || 'Recently',
+      signals: l.signals ?? 0,
+    })),
     trends: overviewRaw.trends || [],
     health: {
       api: overviewRaw.health?.api || 'healthy',
       lastSync: overviewRaw.last_sync
         ? new Date(overviewRaw.last_sync).toLocaleTimeString()
         : new Date().toLocaleTimeString(),
-      latencyMs: overviewRaw.health?.latency_ms || 120,
-      sourceCount: overviewRaw.health?.source_count || 5,
+      latencyMs: overviewRaw.health?.latency_ms || 0,
+      sourceCount: overviewRaw.health?.source_count || 0,
     },
   }
 }
 
 /**
- * Fetches signals list.
+ * Fetches signals list with pagination support.
  */
-export async function getSignals(limit = 50, signal?: AbortSignal): Promise<Signal[]> {
+export async function getSignals(limit = 50, offset = 0, signal?: AbortSignal): Promise<Signal[]> {
   const res = await apiFetch<{ signals: any[]; total: number }>(
-    `/signals?limit=${limit}`,
+    `/signals?limit=${limit}&offset=${offset}`,
     undefined,
     signal
   )
@@ -209,7 +228,13 @@ export async function askAthena(prompt: string, signal?: AbortSignal): Promise<A
     throw new ApiError(400, 'BadRequest', 'Prompt cannot be empty.')
   }
 
-  const raw = await apiFetch<{ answer: string; confidence: number; evidence_count: number }>(
+  const raw = await apiFetch<{
+    answer: string
+    confidence: number
+    evidence_count: number
+    mode?: string
+    model_metadata?: any
+  }>(
     '/athena',
     {
       method: 'POST',
@@ -267,12 +292,12 @@ export async function getHealthModels(signal?: AbortSignal): Promise<HealthModel
   return apiFetch<HealthModelsResponse>('/health/models', undefined, signal)
 }
 
-export const getTrends = async (): Promise<TrendPoint[]> => {
-  const overview = await getOverview()
+export const getTrends = async (signal?: AbortSignal): Promise<TrendPoint[]> => {
+  const overview = await getOverview(signal)
   return overview.trends
 }
 
-export const getHealth = async (): Promise<HealthStatus> => {
-  const overview = await getOverview()
+export const getHealth = async (signal?: AbortSignal): Promise<HealthStatus> => {
+  const overview = await getOverview(signal)
   return overview.health
 }

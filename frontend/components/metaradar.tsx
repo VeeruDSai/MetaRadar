@@ -289,29 +289,55 @@ function SearchModal({
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SignalSearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort()
+    }
   }, [])
 
   useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
     if (!query.trim()) {
       setResults([])
+      setSearchError(null)
       return
     }
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     const timer = setTimeout(async () => {
       setLoading(true)
+      setSearchError(null)
       try {
-        const res = await searchSignals(query, 10)
-        setResults(res.results || [])
-      } catch {
-        setResults([])
+        const res = await searchSignals(query, 10, controller.signal)
+        if (!controller.signal.aborted) {
+          setResults(res.results || [])
+        }
+      } catch (err: any) {
+        if (!controller.signal.aborted) {
+          setResults([])
+          setSearchError(err instanceof Error ? err.message : 'Search request failed')
+        }
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
       }
     }, 280)
-    return () => clearTimeout(timer)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [query])
 
   return (
@@ -334,7 +360,12 @@ function SearchModal({
               <p>Searching 384-dim semantic index...</p>
             </div>
           )}
-          {!loading && results.length > 0 && (
+          {searchError && (
+            <div className="search-empty text-warning">
+              <p>Search unavailable: {searchError}</p>
+            </div>
+          )}
+          {!loading && !searchError && results.length > 0 && (
             results.map((r) => {
               const scorePct = Math.round(r.similarity_score * 100)
               return (
@@ -359,7 +390,7 @@ function SearchModal({
               )
             })
           )}
-          {!loading && query.trim() && results.length === 0 && (
+          {!loading && !searchError && query.trim() && results.length === 0 && (
             <div className="search-empty">
               <p>No matching signals found for &ldquo;{query}&rdquo;</p>
             </div>
@@ -541,22 +572,22 @@ export function DashboardPage() {
         <KPI
           label="Active signals"
           value={overviewData.active_signals ?? 0}
-          change={(overviewData.active_signals ?? 0) > 0 ? '+12.4%' : '+0.0%'}
+          change={overviewData.weekly_change ?? ((overviewData.active_signals ?? 0) > 0 ? '+0.0%' : '—')}
         />
         <KPI
           label="Monitored assets"
           value={overviewData.monitored_assets ?? 0}
-          change="+4"
+          change={(overviewData.monitored_assets ?? 0) > 0 ? 'active' : '—'}
         />
         <KPI
           label="Confluence index"
           value={Math.round(overviewData.confluence.score)}
-          change="+8.1%"
+          change={overviewData.confluence.score > 0 ? overviewData.confluence.label : '—'}
         />
         <KPI
           label="Source feeds"
           value={overviewData.health.sourceCount}
-          change="active"
+          change={overviewData.health.sourceCount > 0 ? 'online' : '—'}
         />
       </div>
 
@@ -607,21 +638,24 @@ export function DashboardPage() {
           <Radar score={overviewData.confluence.score} />
           <div className="driver-list">
             {overviewData.confluence.drivers.length > 0 ? (
-              overviewData.confluence.drivers.map((driver, index) => (
-                <div key={driver}>
-                  <span className="driver-number">0{index + 1}</span>
-                  <span>
-                    {[
-                      'TRIAL READOUT',
-                      'REGULATORY SIGNAL',
-                      'PUBLICATION',
-                      'PATIENT / ACCESS',
-                    ][index] ?? driver}
-                  </span>
-                  <span className="driver-line" />
-                  <small>{driver}</small>
-                </div>
-              ))
+              overviewData.confluence.drivers.map((driver, index) => {
+                const categoryMap: Record<string, string> = {
+                  'Clinical trial readouts': 'TRIAL READOUT',
+                  'Payer & regulatory filings': 'REGULATORY SIGNAL',
+                  'Trial readout velocity': 'TRIAL READOUT',
+                  'Payer language': 'PAYER / ACCESS',
+                  'Regulatory pathway': 'REGULATORY SIGNAL',
+                }
+                const category = categoryMap[driver] || 'INTELLIGENCE'
+                return (
+                  <div key={driver}>
+                    <span className="driver-number">0{index + 1}</span>
+                    <span>{category}</span>
+                    <span className="driver-line" />
+                    <small>{driver}</small>
+                  </div>
+                )
+              })
             ) : (
               <p className="muted text-center text-xs py-4">No active confluence drivers detected.</p>
             )}

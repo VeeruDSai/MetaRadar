@@ -32,7 +32,7 @@ async def test_signals_list_empty_database():
     app.dependency_overrides[get_db] = override_get_db
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            res = await ac.get("/api/v1/signals?limit=10")
+            res = await ac.get("/api/v1/signals?limit=10&offset=0")
             assert res.status_code == 200
             data = res.json()
             assert data["signals"] == []
@@ -56,14 +56,34 @@ async def test_overview_empty_database():
     # 3. confluences count = 0
     res_conf_count = MagicMock()
     res_conf_count.scalar.return_value = 0
+
+    # 4. contradictions count = 0
+    res_contra_count = MagicMock()
+    res_contra_count.scalar.return_value = 0
+
+    # 5. sources count = 0
+    res_sources_count = MagicMock()
+    res_sources_count.scalar.return_value = 0
+
+    # 6. recent signals count = 0
+    res_recent_count = MagicMock()
+    res_recent_count.scalar.return_value = 0
     
-    # 4. developments = []
+    # 7. developments = []
     mock_dev_scalars = MagicMock()
     mock_dev_scalars.all.return_value = []
     res_devs = MagicMock()
     res_devs.scalars.return_value = mock_dev_scalars
     
-    mock_db.execute.side_effect = [res_signals_count, res_assets_count, res_conf_count, res_devs]
+    mock_db.execute.side_effect = [
+        res_signals_count,
+        res_assets_count,
+        res_conf_count,
+        res_contra_count,
+        res_sources_count,
+        res_recent_count,
+        res_devs
+    ]
 
     async def override_get_db():
         yield mock_db
@@ -77,11 +97,12 @@ async def test_overview_empty_database():
             assert data["active_signals"] == 0
             assert data["monitored_assets"] == 0
             assert data["confluences_detected"] == 0
+            assert data["contradictions_flagged"] == 0
             assert "confluence" in data
             assert data["confluence"]["score"] == 0.0
             assert data["confluence"]["drivers"] == []
             assert data["lifecycle"] == []
-            assert len(data["trends"]) >= 4
+            assert data["trends"] == []
             assert data["health"]["api"] == "healthy"
     finally:
         app.dependency_overrides.pop(get_db, None)
@@ -97,6 +118,7 @@ async def test_athena_endpoint_valid_and_invalid():
         assert "answer" in data
         assert data["confidence"] > 0
         assert data["evidence_count"] >= 1
+        assert "mode" in data
 
         # Empty prompt -> 422
         res_empty = await ac.post("/api/v1/athena", json={"prompt": ""})

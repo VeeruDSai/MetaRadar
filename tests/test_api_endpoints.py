@@ -61,7 +61,7 @@ async def test_business_endpoints():
     mock_res_count.scalar.return_value = 0
     
     mock_db.execute.side_effect = [
-        mock_res_count, mock_res_count, mock_res_count, mock_res_scalars, # overview
+        mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_scalars, # overview
         mock_res_scalars, mock_res_count # signals
     ]
 

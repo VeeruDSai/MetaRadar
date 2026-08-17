@@ -218,6 +218,7 @@ export interface DashboardOverview {
   monitored_assets?: number;
   confluences_detected?: number;
   contradictions_flagged?: number;
+  weekly_change?: string;
   signals: Signal[];
   confluence: ConfluenceSummary;
   lifecycle: LifecycleSummary[];
