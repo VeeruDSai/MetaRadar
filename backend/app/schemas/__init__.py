@@ -169,3 +169,60 @@ class PipelineRunResponseSchema(BaseModel):
     errors: List[Dict[str, Any]] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=utc_now)
 
+
+class TrendPointSchema(BaseModel):
+    label: str
+    value: int
+    baseline: Optional[int] = None
+
+
+class ConfluenceSummarySchema(BaseModel):
+    score: float
+    label: str
+    drivers: List[str] = Field(default_factory=list)
+    updated_at: str
+
+
+class LifecycleSummarySchema(BaseModel):
+    id: str
+    name: str
+    stage: str
+    momentum: float = 0.0
+    confidence: float = 85.0
+    last_changed: str = "Recently"
+    signals: int = 0
+
+
+class OverviewHealthSchema(BaseModel):
+    api: str = "healthy"
+    latency_ms: int = 120
+    source_count: int = 5
+
+
+class OverviewResponse(BaseModel):
+    active_signals: int
+    monitored_assets: int
+    confluences_detected: int
+    contradictions_flagged: int = 0
+    weekly_change: str = "+0.0%"
+    last_sync: str
+    confluence: ConfluenceSummarySchema
+    lifecycle: List[LifecycleSummarySchema] = Field(default_factory=list)
+    trends: List[TrendPointSchema] = Field(default_factory=list)
+    health: OverviewHealthSchema
+
+
+class SignalListResponse(BaseModel):
+    signals: List[Dict[str, Any]]
+    total: int
+
+
+class AthenaQueryRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=500)
+
+
+class AthenaQueryResponse(BaseModel):
+    answer: str
+    confidence: float
+    evidence_count: int
+

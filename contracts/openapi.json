@@ -99,7 +99,7 @@
           "Signals & Intelligence"
         ],
         "summary": "List Signals",
-        "description": "Returns signals list.",
+        "description": "Returns signals list with deterministic ordering and pagination total.",
         "operationId": "list_signals_api_v1_signals_get",
         "parameters": [
           {
@@ -120,7 +120,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SignalListResponse"
+                }
               }
             }
           },
@@ -143,14 +145,16 @@
           "Signals & Intelligence"
         ],
         "summary": "Get Overview",
-        "description": "Returns workspace summary metrics and health overview.",
+        "description": "Returns workspace summary metrics, dynamic aggregations, and health overview.",
         "operationId": "get_overview_api_v1_overview_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewResponse"
+                }
               }
             }
           }
@@ -358,6 +362,8 @@
         "properties": {
           "prompt": {
             "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Prompt"
           }
         },
@@ -389,6 +395,36 @@
           "evidence_count"
         ],
         "title": "AthenaQueryResponse"
+      },
+      "ConfluenceSummarySchema": {
+        "properties": {
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "drivers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Drivers"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "label",
+          "updated_at"
+        ],
+        "title": "ConfluenceSummarySchema"
       },
       "ConnectorHealthStatus": {
         "properties": {
@@ -604,6 +640,130 @@
         "type": "object",
         "title": "HealthResponse"
       },
+      "LifecycleSummarySchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "momentum": {
+            "type": "number",
+            "title": "Momentum",
+            "default": 0.0
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 85.0
+          },
+          "last_changed": {
+            "type": "string",
+            "title": "Last Changed",
+            "default": "Recently"
+          },
+          "signals": {
+            "type": "integer",
+            "title": "Signals",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "stage"
+        ],
+        "title": "LifecycleSummarySchema"
+      },
+      "OverviewHealthSchema": {
+        "properties": {
+          "api": {
+            "type": "string",
+            "title": "Api",
+            "default": "healthy"
+          },
+          "latency_ms": {
+            "type": "integer",
+            "title": "Latency Ms",
+            "default": 120
+          },
+          "source_count": {
+            "type": "integer",
+            "title": "Source Count",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "title": "OverviewHealthSchema"
+      },
+      "OverviewResponse": {
+        "properties": {
+          "active_signals": {
+            "type": "integer",
+            "title": "Active Signals"
+          },
+          "monitored_assets": {
+            "type": "integer",
+            "title": "Monitored Assets"
+          },
+          "confluences_detected": {
+            "type": "integer",
+            "title": "Confluences Detected"
+          },
+          "contradictions_flagged": {
+            "type": "integer",
+            "title": "Contradictions Flagged",
+            "default": 0
+          },
+          "weekly_change": {
+            "type": "string",
+            "title": "Weekly Change",
+            "default": "+0.0%"
+          },
+          "last_sync": {
+            "type": "string",
+            "title": "Last Sync"
+          },
+          "confluence": {
+            "$ref": "#/components/schemas/ConfluenceSummarySchema"
+          },
+          "lifecycle": {
+            "items": {
+              "$ref": "#/components/schemas/LifecycleSummarySchema"
+            },
+            "type": "array",
+            "title": "Lifecycle"
+          },
+          "trends": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPointSchema"
+            },
+            "type": "array",
+            "title": "Trends"
+          },
+          "health": {
+            "$ref": "#/components/schemas/OverviewHealthSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_signals",
+          "monitored_assets",
+          "confluences_detected",
+          "last_sync",
+          "confluence",
+          "health"
+        ],
+        "title": "OverviewResponse"
+      },
       "PipelineRunRequestSchema": {
         "properties": {
           "batch_size": {
@@ -812,6 +972,28 @@
         ],
         "title": "SearchResponse"
       },
+      "SignalListResponse": {
+        "properties": {
+          "signals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Signals"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signals",
+          "total"
+        ],
+        "title": "SignalListResponse"
+      },
       "SignalSearchResult": {
         "properties": {
           "signal_id": {
@@ -879,6 +1061,35 @@
         ],
         "title": "SignalSearchResult"
       },
+      "TrendPointSchema": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "integer",
+            "title": "Value"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "TrendPointSchema"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -902,13 +1113,6 @@
           "type": {
             "type": "string",
             "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
           }
         },
         "type": "object",

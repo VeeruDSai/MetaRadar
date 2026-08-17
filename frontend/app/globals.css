@@ -33,3 +33,25 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 900px) { .signals-toolbar { grid-template-columns:1fr; }.sidebar { position:fixed; z-index:30; inset:0 auto 0 0; transform:translateX(-100%); transition:transform .2s; box-shadow:20px 0 40px #0003; }.sidebar-open { transform:translateX(0); }.sidebar-close, .menu-button { display:grid; }.menu-button { margin-right:8px; }.topbar { padding:0 18px; }.content { padding:28px 20px; }.kpi-grid { grid-template-columns:repeat(2,1fr); }.bento-grid, .intelligence-grid, .generic-grid { grid-template-columns:1fr; }.signals-panel, .trend-panel, .questions-panel { grid-column:auto; grid-row:auto; }.trend-panel { order:2; }.questions-panel { order:3; }.footer-source { display:none !important; } }
 @media (max-width: 560px) { .topbar { height:58px; }.breadcrumbs span, .search-button span, .search-button kbd { display:none; }.search-button { width:34px; justify-content:center; padding:0; }.content { padding:24px 14px; }.section-title { display:block; }.section-title .muted { text-align:left; margin-top:10px; }.kpi-grid { gap:8px; }.kpi { padding:13px; }.kpi-value strong { font-size:22px; }.kpi-value span { font-size:10px; }.panel { padding:15px; }.signal-copy > span { white-space:normal; line-height:1.35; }.signal-score { display:none; }.health-footer { padding:0 14px; justify-content:space-between; gap:5px; font-size:9px; }.synthetic-banner { align-items:start; flex-wrap:wrap; }.synthetic-banner .badge { margin-left:25px; }.ask-row { flex-direction:column; }.ask-row button { height:37px; justify-content:center; }.athena-card h2 { font-size:26px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+
+/* Phase 4 Live Real-Time & Search UI Styles */
+.degraded-banner { display: flex; align-items: center; gap: 10px; padding: 9px 18px; background: color-mix(in srgb, var(--warning) 14%, var(--panel)); border-bottom: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border)); color: var(--warning); font-size: 11px; font-weight: 500; }
+.degraded-banner svg { flex: none; }
+.search-modal-backdrop { position: fixed; inset: 0; z-index: 50; background: #03101a88; backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+.search-modal { width: min(580px, 94vw); background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 20px 60px #0004; overflow: hidden; display: flex; flex-direction: column; max-height: 70vh; }
+.search-header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.search-header svg { color: var(--signal); flex: none; }
+.search-header input { flex: 1; border: 0; background: transparent; color: var(--foreground); font-size: 14px; outline: none; }
+.search-header kbd { border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 10px; color: var(--muted-foreground); }
+.search-results { overflow-y: auto; padding: 8px 0; max-height: 480px; }
+.search-item { display: flex; flex-direction: column; gap: 4px; padding: 12px 18px; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--border); color: var(--foreground); transition: background .15s; }
+.search-item:hover { background: color-mix(in srgb, var(--signal) 8%, transparent); }
+.search-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.search-item-top strong { font-size: 13px; color: var(--foreground); }
+.search-item p { margin: 0; font-size: 11px; color: var(--muted-foreground); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.search-item-meta { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: 10px; color: var(--muted-foreground); }
+.search-empty { padding: 36px 18px; text-align: center; color: var(--muted-foreground); font-size: 12px; }
+.retry-button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: var(--signal); color: #062d30; font-weight: 600; border-radius: 6px; border: 0; font-size: 11px; margin-top: 10px; }
+.error-card { padding: 24px; border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border)); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); border-radius: var(--radius); }
+.error-card h3 { margin: 0 0 8px; color: var(--danger); font-size: 15px; }
+.error-card p { margin: 0; color: var(--muted-foreground); font-size: 12px; }
