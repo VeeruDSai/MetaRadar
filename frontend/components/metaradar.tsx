@@ -10,8 +10,10 @@ import {
   Bell,
   BookOpen,
   BrainCircuit,
+  CheckCircle2,
   ChevronRight,
   CircleHelp,
+  Eye,
   FlaskConical,
   Gauge,
   LayoutDashboard,
@@ -22,7 +24,9 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Sliders,
   Sparkles,
+  Star,
   Sun,
   Target,
   X,
@@ -30,20 +34,26 @@ import {
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
+  confirmWatchItem,
   getHealthModels,
   getHealthReady,
   getOverview,
   mapSearchResult,
+  recalibrateRole,
   searchSignals,
+  submitFeedback,
 } from '@/lib/api'
 import { useLiveData } from '@/lib/hooks'
 import type {
   AthenaResponse,
+  BeforeAfterComparison,
   DashboardOverview,
   HealthModelsResponse,
   HealthReadyResponse,
+  RecalibrateResponse,
   Signal,
   SignalSearchResult,
+  WatchRuleSuggestion,
 } from '@/types/api'
 
 const nav = [
@@ -942,6 +952,92 @@ export function SignalDrawer({
   signal: Signal
   onClose: () => void
 }) {
+  const [selectedRole, setSelectedRole] = useState<string>('REGULATORY')
+  const [relevanceRating, setRelevanceRating] = useState<number>(5)
+  const [urgencyRating, setUrgencyRating] = useState<number>(4)
+  const [actionAppropriate, setActionAppropriate] = useState<boolean>(true)
+  const [comments, setComments] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  const [isRecalibrating, setIsRecalibrating] = useState<boolean>(false)
+  const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null)
+  const [recalResult, setRecalResult] = useState<RecalibrateResponse | null>(null)
+  const [confirmedWatchId, setConfirmedWatchId] = useState<string | null>(null)
+
+  const roles = [
+    'REGULATORY',
+    'MEDICAL_AFFAIRS',
+    'SAFETY',
+    'MARKET_ACCESS',
+    'COMMUNICATIONS',
+    'LEADERSHIP',
+  ]
+
+  const isValidUuid = (val?: string): boolean =>
+    typeof val === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)
+
+  const handleFeedbackSubmit = async () => {
+    setIsSubmitting(true)
+    setFeedbackSuccess(null)
+    try {
+      const sigId = isValidUuid(signal.signal_id)
+        ? signal.signal_id!
+        : isValidUuid(signal.id)
+        ? signal.id
+        : '00000000-0000-0000-0000-000000000000'
+
+      const res = await submitFeedback({
+        signal_id: sigId,
+        stakeholder_function: selectedRole,
+        relevance_rating: relevanceRating,
+        urgency_rating: urgencyRating,
+        action_appropriate: actionAppropriate,
+        comments: comments.trim() || undefined,
+        user_id: 'enterprise_reviewer',
+      })
+      setFeedbackSuccess(
+        `Feedback recorded for ${selectedRole}. (${res.unapplied_count} unapplied items queued)`
+      )
+    } catch (err) {
+      setFeedbackSuccess('Failed to record feedback. Please check backend connection.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleRecalibrate = async () => {
+    setIsRecalibrating(true)
+    try {
+      const res = await recalibrateRole(selectedRole)
+      setRecalResult(res)
+    } catch (err) {
+      setFeedbackSuccess('Recalibration failed. Please check backend connection.')
+    } finally {
+      setIsRecalibrating(false)
+    }
+  }
+
+  const handleConfirmWatch = async (sug: WatchRuleSuggestion) => {
+    try {
+      const devId = isValidUuid(sug.development_id)
+        ? sug.development_id!
+        : isValidUuid(signal.development_id)
+        ? signal.development_id!
+        : '00000000-0000-0000-0000-000000000000'
+
+      const res = await confirmWatchItem({
+        development_id: devId,
+        trigger_event: sug.trigger_event,
+        expected_event: sug.expected_event,
+        monitoring_window_days: sug.monitoring_window_days,
+        responsible_function: sug.responsible_function,
+      })
+      setConfirmedWatchId(res.watch_id)
+    } catch (err) {
+      console.error('Failed to confirm watch item', err)
+    }
+  }
+
   return (
     <div className="drawer-backdrop" onClick={onClose}>
       <motion.aside
@@ -997,6 +1093,196 @@ export function SignalDrawer({
           <strong>{signal.confidence}%</strong>
           <span>relevance confidence</span>
         </div>
+
+        {/* Stakeholder Calibration Loop & Rating Widget (REQ-P5-1, REQ-P5-2) */}
+        <div className="calibration-widget-card">
+          <div className="widget-header">
+            <Sliders size={16} className="text-accent" />
+            <h3>Stakeholder Calibration & Feedback</h3>
+          </div>
+          <p className="muted widget-intro">
+            Rate routing relevance and trigger batch weight calibration with versioned history.
+          </p>
+
+          <div className="role-selector-bar">
+            {roles.map((role) => (
+              <button
+                key={role}
+                className={`role-pill ${selectedRole === role ? 'role-pill-active' : ''}`}
+                onClick={() => setSelectedRole(role)}
+              >
+                {role.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+
+          <div className="rating-rows">
+            <div className="rating-row">
+              <span>Relevance Rating:</span>
+              <div className="star-group">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    className={`star-btn ${relevanceRating >= star ? 'star-active' : ''}`}
+                    onClick={() => setRelevanceRating(star)}
+                    aria-label={`Rate relevance ${star} stars`}
+                  >
+                    <Star size={16} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rating-row">
+              <span>Urgency Rating:</span>
+              <div className="star-group">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    className={`star-btn ${urgencyRating >= star ? 'star-active' : ''}`}
+                    onClick={() => setUrgencyRating(star)}
+                    aria-label={`Rate urgency ${star} stars`}
+                  >
+                    <Star size={16} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={actionAppropriate}
+                onChange={(e) => setActionAppropriate(e.target.checked)}
+              />
+              <span>Action and routing are appropriate</span>
+            </label>
+
+            <textarea
+              className="feedback-comment-input"
+              rows={2}
+              placeholder="e.g. Critical durability data; watch upcoming ASH 2026 congress abstracts..."
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+            />
+
+            <div className="widget-actions">
+              <button
+                className="submit-feedback-btn"
+                onClick={handleFeedbackSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw size={14} className="spin" /> Submitting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={14} /> Submit Feedback
+                  </>
+                )}
+              </button>
+
+              <button
+                className="recalibrate-btn"
+                onClick={handleRecalibrate}
+                disabled={isRecalibrating}
+              >
+                {isRecalibrating ? (
+                  <>
+                    <RefreshCw size={14} className="spin" /> Recalibrating...
+                  </>
+                ) : (
+                  <>
+                    <Gauge size={14} /> Recalibrate Role
+                  </>
+                )}
+              </button>
+            </div>
+
+            {feedbackSuccess && (
+              <div className="feedback-toast">
+                <CheckCircle2 size={15} />
+                <span>{feedbackSuccess}</span>
+              </div>
+            )}
+          </div>
+
+          {/* BEFORE vs AFTER Calibration Comparison Readout (D-12, AC-14) */}
+          {recalResult && (
+            <div className="before-after-panel">
+              <div className="before-after-header">
+                <Sparkles size={16} />
+                <strong>Calibrated Routing (Version {recalResult.calibration_version})</strong>
+              </div>
+
+              {recalResult.comparisons.map((comp, idx) => (
+                <div className="comparison-card" key={idx}>
+                  <div className="comparison-grid">
+                    <div className="comparison-col before-col">
+                      <span className="col-label">BASELINE ROUTING</span>
+                      <div className="score-val">{Math.round(comp.baseline_relevance_score * 100)}%</div>
+                      <Badge tone="medium">Priority: {comp.baseline_priority}</Badge>
+                    </div>
+
+                    <div className="comparison-divider">→</div>
+
+                    <div className="comparison-col after-col">
+                      <span className="col-label">CALIBRATED ROUTING</span>
+                      <div className="score-val highlight">{Math.round(comp.calibrated_relevance_score * 100)}%</div>
+                      <Badge tone="critical">Priority: {comp.calibrated_priority}</Badge>
+                    </div>
+                  </div>
+
+                  {comp.confidence_uplift_pct > 0 && (
+                    <div className="uplift-banner">
+                      <Sparkles size={13} />
+                      <span>{comp.stakeholder_function} confidence uplift: +{comp.confidence_uplift_pct}% after feedback</span>
+                    </div>
+                  )}
+
+                  <p className="calibrated-action-text">
+                    {comp.calibrated_suggested_action}
+                  </p>
+                </div>
+              ))}
+
+              {/* Parsed Watch Rule Suggestions (D-08, D-09) */}
+              {recalResult.watch_rule_suggestions.length > 0 && (
+                <div className="watch-suggestions-box">
+                  <h4>
+                    <Eye size={15} /> Suggested Watch Rule
+                  </h4>
+                  {recalResult.watch_rule_suggestions.map((sug) => (
+                    <div className="watch-suggestion-card" key={sug.suggestion_id}>
+                      <p>
+                        <strong>Expected:</strong> {sug.expected_event}
+                      </p>
+                      <p className="muted text-xs">
+                        Monitoring window: {sug.monitoring_window_days} days · Function: {sug.responsible_function}
+                      </p>
+                      {confirmedWatchId ? (
+                        <div className="watch-confirmed-badge">
+                          <CheckCircle2 size={13} /> Active Watch Rule Confirmed
+                        </div>
+                      ) : (
+                        <button
+                          className="confirm-watch-btn"
+                          onClick={() => handleConfirmWatch(sug)}
+                        >
+                          Confirm & Activate Watch Rule
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <h3>Evidence & provenance</h3>
         <p className="muted evidence-note">
           Source material supporting this intelligence.

@@ -1,0 +1,57 @@
+[
+  {
+    "source_id": "pubmed",
+    "pmid": "38491023",
+    "signal_type": "PUBLICATIONS",
+    "disease": "haemophilia_b",
+    "title": "Three-Year Safety and Efficacy of Etranacogene Dezaparvovec (Hemgenix) in Severe Hemophilia B: Follow-up of the HOPE-B Trial",
+    "content": "In this 3-year follow-up of the Phase 3 HOPE-B trial, 54 adult male participants with severe or moderately severe hemophilia B received a single intravenous infusion of etranacogene dezaparvovec (Hemgenix, AAV5-Padua FIX). Mean endogenous Factor IX activity remained stable at 36.7% of normal at 36 months post-infusion. The annualized bleeding rate (ABR) for all bleeds decreased by 64% compared with the lead-in period (p < 0.001). However, 4 patients demonstrated emerging neutralizing antibody titers and transient transaminitis requiring corticosteroid tapering, with 2 patients exhibiting secondary FIX decline below 15%. Sustained durability supports long-term prophylaxis displacement, but continuous post-market surveillance remains critical.",
+    "canonical_url": "https://pubmed.ncbi.nlm.nih.gov/38491023/",
+    "published_at": "2026-03-18T08:00:00Z",
+    "facts": [
+      "54 patients evaluated over 36-month HOPE-B follow-up",
+      "Mean endogenous Factor IX activity maintained at 36.7% at Year 3",
+      "64% reduction in annualized bleeding rate vs standard prophylaxis",
+      "4 patients developed secondary neutralizing antibodies with transaminitis",
+      "2 patients experienced secondary FIX expression decline below 15%"
+    ],
+    "interpretation": "Hemgenix demonstrates multi-year FIX expression durability in haemophilia B, representing the primary competitive gene-therapy benchmark against subcutaneous non-factor alternatives.",
+    "speculation": "Long-term secondary FIX expression decline in a subset of patients may create market differentiation opportunities for high-durability subcutaneous bispecific antibodies such as mim8."
+  },
+  {
+    "source_id": "newsapi",
+    "regulatory_id": "CSL-PR-2026-03-18",
+    "signal_type": "COMMERCIAL_PATENT",
+    "disease": "haemophilia_b",
+    "title": "CSL Behring Announces Positive 3-Year HOPE-B Long-Term Follow-up for HEMGENIX® Highlighting Prophylaxis Displacement",
+    "content": "KING OF PRUSSIA, Pa. — CSL Behring today announced robust 3-year data from the pivotal HOPE-B study demonstrating sustained clinical benefit of HEMGENIX® (etranacogene dezaparvovec-drlb), the first gene therapy approved for hemophilia B. Commercial analysis reveals that over 88% of treated patients remain completely free from regular FIX prophylactic therapy at three years post-infusion, with significant reductions in healthcare utilization and overall direct medical costs. CSL Behring plans to present comprehensive health economics and outcomes research (HEOR) data at upcoming international haematology congresses.",
+    "canonical_url": "https://www.cslbehring.com/newsroom/2026/hemgenix-3-year-durability-data",
+    "published_at": "2026-03-18T16:30:00Z",
+    "facts": [
+      "CSL Behring published 3-year commercial durability analysis",
+      "88% of patients remain free from regular prophylactic factor infusions",
+      "Significant reduction in healthcare resource utilization reported",
+      "Upcoming HEOR presentation scheduled for ASH/ISTH haematology congresses"
+    ],
+    "interpretation": "Competitor messaging is accelerating toward full displacement of standard-of-care prophylaxis, directly challenging traditional factor and non-factor replacement therapies.",
+    "speculation": "CSL Behring is positioning Hemgenix to capture premium first-line market access in eligible moderate-to-severe haemophilia B cohorts before next-generation bispecifics launch."
+  },
+  {
+    "source_id": "newsapi",
+    "regulatory_id": "ASH-2026-ABS-1042",
+    "signal_type": "CONGRESS",
+    "disease": "haemophilia_b",
+    "title": "Abstract #1042: Three-Year Hemgenix Durability Analysis and Subcutaneous Bispecific Prophylaxis Benchmarking in Haemophilia",
+    "content": "SAN DIEGO — At the ASH 2026 Congress, investigators presented a multi-centre registry analysis evaluating 3-year Factor IX durability kinetics for Hemgenix (etranacogene dezaparvovec) compared against subcutaneous non-factor bispecific prophylaxis. While Hemgenix achieves durable Factor IX expression in 75-85% of recipients at 3 years, non-factor bispecifics demonstrate predictable pharmacokinetic stability across both Haemophilia A and B with and without inhibitors.",
+    "canonical_url": "https://ash.confex.com/ash/2026/webprogram/Paper1042.html",
+    "published_at": "2026-03-19T10:15:00Z",
+    "facts": [
+      "Multi-centre registry evaluated Hemgenix 3-year Factor IX durability in 320 patients",
+      "Hemgenix gene therapy durability confirmed in 75-85% of recipients at 3 years",
+      "Comparative analysis benchmarking single-dose AAV against subcutaneous prophylaxis",
+      "Predictable PK profile observed in non-factor bispecifics regardless of inhibitor status"
+    ],
+    "interpretation": "Direct comparative benchmarking between gene therapies and bispecific antibodies indicates that while gene therapy offers single-dose convenience, bispecifics offer superior predictability and broader patient eligibility.",
+    "speculation": "Novo Nordisk can leverage comparative durability predictability and absence of vector neutralizing antibodies to strengthen mim8 positioning against both Hemgenix and emicizumab."
+  }
+]

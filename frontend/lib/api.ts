@@ -1,13 +1,23 @@
 import type {
   AthenaResponse,
+  BeforeAfterComparison,
+  CalibrationWeightsResponse,
+  ConfirmWatchItemRequest,
+  ConfirmWatchItemResponse,
   DashboardOverview,
+  FeedbackSubmissionRequest,
+  FeedbackSubmissionResponse,
+  FeedbackSummaryResponse,
   HealthModelsResponse,
   HealthReadyResponse,
   HealthStatus,
+  RecalibrateResponse,
+  RoleWeight,
   SearchResponse,
   Signal,
   SignalSearchResult,
   TrendPoint,
+  WatchRuleSuggestion,
 } from '@/types/api'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -300,4 +310,73 @@ export const getTrends = async (signal?: AbortSignal): Promise<TrendPoint[]> => 
 export const getHealth = async (signal?: AbortSignal): Promise<HealthStatus> => {
   const overview = await getOverview(signal)
   return overview.health
+}
+
+/**
+ * Submits stakeholder 5-star rating and comments feedback for a signal (D-05, D-07).
+ */
+export async function submitFeedback(
+  payload: FeedbackSubmissionRequest,
+  signal?: AbortSignal
+): Promise<FeedbackSubmissionResponse> {
+  return apiFetch<FeedbackSubmissionResponse>(
+    '/feedback',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    signal
+  )
+}
+
+/**
+ * Triggers bounded batch weight recalibration and generates BEFORE/AFTER comparisons (D-01, D-02, D-03).
+ */
+export async function recalibrateRole(
+  stakeholderFunction?: string,
+  signal?: AbortSignal
+): Promise<RecalibrateResponse> {
+  const query = stakeholderFunction ? `?stakeholder_function=${encodeURIComponent(stakeholderFunction)}` : ''
+  return apiFetch<RecalibrateResponse>(
+    `/calibrate${query}`,
+    {
+      method: 'POST',
+    },
+    signal
+  )
+}
+
+/**
+ * Retrieves active calibrated weights across all stakeholder functions (D-04).
+ */
+export async function getCalibrationWeights(
+  signal?: AbortSignal
+): Promise<CalibrationWeightsResponse> {
+  return apiFetch<CalibrationWeightsResponse>('/calibration/weights', undefined, signal)
+}
+
+/**
+ * Retrieves aggregate feedback statistics and approval rates by stakeholder role.
+ */
+export async function getFeedbackSummary(
+  signal?: AbortSignal
+): Promise<FeedbackSummaryResponse> {
+  return apiFetch<FeedbackSummaryResponse>('/feedback/summary', undefined, signal)
+}
+
+/**
+ * Confirms a parsed watch rule suggestion and creates an active WatchItem (D-09, D-10).
+ */
+export async function confirmWatchItem(
+  payload: ConfirmWatchItemRequest,
+  signal?: AbortSignal
+): Promise<ConfirmWatchItemResponse> {
+  return apiFetch<ConfirmWatchItemResponse>(
+    '/watch-items/confirm',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    signal
+  )
 }
