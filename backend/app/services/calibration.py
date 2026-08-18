@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -84,7 +85,7 @@ class HeuristicWatchParser:
         matched_window = 90
 
         for kw, event_desc, window_days in KEYWORDS_MAP:
-            if kw in comment_lower:
+            if re.search(rf"\b{re.escape(kw)}\b", comment_lower):
                 matched_event = event_desc
                 matched_window = window_days
                 break
@@ -373,6 +374,17 @@ class StakeholderCalibrationService:
             base_val = float(base_scores.get(target_fn, 0.75))
             cal_val = float(calibrated_scores.get(target_fn, base_val))
 
+            # Baseline priority score (unit weights)
+            base_priority_score = round(0.6 * base_val + 0.4 * 0.8, 2)
+            if base_priority_score >= 0.75:
+                baseline_priority = "CRITICAL"
+            elif base_priority_score >= 0.50:
+                baseline_priority = "HIGH"
+            elif base_priority_score >= 0.30:
+                baseline_priority = "MEDIUM"
+            else:
+                baseline_priority = "LOW"
+
             # Calibrated priority score
             priority_score = round(0.6 * (base_val * w_imp) + 0.4 * (0.8 * w_urg), 2)
             if priority_score >= 0.75:
@@ -402,7 +414,7 @@ class StakeholderCalibrationService:
                 BeforeAfterComparisonSchema(
                     signal_id=routing.signal_id,
                     stakeholder_function=target_fn,
-                    baseline_priority="HIGH",
+                    baseline_priority=baseline_priority,
                     calibrated_priority=calibrated_priority,
                     baseline_relevance_score=base_val,
                     calibrated_relevance_score=cal_val,

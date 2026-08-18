@@ -78,6 +78,7 @@ async def test_e2e_hemgenix_durability_shift_scenario():
 
     # Step 3: Mock Persistence Database Session for Calibration
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     sig_uuid = uuid.uuid4()
     dev_uuid = uuid.uuid4()
 

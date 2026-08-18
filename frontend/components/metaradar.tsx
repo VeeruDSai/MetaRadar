@@ -972,11 +972,20 @@ export function SignalDrawer({
     'LEADERSHIP',
   ]
 
+  const isValidUuid = (val?: string): boolean =>
+    typeof val === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)
+
   const handleFeedbackSubmit = async () => {
     setIsSubmitting(true)
     setFeedbackSuccess(null)
     try {
-      const sigId = signal.signal_id || signal.id || '00000000-0000-0000-0000-000000000000'
+      const sigId = isValidUuid(signal.signal_id)
+        ? signal.signal_id!
+        : isValidUuid(signal.id)
+        ? signal.id
+        : '00000000-0000-0000-0000-000000000000'
+
       const res = await submitFeedback({
         signal_id: sigId,
         stakeholder_function: selectedRole,
@@ -1010,7 +1019,12 @@ export function SignalDrawer({
 
   const handleConfirmWatch = async (sug: WatchRuleSuggestion) => {
     try {
-      const devId = sug.development_id || signal.development_id || '00000000-0000-0000-0000-000000000000'
+      const devId = isValidUuid(sug.development_id)
+        ? sug.development_id!
+        : isValidUuid(signal.development_id)
+        ? signal.development_id!
+        : '00000000-0000-0000-0000-000000000000'
+
       const res = await confirmWatchItem({
         development_id: devId,
         trigger_event: sug.trigger_event,

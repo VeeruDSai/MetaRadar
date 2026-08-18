@@ -82,9 +82,27 @@ async def trigger_recalibration(
     Executes batch weight recalibration with bounded gradient updates (alpha=0.05, center=3.0, clamp [0.1, 2.0]),
     preserving baseline routing while generating side-by-side BEFORE/AFTER comparisons and watch-rule suggestions (D-01, D-02, D-03, D-08).
     """
+    if stakeholder_function:
+        fn_upper = stakeholder_function.strip().upper()
+        if fn_upper not in [
+            "MEDICAL_AFFAIRS",
+            "REGULATORY",
+            "SAFETY",
+            "MARKET_ACCESS",
+            "COMMUNICATIONS",
+            "LEADERSHIP",
+        ]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid stakeholder_function '{stakeholder_function}'. Allowed: MEDICAL_AFFAIRS, REGULATORY, SAFETY, MARKET_ACCESS, COMMUNICATIONS, LEADERSHIP",
+            )
+        stakeholder_function = fn_upper
+
     try:
         service = StakeholderCalibrationService(db)
         return await service.recalibrate_role(stakeholder_function)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error executing recalibration: {e}", exc_info=True)
         raise HTTPException(

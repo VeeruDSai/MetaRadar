@@ -70,6 +70,7 @@ def test_heuristic_watch_parser_matches_keywords():
 @pytest.mark.asyncio
 async def test_calibration_service_submit_feedback():
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     
     # Mock unapplied count
     res_count = MagicMock()
@@ -98,6 +99,7 @@ async def test_calibration_service_submit_feedback():
 @pytest.mark.asyncio
 async def test_calibration_service_get_weights_seeding():
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     
     # 1. Scoring weights query (returns empty -> seeds 6 functions)
     res_weights = MagicMock()
@@ -122,6 +124,7 @@ async def test_calibration_service_get_weights_seeding():
 @pytest.mark.asyncio
 async def test_calibration_service_recalibrate_role_bounded_math():
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
 
     # 1. get_weights() execution: existing rows
     now = datetime.now(timezone.utc)
@@ -200,6 +203,7 @@ async def test_calibration_service_recalibrate_role_bounded_math():
     comp = resp.comparisons[0]
     assert comp.calibrated_relevance_score == 0.97
     assert comp.baseline_relevance_score == 0.88
+    assert comp.baseline_priority == "CRITICAL"
     assert comp.confidence_uplift_pct > 0
 
     # Verify watch rule suggestions
@@ -210,6 +214,7 @@ async def test_calibration_service_recalibrate_role_bounded_math():
 @pytest.mark.asyncio
 async def test_feedback_endpoints_api():
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
 
     # Feedback submit mock
     res_count = MagicMock()
@@ -236,6 +241,17 @@ async def test_feedback_endpoints_api():
             data = res.json()
             assert data["status"] == "recorded"
 
+            # 1b. POST /api/v1/feedback with invalid role -> 422
+            invalid_payload = {
+                "signal_id": str(uuid.uuid4()),
+                "stakeholder_function": "INVALID_ROLE",
+                "relevance_rating": 5,
+                "urgency_rating": 4,
+                "action_appropriate": True,
+            }
+            res_inv = await ac.post("/api/v1/feedback", json=invalid_payload)
+            assert res_inv.status_code == 422
+
             # 2. GET /api/v1/calibration/weights
             res_weights = MagicMock()
             res_weights.scalars.return_value.all.return_value = []
@@ -247,6 +263,10 @@ async def test_feedback_endpoints_api():
             assert res_w.status_code == 200
             data_w = res_w.json()
             assert "weights" in data_w
+
+            # 2b. POST /api/v1/calibrate with invalid role query -> 400
+            res_cal_inv = await ac.post("/api/v1/calibrate?stakeholder_function=NOT_A_ROLE")
+            assert res_cal_inv.status_code == 400
 
             # 3. POST /api/v1/watch-items/confirm
             confirm_payload = {
@@ -264,3 +284,4 @@ async def test_feedback_endpoints_api():
 
     finally:
         app.dependency_overrides.pop(get_db, None)
+

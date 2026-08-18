@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 def utc_now():
@@ -237,6 +237,22 @@ class FeedbackSubmissionRequest(BaseModel):
     action_appropriate: bool = Field(..., description="Whether proposed action is appropriate")
     comments: Optional[str] = Field(None, max_length=1000)
     user_id: Optional[str] = Field("demo_user", max_length=100)
+
+    @field_validator("stakeholder_function")
+    @classmethod
+    def validate_stakeholder_function(cls, v: str) -> str:
+        v_upper = v.strip().upper()
+        allowed = {
+            "MEDICAL_AFFAIRS",
+            "REGULATORY",
+            "SAFETY",
+            "MARKET_ACCESS",
+            "COMMUNICATIONS",
+            "LEADERSHIP",
+        }
+        if v_upper not in allowed:
+            raise ValueError(f"Invalid stakeholder_function '{v}'. Allowed: {sorted(allowed)}")
+        return v_upper
 
 
 class FeedbackSubmissionResponse(BaseModel):
