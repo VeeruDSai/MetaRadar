@@ -1,0 +1,126 @@
+{
+  "version": "5.1.0",
+  "generated_at": "2026-08-18",
+  "features": [
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §2.1",
+      "feature": "Overview Dashboard (Four-Question Layout)",
+      "component": "DashboardPage",
+      "endpoint": "GET /api/v1/overview",
+      "status": "WIRED",
+      "notes": "Renders Q1-Q4 decision panels, KPI cards, trend chart, and confluence/lifecycle previews."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.1",
+      "feature": "Signals Feed & Real-Time Stream",
+      "component": "SignalsPage",
+      "endpoint": "GET /api/v1/signals",
+      "status": "WIRED",
+      "notes": "Paginated signals list with priority badges, expandable drawer, and source metadata."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §4.2",
+      "feature": "Apply Filter Control (Severity, Date, Entity, Type)",
+      "component": "FilterBar",
+      "endpoint": "GET /api/v1/signals",
+      "status": "WIRED",
+      "notes": "Inline expandable filter panel with server-side query parameter filtering."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.2",
+      "feature": "Confluence Alerts View",
+      "component": "ConfluencePage",
+      "endpoint": "GET /api/v1/confluence",
+      "status": "WIRED",
+      "notes": "Displays multi-signal confluence stories, severity, and expandable evidence chains."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.3",
+      "feature": "Lifecycle Timelines View",
+      "component": "LifecyclePage",
+      "endpoint": "GET /api/v1/lifecycles",
+      "status": "WIRED",
+      "notes": "State-machine timeline visualization across clinical/regulatory milestones."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.4",
+      "feature": "Red-Team Contradictions View",
+      "component": "RedTeamPage",
+      "endpoint": "GET /api/v1/red-team",
+      "status": "WIRED",
+      "notes": "Surfaces pairwise claim contradictions with confidence scores and red-team notes."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.5",
+      "feature": "Missing Signals View (Watch Rules)",
+      "component": "MissingSignalsPage",
+      "endpoint": "GET /api/v1/missing-signals",
+      "status": "WIRED",
+      "notes": "Overdue expected milestones with growing-confidence indicators and watch confirmation."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.6",
+      "feature": "Ask Athena Synthesis Interface",
+      "component": "IntelligencePage",
+      "endpoint": "POST /api/v1/athena",
+      "status": "WIRED",
+      "notes": "Natural language Q&A with PII/PHI scrubbing and provider reasoning/degraded mode."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.7",
+      "feature": "Developments Registry View",
+      "component": "DevelopmentsPage",
+      "endpoint": "GET /api/v1/developments",
+      "status": "WIRED",
+      "notes": "Development asset grouping, stage badges, and linked clinical signals."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.8",
+      "feature": "Functions Routing Breakdown",
+      "component": "FunctionsPage",
+      "endpoint": "GET /api/v1/feedback/summary",
+      "status": "WIRED",
+      "notes": "Role-based relevance score routing bars and top function-targeted signals."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.9",
+      "feature": "Sources Registry & Connector Health",
+      "component": "SourcesPage",
+      "endpoint": "GET /api/v1/sources",
+      "status": "WIRED",
+      "notes": "Registry of public sources with live connector statuses and freshness classes."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §4.4",
+      "feature": "Settings & Cache Clear Confirmation Modal",
+      "component": "SettingsPage",
+      "endpoint": "POST /api/v1/cache/clear",
+      "status": "WIRED",
+      "notes": "Workspace controls (dark mode, polling interval) and Redis cache flush modal."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §1.1 #11",
+      "feature": "Stakeholder Feedback Calibration Widget",
+      "component": "CalibrationWidget",
+      "endpoint": "POST /api/v1/feedback",
+      "status": "WIRED",
+      "notes": "Interactive 5-star HITL rating and batch recalibration."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.10",
+      "feature": "Narrative Briefs Generation (/briefs)",
+      "component": "BriefsPage",
+      "endpoint": "POST /api/v1/briefs/generate",
+      "status": "DEFERRED",
+      "notes": "Requires net-new complex background narrative synthesis engine; deferred to Phase 7."
+    },
+    {
+      "doc_spec": "docs/4_UI_DESIGN_DOCUMENT.md §3.11",
+      "feature": "Weekly Intelligence Digest (/digest)",
+      "component": "DigestPage",
+      "endpoint": "GET /api/v1/digest/weekly",
+      "status": "DEFERRED",
+      "notes": "Requires periodic email/PDF compiler service; deferred to Phase 7."
+    }
+  ]
+}

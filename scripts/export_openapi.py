@@ -274,7 +274,7 @@ export interface FeedbackSubmissionResponse {
   stakeholder_function: string;
   status: string;
   unapplied_count: number;
-  recalibration_triggered: bool;
+  recalibration_triggered: boolean;
 }
 
 export interface RoleWeight {
@@ -462,3 +462,4 @@ export interface SignalFilterParams {
 
 if __name__ == "__main__":
     export_contracts()
+

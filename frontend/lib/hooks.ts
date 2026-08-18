@@ -20,7 +20,8 @@ export interface LiveDataState<T> {
  */
 export function useLiveData<T>(
   fetcher: (signal?: AbortSignal) => Promise<T>,
-  intervalMs = 30000
+  intervalMs = 30000,
+  deps: any[] = []
 ): LiveDataState<T> {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -124,7 +125,8 @@ export function useLiveData<T>(
       }
       inFlightRef.current = false
     }
-  }, [executeFetch, intervalMs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [executeFetch, intervalMs, ...deps])
 
   return { data, loading, isRefreshing, error, lastUpdated, refetch }
 }
