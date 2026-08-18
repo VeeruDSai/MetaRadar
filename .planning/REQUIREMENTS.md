@@ -1,6 +1,6 @@
 # MetaRadar v5.1 — Project Requirements & Scope Matrix
 
-> **Status:** Baseline Stabilization & Governance (Phase 0) Completed & Verified. Phases 1–5 ready for execution planning.
+> **Status:** Milestone v5.1 Completed & Fully Verified across all 7 phases (Phases 0–6).
 
 ---
 
@@ -19,14 +19,14 @@
 
 ---
 
-## Phase 1: Ingestion Connectors & Data Pipeline
+## Phase 1: Ingestion Connectors & Data Pipeline (COMPLETED)
 
-- [ ] **REQ-P1-1**: Implement concrete NCBI PubMed (E-utilities) `SourceConnector` adapter with `httpx` async client and rate limiting.
-- [ ] **REQ-P1-2**: Implement concrete ClinicalTrials.gov API v2 `SourceConnector` adapter with incremental query filtering.
-- [ ] **REQ-P1-3**: Implement concrete NewsAPI `SourceConnector` adapter with developer quota handling.
-- [ ] **REQ-P1-4**: Implement concrete OpenFDA & EMA RSS feed connector adapters.
-- [ ] **REQ-P1-5**: Implement deterministic deduplication & source-independence classifier before vector embedding.
-- [ ] **REQ-P1-6**: Persist verbatim raw payloads to `raw_signals_bronze` table with content hash verification.
+- [x] **REQ-P1-1**: Implement concrete NCBI PubMed (E-utilities) `SourceConnector` adapter with `httpx` async client and rate limiting.
+- [x] **REQ-P1-2**: Implement concrete ClinicalTrials.gov API v2 `SourceConnector` adapter with incremental query filtering.
+- [x] **REQ-P1-3**: Implement concrete NewsAPI `SourceConnector` adapter with developer quota handling.
+- [x] **REQ-P1-4**: Implement concrete OpenFDA & EMA RSS feed connector adapters.
+- [x] **REQ-P1-5**: Implement deterministic deduplication & source-independence classifier before vector embedding.
+- [x] **REQ-P1-6**: Persist verbatim raw payloads to `raw_signals_bronze` table with content hash verification.
 
 ---
 
@@ -44,26 +44,36 @@
 
 ---
 
-## Phase 3: Real Vector Search & LLM Provider Execution
+## Phase 3: Real Vector Search & LLM Provider Execution (COMPLETED)
 
-- [ ] **REQ-P3-1**: Generate real 384-dimensional embeddings (`sentence-transformers/all-MiniLM-L6-v2`) for signals.
-- [ ] **REQ-P3-2**: Execute pgvector HNSW cosine similarity search (`signals.embedding`) for candidate matching.
-- [ ] **REQ-P3-3**: Wire local Gemma 3 4B inference on GPU/CPU for real text reasoning.
-- [ ] **REQ-P3-4**: Validate xAI Grok API integration with strict `validate_privacy_gate` enforcement.
-
----
-
-## Phase 4: Frontend API Integration & Real-Time Workspace
-
-- [ ] **REQ-P4-1**: Wire Next.js frontend (`frontend/lib/api.ts`) to backend REST API (`/api/v1/signals`, `/overview`, `/athena`).
-- [ ] **REQ-P4-2**: Render live signal feed with severity filtering, priority badges, and evidence drawers.
-- [ ] **REQ-P4-3**: Connect Ask Athena prompt interface to backend `/api/v1/athena` endpoint.
-- [ ] **REQ-P4-4**: Render real-time portfolio momentum charts and confluence radar visualizations.
+- [x] **REQ-P3-1**: Generate real 384-dimensional embeddings (`sentence-transformers/all-MiniLM-L6-v2`) for signals.
+- [x] **REQ-P3-2**: Execute pgvector HNSW cosine similarity search (`signals.embedding`) for candidate matching.
+- [x] **REQ-P3-3**: Wire local Gemma 3 4B inference on GPU/CPU for real text reasoning.
+- [x] **REQ-P3-4**: Validate xAI Grok API integration with strict `validate_privacy_gate` enforcement.
 
 ---
 
-## Phase 5: Calibration & End-to-End Verification
+## Phase 4: Frontend API Integration & Real-Time Workspace (COMPLETED)
 
-- [ ] **REQ-P5-1**: Implement `StakeholderCalibrationService` for rating feedback & weight adjustment.
-- [ ] **REQ-P5-2**: Execute end-to-end demo story (mim8 / emicizumab / Hemgenix durability data).
-- [ ] **REQ-P5-3**: Verify DoD matrix (all tests passing, 0 type errors, 0 lint warnings, clean build).
+- [x] **REQ-P4-1**: Wire Next.js frontend (`frontend/lib/api.ts`) to backend REST API (`/api/v1/signals`, `/overview`, `/athena`).
+- [x] **REQ-P4-2**: Render live signal feed with severity filtering, priority badges, and evidence drawers.
+- [x] **REQ-P4-3**: Connect Ask Athena prompt interface to backend `/api/v1/athena` endpoint.
+- [x] **REQ-P4-4**: Render real-time portfolio momentum charts and confluence radar visualizations.
+
+---
+
+## Phase 5: Calibration & End-to-End Verification (COMPLETED)
+
+- [x] **REQ-P5-1**: Implement `StakeholderCalibrationService` for rating feedback & weight adjustment.
+- [x] **REQ-P5-2**: Execute end-to-end demo story (mim8 / emicizumab / Hemgenix durability data).
+- [x] **REQ-P5-3**: Verify DoD matrix (all tests passing, 0 type errors, 0 lint warnings, clean build).
+
+---
+
+## Phase 6: Full Doc-to-UI Mapping, Feature Synchronization & Automation Launchers (COMPLETED)
+
+- [x] **REQ-P6-1**: Implement read-only intelligence endpoints (`/confluence`, `/lifecycles`, `/red-team`, `/missing-signals`, `/developments`, `/sources`) and server-side signal query filters (`/signals`).
+- [x] **REQ-P6-2**: Implement living `FEATURE_PARITY_MATRIX.md` generated from JSON manifest with 100% in-scope compliance.
+- [x] **REQ-P6-3**: Replace all generic placeholders with 8 dedicated Next.js intelligence & registry pages in `frontend/components/metaradar.tsx`.
+- [x] **REQ-P6-4**: Implement `FilterBar` (expandable multi-filter drawer) and `CacheClearModal` (Redis cache flush with toast feedback).
+- [x] **REQ-P6-5**: Implement automated zero-config `setup.py` and production-grade process launcher `start.py` (NO Celery - A1 compliant).
