@@ -4,7 +4,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.domain_config import get_domain_config
-from app.api.v1.endpoints import health, signals, pipeline, search, feedback
+from app.api.v1.endpoints import (
+    health,
+    signals,
+    pipeline,
+    search,
+    feedback,
+    intelligence,
+    registry,
+    cache,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,11 +58,12 @@ if settings.cors_origins_list:
 # Router Registrations
 app.include_router(health.router, prefix=f"{settings.API_V1_STR}/health", tags=["Health & Diagnostics"])
 app.include_router(signals.router, prefix=f"{settings.API_V1_STR}", tags=["Signals & Intelligence"])
+app.include_router(intelligence.router, prefix=f"{settings.API_V1_STR}", tags=["Intelligence Views"])
+app.include_router(registry.router, prefix=f"{settings.API_V1_STR}", tags=["Registry"])
+app.include_router(cache.router, prefix=f"{settings.API_V1_STR}", tags=["Cache Management"])
 app.include_router(pipeline.router, prefix=f"{settings.API_V1_STR}", tags=["Pipeline Execution"])
 app.include_router(search.router, prefix=f"{settings.API_V1_STR}/search", tags=["Search & Retrieval"])
 app.include_router(feedback.router, prefix=f"{settings.API_V1_STR}", tags=["Stakeholder Calibration & Feedback"])
-
-
 
 
 @app.get("/")

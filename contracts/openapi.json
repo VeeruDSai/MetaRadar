@@ -99,16 +99,126 @@
           "Signals & Intelligence"
         ],
         "summary": "List Signals",
-        "description": "Returns signals list with deterministic ordering, limit/offset pagination, and total count.",
+        "description": "Returns filtered signals list with deterministic ordering, limit/offset pagination, and total count.",
         "operationId": "list_signals_api_v1_signals_get",
         "parameters": [
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by priority: CRITICAL, HIGH, MEDIUM, LOW",
+              "title": "Severity"
+            },
+            "description": "Filter by priority: CRITICAL, HIGH, MEDIUM, LOW"
+          },
+          {
+            "name": "entity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search term in signal title or content",
+              "title": "Entity"
+            },
+            "description": "Search term in signal title or content"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter signals published on or after date",
+              "title": "Date From"
+            },
+            "description": "Filter signals published on or after date"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter signals published on or before date",
+              "title": "Date To"
+            },
+            "description": "Filter signals published on or before date"
+          },
+          {
+            "name": "signal_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by signal type",
+              "title": "Signal Type"
+            },
+            "description": "Filter by signal type"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by source ID",
+              "title": "Source"
+            },
+            "description": "Filter by source ID"
+          },
           {
             "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 100,
+              "maximum": 200,
               "minimum": 1,
               "default": 20,
               "title": "Limit"
@@ -207,6 +317,439 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/confluence": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Get Confluence Alerts",
+        "description": "Retrieve multi-source intelligence confluence alerts with development context.",
+        "operationId": "get_confluence_alerts_api_v1_confluence_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfluenceAlertItem"
+                  },
+                  "title": "Response Get Confluence Alerts Api V1 Confluence Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lifecycles": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Get Lifecycle Timelines",
+        "description": "Retrieve chronological lifecycle timeline events for developments and drug assets.",
+        "operationId": "get_lifecycle_timelines_api_v1_lifecycles_get",
+        "parameters": [
+          {
+            "name": "disease",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disease"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LifecycleTimelineItem"
+                  },
+                  "title": "Response Get Lifecycle Timelines Api V1 Lifecycles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/red-team": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Get Red Team Contradictions",
+        "description": "Retrieve pairwise Red-Team contradiction alerts.",
+        "operationId": "get_red_team_contradictions_api_v1_red_team_get",
+        "parameters": [
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContradictionItem"
+                  },
+                  "title": "Response Get Red Team Contradictions Api V1 Red Team Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/missing-signals": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Get Missing Signals",
+        "description": "Retrieve missing signal watch items and overdue expected events.",
+        "operationId": "get_missing_signals_api_v1_missing_signals_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MissingSignalWatchItem"
+                  },
+                  "title": "Response Get Missing Signals Api V1 Missing Signals Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/developments": {
+      "get": {
+        "tags": [
+          "Registry"
+        ],
+        "summary": "Get Developments Registry",
+        "description": "Retrieve indexed clinical/regulatory developments with asset and company details.",
+        "operationId": "get_developments_registry_api_v1_developments_get",
+        "parameters": [
+          {
+            "name": "disease",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disease"
+            }
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DevelopmentSummary"
+                  },
+                  "title": "Response Get Developments Registry Api V1 Developments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "tags": [
+          "Registry"
+        ],
+        "summary": "Get Sources Registry",
+        "description": "Retrieve registered data sources with freshness classes and live status.",
+        "operationId": "get_sources_registry_api_v1_sources_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceRegistryItem"
+                  },
+                  "type": "array",
+                  "title": "Response Get Sources Registry Api V1 Sources Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cache/clear": {
+      "post": {
+        "tags": [
+          "Cache Management"
+        ],
+        "summary": "Clear Server Cache",
+        "description": "Flush server-side Redis cache keys with graceful fallback.",
+        "operationId": "clear_server_cache_api_v1_cache_clear_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheClearResponse"
                 }
               }
             }
@@ -656,6 +1199,29 @@
         ],
         "title": "BeforeAfterComparisonSchema"
       },
+      "CacheClearResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "flushed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Flushed At"
+          },
+          "keys_cleared": {
+            "type": "integer",
+            "title": "Keys Cleared",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "CacheClearResponse"
+      },
       "CalibrationWeightsResponse": {
         "properties": {
           "version": {
@@ -739,6 +1305,61 @@
           "monitoring_window_days"
         ],
         "title": "ConfirmWatchItemResponse"
+      },
+      "ConfluenceAlertItem": {
+        "properties": {
+          "confluence_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Confluence Id"
+          },
+          "development_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Development Id"
+          },
+          "development_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Development Title"
+          },
+          "signal_count": {
+            "type": "integer",
+            "title": "Signal Count"
+          },
+          "confluence_type": {
+            "type": "string",
+            "title": "Confluence Type"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "signals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Signals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confluence_id",
+          "development_id",
+          "signal_count",
+          "confluence_type",
+          "created_at"
+        ],
+        "title": "ConfluenceAlertItem"
       },
       "ConfluenceSummarySchema": {
         "properties": {
@@ -831,6 +1452,151 @@
           "freshness_class"
         ],
         "title": "ConnectorHealthStatus"
+      },
+      "ContradictionItem": {
+        "properties": {
+          "contradiction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Contradiction Id"
+          },
+          "claim_a_id": {
+            "type": "string",
+            "title": "Claim A Id"
+          },
+          "claim_b_id": {
+            "type": "string",
+            "title": "Claim B Id"
+          },
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "rule_name": {
+            "type": "string",
+            "title": "Rule Name"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Detected At"
+          },
+          "claim_a_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim A Excerpt"
+          },
+          "claim_b_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim B Excerpt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contradiction_id",
+          "claim_a_id",
+          "claim_b_id",
+          "rule_id",
+          "rule_name",
+          "severity",
+          "confidence",
+          "description",
+          "detected_at"
+        ],
+        "title": "ContradictionItem"
+      },
+      "DevelopmentSummary": {
+        "properties": {
+          "development_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Development Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "disease": {
+            "type": "string",
+            "title": "Disease"
+          },
+          "current_stage": {
+            "type": "string",
+            "title": "Current Stage"
+          },
+          "asset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Name"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "signal_count": {
+            "type": "integer",
+            "title": "Signal Count",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "development_id",
+          "title",
+          "disease",
+          "current_stage",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DevelopmentSummary"
       },
       "FeedbackRoleSummarySchema": {
         "properties": {
@@ -1204,6 +1970,141 @@
           "stage"
         ],
         "title": "LifecycleSummarySchema"
+      },
+      "LifecycleTimelineItem": {
+        "properties": {
+          "lifecycle_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Lifecycle Id"
+          },
+          "development_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Development Id"
+          },
+          "development_title": {
+            "type": "string",
+            "title": "Development Title"
+          },
+          "disease": {
+            "type": "string",
+            "title": "Disease"
+          },
+          "asset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Name"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "event_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Event Date"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lifecycle_id",
+          "development_id",
+          "development_title",
+          "disease",
+          "stage",
+          "event_date"
+        ],
+        "title": "LifecycleTimelineItem"
+      },
+      "MissingSignalWatchItem": {
+        "properties": {
+          "watch_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Watch Id"
+          },
+          "development_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Development Id"
+          },
+          "development_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Development Title"
+          },
+          "trigger_event": {
+            "type": "string",
+            "title": "Trigger Event"
+          },
+          "expected_event": {
+            "type": "string",
+            "title": "Expected Event"
+          },
+          "monitoring_window_days": {
+            "type": "integer",
+            "title": "Monitoring Window Days"
+          },
+          "responsible_function": {
+            "type": "string",
+            "title": "Responsible Function"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 0.5
+          },
+          "days_overdue": {
+            "type": "integer",
+            "title": "Days Overdue",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watch_id",
+          "development_id",
+          "trigger_event",
+          "expected_event",
+          "monitoring_window_days",
+          "responsible_function",
+          "status",
+          "created_at"
+        ],
+        "title": "MissingSignalWatchItem"
       },
       "ModelMetadataSchema": {
         "properties": {
@@ -1995,6 +2896,73 @@
         ],
         "title": "SignalSearchResult"
       },
+      "SourceRegistryItem": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "freshness_class": {
+            "type": "string",
+            "title": "Freshness Class"
+          },
+          "syndication_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Syndication Group"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "quota_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Remaining"
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success"
+          },
+          "connector_status": {
+            "type": "string",
+            "title": "Connector Status",
+            "default": "LIVE"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "name",
+          "freshness_class",
+          "status"
+        ],
+        "title": "SourceRegistryItem"
+      },
       "TrendPointSchema": {
         "properties": {
           "label": {
@@ -2047,6 +3015,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

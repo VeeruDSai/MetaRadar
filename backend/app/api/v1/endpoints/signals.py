@@ -1,9 +1,9 @@
 import time
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, distinct
+from sqlalchemy import select, func, distinct, or_
 
 from app.db.session import get_db
 from app.models import Signal, Asset, Confluence, Development, Contradiction
@@ -75,22 +75,57 @@ def _serialize_signal(s: Signal) -> SignalSchema:
 
 @router.get("/signals", response_model=SignalListResponse)
 async def list_signals(
-    limit: int = Query(20, ge=1, le=100),
+    severity: Optional[str] = Query(None, description="Filter by priority: CRITICAL, HIGH, MEDIUM, LOW"),
+    entity: Optional[str] = Query(None, description="Search term in signal title or content"),
+    date_from: Optional[datetime] = Query(None, description="Filter signals published on or after date"),
+    date_to: Optional[datetime] = Query(None, description="Filter signals published on or before date"),
+    signal_type: Optional[str] = Query(None, description="Filter by signal type"),
+    source: Optional[str] = Query(None, description="Filter by source ID"),
+    limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
-    """Returns signals list with deterministic ordering, limit/offset pagination, and total count."""
-    stmt = (
-        select(Signal)
-        .order_by(Signal.published_at.desc().nullslast(), Signal.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
-    result = await db.execute(stmt)
+    """Returns filtered signals list with deterministic ordering, limit/offset pagination, and total count."""
+    query = select(Signal)
+    count_query = select(func.count(Signal.signal_id))
+
+    if severity:
+        sev_list = [s.strip().upper() for s in severity.split(",") if s.strip()]
+        if len(sev_list) == 1:
+            query = query.where(Signal.priority == sev_list[0])
+            count_query = count_query.where(Signal.priority == sev_list[0])
+        elif len(sev_list) > 1:
+            query = query.where(Signal.priority.in_(sev_list))
+            count_query = count_query.where(Signal.priority.in_(sev_list))
+
+    if entity:
+        term = f"%{entity.strip()}%"
+        entity_cond = or_(Signal.title.ilike(term), Signal.content.ilike(term))
+        query = query.where(entity_cond)
+        count_query = count_query.where(entity_cond)
+
+    if signal_type:
+        query = query.where(Signal.signal_type == signal_type.strip())
+        count_query = count_query.where(Signal.signal_type == signal_type.strip())
+
+    if source:
+        query = query.where(Signal.source_id == source.strip())
+        count_query = count_query.where(Signal.source_id == source.strip())
+
+    if date_from:
+        query = query.where(Signal.published_at >= date_from)
+        count_query = count_query.where(Signal.published_at >= date_from)
+
+    if date_to:
+        query = query.where(Signal.published_at <= date_to)
+        count_query = count_query.where(Signal.published_at <= date_to)
+
+    query = query.order_by(Signal.published_at.desc().nullslast(), Signal.created_at.desc()).offset(offset).limit(limit)
+
+    result = await db.execute(query)
     signals = result.scalars().all()
 
-    total_stmt = select(func.count(Signal.signal_id))
-    total_res = await db.execute(total_stmt)
+    total_res = await db.execute(count_query)
     total = total_res.scalar() or 0
 
     return SignalListResponse(
@@ -180,7 +215,6 @@ async def get_overview(db: AsyncSession = Depends(get_db)):
     # 5. Honest time-bucketed trend points (empty when no signals exist)
     trends: List[TrendPointSchema] = []
     if active_signals > 0:
-        # Generate monthly aggregation points
         trends = [
             TrendPointSchema(label="Current", value=active_signals, baseline=None),
             TrendPointSchema(label="7d Recent", value=recent_signals, baseline=None),

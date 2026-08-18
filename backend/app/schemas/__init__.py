@@ -3,9 +3,26 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.intelligence import (
+    ConfluenceAlertItem,
+    LifecycleTimelineItem,
+    ContradictionItem,
+    MissingSignalWatchItem,
+)
+from app.schemas.registry import (
+    DevelopmentSummary,
+    SourceRegistryItem,
+)
+
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+class CacheClearResponse(BaseModel):
+    status: str
+    flushed_at: datetime = Field(default_factory=utc_now)
+    keys_cleared: int = 0
 
 
 class ModelMetadataSchema(BaseModel):
@@ -335,5 +352,3 @@ class ConfirmWatchItemResponse(BaseModel):
     status: str
     responsible_function: str
     monitoring_window_days: int
-
-
