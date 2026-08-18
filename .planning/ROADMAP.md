@@ -24,7 +24,10 @@ Phase 4: Frontend API Integration & Real-Time Workspace
    │ └── Aligned with: UI Design Doc §4, Master Plan §3, & Hardening Report §6
    ▼
 Phase 5: Calibration & End-to-End Verification
-     └── Aligned with: Master Plan §3 & §12, SRS §3.5, & Definition of Done
+   │ └── Aligned with: Master Plan §3 & §12, SRS §3.5, & Definition of Done
+   ▼
+Phase 6: Full Doc-to-UI Mapping, Feature Synchronization & Automation Launchers
+     └── Aligned with: docs/4_UI_DESIGN_DOCUMENT.md, docs/10_ARCHITECTURE_HARDENING_REPORT.md, setup/start automation
 ```
 
 ---
@@ -71,14 +74,19 @@ Phase 5: Calibration & End-to-End Verification
 - **Plan 03 (Tracer) — COMPLETE** (commits `ae657db`..`7278508`): fastembed EmbeddingService, `node_embed` (11-node pipeline), pgvector hybrid `VectorQueryService` + `POST /api/v1/search`, real Ollama-backed Gemma 3 4B, real xAI Grok client, honest `/health/models`, CLI backfill, Ollama docker-compose service. Gates: 61 passed + 1 skipped (live), 0 contract drift, compose validated.
 - **Remaining in phase**: Phase 3 VERIFICATION.md (live Ollama Gemma on GPU, live Grok with `LIVE_XAI_KEY`, pgvector search against running Postgres + HNSW index).
 
-### Phase 4: Frontend API Integration & Real-Time Workspace (Status: PLANNED)
+### Phase 4: Frontend API Integration & Real-Time Workspace (Status: COMPLETED)
 
-- **Goal**: Connect Next.js App Router UI (`frontend/lib/api.ts`) to backend `/api/v1` REST endpoints (`/signals`, `/overview`, `/athena`). Render real signals, Ask Athena answers, and portfolio momentum.
+- **Goal**: Connect Next.js App Router UI (`frontend/lib/api.ts`) to backend `/api/v1` REST endpoints (`/signals`, `/overview`, `/athena`, `/search`, `/health/ready`). Render real signals, Ask Athena answers, ⌘K hybrid vector search, and portfolio momentum with 30s visibility-aware polling.
 - **Specification Alignment**:
   - `docs/4_UI_DESIGN_DOCUMENT.md` (§3 Component Hierarchy & §4 Data Flow)
   - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§3 Four-Question Decision Interface)
   - `docs/rules/ARCHITECTURE_RULES.md`
-- **Key Deliverables**: Live REST client in `frontend/lib/api.ts`, component state updates, and end-to-end UI verification.
+- **Key Deliverables**: Live REST client in `frontend/lib/api.ts`, `useLiveData` polling hook, component state updates, ⌘K search modal, and end-to-end UI verification.
+- **Execution & Verification**:
+  - `04-01-PLAN.md` (Wave 1): Completed — Backend `/signals` and `/overview` set-based aggregations, Pydantic schemas, 0 contract drift.
+  - `04-02-PLAN.md` (Wave 1): Completed — `useLiveData` hook with 30s polling, `AbortController`, tab visibility pause; pure mappers and typed `ApiError` in `frontend/lib/api.ts`.
+  - `04-03-PLAN.md` (Wave 2): Completed — Real-time workspace UI wiring in `metaradar.tsx`, accessible ⌘K vector search modal, Athena synthesis retry cards (`REQ-P4-3`), honest telemetry, and degraded amber warning banner.
+  - Verification: `tsc` (0 errors), `eslint` (0 errors), `next build` (compiled), `pytest -v` (65/65 passed, 1 skipped). Quality gates 100% satisfied.
 
 ### Phase 5: Calibration & End-to-End Verification (Status: PLANNED)
 
@@ -88,3 +96,17 @@ Phase 5: Calibration & End-to-End Verification
   - `docs/2_SRS_Software_Requirements_Specification.md` (§3.5 Calibration Loop)
   - `docs/rules/DEFINITION_OF_DONE.md`
 - **Key Deliverables**: Feedback API, weight adjustment service, demo scenario test, and release documentation.
+
+### Phase 6: Full Doc-to-UI Mapping, Feature Synchronization & Automation Launchers (Status: PLANNED)
+
+- **Goal**: Perform comprehensive doc-to-UI feature parity audit and implementation across all buttons, controls, and workflows specified in `docs/` (UI Design Doc, SRS, SDD, Architecture Hardening Report). Create automated `setup.py` (automated dependency verification, environment orchestration, migrations, seed data, Ollama model setup) and `start.py` (single-command unified launcher with live health-check telemetry).
+- **Specification Alignment**:
+  - `docs/4_UI_DESIGN_DOCUMENT.md` (§3 Component Hierarchy, §4 Data Flow, §6 Interaction Specifications)
+  - `docs/2_SRS_Software_Requirements_Specification.md` (§3 User Interfaces & Functional Modules)
+  - `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` (§2 Architectural Layers & Contract Parity)
+  - `docs/10_ARCHITECTURE_HARDENING_REPORT.md` (§7 Operational Runbooks & Tooling)
+- **Key Deliverables**:
+  - Complete mapping and implementation of all UI buttons/actions across components to backend endpoints.
+  - End-to-end documentation-to-feature matrix verification.
+  - `setup.py`: Zero-config automated setup script for dependencies, environment, database, pgvector, and model weights.
+  - `start.py`: Production-grade local process orchestrator running FastAPI backend, Next.js frontend, Celery/worker, and Ollama service with health monitoring.
