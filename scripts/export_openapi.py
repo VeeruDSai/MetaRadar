@@ -349,6 +349,101 @@ export interface ConfirmWatchItemResponse {
   responsible_function: string;
   monitoring_window_days: number;
 }
+
+// Phase 6 Intelligence & Parity Types
+export interface ConfluenceAlertItem {
+  confluence_id: string;
+  development_id: string;
+  development_title?: string;
+  signal_count: number;
+  confluence_type: string;
+  created_at: string;
+  signals: Array<{
+    signal_id: string;
+    title: string;
+    signal_type: string;
+    published_at?: string;
+  }>;
+}
+
+export interface LifecycleTimelineItem {
+  lifecycle_id: string;
+  development_id: string;
+  development_title: string;
+  disease: string;
+  asset_name?: string;
+  stage: string;
+  event_date: string;
+  notes?: string;
+}
+
+export interface ContradictionItem {
+  contradiction_id: string;
+  claim_a_id: string;
+  claim_b_id: string;
+  rule_id: string;
+  rule_name: string;
+  severity: string;
+  confidence: number;
+  description: string;
+  detected_at: string;
+  claim_a_excerpt?: string;
+  claim_b_excerpt?: string;
+}
+
+export interface MissingSignalWatchItem {
+  watch_id: string;
+  development_id: string;
+  development_title?: string;
+  trigger_event: string;
+  expected_event: string;
+  monitoring_window_days: number;
+  responsible_function: string;
+  status: string;
+  confidence: number;
+  days_overdue: number;
+  created_at: string;
+}
+
+export interface DevelopmentSummary {
+  development_id: string;
+  title: string;
+  disease: string;
+  current_stage: string;
+  asset_name?: string;
+  company_name?: string;
+  signal_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceRegistryItem {
+  source_id: string;
+  name: string;
+  freshness_class: string;
+  syndication_group?: string;
+  status: string;
+  quota_remaining?: number;
+  last_success?: string;
+  connector_status: string;
+}
+
+export interface CacheClearResponse {
+  status: string;
+  flushed_at: string;
+  keys_cleared: number;
+}
+
+export interface SignalFilterParams {
+  severity?: string;
+  entity?: string;
+  date_from?: string;
+  date_to?: string;
+  signal_type?: string;
+  source?: string;
+  limit?: number;
+  offset?: number;
+}
 """
 
     active_ts_path = active_types_dir / "api.ts"
@@ -367,3 +462,4 @@ export interface ConfirmWatchItemResponse {
 
 if __name__ == "__main__":
     export_contracts()
+

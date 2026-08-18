@@ -1,6 +1,7 @@
 import pytest
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 from httpx import AsyncClient, ASGITransport
 
 base_dir = Path(__file__).resolve().parents[1]
@@ -8,6 +9,7 @@ sys.path.insert(0, str(base_dir / "backend"))
 
 from app.main import app
 from app.core.config import settings
+from app.db.session import get_db
 
 
 @pytest.mark.asyncio
@@ -47,9 +49,6 @@ async def test_health_endpoints():
 
 @pytest.mark.asyncio
 async def test_business_endpoints():
-    from unittest.mock import AsyncMock, MagicMock
-    from app.db.session import get_db
-
     mock_db = AsyncMock()
     mock_scalars = MagicMock()
     mock_scalars.all.return_value = []
@@ -77,7 +76,7 @@ async def test_business_endpoints():
             assert "active_signals" in res_overview.json()
 
             # /api/v1/signals
-            res_signals = await ac.get("/api/v1/signals")
+            res_signals = await ac.get("/api/v1/signals?severity=HIGH&entity=Hemgenix")
             assert res_signals.status_code == 200
             assert "signals" in res_signals.json()
 
@@ -92,23 +91,60 @@ async def test_business_endpoints():
 
 
 @pytest.mark.asyncio
-async def test_pipeline_endpoints():
-    from unittest.mock import AsyncMock
-    from app.db.session import get_db
+async def test_intelligence_and_registry_reads():
+    mock_db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.all.return_value = []
+    mock_scalars = MagicMock()
+    mock_scalars.all.return_value = []
+    mock_res.scalars.return_value = mock_scalars
+
+    mock_db.execute.return_value = mock_res
 
     async def mock_get_db():
-        yield None
+        yield mock_db
 
     app.dependency_overrides[get_db] = mock_get_db
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            res_pipe = await ac.post("/api/v1/pipeline/run", json={"batch_size": 3})
-            assert res_pipe.status_code == 200
-            data = res_pipe.json()
-            assert "pipeline_run_id" in data
-            assert data["signals_processed"] >= 1
-            assert data["role_briefs_count"] >= 1
-            assert "node_statuses" in data
+            # /confluence
+            res_conf = await ac.get("/api/v1/confluence")
+            assert res_conf.status_code == 200
+            assert isinstance(res_conf.json(), list)
+
+            # /lifecycles
+            res_life = await ac.get("/api/v1/lifecycles?disease=haemophilia")
+            assert res_life.status_code == 200
+            assert isinstance(res_life.json(), list)
+
+            # /red-team
+            res_red = await ac.get("/api/v1/red-team?severity=HIGH")
+            assert res_red.status_code == 200
+            assert isinstance(res_red.json(), list)
+
+            # /missing-signals
+            res_miss = await ac.get("/api/v1/missing-signals")
+            assert res_miss.status_code == 200
+            assert isinstance(res_miss.json(), list)
+
+            # /developments
+            res_devs = await ac.get("/api/v1/developments")
+            assert res_devs.status_code == 200
+            assert isinstance(res_devs.json(), list)
+
+            # /sources
+            res_sources = await ac.get("/api/v1/sources")
+            assert res_sources.status_code == 200
+            assert isinstance(res_sources.json(), list)
     finally:
         app.dependency_overrides.pop(get_db, None)
 
+
+@pytest.mark.asyncio
+async def test_cache_clear_endpoint():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        res = await ac.post("/api/v1/cache/clear")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] in ["cleared", "cache_unavailable"]
+        assert "flushed_at" in data

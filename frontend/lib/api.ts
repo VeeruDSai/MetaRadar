@@ -18,6 +18,14 @@ import type {
   SignalSearchResult,
   TrendPoint,
   WatchRuleSuggestion,
+  ConfluenceAlertItem,
+  LifecycleTimelineItem,
+  ContradictionItem,
+  MissingSignalWatchItem,
+  DevelopmentSummary,
+  SourceRegistryItem,
+  CacheClearResponse,
+  SignalFilterParams,
 } from '@/types/api'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -218,11 +226,24 @@ export async function getOverview(signal?: AbortSignal): Promise<DashboardOvervi
 }
 
 /**
- * Fetches signals list with pagination support.
+ * Fetches signals list with pagination and multi-parameter filtering support (D-06).
  */
-export async function getSignals(limit = 50, offset = 0, signal?: AbortSignal): Promise<Signal[]> {
+export async function getSignals(
+  params?: SignalFilterParams,
+  signal?: AbortSignal
+): Promise<Signal[]> {
+  const query = new URLSearchParams()
+  query.set('limit', String(params?.limit ?? 50))
+  query.set('offset', String(params?.offset ?? 0))
+  if (params?.severity) query.set('severity', params.severity)
+  if (params?.entity) query.set('entity', params.entity)
+  if (params?.date_from) query.set('date_from', params.date_from)
+  if (params?.date_to) query.set('date_to', params.date_to)
+  if (params?.signal_type) query.set('signal_type', params.signal_type)
+  if (params?.source) query.set('source', params.source)
+
   const res = await apiFetch<{ signals: any[]; total: number }>(
-    `/signals?limit=${limit}&offset=${offset}`,
+    `/signals?${query.toString()}`,
     undefined,
     signal
   )
@@ -376,6 +397,48 @@ export async function confirmWatchItem(
     {
       method: 'POST',
       body: JSON.stringify(payload),
+    },
+    signal
+  )
+}
+
+// Phase 6 API Fetchers
+export async function getConfluences(signal?: AbortSignal): Promise<ConfluenceAlertItem[]> {
+  return apiFetch<ConfluenceAlertItem[]>('/confluence', undefined, signal)
+}
+
+export async function getLifecycles(disease?: string, signal?: AbortSignal): Promise<LifecycleTimelineItem[]> {
+  const query = disease ? `?disease=${encodeURIComponent(disease)}` : ''
+  return apiFetch<LifecycleTimelineItem[]>(`/lifecycles${query}`, undefined, signal)
+}
+
+export async function getRedTeamContradictions(severity?: string, signal?: AbortSignal): Promise<ContradictionItem[]> {
+  const query = severity ? `?severity=${encodeURIComponent(severity)}` : ''
+  return apiFetch<ContradictionItem[]>(`/red-team${query}`, undefined, signal)
+}
+
+export async function getMissingSignals(status?: string, signal?: AbortSignal): Promise<MissingSignalWatchItem[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return apiFetch<MissingSignalWatchItem[]>(`/missing-signals${query}`, undefined, signal)
+}
+
+export async function getDevelopments(disease?: string, stage?: string, signal?: AbortSignal): Promise<DevelopmentSummary[]> {
+  const params = new URLSearchParams()
+  if (disease) params.set('disease', disease)
+  if (stage) params.set('stage', stage)
+  const qs = params.toString() ? `?${params.toString()}` : ''
+  return apiFetch<DevelopmentSummary[]>(`/developments${qs}`, undefined, signal)
+}
+
+export async function getSources(signal?: AbortSignal): Promise<SourceRegistryItem[]> {
+  return apiFetch<SourceRegistryItem[]>('/sources', undefined, signal)
+}
+
+export async function clearCache(signal?: AbortSignal): Promise<CacheClearResponse> {
+  return apiFetch<CacheClearResponse>(
+    '/cache/clear',
+    {
+      method: 'POST',
     },
     signal
   )

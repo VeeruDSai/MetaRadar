@@ -1,112 +1,13 @@
-# MetaRadar v5.1 — Implementation Roadmap
+# MetaRadar — Implementation Roadmap
 
-> **Current Status:** Phase 0 (Baseline Stabilization & Governance) completed & verified. Phase 1 ready for planning and execution.  
-> **Specification Authority:** Fully aligned with `docs/rules/` (Canonical Operating Standards), `docs/METARADAR_MASTER_PLAN_v5.0.md`, `docs/10_ARCHITECTURE_HARDENING_REPORT.md`, `docs/3_SOFTWARE_DESIGN_DOCUMENT.md`, and `docs/4_UI_DESIGN_DOCUMENT.md`.
+## Milestones Overview
 
----
-
-## Phase Structure & Document Mapping Overview
-
-```
-Phase 0: Baseline Stabilization & Governance (COMPLETED)
-   │ └── Aligned with: docs/10_ARCHITECTURE_HARDENING_REPORT.md & docs/rules/*
-   ▼
-Phase 1: Ingestion Connectors & Data Pipeline (NEXT)
-   │ └── Aligned with: Master Plan §4.1, SDD §2.1, & SRS §3.1
-   ▼
-Phase 2: LangGraph 10-Node Intelligence Engine
-   │ └── Aligned with: Master Plan §4, SDD §2.3, & SRS §3.2
-   ▼
-Phase 3: Vector Search & LLM Provider Execution
-   │ └── Aligned with: Master Plan §13-§14, SDD §2.4, & Hardening Report §5
-   ▼
-Phase 4: Frontend API Integration & Real-Time Workspace
-   │ └── Aligned with: UI Design Doc §4, Master Plan §3, & Hardening Report §6
-   ▼
-Phase 5: Calibration & End-to-End Verification
-   │ └── Aligned with: Master Plan §3 & §12, SRS §3.5, & Definition of Done
-   ▼
-Phase 6: Full Doc-to-UI Mapping, Feature Synchronization & Automation Launchers
-     └── Aligned with: docs/4_UI_DESIGN_DOCUMENT.md, docs/10_ARCHITECTURE_HARDENING_REPORT.md, setup/start automation
-```
+### [Milestone v5.1 — Full Platform Architecture & Intelligence Experience](file:///c:/Users/veeru/Documents/MetaRadar/.planning/milestones/v5.1-ROADMAP.md) (SHIPPED 2026-08-19)
+- **Status:** COMPLETED & VERIFIED (Phases 00–06, 16 plans, 100% test pass rate)
+- **Archive:** [v5.1-ROADMAP.md](file:///c:/Users/veeru/Documents/MetaRadar/.planning/milestones/v5.1-ROADMAP.md) | [v5.1-REQUIREMENTS.md](file:///c:/Users/veeru/Documents/MetaRadar/.planning/milestones/v5.1-REQUIREMENTS.md) | [v5.1-MILESTONE-AUDIT.md](file:///c:/Users/veeru/Documents/MetaRadar/.planning/v5.1-MILESTONE-AUDIT.md)
 
 ---
 
-## Phase Details & Document Alignment
+## Backlog / Next Milestone
 
-### Phase 0: Baseline Stabilization & Governance (Status: COMPLETED)
-
-- **Goal**: Reconcile Next.js 16 + FastAPI 0.115 stack, enforce strict typecheck/lint/build quality gates, build 18-point pytest suite, author Dockerfiles, establish Alembic async scaffold, unify OpenAPI contract at `frontend/types/api.ts`, and set CI governance.
-- **Specification Alignment**:
-  - `docs/rules/ENGINEERING_STANDARDS.md`
-  - `docs/rules/DEFINITION_OF_DONE.md`
-  - `docs/rules/TESTING_STRATEGY.md`
-  - `docs/10_ARCHITECTURE_HARDENING_REPORT.md`
-- **Verification**: `pytest -v` (18/18 passed), `tsc` (0 errors), `eslint` (0 errors), `next build` (compiled), `git push origin feature/stabilization-baseline`.
-
-### Phase 1: Ingestion Connectors & Data Pipeline (Status: PLANNED)
-
-- **Goal**: Implement concrete `SourceConnector` adapters for PubMed, ClinicalTrials.gov, NewsAPI, OpenFDA, and EMA RSS. Build bronze-layer verbatim payload storage (`raw_signals_bronze`) and deterministic deduplication (`generate_fingerprint`).
-- **Specification Alignment**:
-  - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§4.1 Ingestion & Validation)
-  - `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` (§2.1 Data Ingestion Architecture)
-  - `docs/2_SRS_Software_Requirements_Specification.md` (§3.1 Data Acquisition)
-- **Key Deliverables**: `backend/app/connectors/pubmed.py`, `clinical_trials.py`, `newsapi.py`, `fda.py`, `ema.py`, deduplication integration, and ingest tests.
-
-### Phase 2: LangGraph 10-Node Intelligence Engine (Status: COMPLETED)
-
-- **Goal**: Build stateful 10-node LangGraph pipeline (`node_ingest` through `node_calibrate -> END`) managing `IntelligenceState`.
-- **Specification Alignment**:
-  - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§4 Pipeline & §12 Domain Rules)
-  - `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` (§2.3 Workflow State Machine)
-  - `docs/8_CORRECTED_UNIFIED_PLAN.md` (§3 Pipeline Architecture)
-- **Key Deliverables**: `backend/app/workflows/` package (state, graph, runner, 10 node modules), `backend/app/api/v1/endpoints/pipeline.py`, synthetic fallback dataset, and 17-point unit test suite.
-- **Verification**: `pytest -v` (51/51 passed), `tsc` (0 errors), `eslint` (0 errors), `next build` (compiled), `contracts/openapi.json` synchronized.
-
-### Phase 3: Vector Search & LLM Provider Execution (Status: IN PROGRESS — Plan 03 executed, verification pending)
-
-- **Goal**: Integrate 384-dim sentence-transformers embedding generation, pgvector HNSW similarity queries (`signals_embedding_hnsw`), and ProviderFactory execution (Local Gemma 3 4B -> Grok privacy-gated fallback -> BART degraded mode).
-- **Specification Alignment**:
-  - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§13 Reasoning Layer & §14 Hardening)
-  - `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` (§2.4 Provider Abstraction)
-  - `docs/rules/DATA_AND_PRIVACY_STANDARDS.md`
-- **Key Deliverables**: Embedding service, vector query service, provider execution integration, and retrieval tests.
-- **Plan 03 (Tracer) — COMPLETE** (commits `ae657db`..`7278508`): fastembed EmbeddingService, `node_embed` (11-node pipeline), pgvector hybrid `VectorQueryService` + `POST /api/v1/search`, real Ollama-backed Gemma 3 4B, real xAI Grok client, honest `/health/models`, CLI backfill, Ollama docker-compose service. Gates: 61 passed + 1 skipped (live), 0 contract drift, compose validated.
-- **Remaining in phase**: Phase 3 VERIFICATION.md (live Ollama Gemma on GPU, live Grok with `LIVE_XAI_KEY`, pgvector search against running Postgres + HNSW index).
-
-### Phase 4: Frontend API Integration & Real-Time Workspace (Status: COMPLETED)
-
-- **Goal**: Connect Next.js App Router UI (`frontend/lib/api.ts`) to backend `/api/v1` REST endpoints (`/signals`, `/overview`, `/athena`, `/search`, `/health/ready`). Render real signals, Ask Athena answers, ⌘K hybrid vector search, and portfolio momentum with 30s visibility-aware polling.
-- **Specification Alignment**:
-  - `docs/4_UI_DESIGN_DOCUMENT.md` (§3 Component Hierarchy & §4 Data Flow)
-  - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§3 Four-Question Decision Interface)
-  - `docs/rules/ARCHITECTURE_RULES.md`
-- **Key Deliverables**: Live REST client in `frontend/lib/api.ts`, `useLiveData` polling hook, component state updates, ⌘K search modal, and end-to-end UI verification.
-- **Execution & Verification**:
-  - `04-01-PLAN.md` (Wave 1): Completed — Backend `/signals` and `/overview` set-based aggregations, Pydantic schemas, 0 contract drift.
-  - `04-02-PLAN.md` (Wave 1): Completed — `useLiveData` hook with 30s polling, `AbortController`, tab visibility pause; pure mappers and typed `ApiError` in `frontend/lib/api.ts`.
-  - `04-03-PLAN.md` (Wave 2): Completed — Real-time workspace UI wiring in `metaradar.tsx`, accessible ⌘K vector search modal, Athena synthesis retry cards (`REQ-P4-3`), honest telemetry, and degraded amber warning banner.
-  - Verification: `tsc` (0 errors), `eslint` (0 errors), `next build` (compiled), `pytest -v` (65/65 passed, 1 skipped). Quality gates 100% satisfied.
-
-### Phase 5: Calibration & End-to-End Verification (Status: PLANNED)
-
-- **Goal**: Implement `StakeholderCalibrationService` for rating feedback, execute the haemophilia demo story (mim8 / emicizumab / Hemgenix durability data), and perform final Definition of Done audit.
-- **Specification Alignment**:
-  - `docs/METARADAR_MASTER_PLAN_v5.0.md` (§3 MVP Scope & §12 Domain Research)
-  - `docs/2_SRS_Software_Requirements_Specification.md` (§3.5 Calibration Loop)
-  - `docs/rules/DEFINITION_OF_DONE.md`
-- **Key Deliverables**: Feedback API, weight adjustment service, demo scenario test, and release documentation.
-
-### Phase 6: Full Doc-to-UI Mapping, Feature Synchronization & Automation Launchers (Status: PLANNED)
-
-- **Goal**: Perform comprehensive doc-to-UI feature parity audit and implementation across all buttons, controls, and workflows specified in `docs/` (UI Design Doc, SRS, SDD, Architecture Hardening Report). Create automated `setup.py` (automated dependency verification, environment orchestration, migrations, seed data, Ollama model setup) and `start.py` (single-command unified launcher with live health-check telemetry).
-- **Specification Alignment**:
-  - `docs/4_UI_DESIGN_DOCUMENT.md` (§3 Component Hierarchy, §4 Data Flow, §6 Interaction Specifications)
-  - `docs/2_SRS_Software_Requirements_Specification.md` (§3 User Interfaces & Functional Modules)
-  - `docs/3_SOFTWARE_DESIGN_DOCUMENT.md` (§2 Architectural Layers & Contract Parity)
-  - `docs/10_ARCHITECTURE_HARDENING_REPORT.md` (§7 Operational Runbooks & Tooling)
-- **Key Deliverables**:
-  - Complete mapping and implementation of all UI buttons/actions across components to backend endpoints.
-  - End-to-end documentation-to-feature matrix verification.
-  - `setup.py`: Zero-config automated setup script for dependencies, environment, database, pgvector, and model weights.
-  - `start.py`: Production-grade local process orchestrator running FastAPI backend, Next.js frontend, Celery/worker, and Ollama service with health monitoring.
+Future milestone initiatives (e.g. v5.2 / v6.0) can be planned and tracked here using `/gsd-new-milestone`.

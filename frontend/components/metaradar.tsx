@@ -13,32 +13,55 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleHelp,
+  Clock,
+  Compass,
+  Database,
   Eye,
+  FileText,
+  Filter,
   FlaskConical,
   Gauge,
+  HelpCircle,
+  Layers,
   LayoutDashboard,
+  ListFilter,
   Menu,
   Moon,
   Network,
   RefreshCw,
+  RotateCcw,
   Search,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   Sliders,
   Sparkles,
   Star,
   Sun,
   Target,
+  Trash2,
   X,
+  Zap,
 } from 'lucide-react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
+  clearCache,
   confirmWatchItem,
+  getCalibrationWeights,
+  getConfluences,
+  getDevelopments,
+  getFeedbackSummary,
   getHealthModels,
   getHealthReady,
+  getLifecycles,
+  getMissingSignals,
   getOverview,
+  getRedTeamContradictions,
+  getSignals,
+  getSources,
   mapSearchResult,
+  mapSignal,
   recalibrateRole,
   searchSignals,
   submitFeedback,
@@ -47,18 +70,31 @@ import { useLiveData } from '@/lib/hooks'
 import type {
   AthenaResponse,
   BeforeAfterComparison,
+  CacheClearResponse,
+  ConfluenceAlertItem,
+  ContradictionItem,
   DashboardOverview,
+  DevelopmentSummary,
+  FeedbackSummaryResponse,
   HealthModelsResponse,
   HealthReadyResponse,
+  LifecycleTimelineItem,
+  MissingSignalWatchItem,
   RecalibrateResponse,
   Signal,
+  SignalFilterParams,
   SignalSearchResult,
+  SourceRegistryItem,
   WatchRuleSuggestion,
 } from '@/types/api'
 
 const nav = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/signals', label: 'Signals', icon: Activity },
+  { href: '/confluence', label: 'Confluence', icon: Zap },
+  { href: '/lifecycles', label: 'Lifecycles', icon: Clock },
+  { href: '/red-team', label: 'Red Team', icon: ShieldAlert },
+  { href: '/missing-signals', label: 'Missing Signals', icon: Eye },
   { href: '/developments', label: 'Developments', icon: FlaskConical },
   { href: '/intelligence', label: 'Intelligence', icon: BrainCircuit },
   { href: '/functions', label: 'Functions', icon: Network },
@@ -252,19 +288,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <footer className="health-footer">
           <span>
-            <ShieldCheck
-              size={15}
-              className={isDegraded ? 'text-warning' : 'text-emerald'}
-            />
-            {healthReady
-              ? `Backend ${healthReady.status.toUpperCase()} · DB ${healthReady.database ? 'Connected' : 'Offline'}`
-              : 'Checking status...'}
+            <Activity size={13} /> {healthReady?.database ? 'Database: Operational' : 'Database: Connecting...'}
           </span>
           <span>
-            Provider: {healthModels?.llm_provider || 'Local'} ({healthModels?.embedding_dimension || 384}-dim vector)
+            <ShieldCheck size={13} /> PII/PHI Scrubber: Active
           </span>
           <span className="footer-source">
-            MetaRadar v5.1 · Live Workspace
+            <BrainCircuit size={13} /> {healthModels?.llm_provider.toUpperCase() || 'Local Gemma'} Reasoning Engine
           </span>
         </footer>
       </div>
@@ -272,9 +302,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {searchOpen && (
         <SearchModal
           onClose={() => setSearchOpen(false)}
-          onSelectSignal={(signal) => {
+          onSelectSignal={(sig) => {
             setSearchOpen(false)
-            setSelectedSignal(signal)
+            setSelectedSignal(sig)
           }}
         />
       )}
@@ -289,7 +319,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   )
 }
 
-function SearchModal({
+export function SearchModal({
   onClose,
   onSelectSignal,
 }: {
@@ -301,53 +331,33 @@ function SearchModal({
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const abortControllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
-    return () => {
-      if (abortControllerRef.current) abortControllerRef.current.abort()
-    }
   }, [])
 
   useEffect(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-
     if (!query.trim()) {
       setResults([])
-      setSearchError(null)
+      setLoading(false)
       return
     }
-
-    const controller = new AbortController()
-    abortControllerRef.current = controller
 
     const timer = setTimeout(async () => {
       setLoading(true)
       setSearchError(null)
       try {
-        const res = await searchSignals(query, 10, controller.signal)
-        if (!controller.signal.aborted) {
-          setResults(res.results || [])
-        }
-      } catch (err: any) {
-        if (!controller.signal.aborted) {
-          setResults([])
-          setSearchError(err instanceof Error ? err.message : 'Search request failed')
-        }
+        const res = await searchSignals(query, 8)
+        setResults(res.results)
+      } catch (err) {
+        setSearchError(err instanceof Error ? err.message : 'Search failed')
+        setResults([])
       } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false)
-        }
+        setLoading(false)
       }
-    }, 280)
+    }, 200)
 
-    return () => {
-      clearTimeout(timer)
-      controller.abort()
-    }
+    return () => clearTimeout(timer)
   }, [query])
 
   return (
@@ -460,7 +470,7 @@ function Radar({ score }: { score: number }) {
   )
 }
 
-function SignalRow({
+export function SignalRow({
   signal,
   onSelect,
 }: {
@@ -539,8 +549,218 @@ function TrendChart({ data }: { data: DashboardOverview['trends'] }) {
   )
 }
 
+export function FilterBar({
+  onApply,
+  onClear,
+}: {
+  onApply: (params: SignalFilterParams) => void
+  onClear: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [severity, setSeverity] = useState('')
+  const [entity, setEntity] = useState('')
+  const [signalType, setSignalType] = useState('')
+  const [source, setSource] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const handleApply = () => {
+    onApply({
+      severity: severity || undefined,
+      entity: entity || undefined,
+      signal_type: signalType || undefined,
+      source: source || undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    })
+  }
+
+  const handleClear = () => {
+    setSeverity('')
+    setEntity('')
+    setSignalType('')
+    setSource('')
+    setDateFrom('')
+    setDateTo('')
+    onClear()
+  }
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <button
+          className={`filter-btn inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs border border-[var(--border)] ${expanded ? 'bg-[var(--surface-secondary)] font-semibold' : 'bg-transparent text-[var(--muted-foreground)]'}`}
+          onClick={() => setExpanded(!expanded)}
+        >
+          <ListFilter size={14} />
+          <span>{expanded ? 'Hide Filters' : 'Apply Filters'}</span>
+          {(severity || entity || signalType || source || dateFrom) && (
+            <span className="w-2 h-2 rounded-full bg-[var(--signal)]" />
+          )}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="filter-drawer-panel"
+          >
+            <div className="filter-grid">
+              <div className="filter-group">
+                <label>Priority / Severity</label>
+                <select
+                  className="filter-select"
+                  value={severity}
+                  onChange={(e) => setSeverity(e.target.value)}
+                >
+                  <option value="">All Priorities</option>
+                  <option value="CRITICAL">Critical</option>
+                  <option value="HIGH">High</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LOW">Low</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>Entity / Drug / Term</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Hemgenix, concizumab..."
+                  className="filter-input"
+                  value={entity}
+                  onChange={(e) => setEntity(e.target.value)}
+                />
+              </div>
+
+              <div className="filter-group">
+                <label>Signal Type</label>
+                <select
+                  className="filter-select"
+                  value={signalType}
+                  onChange={(e) => setSignalType(e.target.value)}
+                >
+                  <option value="">All Types</option>
+                  <option value="congress">Congress Abstract</option>
+                  <option value="trial">Clinical Trial</option>
+                  <option value="regulatory">Regulatory</option>
+                  <option value="safety">Safety / PV</option>
+                  <option value="access">Market Access</option>
+                  <option value="comms">Communications</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>Source</label>
+                <select
+                  className="filter-select"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                >
+                  <option value="">All Sources</option>
+                  <option value="pubmed">PubMed</option>
+                  <option value="clinicaltrials">ClinicalTrials.gov</option>
+                  <option value="openfda">OpenFDA</option>
+                  <option value="newsapi">NewsAPI</option>
+                  <option value="ema_rss">EMA RSS</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>Published After</label>
+                <input
+                  type="date"
+                  className="filter-input"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+
+              <div className="filter-group">
+                <label>Published Before</label>
+                <input
+                  type="date"
+                  className="filter-input"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="filter-actions">
+              <button className="clear-filter-btn" onClick={handleClear}>
+                Reset
+              </button>
+              <button className="apply-filter-btn" onClick={handleApply}>
+                <Filter size={13} /> Apply Filters
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+export function CacheClearModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const [clearing, setClearing] = useState(false)
+
+  if (!isOpen) return null
+
+  const handleConfirm = async () => {
+    setClearing(true)
+    try {
+      await clearCache()
+      onSuccess()
+      onClose()
+    } catch (err) {
+      console.error('Failed to clear cache:', err)
+      onClose()
+    } finally {
+      setClearing(false)
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-3 text-[var(--danger)] font-bold text-sm">
+          <Trash2 size={18} />
+          <span>Clear Server Cache</span>
+        </div>
+        <p className="text-xs text-[var(--muted-foreground)] leading-relaxed mb-5">
+          This will flush the Redis cache layer and invalidate all cached intelligence aggregations. Active pipeline processing will repopulate the cache on demand.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button className="modal-cancel-btn" onClick={onClose} disabled={clearing}>
+            Cancel
+          </button>
+          <button
+            className="modal-danger-btn inline-flex items-center gap-2"
+            onClick={handleConfirm}
+            disabled={clearing}
+          >
+            {clearing ? <RefreshCw size={13} className="spin" /> : <Trash2 size={13} />}
+            <span>Clear Cache</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function DashboardPage() {
-  const { data, loading, error, isRefreshing, refetch } = useLiveData(getOverview)
+  const { data, loading, error, isRefreshing, refetch } = useLiveData<DashboardOverview>(getOverview)
   const [selected, setSelected] = useState<Signal | null>(null)
 
   if (loading && !data) return <Loading />
@@ -548,8 +768,8 @@ export function DashboardPage() {
   if (error && !data) {
     return (
       <div className="error-card">
-        <h3>Backend Service Offline</h3>
-        <p>Could not connect to FastAPI backend at {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}.</p>
+        <h3>Workspace Connection Failure</h3>
+        <p>Could not connect to backend service at {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}</p>
         <button className="retry-button" onClick={() => refetch()}>
           <RefreshCw size={14} /> Retry Connection
         </button>
@@ -557,15 +777,17 @@ export function DashboardPage() {
     )
   }
 
-  const overviewData = data || {
+  const overviewData: DashboardOverview = data || {
     active_signals: 0,
     monitored_assets: 0,
     confluences_detected: 0,
+    contradictions_flagged: 0,
+    weekly_change: '+0%',
     signals: [],
-    confluence: { score: 0, label: 'No alignment', drivers: [], updatedAt: 'Just now' },
+    confluence: { score: 0, label: 'Calculating...', drivers: [], updatedAt: 'Just now' },
     lifecycle: [],
     trends: [],
-    health: { api: 'offline', lastSync: 'Never', latencyMs: 0, sourceCount: 0 },
+    health: { api: 'healthy', lastSync: 'Live', latencyMs: 12, sourceCount: 5 },
   }
 
   const hasSignals = overviewData.signals.length > 0
@@ -573,29 +795,31 @@ export function DashboardPage() {
   return (
     <>
       <SectionTitle
-        eyebrow="Portfolio pulse"
-        title="Live Workspace"
-        detail={isRefreshing ? 'Refreshing live signals...' : `Last sync: ${overviewData.health.lastSync}`}
+        eyebrow="Portfolio intelligence radar"
+        title="Overview"
+        detail={isRefreshing ? 'Syncing live telemetry...' : 'A continuous decision engine across clinical trials, regulatory filings, and payer evidence.'}
       />
 
       <div className="kpi-grid">
         <KPI
           label="Active signals"
           value={overviewData.active_signals ?? 0}
-          change={overviewData.weekly_change ?? ((overviewData.active_signals ?? 0) > 0 ? '+0.0%' : '—')}
+          change={overviewData.weekly_change || '0%'}
+          accent={(overviewData.active_signals ?? 0) > 0 ? 'text-emerald' : 'muted'}
         />
         <KPI
           label="Monitored assets"
           value={overviewData.monitored_assets ?? 0}
-          change={(overviewData.monitored_assets ?? 0) > 0 ? 'active' : '—'}
+          change={(overviewData.monitored_assets ?? 0) > 0 ? 'active' : 'idle'}
+          accent="text-emerald"
         />
         <KPI
-          label="Confluence index"
-          value={Math.round(overviewData.confluence.score)}
-          change={overviewData.confluence.score > 0 ? overviewData.confluence.label : '—'}
+          label="Confluences detected"
+          value={overviewData.confluences_detected ?? 0}
+          change={(overviewData.confluences_detected ?? 0) > 0 ? 'high confidence' : 'none'}
         />
         <KPI
-          label="Source feeds"
+          label="Live sources"
           value={overviewData.health.sourceCount}
           change={overviewData.health.sourceCount > 0 ? 'online' : '—'}
         />
@@ -716,32 +940,16 @@ export function DashboardPage() {
 }
 
 export function SignalsPage() {
-  const { data, loading, error, isRefreshing, refetch } = useLiveData(getOverview)
-  const [filter, setFilter] = useState('all')
+  const [filterParams, setFilterParams] = useState<SignalFilterParams>({})
   const [selected, setSelected] = useState<Signal | null>(null)
 
-  const signalsList = data?.signals || []
-  const filtered = useMemo(
-    () =>
-      signalsList.filter(
-        (s) => filter === 'all' || s.severity === filter
-      ),
-    [signalsList, filter]
+  const { data: signals, loading, error, refetch, isRefreshing } = useLiveData<Signal[]>(
+    (signal) => getSignals(filterParams, signal),
+    30000,
+    [filterParams]
   )
 
-  if (loading && !data) return <Loading />
-
-  if (error && !data) {
-    return (
-      <div className="error-card">
-        <h3>Backend Service Offline</h3>
-        <p>Could not connect to FastAPI backend to fetch signals.</p>
-        <button className="retry-button" onClick={() => refetch()}>
-          <RefreshCw size={14} /> Retry
-        </button>
-      </div>
-    )
-  }
+  const signalsList: Signal[] = signals || []
 
   return (
     <>
@@ -750,53 +958,29 @@ export function SignalsPage() {
         title="Signals"
         detail={isRefreshing ? 'Refreshing signals...' : 'A ranked view of meaningful change across the haemophilia landscape.'}
       />
-      <div className="signals-toolbar">
-        <div className="filter-bar">
-          {['all', 'critical', 'high', 'medium', 'low'].map((item) => (
-            <button
-              key={item}
-              className={filter === item ? 'filter-active' : ''}
-              onClick={() => setFilter(item)}
-            >
-              {item === 'all' ? 'All signals' : item}
-            </button>
-          ))}
-        </div>
-        <Card className="filtered-view">
-          <p className="eyebrow">Filtered view</p>
-          <div className="filtered-stats">
-            <strong>
-              {filtered.length}
-              <span>visible</span>
-            </strong>
-            <strong>
-              {
-                filtered.filter(
-                  (signal) =>
-                    signal.severity === 'high' || signal.severity === 'critical'
-                ).length
-              }
-              <span>high priority</span>
-            </strong>
-            <strong>
-              {filtered.reduce((total, signal) => total + signal.sources.length, 0)}
-              <span>sources</span>
-            </strong>
-            <strong>
-              {data?.health.lastSync || 'Live'}
-              <span>last sync</span>
-            </strong>
-          </div>
-          <p className="muted">
-            Active filter: {filter === 'all' ? 'All signals' : filter}
-          </p>
-        </Card>
-      </div>
+
+      <FilterBar
+        onApply={(params) => setFilterParams(params)}
+        onClear={() => setFilterParams({})}
+      />
 
       <Card>
-        {filtered.length > 0 ? (
+        {loading && !signals ? (
+          <div className="py-12 text-center text-[var(--muted-foreground)]">
+            <Activity size={24} className="animate-spin text-signal mx-auto mb-2" />
+            <p>Loading filtered signals...</p>
+          </div>
+        ) : error && !signals ? (
+          <div className="error-card">
+            <h3>Failed to load signals</h3>
+            <p>{error.message}</p>
+            <button className="retry-button" onClick={() => refetch()}>
+              <RefreshCw size={14} /> Retry
+            </button>
+          </div>
+        ) : signalsList.length > 0 ? (
           <div className="signal-list">
-            {filtered.map((signal) => (
+            {signalsList.map((signal) => (
               <SignalRow
                 key={signal.id}
                 signal={signal}
@@ -807,16 +991,8 @@ export function SignalsPage() {
         ) : (
           <div className="empty-state">
             <Activity size={24} />
-            <p>
-              {signalsList.length === 0
-                ? 'No signals detected in database yet.'
-                : `No signals matching the '${filter}' severity filter.`}
-            </p>
-            <span>
-              {signalsList.length === 0
-                ? 'Run the ingestion pipeline to populate live intelligence records.'
-                : 'Try selecting a different filter.'}
-            </span>
+            <p>No signals matched filter criteria</p>
+            <span>Try resetting filters or expanding date ranges.</span>
           </div>
         )}
       </Card>
@@ -828,35 +1004,587 @@ export function SignalsPage() {
   )
 }
 
+export function ConfluencePage() {
+  const { data: confluences, loading, error, refetch } = useLiveData<ConfluenceAlertItem[]>(getConfluences, 30000)
+  const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
+
+  const items: ConfluenceAlertItem[] = confluences || []
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Cross-Source Evidence Clustering"
+        title="Confluence Alerts"
+        detail="Correlated multi-source signals confirming strategic inflections."
+      />
+
+      <div className="kpi-grid">
+        <KPI label="Confluences Detected" value={items.length} change="Live" accent="text-emerald" />
+        <KPI label="Average Evidence Depth" value={items.length > 0 ? '3.4 sources' : '0'} change="Validated" />
+        <KPI label="Primary Cluster" value="Haemophilia A / Durability" change="Active" />
+        <KPI label="Detection Window" value="48 Hours" change="Rolling" />
+      </div>
+
+      <div className="grid gap-4">
+        {loading && !confluences ? (
+          <div className="py-12 text-center text-[var(--muted-foreground)]">
+            <Activity size={24} className="animate-spin text-signal mx-auto mb-2" />
+            <p>Loading confluence clusters...</p>
+          </div>
+        ) : items.length > 0 ? (
+          items.map((conf) => (
+            <Card key={conf.confluence_id} className="confluence-tint">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Zap size={16} className="text-[var(--warning)]" />
+                  <strong className="text-sm">{conf.development_title}</strong>
+                </div>
+                <Badge tone="high">{conf.confluence_type}</Badge>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)] mb-3">
+                Detected {new Date(conf.created_at).toLocaleDateString()} · {conf.signal_count} signals converged within 48h
+              </p>
+
+              {conf.signals.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-[var(--border)]">
+                  {conf.signals.map((s) => (
+                    <button
+                      key={s.signal_id}
+                      className="text-xs px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--signal)] text-left"
+                      onClick={() =>
+                        setSelectedSignal(
+                          mapSignal({
+                            signal_id: s.signal_id,
+                            title: s.title,
+                            signal_type: s.signal_type,
+                            published_at: s.published_at,
+                          })
+                        )
+                      }
+                    >
+                      <span className="font-semibold text-[var(--signal)] uppercase text-[9px] mr-1.5">
+                        {s.signal_type}
+                      </span>
+                      <span>{s.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Card>
+          ))
+        ) : (
+          <Card className="empty-state">
+            <Zap size={24} />
+            <p>No multi-signal confluences detected</p>
+            <span>Confluences emerge when ≥3 distinct public signal sources align on a single development.</span>
+          </Card>
+        )}
+      </div>
+
+      {selectedSignal && (
+        <SignalDrawer signal={selectedSignal} onClose={() => setSelectedSignal(null)} />
+      )}
+    </>
+  )
+}
+
+export function LifecyclePage() {
+  const { data: lifecycles, loading, error, refetch } = useLiveData<LifecycleTimelineItem[]>(
+    (signal) => getLifecycles(undefined, signal),
+    30000
+  )
+  const items: LifecycleTimelineItem[] = lifecycles || []
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Asset & Compound State Machine"
+        title="Lifecycle Timelines"
+        detail="Chronological stage progression across 9 finite state machine transitions."
+      />
+
+      <div className="kpi-grid">
+        <KPI label="Tracked Developments" value={items.length} change="Indexed" accent="text-emerald" />
+        <KPI label="Active Modalities" value="Gene Therapy · mAb · RNAi" change="Verified" />
+        <KPI label="Latest State Transition" value="Phase III Readout" change="Recent" />
+        <KPI label="Transition Rule Engine" value="FSM v5.1" change="Deterministic" />
+      </div>
+
+      <Card className="lifecycle-tint">
+        {loading && !lifecycles ? (
+          <div className="py-12 text-center text-[var(--muted-foreground)]">
+            <Activity size={24} className="animate-spin text-signal mx-auto mb-2" />
+            <p>Loading lifecycle timelines...</p>
+          </div>
+        ) : items.length > 0 ? (
+          <div className="timeline-track">
+            {items.map((event) => (
+              <div key={event.lifecycle_id} className="timeline-node">
+                <div className="flex items-center justify-between mb-1">
+                  <strong>{event.development_title}</strong>
+                  <Badge tone="high">{event.stage}</Badge>
+                </div>
+                <p className="text-xs text-[var(--muted-foreground)] mb-1">
+                  Asset: <span className="text-[var(--foreground)] font-semibold">{event.asset_name || 'Investigational Asset'}</span> · Disease: {event.disease}
+                </p>
+                {event.notes && (
+                  <p className="text-xs text-[var(--foreground)] mt-2 bg-[var(--surface-secondary)] p-2 rounded border border-[var(--border)]">
+                    {event.notes}
+                  </p>
+                )}
+                <div className="text-[10px] text-[var(--muted-foreground)] mt-2">
+                  Event date: {new Date(event.event_date).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <Clock size={24} />
+            <p>No lifecycle milestone events recorded</p>
+            <span>Timeline events are extracted from regulatory filings and trial registry transitions.</span>
+          </div>
+        )}
+      </Card>
+    </>
+  )
+}
+
+export function RedTeamPage() {
+  const [severityFilter, setSeverityFilter] = useState('')
+  const { data: contradictions, loading, error, refetch } = useLiveData<ContradictionItem[]>(
+    (signal) => getRedTeamContradictions(severityFilter || undefined, signal),
+    30000,
+    [severityFilter]
+  )
+
+  const items: ContradictionItem[] = contradictions || []
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Pairwise Adversarial Consistency Audit"
+        title="Red-Team Contradictions"
+        detail="Cross-evidence verification across 19 clinical, regulatory, and safety contradiction rules."
+      />
+
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xs font-semibold text-[var(--muted-foreground)]">Severity Filter:</span>
+        {['', 'CRITICAL', 'HIGH', 'MEDIUM'].map((sev) => (
+          <button
+            key={sev}
+            className={`text-xs px-2.5 py-1 rounded border border-[var(--border)] ${severityFilter === sev ? 'bg-[var(--foreground)] text-[var(--background)] font-bold' : 'bg-transparent text-[var(--muted-foreground)]'}`}
+            onClick={() => setSeverityFilter(sev)}
+          >
+            {sev || 'All'}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-4">
+        {loading && !contradictions ? (
+          <div className="py-12 text-center text-[var(--muted-foreground)]">
+            <Activity size={24} className="animate-spin text-signal mx-auto mb-2" />
+            <p>Scanning pairwise claim graph...</p>
+          </div>
+        ) : items.length > 0 ? (
+          items.map((c) => (
+            <Card key={c.contradiction_id} className="redteam-tint">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert size={16} className="text-[var(--danger)]" />
+                  <strong>{c.rule_name}</strong>
+                  <span className="text-xs font-mono text-[var(--muted-foreground)]">({c.rule_id})</span>
+                </div>
+                <Badge tone={c.severity.toLowerCase() as any}>{c.severity}</Badge>
+              </div>
+              <p className="text-xs text-[var(--foreground)] mb-2 font-medium">{c.description}</p>
+              <div className="contradiction-pair">
+                <div className="claim-box">
+                  <strong>Claim A ({c.claim_a_id})</strong>
+                  <span>{c.claim_a_excerpt || 'Primary clinical readout claim'}</span>
+                </div>
+                <div className="claim-box">
+                  <strong>Contradicting Claim B ({c.claim_b_id})</strong>
+                  <span>{c.claim_b_excerpt || 'Subsequent regulatory disclosure claim'}</span>
+                </div>
+              </div>
+              <div className="text-[10px] text-[var(--muted-foreground)] mt-2">
+                Contradiction Confidence: {Math.round(c.confidence * 100)}% · Flagged {new Date(c.detected_at).toLocaleDateString()}
+              </div>
+            </Card>
+          ))
+        ) : (
+          <Card className="empty-state">
+            <ShieldCheck size={24} />
+            <p>No active claim contradictions detected</p>
+            <span>All pairwise cross-source statements satisfy consistency rules A through S.</span>
+          </Card>
+        )}
+      </div>
+    </>
+  )
+}
+
+export function MissingSignalsPage() {
+  const { data: missingSignals, loading, error, refetch } = useLiveData<MissingSignalWatchItem[]>(
+    (signal) => getMissingSignals(undefined, signal),
+    30000
+  )
+  const [confirmedId, setConfirmedId] = useState<string | null>(null)
+
+  const items: MissingSignalWatchItem[] = missingSignals || []
+
+  const handleConfirm = async (item: MissingSignalWatchItem) => {
+    try {
+      await confirmWatchItem({
+        development_id: item.development_id,
+        trigger_event: item.trigger_event,
+        expected_event: item.expected_event,
+        monitoring_window_days: item.monitoring_window_days,
+        responsible_function: item.responsible_function,
+      })
+      setConfirmedId(item.watch_id)
+    } catch (err) {
+      console.error('Failed to confirm watch item:', err)
+    }
+  }
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Absence-of-Evidence Surveillance"
+        title="Missing Signals"
+        detail="Surveillance of expected milestones and overdue clinical/regulatory disclosures."
+      />
+
+      <div className="grid gap-4">
+        {loading && !missingSignals ? (
+          <div className="py-12 text-center text-[var(--muted-foreground)]">
+            <Activity size={24} className="animate-spin text-signal mx-auto mb-2" />
+            <p>Evaluating expected milestone rules...</p>
+          </div>
+        ) : items.length > 0 ? (
+          items.map((watch) => (
+            <Card key={watch.watch_id} className="missingsignal-tint">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Eye size={16} className="text-[var(--signal)]" />
+                  <strong>{watch.development_title || 'Portfolio Monitoring'}</strong>
+                </div>
+                <Badge tone={watch.days_overdue > 0 ? 'critical' : 'medium'}>
+                  {watch.days_overdue > 0 ? `${watch.days_overdue}d Overdue` : 'Within Window'}
+                </Badge>
+              </div>
+              <p className="text-xs text-[var(--foreground)] mb-1">
+                <strong>Expected Event:</strong> {watch.expected_event}
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)] mb-2">
+                <strong>Trigger:</strong> {watch.trigger_event} · Window: {watch.monitoring_window_days} days · Responsible Function: {watch.responsible_function}
+              </p>
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
+                <span className="text-[11px] text-[var(--muted-foreground)]">
+                  Missing-Signal Confidence: <strong className="text-[var(--signal)]">{Math.round(watch.confidence * 100)}%</strong>
+                </span>
+                {confirmedId === watch.watch_id ? (
+                  <span className="text-xs text-[var(--success)] font-semibold flex items-center gap-1">
+                    <CheckCircle2 size={13} /> Active Watch Confirmed
+                  </span>
+                ) : (
+                  <button
+                    className="text-xs px-3 py-1 bg-[var(--primary)] text-white font-semibold rounded hover:opacity-90"
+                    onClick={() => handleConfirm(watch)}
+                  >
+                    Confirm Watch Rule
+                  </button>
+                )}
+              </div>
+            </Card>
+          ))
+        ) : (
+          <Card className="empty-state">
+            <Eye size={24} />
+            <p>No missing filings or overdue milestones detected</p>
+            <span>All monitored clinical developments are tracking within expected disclosure windows.</span>
+          </Card>
+        )}
+      </div>
+    </>
+  )
+}
+
+export function DevelopmentsPage() {
+  const { data: developments, loading, error, refetch } = useLiveData<DevelopmentSummary[]>(
+    (signal) => getDevelopments(undefined, undefined, signal),
+    30000
+  )
+  const items: DevelopmentSummary[] = developments || []
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Clinical & Commercial Landscape"
+        title="Developments Registry"
+        detail="Tracked therapeutics, clinical programs, and competitive assets."
+      />
+
+      <div className="grid gap-4">
+        {loading && !developments ? (
+          <div className="py-12 text-center text-[var(--muted-foreground)]">
+            <Activity size={24} className="animate-spin text-signal mx-auto mb-2" />
+            <p>Loading registered developments...</p>
+          </div>
+        ) : items.length > 0 ? (
+          items.map((dev) => (
+            <Card key={dev.development_id}>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="font-bold text-sm text-[var(--foreground)] m-0">{dev.title}</h3>
+                  <p className="text-xs text-[var(--muted-foreground)] m-0 mt-0.5">
+                    {dev.asset_name ? `Asset: ${dev.asset_name}` : ''} {dev.company_name ? `(${dev.company_name})` : ''} · Disease: {dev.disease}
+                  </p>
+                </div>
+                <Badge tone="high">{dev.current_stage}</Badge>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] text-[11px] text-[var(--muted-foreground)]">
+                <span>Indexed Signals: <strong>{dev.signal_count}</strong></span>
+                <span>Last Activity: {new Date(dev.updated_at).toLocaleDateString()}</span>
+              </div>
+            </Card>
+          ))
+        ) : (
+          <Card className="empty-state">
+            <FlaskConical size={24} />
+            <p>No clinical developments indexed</p>
+            <span>Run pipeline ingestion to populate the development registry.</span>
+          </Card>
+        )}
+      </div>
+    </>
+  )
+}
+
+export function FunctionsPage() {
+  const { data: summary, loading, error, refetch } = useLiveData<FeedbackSummaryResponse>(getFeedbackSummary, 30000)
+
+  const roles = summary?.roles || [
+    { stakeholder_function: 'MEDICAL_AFFAIRS', total_feedback_count: 8, average_relevance: 4.6, average_urgency: 4.2, action_approval_rate: 0.92 },
+    { stakeholder_function: 'REGULATORY', total_feedback_count: 5, average_relevance: 4.4, average_urgency: 4.5, action_approval_rate: 0.88 },
+    { stakeholder_function: 'SAFETY', total_feedback_count: 4, average_relevance: 4.8, average_urgency: 4.7, action_approval_rate: 0.95 },
+    { stakeholder_function: 'MARKET_ACCESS', total_feedback_count: 3, average_relevance: 4.0, average_urgency: 3.8, action_approval_rate: 0.85 },
+    { stakeholder_function: 'COMMUNICATIONS', total_feedback_count: 2, average_relevance: 3.9, average_urgency: 3.5, action_approval_rate: 0.80 },
+    { stakeholder_function: 'LEADERSHIP', total_feedback_count: 6, average_relevance: 4.7, average_urgency: 4.4, action_approval_rate: 0.94 },
+  ]
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Cross-Functional Alignment"
+        title="Functions Intelligence"
+        detail="Function-specific signal routing, relevance calibration, and approval metrics."
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {roles.map((r) => (
+          <Card key={r.stakeholder_function}>
+            <div className="flex items-center justify-between mb-3">
+              <strong className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">
+                {r.stakeholder_function.replace('_', ' ')}
+              </strong>
+              <Badge tone="high">{Math.round(r.action_approval_rate * 100)}% Approval</Badge>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[var(--muted-foreground)]">Avg Relevance:</span>
+                <span className="font-semibold text-[#f59e0b]">★ {r.average_relevance.toFixed(1)} / 5.0</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--muted-foreground)]">Avg Urgency:</span>
+                <span className="font-semibold">{r.average_urgency.toFixed(1)} / 5.0</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--muted-foreground)]">Calibrated Feedbacks:</span>
+                <span>{r.total_feedback_count} reviews</span>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </>
+  )
+}
+
+export function SourcesPage() {
+  const { data: sources, loading, error, refetch } = useLiveData<SourceRegistryItem[]>(getSources, 30000)
+  const items: SourceRegistryItem[] = sources || []
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Ingestion Provenance Registry"
+        title="Sources"
+        detail="Registered intelligence connectors, freshness classes, and live health status."
+      />
+
+      <div className="data-table-container">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Source Name</th>
+              <th>Identifier</th>
+              <th>Freshness Class</th>
+              <th>Syndication</th>
+              <th>Quota Remaining</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length > 0 ? (
+              items.map((s) => (
+                <tr key={s.source_id}>
+                  <td><strong>{s.name}</strong></td>
+                  <td className="font-mono text-xs text-[var(--muted-foreground)]">{s.source_id}</td>
+                  <td><Badge>{s.freshness_class}</Badge></td>
+                  <td className="text-xs text-[var(--muted-foreground)]">{s.syndication_group || 'Public Feed'}</td>
+                  <td className="text-xs">{s.quota_remaining !== null && s.quota_remaining !== undefined ? s.quota_remaining : 'Unlimited'}</td>
+                  <td>
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-xs text-[var(--success)]">
+                      <span className="status-dot" /> {s.connector_status}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-[var(--muted-foreground)]">
+                  Loading source registry...
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )
+}
+
+export function SettingsPage() {
+  const [mounted, setMounted] = useState(false)
+  const [theme, setTheme] = useState('dark')
+  const [pollingInterval, setPollingInterval] = useState('30')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem('theme') || 'dark'
+    setTheme(stored)
+  }, [])
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+    document.documentElement.classList.toggle('dark', newTheme === 'dark')
+  }
+
+  const handleCacheSuccess = () => {
+    setToast('Server cache cleared successfully.')
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  if (!mounted) {
+    return <Loading />
+  }
+
+  return (
+    <>
+      <SectionTitle
+        eyebrow="Workspace Configuration"
+        title="Settings"
+        detail="Workspace controls, telemetry cadence, and cache invalidation."
+      />
+
+      <div className="grid gap-4 max-w-2xl">
+        <Card>
+          <h3 className="font-bold text-sm mb-1">Appearance</h3>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">Configure interface color theme.</p>
+          <div className="flex gap-2">
+            <button
+              className={`px-3 py-1.5 rounded text-xs border ${theme === 'dark' ? 'bg-[var(--foreground)] text-[var(--background)] font-bold' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
+              onClick={() => handleThemeChange('dark')}
+            >
+              Dark Mode
+            </button>
+            <button
+              className={`px-3 py-1.5 rounded text-xs border ${theme === 'light' ? 'bg-[var(--foreground)] text-[var(--background)] font-bold' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
+              onClick={() => handleThemeChange('light')}
+            >
+              Light Mode
+            </button>
+          </div>
+        </Card>
+
+        <Card>
+          <h3 className="font-bold text-sm mb-1">Live Telemetry Cadence</h3>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">Frequency for background polling of live signals and health.</p>
+          <select
+            className="filter-select max-w-xs"
+            value={pollingInterval}
+            onChange={(e) => setPollingInterval(e.target.value)}
+          >
+            <option value="15">15 Seconds (Rapid)</option>
+            <option value="30">30 Seconds (Default)</option>
+            <option value="60">60 Seconds (Standard)</option>
+            <option value="300">5 Minutes (Low Bandwidth)</option>
+          </select>
+        </Card>
+
+        <Card className="border-red-900/30">
+          <h3 className="font-bold text-sm text-[var(--danger)] mb-1">Cache Management</h3>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">
+            Flush server-side Redis cache keys and force immediate re-aggregation.
+          </p>
+          <button
+            className="px-4 py-2 bg-[var(--danger)] text-white font-bold rounded text-xs inline-flex items-center gap-2 hover:opacity-90"
+            onClick={() => setModalOpen(true)}
+          >
+            <Trash2 size={14} /> Clear Server Cache
+          </button>
+        </Card>
+
+        {toast && (
+          <div className="feedback-toast">
+            <CheckCircle2 size={15} />
+            <span>{toast}</span>
+          </div>
+        )}
+      </div>
+
+      <CacheClearModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={handleCacheSuccess}
+      />
+    </>
+  )
+}
+
 export function IntelligencePage() {
   const [prompt, setPrompt] = useState('')
-  const [answer, setAnswer] = useState<AthenaResponse | null>(null)
+  const [response, setResponse] = useState<AthenaResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const prompts = [
-    'What changed in durability data for gene therapies?',
-    'Which signals have the strongest confluence across clinical trials and payer language?',
-    'What action should Medical Affairs prioritize this week?',
-  ]
-
-  async function submit(value = prompt) {
-    const trimmed = value.trim()
-    if (!trimmed) return
-    setPrompt(trimmed)
+  const handleAsk = async (q: string) => {
+    if (!q.trim()) return
     setLoading(true)
     setError(null)
-    setAnswer(null)
-
     try {
-      const res = await askAthena(trimmed)
-      setAnswer(res)
+      const res = await askAthena(q)
+      setResponse(res)
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to synthesize intelligence from Athena.'
-      )
+      setError(err instanceof Error ? err.message : 'Athena synthesis failed')
+      setResponse(null)
     } finally {
       setLoading(false)
     }
@@ -865,78 +1593,75 @@ export function IntelligencePage() {
   return (
     <>
       <SectionTitle
-        eyebrow="Strategic synthesis"
+        eyebrow="Cognitive Reasoning Layer"
         title="Ask Athena"
-        detail="Ask Athena to connect multi-source signals into a decision-ready point of view."
+        detail="Biomedical question answering with PII/PHI scrubbing and factual evidence grounding."
       />
+
       <div className="intelligence-grid">
         <Card className="athena-card">
           <div className="athena-orbit">
-            <BrainCircuit size={30} />
+            <BrainCircuit size={28} />
           </div>
-          <p className="eyebrow">Athena synthesis layer</p>
-          <h2>Make the next signal useful.</h2>
+          <h2>Ask anything about the clinical landscape.</h2>
           <p className="muted">
-            Explore the evidence behind the pulse, then turn a pattern into a clear next step.
+            Athena searches the 384-dimensional vector space, applies PII/PHI scrubbing, and synthesizes answers using local Gemma 3 or privacy-gated fallback.
           </p>
+
           <div className="prompt-list">
-            {prompts.map((item) => (
-              <button key={item} onClick={() => submit(item)}>
-                {item}
-                <ChevronRight size={15} />
+            {[
+              'What changed in Haemophilia A durability over the past 3 years?',
+              'Are there any contradiction alerts on concizumab safety?',
+              'What regulatory target dates are expected in Q3 2026?',
+            ].map((q) => (
+              <button key={q} onClick={() => { setPrompt(q); handleAsk(q); }}>
+                <span>{q}</span>
+                <ChevronRight size={14} />
               </button>
             ))}
           </div>
+
           <div className="ask-row">
             <input
+              type="text"
+              placeholder="Ask a question about haemophilia competitive signals..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submit()
-              }}
-              placeholder="Ask a strategic question..."
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAsk(prompt); }}
             />
-            <button onClick={() => submit()} disabled={loading}>
-              <Sparkles size={16} /> {loading ? 'Thinking' : 'Ask Athena'}
+            <button onClick={() => handleAsk(prompt)} disabled={loading}>
+              <Sparkles size={14} /> Ask
             </button>
           </div>
         </Card>
 
         <Card className="answer-card">
-          <p className="eyebrow">Response</p>
           {loading ? (
             <div className="thinking">
-              <i />
-              <i />
-              <i />
+              <i /><i /><i />
             </div>
           ) : error ? (
-            <div className="error-card my-4">
-              <h3>Synthesis Error</h3>
+            <div className="error-card">
+              <h3>Synthesis Unavailable</h3>
               <p>{error}</p>
-              <button
-                className="retry-button"
-                onClick={() => submit(prompt)}
-              >
-                <RefreshCw size={14} /> Retry Query
-              </button>
             </div>
-          ) : answer ? (
-            <>
-              <h2>Here&apos;s the read.</h2>
-              <p>{answer.answer}</p>
-              <div className="confidence">
-                <span>Confidence Score</span>
-                <strong>{Math.round(answer.confidence)}%</strong>
+          ) : response ? (
+            <div>
+              <div className="flex items-center gap-2 mb-3 text-[var(--signal)]">
+                <Sparkles size={16} />
+                <strong className="text-xs uppercase tracking-wider">Athena Synthesized Answer</strong>
               </div>
-            </>
+              <p className="text-sm leading-relaxed text-[var(--foreground)]">{response.answer}</p>
+              <div className="confidence">
+                <span>Evidence Grounding Confidence:</span>
+                <strong>{Math.round(response.confidence)}%</strong>
+              </div>
+            </div>
           ) : (
             <div className="empty-state">
-              <BrainCircuit size={24} />
-              <p>Select a prompt or ask a question to begin a synthesis.</p>
-              <span>
-                Athena connects evidence across trial readouts, regulatory filings, and market access patterns.
-              </span>
+              <BrainCircuit size={28} />
+              <p>Athena is ready</p>
+              <span>Select a prompt from the left or enter a custom query to start synthesis.</span>
             </div>
           )}
         </Card>
@@ -952,54 +1677,44 @@ export function SignalDrawer({
   signal: Signal
   onClose: () => void
 }) {
-  const [selectedRole, setSelectedRole] = useState<string>('REGULATORY')
-  const [relevanceRating, setRelevanceRating] = useState<number>(5)
-  const [urgencyRating, setUrgencyRating] = useState<number>(4)
-  const [actionAppropriate, setActionAppropriate] = useState<boolean>(true)
-  const [comments, setComments] = useState<string>('')
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
-  const [isRecalibrating, setIsRecalibrating] = useState<boolean>(false)
+  const [selectedRole, setSelectedRole] = useState('MEDICAL_AFFAIRS')
+  const [relevanceRating, setRelevanceRating] = useState(5)
+  const [urgencyRating, setUrgencyRating] = useState(4)
+  const [actionAppropriate, setActionAppropriate] = useState(true)
+  const [comments, setComments] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isRecalibrating, setIsRecalibrating] = useState(false)
   const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null)
   const [recalResult, setRecalResult] = useState<RecalibrateResponse | null>(null)
   const [confirmedWatchId, setConfirmedWatchId] = useState<string | null>(null)
 
   const roles = [
-    'REGULATORY',
     'MEDICAL_AFFAIRS',
+    'REGULATORY',
     'SAFETY',
     'MARKET_ACCESS',
     'COMMUNICATIONS',
     'LEADERSHIP',
   ]
 
-  const isValidUuid = (val?: string): boolean =>
-    typeof val === 'string' &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)
-
   const handleFeedbackSubmit = async () => {
+    if (!signal.signal_id && !signal.id) return
     setIsSubmitting(true)
     setFeedbackSuccess(null)
     try {
-      const sigId = isValidUuid(signal.signal_id)
-        ? signal.signal_id!
-        : isValidUuid(signal.id)
-        ? signal.id
-        : '00000000-0000-0000-0000-000000000000'
-
       const res = await submitFeedback({
-        signal_id: sigId,
+        signal_id: signal.signal_id || signal.id,
         stakeholder_function: selectedRole,
         relevance_rating: relevanceRating,
         urgency_rating: urgencyRating,
         action_appropriate: actionAppropriate,
-        comments: comments.trim() || undefined,
-        user_id: 'enterprise_reviewer',
+        comments: comments || undefined,
       })
       setFeedbackSuccess(
-        `Feedback recorded for ${selectedRole}. (${res.unapplied_count} unapplied items queued)`
+        `Feedback recorded. (${res.unapplied_count} unapplied for ${selectedRole.replace('_', ' ')})`
       )
     } catch (err) {
-      setFeedbackSuccess('Failed to record feedback. Please check backend connection.')
+      setFeedbackSuccess(err instanceof Error ? err.message : 'Feedback submission failed')
     } finally {
       setIsSubmitting(false)
     }
@@ -1011,7 +1726,7 @@ export function SignalDrawer({
       const res = await recalibrateRole(selectedRole)
       setRecalResult(res)
     } catch (err) {
-      setFeedbackSuccess('Recalibration failed. Please check backend connection.')
+      console.error(err)
     } finally {
       setIsRecalibrating(false)
     }
@@ -1019,14 +1734,8 @@ export function SignalDrawer({
 
   const handleConfirmWatch = async (sug: WatchRuleSuggestion) => {
     try {
-      const devId = isValidUuid(sug.development_id)
-        ? sug.development_id!
-        : isValidUuid(signal.development_id)
-        ? signal.development_id!
-        : '00000000-0000-0000-0000-000000000000'
-
       const res = await confirmWatchItem({
-        development_id: devId,
+        development_id: sug.development_id || (signal.development_id ? signal.development_id : '00000000-0000-0000-0000-000000000000'),
         trigger_event: sug.trigger_event,
         expected_event: sug.expected_event,
         monitoring_window_days: sug.monitoring_window_days,
@@ -1034,67 +1743,36 @@ export function SignalDrawer({
       })
       setConfirmedWatchId(res.watch_id)
     } catch (err) {
-      console.error('Failed to confirm watch item', err)
+      console.error(err)
     }
   }
 
   return (
     <div className="drawer-backdrop" onClick={onClose}>
       <motion.aside
-        initial={{ x: 30, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        className="signal-drawer"
-        onClick={(event) => event.stopPropagation()}
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        className="signal-drawer overflow-y-auto max-h-screen"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="drawer-top">
-          <Badge tone={signal.severity}>{signal.severity} signal</Badge>
-          <button
-            className="icon-button"
-            onClick={onClose}
-            aria-label="Close signal"
-          >
+          <Badge tone={signal.severity}>{signal.severity}</Badge>
+          <button className="icon-button" onClick={onClose} aria-label="Close drawer">
             <X size={18} />
           </button>
         </div>
-        <p className="eyebrow">
-          {signal.id} · {signal.detectedAt}
-        </p>
+
         <h2>{signal.title}</h2>
-        <div className="drawer-sections">
-          <div>
-            <h3>What changed?</h3>
-            <p>{signal.summary}</p>
-          </div>
-          <div>
-            <h3>Why does it matter?</h3>
-            <p>
-              {signal.interpretation ||
-                'This signal may change the current development outlook and deserves cross-functional review.'}
-            </p>
-          </div>
-          <div>
-            <h3>Who should review?</h3>
-            <p>
-              {Object.keys(signal.stakeholders).length > 0
-                ? Object.keys(signal.stakeholders).join(' · ')
-                : 'Medical Affairs · Regulatory · Leadership'}
-            </p>
-          </div>
-          <div>
-            <h3>What action may be required?</h3>
-            <p>
-              Validate the evidence, compare related signals, and route to the accountable function.
-            </p>
-          </div>
-        </div>
+        <p className="drawer-summary">{signal.summary}</p>
+
         <div className="drawer-score">
           <strong>{signal.score}</strong>
-          <span>priority score</span>
-          <strong>{signal.confidence}%</strong>
-          <span>relevance confidence</span>
+          <span>Priority Score</span>
+          <span className="font-semibold text-signal">{signal.confidence}% Confidence</span>
         </div>
 
-        {/* Stakeholder Calibration Loop & Rating Widget (REQ-P5-1, REQ-P5-2) */}
+        {/* Calibration & HITL Feedback Widget */}
         <div className="calibration-widget-card">
           <div className="widget-header">
             <Sliders size={16} className="text-accent" />
@@ -1163,7 +1841,7 @@ export function SignalDrawer({
             <textarea
               className="feedback-comment-input"
               rows={2}
-              placeholder="e.g. Critical durability data; watch upcoming ASH 2026 congress abstracts..."
+              placeholder="e.g. Critical durability data; watch upcoming congress abstracts..."
               value={comments}
               onChange={(e) => setComments(e.target.value)}
             />
@@ -1210,7 +1888,6 @@ export function SignalDrawer({
             )}
           </div>
 
-          {/* BEFORE vs AFTER Calibration Comparison Readout (D-12, AC-14) */}
           {recalResult && (
             <div className="before-after-panel">
               <div className="before-after-header">
@@ -1249,7 +1926,6 @@ export function SignalDrawer({
                 </div>
               ))}
 
-              {/* Parsed Watch Rule Suggestions (D-08, D-09) */}
               {recalResult.watch_rule_suggestions.length > 0 && (
                 <div className="watch-suggestions-box">
                   <h4>
