@@ -52,7 +52,7 @@ class GemmaProvider(LLMProvider):
         if self._client is None:
             self._client = httpx.AsyncClient(
                 base_url=settings.OLLAMA_HOST,
-                timeout=httpx.Timeout(connect=5.0, read=30.0)  # Gemma inference can be slow
+                timeout=httpx.Timeout(30.0, connect=5.0)  # Gemma inference can be slow
             )
         return self._client
 

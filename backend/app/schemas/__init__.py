@@ -228,3 +228,96 @@ class AthenaQueryResponse(BaseModel):
     mode: str = "reasoning"
     model_metadata: Optional[ModelMetadataSchema] = None
 
+
+class FeedbackSubmissionRequest(BaseModel):
+    signal_id: UUID
+    stakeholder_function: str = Field(..., description="Canonical function (e.g., REGULATORY, MEDICAL_AFFAIRS)")
+    relevance_rating: int = Field(..., ge=1, le=5, description="1 to 5 star rating")
+    urgency_rating: int = Field(..., ge=1, le=5, description="1 to 5 urgency rating")
+    action_appropriate: bool = Field(..., description="Whether proposed action is appropriate")
+    comments: Optional[str] = Field(None, max_length=1000)
+    user_id: Optional[str] = Field("demo_user", max_length=100)
+
+
+class FeedbackSubmissionResponse(BaseModel):
+    feedback_id: UUID
+    signal_id: UUID
+    stakeholder_function: str
+    status: str = "recorded"
+    unapplied_count: int
+    recalibration_triggered: bool
+
+
+class RoleWeightSchema(BaseModel):
+    stakeholder_function: str
+    impact_weight: float
+    urgency_weight: float
+    novelty_weight: float
+    updated_at: datetime
+
+
+class CalibrationWeightsResponse(BaseModel):
+    version: str
+    weights: List[RoleWeightSchema]
+
+
+class WatchRuleSuggestionSchema(BaseModel):
+    suggestion_id: str
+    development_id: Optional[UUID] = None
+    trigger_event: str
+    expected_event: str
+    monitoring_window_days: int
+    responsible_function: str
+    rationale: str
+
+
+class BeforeAfterComparisonSchema(BaseModel):
+    signal_id: UUID
+    stakeholder_function: str
+    baseline_priority: str
+    calibrated_priority: str
+    baseline_relevance_score: float
+    calibrated_relevance_score: float
+    baseline_suggested_action: str
+    calibrated_suggested_action: str
+    confidence_uplift_pct: float
+
+
+class RecalibrateResponse(BaseModel):
+    status: str
+    calibration_version: str
+    stakeholder_function: Optional[str] = None
+    applied_feedback_count: int
+    updated_weights: List[RoleWeightSchema] = Field(default_factory=list)
+    comparisons: List[BeforeAfterComparisonSchema] = Field(default_factory=list)
+    watch_rule_suggestions: List[WatchRuleSuggestionSchema] = Field(default_factory=list)
+
+
+class FeedbackRoleSummarySchema(BaseModel):
+    stakeholder_function: str
+    total_feedback_count: int
+    average_relevance: float
+    average_urgency: float
+    action_approval_rate: float
+
+
+class FeedbackSummaryResponse(BaseModel):
+    total_feedback: int
+    roles: List[FeedbackRoleSummarySchema] = Field(default_factory=list)
+
+
+class ConfirmWatchItemRequest(BaseModel):
+    development_id: UUID
+    trigger_event: str
+    expected_event: str
+    monitoring_window_days: int = 90
+    responsible_function: str
+
+
+class ConfirmWatchItemResponse(BaseModel):
+    watch_id: UUID
+    status: str
+    responsible_function: str
+    monitoring_window_days: int
+
+

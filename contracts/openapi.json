@@ -350,6 +350,186 @@
         }
       }
     },
+    "/api/v1/feedback": {
+      "post": {
+        "tags": [
+          "Stakeholder Calibration & Feedback"
+        ],
+        "summary": "Submit stakeholder rating and comment feedback on a signal",
+        "description": "Records stakeholder rating and review comments to the WORM calibration_feedback table (D-05, D-07).",
+        "operationId": "submit_feedback_api_v1_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackSubmissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackSubmissionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/summary": {
+      "get": {
+        "tags": [
+          "Stakeholder Calibration & Feedback"
+        ],
+        "summary": "Retrieve aggregated feedback metrics and approval rates by stakeholder role",
+        "description": "Returns aggregated feedback metrics across all six canonical stakeholder functions (D-07).",
+        "operationId": "get_feedback_summary_api_v1_feedback_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibrate": {
+      "post": {
+        "tags": [
+          "Stakeholder Calibration & Feedback"
+        ],
+        "summary": "Trigger bounded batch weight recalibration and recompute calibrated routing",
+        "description": "Executes batch weight recalibration with bounded gradient updates (alpha=0.05, center=3.0, clamp [0.1, 2.0]),\npreserving baseline routing while generating side-by-side BEFORE/AFTER comparisons and watch-rule suggestions (D-01, D-02, D-03, D-08).",
+        "operationId": "trigger_recalibration_api_v1_calibrate_post",
+        "parameters": [
+          {
+            "name": "stakeholder_function",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional stakeholder function to recalibrate. If omitted, recalibrates all roles.",
+              "title": "Stakeholder Function"
+            },
+            "description": "Optional stakeholder function to recalibrate. If omitted, recalibrates all roles."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecalibrateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/weights": {
+      "get": {
+        "tags": [
+          "Stakeholder Calibration & Feedback"
+        ],
+        "summary": "Get current calibrated scoring weights across all stakeholder functions",
+        "description": "Returns current impact, urgency, and novelty weights for all six stakeholder roles (D-04, D-07).",
+        "operationId": "get_calibration_weights_api_v1_calibration_weights_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationWeightsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/watch-items/confirm": {
+      "post": {
+        "tags": [
+          "Stakeholder Calibration & Feedback"
+        ],
+        "summary": "Confirm a suggested watch-rule from stakeholder feedback",
+        "description": "Confirms a parsed watch rule suggestion and creates an active WatchItem attached to the development (D-09, D-10).",
+        "operationId": "confirm_watch_item_api_v1_watch_items_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmWatchItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmWatchItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -421,6 +601,144 @@
           "evidence_count"
         ],
         "title": "AthenaQueryResponse"
+      },
+      "BeforeAfterComparisonSchema": {
+        "properties": {
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "stakeholder_function": {
+            "type": "string",
+            "title": "Stakeholder Function"
+          },
+          "baseline_priority": {
+            "type": "string",
+            "title": "Baseline Priority"
+          },
+          "calibrated_priority": {
+            "type": "string",
+            "title": "Calibrated Priority"
+          },
+          "baseline_relevance_score": {
+            "type": "number",
+            "title": "Baseline Relevance Score"
+          },
+          "calibrated_relevance_score": {
+            "type": "number",
+            "title": "Calibrated Relevance Score"
+          },
+          "baseline_suggested_action": {
+            "type": "string",
+            "title": "Baseline Suggested Action"
+          },
+          "calibrated_suggested_action": {
+            "type": "string",
+            "title": "Calibrated Suggested Action"
+          },
+          "confidence_uplift_pct": {
+            "type": "number",
+            "title": "Confidence Uplift Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signal_id",
+          "stakeholder_function",
+          "baseline_priority",
+          "calibrated_priority",
+          "baseline_relevance_score",
+          "calibrated_relevance_score",
+          "baseline_suggested_action",
+          "calibrated_suggested_action",
+          "confidence_uplift_pct"
+        ],
+        "title": "BeforeAfterComparisonSchema"
+      },
+      "CalibrationWeightsResponse": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "weights": {
+            "items": {
+              "$ref": "#/components/schemas/RoleWeightSchema"
+            },
+            "type": "array",
+            "title": "Weights"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "weights"
+        ],
+        "title": "CalibrationWeightsResponse"
+      },
+      "ConfirmWatchItemRequest": {
+        "properties": {
+          "development_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Development Id"
+          },
+          "trigger_event": {
+            "type": "string",
+            "title": "Trigger Event"
+          },
+          "expected_event": {
+            "type": "string",
+            "title": "Expected Event"
+          },
+          "monitoring_window_days": {
+            "type": "integer",
+            "title": "Monitoring Window Days",
+            "default": 90
+          },
+          "responsible_function": {
+            "type": "string",
+            "title": "Responsible Function"
+          }
+        },
+        "type": "object",
+        "required": [
+          "development_id",
+          "trigger_event",
+          "expected_event",
+          "responsible_function"
+        ],
+        "title": "ConfirmWatchItemRequest"
+      },
+      "ConfirmWatchItemResponse": {
+        "properties": {
+          "watch_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Watch Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "responsible_function": {
+            "type": "string",
+            "title": "Responsible Function"
+          },
+          "monitoring_window_days": {
+            "type": "integer",
+            "title": "Monitoring Window Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watch_id",
+          "status",
+          "responsible_function",
+          "monitoring_window_days"
+        ],
+        "title": "ConfirmWatchItemResponse"
       },
       "ConfluenceSummarySchema": {
         "properties": {
@@ -513,6 +831,166 @@
           "freshness_class"
         ],
         "title": "ConnectorHealthStatus"
+      },
+      "FeedbackRoleSummarySchema": {
+        "properties": {
+          "stakeholder_function": {
+            "type": "string",
+            "title": "Stakeholder Function"
+          },
+          "total_feedback_count": {
+            "type": "integer",
+            "title": "Total Feedback Count"
+          },
+          "average_relevance": {
+            "type": "number",
+            "title": "Average Relevance"
+          },
+          "average_urgency": {
+            "type": "number",
+            "title": "Average Urgency"
+          },
+          "action_approval_rate": {
+            "type": "number",
+            "title": "Action Approval Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stakeholder_function",
+          "total_feedback_count",
+          "average_relevance",
+          "average_urgency",
+          "action_approval_rate"
+        ],
+        "title": "FeedbackRoleSummarySchema"
+      },
+      "FeedbackSubmissionRequest": {
+        "properties": {
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "stakeholder_function": {
+            "type": "string",
+            "title": "Stakeholder Function",
+            "description": "Canonical function (e.g., REGULATORY, MEDICAL_AFFAIRS)"
+          },
+          "relevance_rating": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Relevance Rating",
+            "description": "1 to 5 star rating"
+          },
+          "urgency_rating": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Urgency Rating",
+            "description": "1 to 5 urgency rating"
+          },
+          "action_appropriate": {
+            "type": "boolean",
+            "title": "Action Appropriate",
+            "description": "Whether proposed action is appropriate"
+          },
+          "comments": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "default": "demo_user"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signal_id",
+          "stakeholder_function",
+          "relevance_rating",
+          "urgency_rating",
+          "action_appropriate"
+        ],
+        "title": "FeedbackSubmissionRequest"
+      },
+      "FeedbackSubmissionResponse": {
+        "properties": {
+          "feedback_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Feedback Id"
+          },
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "stakeholder_function": {
+            "type": "string",
+            "title": "Stakeholder Function"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "recorded"
+          },
+          "unapplied_count": {
+            "type": "integer",
+            "title": "Unapplied Count"
+          },
+          "recalibration_triggered": {
+            "type": "boolean",
+            "title": "Recalibration Triggered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feedback_id",
+          "signal_id",
+          "stakeholder_function",
+          "unapplied_count",
+          "recalibration_triggered"
+        ],
+        "title": "FeedbackSubmissionResponse"
+      },
+      "FeedbackSummaryResponse": {
+        "properties": {
+          "total_feedback": {
+            "type": "integer",
+            "title": "Total Feedback"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRoleSummarySchema"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_feedback"
+        ],
+        "title": "FeedbackSummaryResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -971,6 +1449,95 @@
           "node_statuses"
         ],
         "title": "PipelineRunResponseSchema"
+      },
+      "RecalibrateResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "calibration_version": {
+            "type": "string",
+            "title": "Calibration Version"
+          },
+          "stakeholder_function": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stakeholder Function"
+          },
+          "applied_feedback_count": {
+            "type": "integer",
+            "title": "Applied Feedback Count"
+          },
+          "updated_weights": {
+            "items": {
+              "$ref": "#/components/schemas/RoleWeightSchema"
+            },
+            "type": "array",
+            "title": "Updated Weights"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/BeforeAfterComparisonSchema"
+            },
+            "type": "array",
+            "title": "Comparisons"
+          },
+          "watch_rule_suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/WatchRuleSuggestionSchema"
+            },
+            "type": "array",
+            "title": "Watch Rule Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "calibration_version",
+          "applied_feedback_count"
+        ],
+        "title": "RecalibrateResponse"
+      },
+      "RoleWeightSchema": {
+        "properties": {
+          "stakeholder_function": {
+            "type": "string",
+            "title": "Stakeholder Function"
+          },
+          "impact_weight": {
+            "type": "number",
+            "title": "Impact Weight"
+          },
+          "urgency_weight": {
+            "type": "number",
+            "title": "Urgency Weight"
+          },
+          "novelty_weight": {
+            "type": "number",
+            "title": "Novelty Weight"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stakeholder_function",
+          "impact_weight",
+          "urgency_weight",
+          "novelty_weight",
+          "updated_at"
+        ],
+        "title": "RoleWeightSchema"
       },
       "ScoreBreakdownSchema": {
         "properties": {
@@ -1489,6 +2056,56 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WatchRuleSuggestionSchema": {
+        "properties": {
+          "suggestion_id": {
+            "type": "string",
+            "title": "Suggestion Id"
+          },
+          "development_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Development Id"
+          },
+          "trigger_event": {
+            "type": "string",
+            "title": "Trigger Event"
+          },
+          "expected_event": {
+            "type": "string",
+            "title": "Expected Event"
+          },
+          "monitoring_window_days": {
+            "type": "integer",
+            "title": "Monitoring Window Days"
+          },
+          "responsible_function": {
+            "type": "string",
+            "title": "Responsible Function"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestion_id",
+          "trigger_event",
+          "expected_event",
+          "monitoring_window_days",
+          "responsible_function",
+          "rationale"
+        ],
+        "title": "WatchRuleSuggestionSchema"
       }
     }
   }

@@ -256,6 +256,99 @@ export interface DashboardOverview {
 }
 
 export type HealthStatus = DashboardHealth;
+
+// Phase 5 Calibration & Feedback Types
+export interface FeedbackSubmissionRequest {
+  signal_id: string;
+  stakeholder_function: string;
+  relevance_rating: number;
+  urgency_rating: number;
+  action_appropriate: boolean;
+  comments?: string;
+  user_id?: string;
+}
+
+export interface FeedbackSubmissionResponse {
+  feedback_id: string;
+  signal_id: string;
+  stakeholder_function: string;
+  status: string;
+  unapplied_count: number;
+  recalibration_triggered: boolean;
+}
+
+export interface RoleWeight {
+  stakeholder_function: string;
+  impact_weight: number;
+  urgency_weight: number;
+  novelty_weight: number;
+  updated_at: string;
+}
+
+export interface CalibrationWeightsResponse {
+  version: string;
+  weights: RoleWeight[];
+}
+
+export interface WatchRuleSuggestion {
+  suggestion_id: string;
+  development_id?: string;
+  trigger_event: string;
+  expected_event: string;
+  monitoring_window_days: number;
+  responsible_function: string;
+  rationale: string;
+}
+
+export interface BeforeAfterComparison {
+  signal_id: string;
+  stakeholder_function: string;
+  baseline_priority: string;
+  calibrated_priority: string;
+  baseline_relevance_score: number;
+  calibrated_relevance_score: number;
+  baseline_suggested_action: string;
+  calibrated_suggested_action: string;
+  confidence_uplift_pct: number;
+}
+
+export interface RecalibrateResponse {
+  status: string;
+  calibration_version: string;
+  stakeholder_function?: string;
+  applied_feedback_count: number;
+  updated_weights: RoleWeight[];
+  comparisons: BeforeAfterComparison[];
+  watch_rule_suggestions: WatchRuleSuggestion[];
+}
+
+export interface FeedbackRoleSummary {
+  stakeholder_function: string;
+  total_feedback_count: number;
+  average_relevance: number;
+  average_urgency: number;
+  action_approval_rate: number;
+}
+
+export interface FeedbackSummaryResponse {
+  total_feedback: number;
+  roles: FeedbackRoleSummary[];
+}
+
+export interface ConfirmWatchItemRequest {
+  development_id: string;
+  trigger_event: string;
+  expected_event: string;
+  monitoring_window_days?: number;
+  responsible_function: string;
+}
+
+export interface ConfirmWatchItemResponse {
+  watch_id: string;
+  status: string;
+  responsible_function: string;
+  monitoring_window_days: number;
+}
 """
 
     active_ts_path = active_types_dir / "api.ts"
