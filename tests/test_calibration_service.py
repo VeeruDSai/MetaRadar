@@ -285,3 +285,104 @@ async def test_feedback_endpoints_api():
     finally:
         app.dependency_overrides.pop(get_db, None)
 
+
+@pytest.mark.asyncio
+async def test_calibration_service_weight_clamping_and_empty_feedback():
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+
+    # 1. Test empty feedback returns no_unapplied_feedback
+    res_weights = MagicMock()
+    res_weights.scalars.return_value.all.return_value = []
+    res_hist = MagicMock()
+    res_hist.scalar_one_or_none.return_value = None
+    res_fb_empty = MagicMock()
+    res_fb_empty.scalars.return_value.all.return_value = []
+
+    mock_db.execute.side_effect = [res_weights, res_hist, res_fb_empty]
+
+    service = StakeholderCalibrationService(mock_db)
+    resp = await service.recalibrate_role("SAFETY")
+    assert resp.status == "no_unapplied_feedback"
+    assert resp.applied_feedback_count == 0
+    assert len(resp.comparisons) == 0
+
+    # 2. Test weight clamping to max 2.0
+    now = datetime.now(timezone.utc)
+    w_high = ScoringWeights(
+        stakeholder_function="SAFETY",
+        impact_weight=1.98,
+        urgency_weight=1.98,
+        novelty_weight=1.0,
+        updated_at=now,
+    )
+    res_w2 = MagicMock()
+    res_w2.scalars.return_value.all.return_value = [w_high]
+    res_h2 = MagicMock()
+    res_h2.scalar_one_or_none.return_value = CalibrationHistory(version="v1.0.1")
+
+    # Extreme 5-star feedback: delta = 0.05 * (5.0 - 3.0) = +0.10 -> 1.98 + 0.10 = 2.08 -> clamped to 2.0
+    sig_id = uuid.uuid4()
+    fb_extreme = CalibrationFeedback(
+        feedback_id=uuid.uuid4(),
+        signal_id=sig_id,
+        stakeholder_function="SAFETY",
+        relevance_rating=5,
+        urgency_rating=5,
+        action_appropriate=True,
+    )
+    res_fb_ext = MagicMock()
+    res_fb_ext.scalars.return_value.all.return_value = [fb_extreme]
+    res_db_w2 = MagicMock()
+    res_db_w2.scalar_one_or_none.return_value = w_high
+    res_routing2 = MagicMock()
+    res_routing2.scalars.return_value.all.return_value = []
+
+    mock_db.execute.side_effect = [res_w2, res_h2, res_fb_ext, res_db_w2, res_routing2]
+    resp_clamped = await service.recalibrate_role("SAFETY")
+
+    assert resp_clamped.status == "recalibrated"
+    safety_w = next(w for w in resp_clamped.updated_weights if w.stakeholder_function == "SAFETY")
+    assert safety_w.impact_weight == 2.0
+    assert safety_w.urgency_weight == 2.0
+
+
+@pytest.mark.asyncio
+async def test_calibration_service_get_summary_aggregation():
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+
+    # Mock SQL aggregation result row
+    class MockSummaryRow:
+        def __init__(self, fn, total, avg_rel, avg_urg, app_cnt):
+            self.stakeholder_function = fn
+            self.total = total
+            self.avg_rel = avg_rel
+            self.avg_urg = avg_urg
+            self.approved_count = app_cnt
+
+    rows = [
+        MockSummaryRow("REGULATORY", 10, 4.50, 4.20, 9),
+        MockSummaryRow("MEDICAL_AFFAIRS", 5, 3.80, 3.40, 4),
+    ]
+    res_summary = MagicMock()
+    res_summary.all.return_value = rows
+    mock_db.execute.return_value = res_summary
+
+    service = StakeholderCalibrationService(mock_db)
+    summary = await service.get_summary()
+
+    assert summary.total_feedback == 15
+    assert len(summary.roles) == 2
+
+    reg = next(r for r in summary.roles if r.stakeholder_function == "REGULATORY")
+    assert reg.total_feedback_count == 10
+    assert reg.average_relevance == 4.50
+    assert reg.action_approval_rate == 90.0
+
+    med = next(r for r in summary.roles if r.stakeholder_function == "MEDICAL_AFFAIRS")
+    assert med.total_feedback_count == 5
+    assert med.average_relevance == 3.80
+    assert med.action_approval_rate == 80.0
+
+

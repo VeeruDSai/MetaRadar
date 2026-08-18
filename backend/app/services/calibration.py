@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -444,7 +444,7 @@ class StakeholderCalibrationService:
             func.avg(CalibrationFeedback.relevance_rating).label("avg_rel"),
             func.avg(CalibrationFeedback.urgency_rating).label("avg_urg"),
             func.sum(
-                func.cast(CalibrationFeedback.action_appropriate, func.integer())
+                case((CalibrationFeedback.action_appropriate.is_(True), 1), else_=0)
             ).label("approved_count"),
         ).group_by(CalibrationFeedback.stakeholder_function)
 
