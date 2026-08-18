@@ -109,14 +109,14 @@ def start_backend(port: int) -> subprocess.Popen:
     return proc
 
 
-def start_frontend(port: int) -> subprocess.Popen:
+def start_frontend(port: int, backend_port: int = 8000) -> subprocess.Popen:
     frontend_dir = BASE_DIR / "frontend"
     log_file = LOGS_DIR / "frontend.log"
     npm_cmd = shutil.which("npm") or "npm"
     print(f"  [FRONTEND] Starting Next.js 16 on http://localhost:{port} (logging to logs/frontend.log)...")
 
     env = os.environ.copy()
-    env["NEXT_PUBLIC_API_URL"] = f"http://localhost:8000/api/v1"
+    env["NEXT_PUBLIC_API_URL"] = f"http://localhost:{backend_port}/api/v1"
 
     log_out = open(log_file, "a", encoding="utf-8")
 
@@ -170,7 +170,7 @@ def main():
     # 3. Launch Frontend
     frontend_proc = None
     if not args.no_frontend:
-        frontend_proc = start_frontend(args.port_frontend)
+        frontend_proc = start_frontend(args.port_frontend, args.port_backend)
 
     print("\n" + "-" * 70)
     print(f" Services launched. Press Ctrl+C to terminate all processes.")
