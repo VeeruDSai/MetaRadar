@@ -2,9 +2,15 @@
 
 > **Project Name:** MetaRadar  
 > **Subtitle:** Near-Real-Time Competitive Intelligence Radar  
-> **Version:** 5.1 (Canonical Master Architecture Specification)  
+> **Version:** 5.1 (Canonical Master Architecture Specification — SHIPPED 2026-08-19)  
 > **Target Pilot Domain:** Haemophilia within Rare Disease (Novo Nordisk GBS Hackathon Problem Statement #3)  
 > **Core Principle:** *"A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development."*
+
+---
+
+## Current State & Shipped Milestone
+
+- **Milestone v5.1 Shipped (2026-08-19)**: Full platform delivery across all 7 architectural phases (Phases 0–6) with 100% test coverage (80/80 active pytest tests), zero contract drift, full Next.js 16 UI synchronization, stakeholder calibration feedback loops, and zero-config automated setup/launchers.
 
 ---
 
@@ -16,18 +22,18 @@ MetaRadar is a near-real-time competitive intelligence platform that converts fr
 
 *"A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development."* — Transforming raw biomedical noise into calibrated strategic intelligence across Medical Affairs, Regulatory, Safety, Market Access, Comms, and Leadership.
 
-## Requirements
+## Shipped Requirements
 
-### Validated
-- [x] Phase 0: Baseline Stabilization & Quality Governance (Next.js 16 + FastAPI 0.115 + Alembic + PII/PHI scrubber + Red-Team engine)
-- [x] Phase 2: LangGraph 10-Node Intelligence Engine (MetaRadarState + 10 workflow nodes + PipelineRunner + 51 unit/integration tests)
+### Validated & Delivered
+- [x] Phase 0: Baseline Stabilization & Quality Governance (Next.js 16 + FastAPI + Alembic + PII/PHI scrubber + Red-Team engine)
+- [x] Phase 1: Ingestion Connectors & Data Pipeline (PubMed, ClinicalTrials, NewsAPI, OpenFDA, EMA RSS + Bronze storage + Deduplication)
+- [x] Phase 2: LangGraph 10-Node Intelligence Engine (MetaRadarState + 10 workflow nodes + PipelineRunner + 51 tests)
+- [x] Phase 3: Vector Search & LLM Provider Execution (fastembed 384-dim embeddings + pgvector HNSW search + Ollama Gemma 3 4B + Grok privacy gate)
+- [x] Phase 4: Frontend API Integration & Real-Time Workspace (Next.js App Router live REST client + portfolio momentum + confluence radar)
+- [x] Phase 5: Calibration & End-to-End Verification (Stakeholder feedback loop + haemophilia demo story + Definition of Done audit)
+- [x] Phase 6: Full Doc-to-UI Mapping, Parity & Launchers (100% feature parity matrix, 8 dedicated intelligence pages, zero-config `setup.py`, and `start.py`)
 
-### Active
-- [ ] Phase 3: Vector Search & LLM Provider Execution (fastembed 384-dim embeddings + pgvector HNSW cosine search + Ollama Gemma 3 4B + Grok privacy gate)
-- [ ] Phase 4: Frontend API Integration & Real-Time Workspace (Next.js App Router live REST client + portfolio momentum + confluence radar)
-- [ ] Phase 5: Calibration & End-to-End Verification (Stakeholder feedback loop + haemophilia demo story + Definition of Done audit)
-
-### Out of Scope
+### Out of Scope (Preserved for Future Milestones)
 - Fine-tuning local LLM weights (deferred to dedicated model training phase)
 - Multi-tenant cloud identity provider integration (scoped to local role-based simulation)
 - Autonomous internet scraper loops (all data acquired through governed API connectors and bronze staging)
@@ -54,10 +60,11 @@ Instead of broadcasting unlinked news feeds to every user, MetaRadar processes e
 ## Technology Stack & Hardened Baseline
 
 - **Frontend**: Next.js 16.3.0 (App Router), React 19, TypeScript 5.7.3, Tailwind CSS v4 (CSS-first `@theme inline`), Framer Motion 13, Recharts 3, Base UI / shadcn "base-nova" UI primitives. Strict TypeScript (`ignoreBuildErrors: false`) and ESLint 10 flat config (`eslint.config.mjs`).
-- **Backend**: Python 3.11+, FastAPI `>=0.110.0`, Pydantic v2 (`>=2.6.0`), SQLAlchemy 2.0 async (`asyncpg`), Alembic async migration engine. PII/PHI scrubber (`PIIPHIScrubber`), Red-Team 19-rule registry (`RedTeamNLIService`), and an 18-point `pytest` test suite.
+- **Backend**: Python 3.11+, FastAPI `>=0.110.0`, Pydantic v2 (`>=2.6.0`), SQLAlchemy 2.0 async (`asyncpg`), Alembic async migration engine. PII/PHI scrubber (`PIIPHIScrubber`), Red-Team 19-rule registry (`RedTeamNLIService`), and an 80-point `pytest` test suite.
 - **Database & Storage**: PostgreSQL 16 + pgvector (`384-dim` HNSW vector index with cosine similarity), Redis 7 (caching & non-blocking readiness healthchecks).
 - **AI/ML Reasoning Chain**: Local Gemma 3 4B (`LLM_PROVIDER=local` on RTX 3050 4GB VRAM) -> xAI Grok Hosted Fallback (gated by strict `validate_privacy_gate`) -> Degraded BART Factual Summary Mode (`reasoning_available = False`).
 - **Contract & CI Governance**: Automated OpenAPI 3.1 export to `contracts/openapi.json` and unified canonical contract at `frontend/types/api.ts`. GitHub Actions CI (`.github/workflows/ci.yml`) enforcing pytest, contract sync, `tsc`, `eslint`, and `next build` with least-privilege token permissions.
+- **Operations & Orchestration**: Single-command zero-config environment setup (`python setup.py`) and unified process launcher (`python start.py`).
 
 ---
 
