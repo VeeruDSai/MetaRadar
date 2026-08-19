@@ -47,3 +47,22 @@ def test_start_py_module_imports():
     assert hasattr(start, "check_endpoint_health")
     assert hasattr(start, "start_backend")
     assert hasattr(start, "start_frontend")
+    assert hasattr(start, "free_port_if_in_use")
+    assert hasattr(start, "print_recent_logs")
+    assert hasattr(start, "check_socket_ready")
+
+
+def test_free_port_on_unused_port():
+    import start
+    # Port 59999 should not be in use, function should return cleanly without error
+    start.free_port_if_in_use(59999, "Test Unused Port")
+
+
+def test_print_recent_logs(tmp_path):
+    import start
+    log_file = tmp_path / "test.log"
+    log_file.write_text("line 1\nline 2\nline 3\n", encoding="utf-8")
+    # Should execute without error
+    start.print_recent_logs(log_file, "TestService", max_lines=2)
+    start.print_recent_logs(tmp_path / "nonexistent.log", "TestService")
+

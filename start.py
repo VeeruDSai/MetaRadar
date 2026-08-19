@@ -43,9 +43,18 @@ def signal_handler(sig, frame):
 def cleanup_processes():
     for proc in active_processes:
         if proc.poll() is None:
+            if sys.platform == "win32":
+                try:
+                    subprocess.run(
+                        ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                        capture_output=True,
+                        check=False,
+                    )
+                except Exception:
+                    pass
             try:
                 proc.terminate()
-                proc.wait(timeout=3)
+                proc.wait(timeout=2)
             except Exception:
                 try:
                     proc.kill()
@@ -53,15 +62,80 @@ def cleanup_processes():
                     pass
 
 
+def print_recent_logs(log_path: Path, service_name: str, max_lines: int = 15):
+    if not log_path.exists():
+        return
+    try:
+        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        tail = lines[-max_lines:] if len(lines) > max_lines else lines
+        if tail:
+            print(f"\n--- [DIAGNOSTIC] Recent logs from {service_name} ({log_path.name}) ---", file=sys.stderr)
+            for line in tail:
+                print(f"  {line}", file=sys.stderr)
+            print("-" * 60, file=sys.stderr)
+    except Exception:
+        pass
+
+
 import socket
 
 
-def check_socket_ready(host: str, port: int, timeout: float = 1.0) -> bool:
+def check_socket_ready(host: str, port: int, timeout: float = 0.5) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
     except Exception:
         return False
+
+
+def free_port_if_in_use(port: int, service_name: str):
+    """
+    If a port is already occupied (e.g. lingering process from previous run),
+    attempt to terminate the holding process so the new service instance can bind cleanly.
+    """
+    if not check_socket_ready("127.0.0.1", port, timeout=0.3):
+        return
+
+    print(f"  [PORT CHECK] Port {port} ({service_name}) is already in use. Cleaning up lingering process...")
+    if sys.platform == "win32":
+        try:
+            res = subprocess.run(
+                ["netstat", "-ano"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if res.stdout:
+                for line in res.stdout.splitlines():
+                    if f":{port}" in line and "LISTENING" in line:
+                        parts = line.strip().split()
+                        pid = parts[-1]
+                        if pid.isdigit() and int(pid) != os.getpid():
+                            print(f"  [PORT CLEANUP] Terminating lingering process PID {pid} on port {port}...")
+                            subprocess.run(
+                                ["taskkill", "/F", "/T", "/PID", pid],
+                                capture_output=True,
+                                check=False,
+                            )
+        except Exception as e:
+            print(f"  [WARNING] Could not free port {port}: {e}", file=sys.stderr)
+    else:
+        try:
+            res = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if res.stdout:
+                for pid in res.stdout.strip().splitlines():
+                    if pid.isdigit() and int(pid) != os.getpid():
+                        print(f"  [PORT CLEANUP] Terminating lingering process PID {pid} on port {port}...")
+                        subprocess.run(["kill", "-9", pid], capture_output=True, check=False)
+        except Exception as e:
+            print(f"  [WARNING] Could not free port {port}: {e}", file=sys.stderr)
+
+    time.sleep(0.8)
 
 
 def wait_for_backing_service(host: str, port: int, service_name: str, max_retries: int = 15, delay: float = 1.0) -> bool:
@@ -81,6 +155,20 @@ def start_docker_services(skip_docker: bool):
     docker_cmd = shutil.which("docker")
     if not docker_cmd:
         print("  [INFO] Docker executable not found in PATH. Checking direct backing port availability...")
+        wait_for_backing_service("127.0.0.1", 5432, "PostgreSQL (port 5432)", max_retries=3, delay=0.5)
+        wait_for_backing_service("127.0.0.1", 6379, "Redis (port 6379)", max_retries=3, delay=0.5)
+        return
+
+    # Check if Docker daemon is actually running and responding
+    daemon_ready = False
+    try:
+        info_check = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=3)
+        daemon_ready = (info_check.returncode == 0)
+    except Exception:
+        daemon_ready = False
+
+    if not daemon_ready:
+        print("  [INFO] Docker daemon is not active. Checking direct backing port availability...")
         wait_for_backing_service("127.0.0.1", 5432, "PostgreSQL (port 5432)", max_retries=3, delay=0.5)
         wait_for_backing_service("127.0.0.1", 6379, "Redis (port 6379)", max_retries=3, delay=0.5)
         return
@@ -195,11 +283,13 @@ def main():
     # 2. Launch Backend
     backend_proc = None
     if not args.no_backend:
+        free_port_if_in_use(args.port_backend, "FastAPI Backend")
         backend_proc = start_backend(args.port_backend)
 
     # 3. Launch Frontend
     frontend_proc = None
     if not args.no_frontend:
+        free_port_if_in_use(args.port_frontend, "Next.js Frontend")
         frontend_proc = start_frontend(args.port_frontend, args.port_backend)
 
     print("\n" + "-" * 70)
@@ -217,16 +307,20 @@ def main():
     iteration = 0
     try:
         while True:
-            time.sleep(4)
+            time.sleep(3)
             iteration += 1
 
             # Check process lifespans
             if backend_proc and backend_proc.poll() is not None:
-                print(f"  [ERROR] Backend process exited unexpectedly with code {backend_proc.returncode}!", file=sys.stderr)
-                break
+                print(f"\n  [ERROR] Backend process exited unexpectedly with code {backend_proc.returncode}!", file=sys.stderr)
+                print_recent_logs(LOGS_DIR / "backend.log", "FastAPI Backend")
+                cleanup_processes()
+                sys.exit(1)
             if frontend_proc and frontend_proc.poll() is not None:
-                print(f"  [ERROR] Frontend process exited unexpectedly with code {frontend_proc.returncode}!", file=sys.stderr)
-                break
+                print(f"\n  [ERROR] Frontend process exited unexpectedly with code {frontend_proc.returncode}!", file=sys.stderr)
+                print_recent_logs(LOGS_DIR / "frontend.log", "Next.js Frontend")
+                cleanup_processes()
+                sys.exit(1)
 
             b_ok = check_endpoint_health(backend_url) if backend_proc else None
             f_ok = check_endpoint_health(frontend_url) if frontend_proc else None
