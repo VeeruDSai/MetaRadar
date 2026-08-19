@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import uuid
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
@@ -16,10 +17,13 @@ from app.models import (
     ScoringWeights,
 )
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 
 async def seed_data():
     async with async_session_factory() as session:
-        print("🌱 Seeding MetaRadar reference and synthetic landscape data...")
+        print("[SEED] Seeding MetaRadar reference and synthetic landscape data...")
 
         # 1. Sources
         sources_data = [
@@ -33,6 +37,7 @@ async def seed_data():
             existing = await session.get(Source, s["source_id"])
             if not existing:
                 session.add(Source(**s, status="active"))
+        await session.flush()
 
         # 2. Companies
         companies_data = [
@@ -46,6 +51,7 @@ async def seed_data():
             existing = await session.get(Company, c["company_id"])
             if not existing:
                 session.add(Company(**c))
+        await session.flush()
 
         # 3. Assets
         assets_data = [
@@ -287,7 +293,7 @@ async def seed_data():
                 ))
 
         await session.commit()
-        print("✅ Database seeding complete.")
+        print("[SUCCESS] Database seeding complete.")
 
 
 if __name__ == "__main__":

@@ -53,19 +53,49 @@ def cleanup_processes():
                     pass
 
 
+import socket
+
+
+def check_socket_ready(host: str, port: int, timeout: float = 1.0) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def wait_for_backing_service(host: str, port: int, service_name: str, max_retries: int = 15, delay: float = 1.0) -> bool:
+    for i in range(max_retries):
+        if check_socket_ready(host, port):
+            print(f"  [READY] {service_name} online on {host}:{port}.")
+            return True
+        time.sleep(delay)
+    print(f"  [WARNING] {service_name} on {host}:{port} was not ready after {max_retries * delay}s.", file=sys.stderr)
+    return False
+
+
 def start_docker_services(skip_docker: bool):
     if skip_docker:
         return
 
     docker_cmd = shutil.which("docker")
     if not docker_cmd:
+        print("  [INFO] Docker executable not found in PATH. Checking direct backing port availability...")
+        wait_for_backing_service("127.0.0.1", 5432, "PostgreSQL (port 5432)", max_retries=3, delay=0.5)
+        wait_for_backing_service("127.0.0.1", 6379, "Redis (port 6379)", max_retries=3, delay=0.5)
         return
 
     print("  [DOCKER] Ensuring backing databases (Postgres & Redis) are running...")
     try:
-        subprocess.run(["docker", "compose", "up", "-d", "postgres", "redis"], cwd=str(BASE_DIR), check=False)
+        res = subprocess.run(["docker", "compose", "up", "-d", "postgres", "redis"], cwd=str(BASE_DIR), capture_output=True, text=True)
+        if res.returncode != 0 and res.stderr:
+            print(f"  [WARNING] Docker compose: {res.stderr.strip()}", file=sys.stderr)
     except Exception as e:
         print(f"  [WARNING] Docker compose start: {e}", file=sys.stderr)
+
+    # Wait for PostgreSQL and Redis to be accepting connections
+    wait_for_backing_service("127.0.0.1", 5432, "PostgreSQL (port 5432)", max_retries=15, delay=1.0)
+    wait_for_backing_service("127.0.0.1", 6379, "Redis (port 6379)", max_retries=15, delay=1.0)
 
 
 def check_endpoint_health(url: str, timeout: float = 1.5) -> bool:
