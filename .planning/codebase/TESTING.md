@@ -58,17 +58,19 @@ tests/
 ├── test_config.py                    # domain config + settings defaults
 ├── test_contract_drift.py            # OpenAPI ↔ frontend types contract sync
 ├── test_e2e_calibration_scenario.py  # scripted end-to-end scenario (real PipelineRunner)
-├── test_foundation.py                # standalone verification script (asyncio.run)
-├── test_ingestion.py                 # connector + bronze persistence + dedup + source independence
-├── test_intelligence_nodes.py        # workflow state contract, graph, per-node behavior
-├── test_launchers.py                 # setup.py / start.py CLI smoke tests
-├── test_parity_matrix.py             # feature parity manifest ↔ OpenAPI wiring
-├── test_privacy_boundary.py          # PII/PHI scrubber + Grok privacy gate
-├── test_provider_matrix.py           # provider fallback matrix via MockTransport
-├── test_providers_live.py            # opt-in live xAI calls (marker: live)
-├── test_redteam_behavior.py          # red-team service rules + caching
-├── test_retrieval.py                 # embeddings, vector query, provider failure behavior
-└── test_signals_endpoints.py         # signals/overview/athena endpoints with empty-DB mocks
+├── test_failure_injection.py         # failure injection, connector timeout, validation error
+├── test_foundation.py                # standalone script (runs `verify()`)
+├── test_ingestion.py                 # all 5 connectors + bronze layer + deduplication
+├── test_intelligence_nodes.py        # LangGraph nodes 1–11 unit tests
+├── test_launchers.py                 # CLI scripts --help smoke tests
+├── test_parity_matrix.py             # verify all wired routes in manifest exist in OpenAPI
+├── test_privacy_boundary.py          # PII scrubbing regexes and classification logic
+├── test_provider_matrix.py           # all 6 provider matrix test cases (A–F)
+├── test_providers_live.py            # live Grok integration test (marked `@pytest.mark.live`)
+├── test_redteam_behavior.py          # priority gating, candidate cap, NLI eval caching
+├── test_retrieval.py                 # embedding dimensionality, search filters, Gemma/Grok logic
+├── test_signals_endpoints.py         # signals list/overview pagination and empty-DB handling
+└── test_truthfulness_and_invariants.py # Phase 07 determinism, confluence, FSM, and read-only invariants
 ```
 
 ## Test Structure

@@ -37,14 +37,14 @@ MetaRadar v5.1 is a near-real-time competitive intelligence platform for the hae
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| FastAPI app factory | Creates app, CORS, registers 8 routers, lifespan logging | `backend/app/main.py` |
+| FastAPI app factory | Creates app, CORS, registers 9 routers, correlation ID middleware, structlog | `backend/app/main.py` |
 | Settings singleton | pydantic-settings env config (DB, Redis, LLM, CORS) | `backend/app/core/config.py` |
 | Domain config | YAML-driven haemophilia ontology + connector query blocks, cached | `backend/app/core/domain_config.py` → `config/haemophilia.yaml` |
-| API endpoints | HTTP surface: signals, overview, athena, search, pipeline, feedback, registry, cache, health | `backend/app/api/v1/endpoints/*.py` |
+| API endpoints | HTTP surface: signals, overview, athena, search, pipeline, feedback, registry, cache, health, observability | `backend/app/api/v1/endpoints/*.py` |
 | Pydantic schemas | Request/response contracts; canonical OpenAPI source | `backend/app/schemas/__init__.py`, `backend/app/schemas/intelligence.py`, `backend/app/schemas/registry.py` |
-| SQLAlchemy models | ~20 ORM tables (signals, bronze, developments, calibration, watch items) | `backend/app/models/__init__.py` |
+| SQLAlchemy models | 22 ORM tables (signals, bronze, developments, calibration, watch items, health logs, runs) | `backend/app/models/__init__.py` |
 | DB session | Async engine, `get_db` dependency, advisory locks | `backend/app/db/session.py` |
-| Alembic migrations | Schema versioning (3 migrations) | `backend/alembic/versions/` |
+| Alembic migrations | Schema versioning (4 migrations: 001, 002, 003, 004) | `backend/alembic/versions/` |
 | Source connectors | 5 adapters implementing `SourceConnector`; config-driven profiles | `backend/app/connectors/` |
 | LLM providers | `LLMProvider` base + Gemma (Ollama), Grok (xAI), Degraded BART | `backend/app/providers/` |
 | ProviderFactory | Fallback chain orchestrator (singleton) | `backend/app/providers/factory.py` |
@@ -52,11 +52,12 @@ MetaRadar v5.1 is a near-real-time competitive intelligence platform for the hae
 | LangGraph graph | 11-node linear pipeline assembly/compile | `backend/app/workflows/graph.py` |
 | PipelineRunner | Async orchestrator; PipelineRun DB lifecycle; `ainvoke` execution | `backend/app/workflows/runner.py` |
 | Workflow nodes | 11 node functions (ingest → calibrate) | `backend/app/workflows/nodes/` |
-| Business services | Embedding, vector search, calibration, PII/PHI, dedup, red-team NLI, source independence | `backend/app/services/` |
-| Frontend shell | Layout, metadata, dark/light theme | `frontend/app/layout.tsx` |
-| Frontend router | Root redirect to /dashboard; dynamic `[section]` dispatch | `frontend/app/page.tsx`, `frontend/app/[section]/page.tsx` |
-| Frontend component library | All workspace pages + Shell + modals (monolithic) | `frontend/components/metaradar.tsx` |
-| Frontend API client | `apiFetch` wrapper, signal mappers, all endpoint calls | `frontend/lib/api.ts` |
+| Priority Scoring Service | Deterministic 4-factor scoring (Novelty 25%, Clinical 30%, Regulatory 25%, Recency 20%) | `backend/app/services/scoring.py` |
+| Confluence Engine | Multi-source convergence detection (≥3 sources in 48h) | `backend/app/services/confluence.py` |
+| Structured Logging | Structlog JSON logging with secret/PII auto-redaction | `backend/app/core/logging.py` |
+| Correlation Middleware | X-Request-ID propagation and contextual request tracing | `backend/app/core/middleware.py` |
+| Frontend bounded workspaces | Modularized domain workspaces (Signals, Confluence, Contradictions, Missing Signals, Athena, etc.) | `frontend/components/{signals,confluence,contradictions,missing-signals,developments,intelligence,functions,calibration,sources,observability,settings}/` |
+| Frontend API client | `apiFetch` wrapper, typed ApiError, correlation ID propagation | `frontend/lib/api.ts`, `frontend/lib/errors.ts`, `frontend/lib/mappers.ts` |
 | Frontend hooks | `useLiveData` visibility-aware polling | `frontend/lib/hooks.ts` |
 | Frontend types | Auto-generated contract (DO NOT EDIT) | `frontend/types/api.ts` |
 | Contract exporter | OpenAPI JSON + TS contract generation | `scripts/export_openapi.py` → `contracts/openapi.json` |
