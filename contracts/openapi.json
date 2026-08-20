@@ -266,7 +266,7 @@
           "Signals & Intelligence"
         ],
         "summary": "Get Overview",
-        "description": "Returns workspace summary metrics, dynamic database aggregations, and measured health latency.",
+        "description": "Aggregated dashboard telemetry with real computed confluence scores and truthful health metrics.",
         "operationId": "get_overview_api_v1_overview_get",
         "responses": {
           "200": {
@@ -288,7 +288,7 @@
           "Signals & Intelligence"
         ],
         "summary": "Query Athena",
-        "description": "Queries Athena intelligence synthesis layer with prompt sanitization, privacy gating, and honest telemetry.",
+        "description": "Queries Athena intelligence synthesis layer with real pgvector retrieval, prompt sanitization, and honest citations.",
         "operationId": "query_athena_api_v1_athena_post",
         "requestBody": {
           "content": {
@@ -330,7 +330,7 @@
           "Intelligence Views"
         ],
         "summary": "Get Confluence Alerts",
-        "description": "Retrieve multi-source intelligence confluence alerts with development context.",
+        "description": "Retrieve multi-source intelligence confluence alerts with real computed scoring and breakdown.",
         "operationId": "get_confluence_alerts_api_v1_confluence_get",
         "parameters": [
           {
@@ -468,7 +468,7 @@
           "Intelligence Views"
         ],
         "summary": "Get Red Team Contradictions",
-        "description": "Retrieve pairwise Red-Team contradiction alerts.",
+        "description": "Retrieve pairwise Red-Team contradiction alerts with verbatim evidence excerpts.",
         "operationId": "get_red_team_contradictions_api_v1_red_team_get",
         "parameters": [
           {
@@ -545,7 +545,7 @@
           "Intelligence Views"
         ],
         "summary": "Get Missing Signals",
-        "description": "Retrieve missing signal watch items and overdue expected events.",
+        "description": "Retrieve missing signal watch items with explicit 6-state FSM and overdue heuristic scores.",
         "operationId": "get_missing_signals_api_v1_missing_signals_get",
         "parameters": [
           {
@@ -728,6 +728,82 @@
                   },
                   "type": "array",
                   "title": "Response Get Sources Registry Api V1 Sources Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/observability/activity": {
+      "get": {
+        "tags": [
+          "Observability & System Health"
+        ],
+        "summary": "Get System Activity",
+        "description": "Retrieve recent system activity logs, pipeline executions, and operational audit events.",
+        "operationId": "get_system_activity_api_v1_observability_activity_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityLogItem"
+                  },
+                  "title": "Response Get System Activity Api V1 Observability Activity Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources/health": {
+      "get": {
+        "tags": [
+          "Observability & System Health"
+        ],
+        "summary": "Get Sources Health",
+        "description": "Retrieve live health telemetry across all configured source connectors.",
+        "operationId": "get_sources_health_api_v1_sources_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceRegistryItem"
+                  },
+                  "type": "array",
+                  "title": "Response Get Sources Health Api V1 Sources Health Get"
                 }
               }
             }
@@ -1092,6 +1168,156 @@
   },
   "components": {
     "schemas": {
+      "ActivityLogItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "component": {
+            "type": "string",
+            "title": "Component"
+          },
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "pipeline_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline Run Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "timestamp",
+          "level",
+          "service",
+          "component",
+          "event",
+          "status",
+          "message"
+        ],
+        "title": "ActivityLogItem"
+      },
+      "AthenaEvidenceCitation": {
+        "properties": {
+          "signal_id": {
+            "type": "string",
+            "title": "Signal Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "canonical_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Url"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "distance": {
+            "type": "number",
+            "title": "Distance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signal_id",
+          "title",
+          "source_id",
+          "excerpt",
+          "distance"
+        ],
+        "title": "AthenaEvidenceCitation"
+      },
       "AthenaQueryRequest": {
         "properties": {
           "prompt": {
@@ -1117,6 +1343,11 @@
             "type": "number",
             "title": "Confidence"
           },
+          "confidence_type": {
+            "type": "string",
+            "title": "Confidence Type",
+            "default": "model_reasoning"
+          },
           "evidence_count": {
             "type": "integer",
             "title": "Evidence Count"
@@ -1135,6 +1366,18 @@
                 "type": "null"
               }
             ]
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/AthenaEvidenceCitation"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "response_type": {
+            "type": "string",
+            "title": "Response Type",
+            "default": "grounded_synthesis"
           }
         },
         "type": "object",
@@ -1222,6 +1465,102 @@
         ],
         "title": "CacheClearResponse"
       },
+      "CalibrationRunSchema": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Triggered At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "feedback_count": {
+            "type": "integer",
+            "title": "Feedback Count"
+          },
+          "previous_weights": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Weights"
+          },
+          "new_weights": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Weights"
+          },
+          "affected_functions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Functions"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "scoring_version": {
+            "type": "string",
+            "title": "Scoring Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "triggered_at",
+          "status",
+          "feedback_count",
+          "scoring_version"
+        ],
+        "title": "CalibrationRunSchema"
+      },
       "CalibrationWeightsResponse": {
         "properties": {
           "version": {
@@ -1234,6 +1573,18 @@
             },
             "type": "array",
             "title": "Weights"
+          },
+          "run_history": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationRunSchema"
+            },
+            "type": "array",
+            "title": "Run History"
+          },
+          "pending_feedback_count": {
+            "type": "integer",
+            "title": "Pending Feedback Count",
+            "default": 0
           }
         },
         "type": "object",
@@ -1349,6 +1700,54 @@
             },
             "type": "array",
             "title": "Signals"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "calculation_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calculation Version",
+            "default": "confluence_v2.0"
+          },
+          "independent_sources_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Independent Sources Count"
+          },
+          "score_breakdown": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Breakdown"
           }
         },
         "type": "object",
@@ -1442,6 +1841,48 @@
               }
             ],
             "title": "Last Error"
+          },
+          "connector_status": {
+            "type": "string",
+            "title": "Connector Status",
+            "default": "NEVER_CONNECTED"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "records_fetched": {
+            "type": "integer",
+            "title": "Records Fetched",
+            "default": 0
+          },
+          "records_accepted": {
+            "type": "integer",
+            "title": "Records Accepted",
+            "default": 0
+          },
+          "records_rejected": {
+            "type": "integer",
+            "title": "Records Rejected",
+            "default": 0
+          },
+          "http_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Http Status"
           }
         },
         "type": "object",
@@ -1484,6 +1925,11 @@
             "type": "number",
             "title": "Confidence"
           },
+          "confidence_type": {
+            "type": "string",
+            "title": "Confidence Type",
+            "default": "nli_heuristic"
+          },
           "description": {
             "type": "string",
             "title": "Description"
@@ -1514,6 +1960,53 @@
               }
             ],
             "title": "Claim B Excerpt"
+          },
+          "claim_a_evidence_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim A Evidence Id"
+          },
+          "claim_b_evidence_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim B Evidence Id"
+          },
+          "detection_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detection Rule"
+          },
+          "resolution_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Status",
+            "default": "unresolved"
           }
         },
         "type": "object",
@@ -2082,6 +2575,22 @@
             "title": "Confidence",
             "default": 0.5
           },
+          "confidence_type": {
+            "type": "string",
+            "title": "Confidence Type",
+            "default": "overdue_heuristic"
+          },
+          "overdue_heuristic_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overdue Heuristic Score"
+          },
           "days_overdue": {
             "type": "integer",
             "title": "Days Overdue",
@@ -2376,6 +2885,18 @@
             "type": "integer",
             "title": "Applied Feedback Count"
           },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
           "updated_weights": {
             "items": {
               "$ref": "#/components/schemas/RoleWeightSchema"
@@ -2442,33 +2963,35 @@
       },
       "ScoreBreakdownSchema": {
         "properties": {
-          "impact": {
-            "type": "number",
-            "title": "Impact"
-          },
-          "urgency": {
-            "type": "number",
-            "title": "Urgency"
-          },
-          "evidence_strength": {
-            "type": "number",
-            "title": "Evidence Strength"
-          },
-          "strategic_relevance": {
-            "type": "number",
-            "title": "Strategic Relevance"
-          },
           "novelty": {
             "type": "number",
-            "title": "Novelty"
+            "title": "Novelty",
+            "default": 0.0
           },
-          "routing_relevance": {
+          "clinical": {
             "type": "number",
-            "title": "Routing Relevance"
+            "title": "Clinical",
+            "default": 0.0
           },
-          "total_score": {
+          "regulatory": {
             "type": "number",
-            "title": "Total Score"
+            "title": "Regulatory",
+            "default": 0.0
+          },
+          "recency": {
+            "type": "number",
+            "title": "Recency",
+            "default": 0.0
+          },
+          "total": {
+            "type": "number",
+            "title": "Total",
+            "default": 0.0
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "haemophilia_v2.0"
           },
           "reason": {
             "anyOf": [
@@ -2480,18 +3003,75 @@
               }
             ],
             "title": "Reason"
+          },
+          "impact": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency"
+          },
+          "evidence_strength": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Strength"
+          },
+          "strategic_relevance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategic Relevance"
+          },
+          "routing_relevance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Relevance"
+          },
+          "total_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Score"
           }
         },
         "type": "object",
-        "required": [
-          "impact",
-          "urgency",
-          "evidence_strength",
-          "strategic_relevance",
-          "novelty",
-          "routing_relevance",
-          "total_score"
-        ],
         "title": "ScoreBreakdownSchema"
       },
       "SearchFilters": {
@@ -2734,6 +3314,54 @@
             "format": "date-time",
             "title": "Retrieved At"
           },
+          "data_mode": {
+            "type": "string",
+            "title": "Data Mode",
+            "default": "live"
+          },
+          "is_synthetic": {
+            "type": "boolean",
+            "title": "Is Synthetic",
+            "default": false
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "confidence_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Type"
+          },
+          "confidence_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Rationale"
+          },
+          "scoring_status": {
+            "type": "string",
+            "title": "Scoring Status",
+            "default": "computed"
+          },
           "facts": {
             "items": {
               "type": "string"
@@ -2765,7 +3393,8 @@
           },
           "priority": {
             "type": "string",
-            "title": "Priority"
+            "title": "Priority",
+            "default": "MEDIUM"
           },
           "score_breakdown": {
             "anyOf": [
@@ -2789,19 +3418,23 @@
           },
           "scoring_model_version": {
             "type": "string",
-            "title": "Scoring Model Version"
+            "title": "Scoring Model Version",
+            "default": "haemophilia_v2.0"
           },
           "scoring_config_version": {
             "type": "string",
-            "title": "Scoring Config Version"
+            "title": "Scoring Config Version",
+            "default": "haemophilia_v1"
           },
           "embedding_model_version": {
             "type": "string",
-            "title": "Embedding Model Version"
+            "title": "Embedding Model Version",
+            "default": "v1"
           },
           "prompt_version": {
             "type": "string",
-            "title": "Prompt Version"
+            "title": "Prompt Version",
+            "default": "v1.0.0"
           },
           "created_at": {
             "type": "string",
@@ -2820,11 +3453,6 @@
           "content",
           "published_at",
           "retrieved_at",
-          "priority",
-          "scoring_model_version",
-          "scoring_config_version",
-          "embedding_model_version",
-          "prompt_version",
           "created_at"
         ],
         "title": "SignalSchema"
@@ -2951,7 +3579,56 @@
           "connector_status": {
             "type": "string",
             "title": "Connector Status",
-            "default": "LIVE"
+            "default": "NEVER_CONNECTED"
+          },
+          "last_attempted": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempted"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "records_fetched": {
+            "type": "integer",
+            "title": "Records Fetched",
+            "default": 0
+          },
+          "records_accepted": {
+            "type": "integer",
+            "title": "Records Accepted",
+            "default": 0
+          },
+          "records_rejected": {
+            "type": "integer",
+            "title": "Records Rejected",
+            "default": 0
+          },
+          "http_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Http Status"
           }
         },
         "type": "object",
