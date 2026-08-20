@@ -96,7 +96,7 @@ async def get_system_activity(
 
 @router.get("/sources/health", response_model=List[SourceRegistryItem])
 async def get_sources_health(db: AsyncSession = Depends(get_db)):
-    """Retrieve live health telemetry across all configured source connectors."""
+    """Retrieve live health telemetry across all configured source connectors, reconciled with latest health logs."""
     try:
         query = select(Source).order_by(Source.source_id)
         result = await db.execute(query)
@@ -105,8 +105,36 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
         logger.debug(f"Sources query skipped: {e}")
         sources = []
 
+    # Query latest SourceHealthLog per source_id
+    latest_logs: Dict[str, SourceHealthLog] = {}
+    try:
+        log_query = select(SourceHealthLog).order_by(desc(SourceHealthLog.checked_at)).limit(100)
+        log_res = await db.execute(log_query)
+        all_logs = log_res.scalars().all()
+        for l in all_logs:
+            if l.source_id not in latest_logs:
+                latest_logs[l.source_id] = l
+    except Exception as e:
+        logger.debug(f"Latest health logs query skipped: {e}")
+
     items = []
+    seen_ids = set()
+
     for s in sources:
+        seen_ids.add(s.source_id)
+        hl = latest_logs.get(s.source_id)
+
+        conn_status = hl.connector_status if hl else (s.connector_status or "NEVER_CONNECTED")
+        latency = int(hl.latency_ms) if (hl and hl.latency_ms is not None) else s.latency_ms
+        fetched = hl.records_fetched if (hl and hl.records_fetched is not None) else (s.records_fetched or 0)
+        accepted = hl.records_accepted if (hl and hl.records_accepted is not None) else (s.records_accepted or 0)
+        rejected = hl.records_rejected if (hl and hl.records_rejected is not None) else (s.records_rejected or 0)
+        last_att = hl.checked_at if hl else s.last_attempted
+        last_succ = hl.checked_at if (hl and hl.connector_status == "HEALTHY") else s.last_success
+        http_code = hl.http_status if (hl and hl.http_status is not None) else s.http_status
+        if http_code is None and conn_status == "HEALTHY":
+            http_code = 200
+
         items.append(
             SourceRegistryItem(
                 source_id=s.source_id,
@@ -115,14 +143,16 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
                 syndication_group=s.syndication_group,
                 status=s.status,
                 quota_remaining=s.quota_remaining,
-                last_success=s.last_success,
-                connector_status=s.connector_status or "NEVER_CONNECTED",
-                last_attempted=s.last_attempted,
-                latency_ms=s.latency_ms,
-                records_fetched=s.records_fetched or 0,
-                records_accepted=s.records_accepted or 0,
-                records_rejected=s.records_rejected or 0,
-                http_status=s.http_status,
+                last_success=last_succ,
+                last_error=hl.last_error if hl else s.last_error,
+                connector_status=conn_status,
+                last_attempted=last_att,
+                latency_ms=latency,
+                records_fetched=fetched,
+                records_accepted=accepted,
+                records_rejected=rejected,
+                http_status=http_code,
             )
         )
+
     return items

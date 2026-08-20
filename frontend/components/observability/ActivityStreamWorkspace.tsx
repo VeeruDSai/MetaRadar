@@ -37,8 +37,8 @@ export function ActivityStreamWorkspace() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">System Activity & Observability Stream</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">System Activity & Observability Stream</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             End-to-end structured JSON telemetry, correlation tracing (X-Request-ID), and pipeline execution logs.
           </p>
         </div>
@@ -47,7 +47,7 @@ export function ActivityStreamWorkspace() {
           <select
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200"
+            className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200"
           >
             <option value="">All Log Levels</option>
             <option value="INFO">INFO</option>
@@ -57,7 +57,7 @@ export function ActivityStreamWorkspace() {
 
           <button
             onClick={loadLogs}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 transition"
+            className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
           >
             Refresh Stream
           </button>
@@ -78,7 +78,7 @@ export function ActivityStreamWorkspace() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 rounded-xl bg-slate-900/40 animate-pulse border border-slate-800" />
+            <div key={i} className="h-16 rounded-xl bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-slate-800" />
           ))}
         </div>
       )}
@@ -100,7 +100,13 @@ export function ActivityStreamWorkspace() {
             return (
               <div
                 key={log.id}
-                className={`rounded-xl border p-4 space-y-2 transition ${isError ? 'border-red-800/40 bg-red-950/20' : isWarn ? 'border-amber-800/40 bg-amber-950/20' : 'border-slate-800 bg-slate-900/60'}`}
+                className={`rounded-xl border p-4 space-y-2 transition ${
+                  isError
+                    ? 'border-red-200 bg-red-50/50 dark:border-red-800/40 dark:bg-red-950/20'
+                    : isWarn
+                    ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-950/20'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs'
+                }`}
               >
                 <div
                   className="flex items-start justify-between gap-3 cursor-pointer select-none"
@@ -108,14 +114,20 @@ export function ActivityStreamWorkspace() {
                 >
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider ${isError ? 'bg-red-950 text-red-300 border border-red-800' : isWarn ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-300'}`}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider ${
+                        isError
+                          ? 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                          : isWarn
+                          ? 'bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                      }`}
                     >
                       {log.level}
                     </span>
-                    <span className="text-xs font-mono font-semibold text-slate-300">
+                    <span className="text-xs font-mono font-semibold text-slate-900 dark:text-slate-300">
                       {log.service} :: {log.component}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono text-[11px]">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
@@ -132,26 +144,26 @@ export function ActivityStreamWorkspace() {
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
                   {log.message}
                 </p>
 
                 {/* Expanded Technical Diagnostics */}
                 {isExpanded && (
-                  <div className="pt-2 border-t border-slate-800/60 space-y-2 text-xs font-mono">
-                    <div className="grid grid-cols-2 gap-2 text-slate-400 text-[11px]">
-                      <div>Event: <span className="text-slate-200">{log.event}</span></div>
-                      <div>Status: <span className="text-slate-200">{log.status}</span></div>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 space-y-2 text-xs font-mono">
+                    <div className="grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-400 text-[11px]">
+                      <div>Event: <span className="text-slate-900 dark:text-slate-200">{log.event}</span></div>
+                      <div>Status: <span className="text-slate-900 dark:text-slate-200">{log.status}</span></div>
                       {log.request_id && (
-                        <div>Request ID: <span className="text-slate-200">{log.request_id}</span></div>
+                        <div>Request ID: <span className="text-slate-900 dark:text-slate-200">{log.request_id}</span></div>
                       )}
                       {log.pipeline_run_id && (
-                        <div>Pipeline Run: <span className="text-slate-200">{log.pipeline_run_id}</span></div>
+                        <div>Pipeline Run: <span className="text-slate-900 dark:text-slate-200">{log.pipeline_run_id}</span></div>
                       )}
                     </div>
 
                     {log.details && (
-                      <pre className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 overflow-x-auto">
+                      <pre className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-800 dark:text-slate-300 overflow-x-auto">
                         {JSON.stringify(log.details, null, 2)}
                       </pre>
                     )}

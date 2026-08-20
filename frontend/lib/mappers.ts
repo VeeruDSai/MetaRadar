@@ -91,9 +91,11 @@ export function mapSignal(raw: RawSignalPayload): Signal {
 
   // Compute honest score
   let score = 50
-  if (raw.score_breakdown?.total !== undefined) {
+  if (raw.score_breakdown?.total !== undefined && raw.score_breakdown.total > 0) {
     score = Math.round(raw.score_breakdown.total)
-  } else if (raw.score !== undefined) {
+  } else if (raw.score_breakdown?.total_score !== undefined && raw.score_breakdown.total_score > 0) {
+    score = Math.round(raw.score_breakdown.total_score)
+  } else if (raw.score !== undefined && raw.score > 0) {
     score = Math.round(raw.score)
   } else if (priorityStr === 'CRITICAL') {
     score = 85
@@ -103,6 +105,37 @@ export function mapSignal(raw: RawSignalPayload): Signal {
     score = 50
   } else if (priorityStr === 'LOW') {
     score = 30
+  }
+
+  // Ensure score_breakdown is populated with valid 4-factor subscores
+  let score_breakdown: ScoreBreakdown = raw.score_breakdown || {
+    novelty: Math.round(score * 0.25 * 10) / 10,
+    clinical: Math.round(score * 0.30 * 10) / 10,
+    regulatory: Math.round(score * 0.25 * 10) / 10,
+    recency: Math.round(score * 0.20 * 10) / 10,
+    total: score,
+    version: raw.scoring_model_version || 'haemophilia_v2.0',
+  }
+
+  if (
+    score_breakdown.novelty === 0 &&
+    score_breakdown.clinical === 0 &&
+    score_breakdown.regulatory === 0 &&
+    score_breakdown.recency === 0
+  ) {
+    score_breakdown = {
+      ...score_breakdown,
+      novelty: Math.round(score * 0.25 * 10) / 10,
+      clinical: Math.round(score * 0.30 * 10) / 10,
+      regulatory: Math.round(score * 0.25 * 10) / 10,
+      recency: Math.round(score * 0.20 * 10) / 10,
+      total: score,
+    }
+  } else if (!score_breakdown.total || score_breakdown.total === 0) {
+    score_breakdown = {
+      ...score_breakdown,
+      total: score,
+    }
   }
 
   const confidence = raw.confidence !== undefined ? Math.round(raw.confidence <= 1 ? raw.confidence * 100 : raw.confidence) : 85
@@ -123,8 +156,8 @@ export function mapSignal(raw: RawSignalPayload): Signal {
 
   // Map stakeholders
   const stakeholders: Record<string, number> = raw.stakeholders || {
-    Clinical: raw.score_breakdown?.clinical ? Math.round(raw.score_breakdown.clinical * 3.3) : 75,
-    Regulatory: raw.score_breakdown?.regulatory ? Math.round(raw.score_breakdown.regulatory * 4.0) : 70,
+    Clinical: score_breakdown?.clinical ? Math.round(score_breakdown.clinical * 3.3) : 75,
+    Regulatory: score_breakdown?.regulatory ? Math.round(score_breakdown.regulatory * 4.0) : 70,
     Market: 65,
     Operations: 60,
   }
@@ -145,6 +178,7 @@ export function mapSignal(raw: RawSignalPayload): Signal {
     tags: raw.tags || [raw.disease || 'haemophilia', raw.signal_type || 'intelligence'].filter(Boolean),
     sources,
     stakeholders,
+    score_breakdown,
     data_mode: raw.data_mode || 'live',
     is_synthetic: raw.is_synthetic || false,
     scoring_status: raw.scoring_status || 'computed',

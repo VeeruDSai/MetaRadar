@@ -7,8 +7,8 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors import ALL_CONNECTORS
-from app.connectors.base import ProfileRunResult, SourceConnector
-from app.models import SourceHealthLog
+from app.models import SourceHealthLog, Source
+from sqlalchemy import select
 from app.core.logging import get_logger
 
 logger = get_logger("ingestion_service")
@@ -72,6 +72,7 @@ class IngestionService:
                 total_duplicates += conn_dups
 
                 latency_ms = (time.perf_counter() - conn_start) * 1000.0
+                now_utc = datetime.now(timezone.utc)
 
                 # Record health log in database
                 health_log = SourceHealthLog(
@@ -82,9 +83,24 @@ class IngestionService:
                     records_accepted=conn_new,
                     records_rejected=conn_dups,
                     last_error=error_msg,
-                    checked_at=datetime.now(timezone.utc),
+                    checked_at=now_utc,
                 )
                 self.session.add(health_log)
+
+                # Update Source row if present
+                src_res = await self.session.execute(select(Source).where(Source.source_id == conn.source_id))
+                src_obj = src_res.scalar_one_or_none()
+                if src_obj:
+                    src_obj.connector_status = conn_status
+                    src_obj.latency_ms = int(latency_ms)
+                    src_obj.records_fetched = conn_fetched
+                    src_obj.records_accepted = conn_new
+                    src_obj.records_rejected = conn_dups
+                    src_obj.last_attempted = now_utc
+                    src_obj.last_error = error_msg
+                    if conn_status == "HEALTHY":
+                        src_obj.last_success = now_utc
+
                 await self.session.commit()
 
                 per_source_results[conn.source_id] = {

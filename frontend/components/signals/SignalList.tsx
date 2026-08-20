@@ -54,8 +54,8 @@ export function SignalList() {
       {/* Header & Filter Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Live Intelligence Signals</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Live Intelligence Signals</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             Real-time competitive signals parsed and prioritized across biomedical sources.
           </p>
         </div>
@@ -66,13 +66,13 @@ export function SignalList() {
             placeholder="Search signals or entities..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 shadow-xs"
           />
 
           <select
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200"
+            className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 shadow-xs"
           >
             <option value="">All Priorities</option>
             <option value="CRITICAL">Critical</option>
@@ -84,7 +84,7 @@ export function SignalList() {
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200"
+            className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 shadow-xs"
           >
             <option value="">All Sources</option>
             <option value="pubmed">PubMed</option>
@@ -96,7 +96,7 @@ export function SignalList() {
 
           <button
             onClick={loadSignals}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition"
+            className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-300 transition border border-slate-200 dark:border-slate-700"
           >
             Refresh
           </button>
@@ -119,7 +119,7 @@ export function SignalList() {
       {loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-36 rounded-xl bg-slate-900/40 animate-pulse border border-slate-800/60" />
+            <div key={i} className="h-36 rounded-xl bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-slate-800/60" />
           ))}
         </div>
       )}

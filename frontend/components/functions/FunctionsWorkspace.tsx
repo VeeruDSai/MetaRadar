@@ -33,14 +33,14 @@ export function FunctionsWorkspace() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Stakeholder Functions Intelligence</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Stakeholder Functions Intelligence</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             Functional routing metrics, accuracy ratings, and action approval rates across the 6 canonical stakeholder roles.
           </p>
         </div>
         <button
           onClick={loadSummary}
-          className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 transition"
+          className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
         >
           Refresh Functions
         </button>
@@ -60,7 +60,7 @@ export function FunctionsWorkspace() {
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-slate-900/40 animate-pulse border border-slate-800" />
+            <div key={i} className="h-32 rounded-xl bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-slate-800" />
           ))}
         </div>
       )}
@@ -77,27 +77,27 @@ export function FunctionsWorkspace() {
           {summary.roles.map((role) => (
             <div
               key={role.stakeholder_function}
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-3 shadow-sm hover:border-slate-700 transition"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 space-y-3 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-200">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">
                   {role.stakeholder_function.replace(/_/g, ' ')}
                 </h3>
-                <span className="text-xs font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-300">
+                <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                   {role.total_feedback_count} reviews
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800">
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
                   <div className="text-[10px] text-slate-500 uppercase">Avg Relevance</div>
-                  <div className="text-sm font-semibold text-emerald-400 mt-0.5">
+                  <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
                     {role.average_relevance ? role.average_relevance.toFixed(1) : 'N/A'} / 5.0
                   </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800">
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
                   <div className="text-[10px] text-slate-500 uppercase">Approval Rate</div>
-                  <div className="text-sm font-semibold text-blue-400 mt-0.5">
+                  <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
                     {role.action_approval_rate ? `${Math.round(role.action_approval_rate * 100)}%` : '100%'}
                   </div>
                 </div>

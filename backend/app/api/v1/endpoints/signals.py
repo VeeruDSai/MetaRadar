@@ -39,26 +39,65 @@ def _serialize_signal(s: Signal) -> SignalSchema:
 
     if s.score_breakdown and isinstance(s.score_breakdown, dict):
         try:
-            score_breakdown = ScoreBreakdownSchema(**s.score_breakdown)
+            bd_dict = dict(s.score_breakdown)
+            # If total is 0 but total_score or sub-factors exist
+            if bd_dict.get("total", 0) == 0:
+                if bd_dict.get("total_score"):
+                    bd_dict["total"] = float(bd_dict["total_score"])
+                elif any(bd_dict.get(k) for k in ("novelty", "clinical", "regulatory", "recency")):
+                    bd_dict["total"] = round(
+                        (bd_dict.get("novelty", 0) * 0.25) +
+                        (bd_dict.get("clinical", 0) * 0.30) +
+                        (bd_dict.get("regulatory", 0) * 0.25) +
+                        (bd_dict.get("recency", 0) * 0.20),
+                        1
+                    )
+
+            # If 4-factor component scores are missing, compute them from text or total
+            if not any(bd_dict.get(k) for k in ("novelty", "clinical", "regulatory", "recency")):
+                if s.content or s.title:
+                    computed = priority_scorer.score_text(
+                        text=f"{s.title} {s.content or ''}",
+                        published_at=s.published_at,
+                        novelty_distance=0.5,
+                    )
+                    if computed:
+                        bd_dict["novelty"] = computed.novelty
+                        bd_dict["clinical"] = computed.clinical
+                        bd_dict["regulatory"] = computed.regulatory
+                        bd_dict["recency"] = computed.recency
+                        bd_dict["total"] = computed.total
+                        bd_dict["version"] = computed.version
+                elif bd_dict.get("total", 0) > 0:
+                    tot = bd_dict["total"]
+                    bd_dict["novelty"] = round(tot * 0.25, 1)
+                    bd_dict["clinical"] = round(tot * 0.30, 1)
+                    bd_dict["regulatory"] = round(tot * 0.25, 1)
+                    bd_dict["recency"] = round(tot * 0.20, 1)
+
+            score_breakdown = ScoreBreakdownSchema(**bd_dict)
         except Exception:
             score_breakdown = None
 
     # If score_breakdown is null in DB, attempt deterministic on-the-fly evaluation or mark as not_computed
-    if score_breakdown is None and s.content:
-        computed = priority_scorer.score_text(
-            text=f"{s.title} {s.content}",
-            published_at=s.published_at,
-            novelty_distance=0.5,
-        )
-        if computed:
-            score_breakdown = ScoreBreakdownSchema(
-                novelty=computed.novelty,
-                clinical=computed.clinical,
-                regulatory=computed.regulatory,
-                recency=computed.recency,
-                total=computed.total,
-                version=computed.version,
+    if score_breakdown is None:
+        if s.content or s.title:
+            computed = priority_scorer.score_text(
+                text=f"{s.title} {s.content or ''}",
+                published_at=s.published_at,
+                novelty_distance=0.5,
             )
+            if computed:
+                score_breakdown = ScoreBreakdownSchema(
+                    novelty=computed.novelty,
+                    clinical=computed.clinical,
+                    regulatory=computed.regulatory,
+                    recency=computed.recency,
+                    total=computed.total,
+                    version=computed.version,
+                )
+            else:
+                scoring_status = "not_computed"
         else:
             scoring_status = "not_computed"
 

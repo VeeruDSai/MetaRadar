@@ -835,7 +835,7 @@
           "Observability & System Health"
         ],
         "summary": "Get Sources Health",
-        "description": "Retrieve live health telemetry across all configured source connectors.",
+        "description": "Retrieve live health telemetry across all configured source connectors, reconciled with latest health logs.",
         "operationId": "get_sources_health_api_v1_sources_health_get",
         "responses": {
           "200": {

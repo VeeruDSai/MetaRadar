@@ -94,11 +94,14 @@ async def get_confluence_alerts(
                 Signal.title,
                 Signal.signal_type,
                 Signal.source_id,
-                Signal.external_id,
+                Signal.fingerprint,
                 Signal.canonical_url,
                 Signal.content,
                 Signal.published_at,
                 Signal.retrieved_at,
+                Signal.pmid,
+                Signal.nct_id,
+                Signal.regulatory_id,
             )
             .where(Signal.development_id == conf.development_id)
             .order_by(Signal.published_at.desc())
@@ -112,12 +115,13 @@ async def get_confluence_alerts(
         signal_types = []
 
         for s in sig_rows:
+            ext_id = s[9] or s[10] or s[11] or s[4] or str(s[0])
             signals_data.append({
                 "signal_id": str(s[0]),
                 "title": s[1],
                 "signal_type": s[2],
                 "source_id": s[3],
-                "external_id": s[4],
+                "external_id": ext_id,
                 "canonical_url": s[5],
                 "published_at": s[7].isoformat() if s[7] else None,
             })
@@ -218,11 +222,14 @@ async def inspect_confluence(
             Signal.title,
             Signal.signal_type,
             Signal.source_id,
-            Signal.external_id,
+            Signal.fingerprint,
             Signal.canonical_url,
             Signal.content,
             Signal.published_at,
             Signal.retrieved_at,
+            Signal.pmid,
+            Signal.nct_id,
+            Signal.regulatory_id,
         )
         .where(Signal.development_id == conf.development_id)
         .order_by(Signal.published_at.desc())
@@ -259,11 +266,12 @@ async def inspect_confluence(
         elif s[3] == "ema":
             source_name = "EMA RSS Stream"
 
+        ext_id = s[9] or s[10] or s[11] or s[4] or str(s[0])
         evidence_sources.append(
             ConfluenceEvidenceSourceItem(
                 source_name=source_name,
                 source_type=s[2] or "CLINICAL_TRIAL",
-                external_id=s[4] or str(s[0]),
+                external_id=ext_id,
                 source_url=s[5],
                 retrieved_at=s[8],
                 published_at=s[7],
@@ -278,14 +286,14 @@ async def inspect_confluence(
     reasoning = (
         f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent source types "
         f"within a 48h sliding window. Drivers: {drivers_str}."
-        if signal_types else f"Confluence severity {conf.severity_score:.1f} calculated from multi-source cross-referencing."
+        if signal_types else "Confluence calculated from multi-source cross-referencing."
     )
 
     return ConfluenceInspectResponse(
         confluence_id=conf.confluence_id,
         development_id=conf.development_id,
         development_title=dev_title or "Unassigned Development",
-        score=score if signal_types else float(conf.severity_score or 75.0),
+        score=score if signal_types else 75.0,
         label=f"{conf.confluence_type.capitalize()} Confluence ({independent_count or 3} Independent Sources)",
         confluence_type=conf.confluence_type,
         window_hours=48,

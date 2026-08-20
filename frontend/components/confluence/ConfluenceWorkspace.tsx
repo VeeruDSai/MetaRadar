@@ -61,14 +61,14 @@ export function ConfluenceWorkspace() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Multi-Source Confluence Alerts</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Multi-Source Confluence Alerts</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             Independent signals converging on the same development within a 48-hour window (≥3 distinct source types required).
           </p>
         </div>
         <button
           onClick={loadAlerts}
-          className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 transition"
+          className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
         >
           Refresh Confluences
         </button>
@@ -88,7 +88,7 @@ export function ConfluenceWorkspace() {
       {loading && (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-slate-900/40 animate-pulse border border-slate-800" />
+            <div key={i} className="h-32 rounded-xl bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-slate-800" />
           ))}
         </div>
       )}
@@ -105,29 +105,29 @@ export function ConfluenceWorkspace() {
           {alerts.map((item) => (
             <div
               key={item.confluence_id}
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 shadow-sm"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 space-y-4 shadow-sm"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-950/80 text-purple-300 border border-purple-800/60">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800/60">
                       {item.confluence_type || 'Emerging'} Confluence
                     </span>
-                    <span className="text-xs font-mono text-slate-400">
+                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
                       {item.independent_sources_count || item.signal_count} Sources Converged
                     </span>
                   </div>
-                  <h3 className="text-base font-semibold text-slate-200">
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-200">
                     {item.development_title || 'Haemophilia Development'}
                   </h3>
                   {item.reasoning && (
-                    <p className="text-xs text-slate-400 leading-relaxed font-sans">{item.reasoning}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">{item.reasoning}</p>
                   )}
                 </div>
 
                 <div className="text-right shrink-0 space-y-2">
                   <div>
-                    <div className="text-sm font-mono font-bold text-purple-400">
+                    <div className="text-sm font-mono font-bold text-purple-600 dark:text-purple-400">
                       Score: {item.score !== undefined ? `${item.score} / 100` : '75.0'}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono">
@@ -136,7 +136,7 @@ export function ConfluenceWorkspace() {
                   </div>
                   <button
                     onClick={() => handleInspect(item)}
-                    className="px-3 py-1 text-xs font-medium rounded-lg bg-purple-900/60 hover:bg-purple-800/80 text-purple-200 border border-purple-700/60 transition flex items-center gap-1.5 ml-auto"
+                    className="px-3 py-1 text-xs font-medium rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800/80 dark:text-purple-200 dark:border-purple-700/60 transition flex items-center gap-1.5 ml-auto"
                   >
                     <span>Inspect Evidence</span>
                     <span>→</span>
@@ -151,7 +151,7 @@ export function ConfluenceWorkspace() {
                   {Object.entries(item.score_breakdown).map(([k, v]) => (
                     <span
                       key={k}
-                      className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px]"
+                      className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] border border-slate-200 dark:border-slate-700"
                     >
                       {k.replace(/_/g, ' ')}: +{v} pts
                     </span>
@@ -161,17 +161,17 @@ export function ConfluenceWorkspace() {
 
               {/* Signals list preview */}
               {item.signals && item.signals.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                     Contributing Evidence Signals
                   </div>
                   <div className="space-y-1.5">
                     {item.signals.map((s, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-950/40 border border-slate-800/40"
+                        className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/40"
                       >
-                        <span className="text-slate-300 font-medium truncate max-w-md">{s.title}</span>
+                        <span className="text-slate-800 dark:text-slate-300 font-medium truncate max-w-md">{s.title}</span>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
                           <span className="text-slate-500 font-mono text-[11px]">
                             {s.signal_type}
@@ -181,7 +181,7 @@ export function ConfluenceWorkspace() {
                               href={s.canonical_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-purple-400 hover:text-purple-300 text-[11px] underline"
+                              className="text-purple-600 dark:text-purple-400 hover:underline text-[11px] font-medium"
                             >
                               Source URL ↗
                             </a>
@@ -199,32 +199,32 @@ export function ConfluenceWorkspace() {
 
       {/* Backward Trace Inspect Modal / Drawer */}
       {inspectTarget && (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/80 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm flex justify-end">
           <div
-            className="w-full max-w-2xl bg-slate-900 border-l border-slate-800 h-full overflow-y-auto p-6 space-y-6 shadow-2xl flex flex-col justify-between"
+            className="w-full max-w-2xl bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 h-full overflow-y-auto p-6 space-y-6 shadow-2xl flex flex-col justify-between"
             role="dialog"
             aria-modal="true"
             aria-label="Confluence Evidence Backward Trace"
           >
             <div className="space-y-6">
               {/* Header */}
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-800">
+              <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-950/80 text-purple-300 border border-purple-800/60">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800/60">
                       {inspectTarget.label}
                     </span>
-                    <span className="text-xs font-mono text-emerald-400 font-bold">
+                    <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                       Score: {inspectTarget.score} / 100
                     </span>
                   </div>
-                  <h2 className="text-lg font-semibold text-slate-100">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     {inspectTarget.development_title || 'Haemophilia Development'}
                   </h2>
                 </div>
                 <button
                   onClick={() => setInspectTarget(null)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition"
+                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition"
                   aria-label="Close inspector"
                 >
                   ✕
@@ -232,11 +232,11 @@ export function ConfluenceWorkspace() {
               </div>
 
               {/* Explainable Reasoning Answer */}
-              <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+              <div className="bg-slate-50 dark:bg-slate-950/70 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-400">
                   Inspectable Mathematical Reasoning
                 </h3>
-                <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
                   {inspectTarget.reasoning}
                 </p>
                 <div className="text-[11px] text-slate-500 font-mono pt-1">
@@ -246,11 +246,11 @@ export function ConfluenceWorkspace() {
 
               {/* Verbatim Independent Sources Chain */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   Unbroken Backward Trace: Verbatim Source Excerpts ({inspectTarget.sources.length} Verified Sources)
                 </h3>
                 {inspectTarget.sources.length === 0 ? (
-                  <div className="text-xs text-slate-500 italic p-3 bg-slate-950/40 rounded-lg border border-slate-800">
+                  <div className="text-xs text-slate-500 italic p-3 bg-slate-50 dark:bg-slate-950/40 rounded-lg border border-slate-200 dark:border-slate-800">
                     No verbatim citations linked for this development.
                   </div>
                 ) : (
@@ -258,24 +258,24 @@ export function ConfluenceWorkspace() {
                     {inspectTarget.sources.map((src, i) => (
                       <div
                         key={i}
-                        className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2.5"
+                        className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-2.5"
                       >
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-purple-300 font-medium">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-50 text-purple-700 border border-purple-200 dark:bg-slate-800 dark:text-purple-300 font-medium">
                               {src.source_name}
                             </span>
-                            <span className="text-[11px] font-mono text-slate-400">
+                            <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">
                               ID: {src.external_id}
                             </span>
                           </div>
-                          <span className="text-xs font-mono font-semibold text-emerald-400">
+                          <span className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                             +{src.points_contributed} pts
                           </span>
                         </div>
 
                         {/* Verbatim Excerpt */}
-                        <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300 leading-relaxed font-sans select-text">
+                        <div className="p-3 rounded-lg bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-300 leading-relaxed font-sans select-text">
                           &ldquo;{src.verbatim_excerpt}&rdquo;
                         </div>
 
@@ -289,13 +289,13 @@ export function ConfluenceWorkspace() {
                               href={src.source_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-purple-400 hover:underline flex items-center gap-1"
+                              className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-medium"
                             >
                               <span>View Original Public Source</span>
                               <span>↗</span>
                             </a>
                           ) : (
-                            <span className="text-slate-600">No public URL attached</span>
+                            <span className="text-slate-500">No public URL attached</span>
                           )}
                         </div>
                       </div>
@@ -305,10 +305,10 @@ export function ConfluenceWorkspace() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-800 flex justify-end">
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
               <button
                 onClick={() => setInspectTarget(null)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 transition"
+                className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
               >
                 Close Inspector
               </button>

@@ -243,43 +243,76 @@ async def seed_data():
                 ),
             ])
 
-            # 9. Starter Signals
+            # 9. Starter Signals (Clearly tagged as synthetic test fixtures with real score breakdowns)
             session.add_all([
                 Signal(
                     source_id="pubmed",
                     development_id=dev1_id,
                     fingerprint="fp_seed_01",
-                    signal_type="congress",
+                    signal_type="PUBLICATIONS",
                     disease="haemophilia_a",
                     title="Five-Year Durability Outcomes in AAV5 Gene Therapy for Severe Haemophilia A",
                     content="Sustained median Factor VIII expression was maintained at 5 years with a 92% reduction in annualized bleeding rates compared to baseline prophylactic therapy.",
+                    canonical_url="https://pubmed.ncbi.nlm.nih.gov/38291023/",
                     published_at=now - timedelta(days=1),
+                    retrieved_at=now,
+                    data_mode="test_fixture",
+                    is_synthetic=True,
                     priority="HIGH",
-                    score_breakdown={"total_score": 88, "impact": 9, "urgency": 8, "evidence_strength": 9},
+                    score_breakdown={
+                        "novelty": 20.0,
+                        "clinical": 24.0,
+                        "regulatory": 18.0,
+                        "recency": 18.0,
+                        "total": 80.0,
+                        "version": "haemophilia_v2.0"
+                    },
                 ),
                 Signal(
-                    source_id="clinicaltrials",
+                    source_id="clinical_trials",
                     development_id=dev3_id,
                     fingerprint="fp_seed_02",
-                    signal_type="trial",
+                    signal_type="CLINICAL_TRIAL",
                     disease="haemophilia_a",
                     title="Phase 3 FRONTIER-2 Trial Evaluates Subcutaneous Mim8 in Haemophilia A Patients",
                     content="Primary outcome measures achieved zero-bleed status in a majority of treated cohorts without unexpected thromboembolic adverse events.",
+                    canonical_url="https://clinicaltrials.gov/study/NCT04869267",
                     published_at=now - timedelta(days=3),
+                    retrieved_at=now,
+                    data_mode="test_fixture",
+                    is_synthetic=True,
                     priority="CRITICAL",
-                    score_breakdown={"total_score": 94, "impact": 10, "urgency": 9, "evidence_strength": 9},
+                    score_breakdown={
+                        "novelty": 23.5,
+                        "clinical": 28.5,
+                        "regulatory": 23.0,
+                        "recency": 15.0,
+                        "total": 90.0,
+                        "version": "haemophilia_v2.0"
+                    },
                 ),
                 Signal(
-                    source_id="openfda",
+                    source_id="fda",
                     development_id=dev2_id,
                     fingerprint="fp_seed_03",
-                    signal_type="regulatory",
+                    signal_type="REGULATORY",
                     disease="haemophilia_b",
                     title="FDA Priority Review Granted for Subcutaneous Anti-TFPI Prophylaxis Expansion",
                     content="Supplemental Biologics License Application (sBLA) accepted under Priority Review with a PDUFA action date scheduled for late 2026.",
+                    canonical_url="https://api.fda.gov/drug/drugsfda.json?search=openfda.application_number:BLA761083",
                     published_at=now - timedelta(days=5),
+                    retrieved_at=now,
+                    data_mode="test_fixture",
+                    is_synthetic=True,
                     priority="HIGH",
-                    score_breakdown={"total_score": 82, "impact": 8, "urgency": 8, "evidence_strength": 9},
+                    score_breakdown={
+                        "novelty": 18.0,
+                        "clinical": 22.0,
+                        "regulatory": 24.0,
+                        "recency": 14.0,
+                        "total": 78.0,
+                        "version": "haemophilia_v2.0"
+                    },
                 ),
             ])
 

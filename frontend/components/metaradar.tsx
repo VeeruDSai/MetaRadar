@@ -43,6 +43,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+import { useTheme } from '@/components/theme/ThemeProvider'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
@@ -149,17 +150,13 @@ export function SectionTitle({
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const [dark, setDark] = useState(true)
+  const { isDark, toggleTheme } = useTheme()
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
 
   // Live health status polling (60s cadence)
   const { data: healthReady } = useLiveData<HealthReadyResponse>(getHealthReady, 60000)
   const { data: healthModels } = useLiveData<HealthModelsResponse>(getHealthModels, 60000)
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-  }, [dark])
 
   // Global ⌘K / Ctrl+K keyboard shortcut
   useEffect(() => {
@@ -277,10 +274,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
             <button
               className="theme-toggle"
-              onClick={() => setDark(!dark)}
-              aria-label="Toggle theme"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
             >
-              {dark ? <Moon size={16} /> : <Sun size={16} />}
+              {isDark ? <Moon size={16} /> : <Sun size={16} />}
             </button>
           </div>
         </header>
@@ -1471,22 +1468,14 @@ export function SourcesPage() {
 
 export function SettingsPage() {
   const [mounted, setMounted] = useState(false)
-  const [theme, setTheme] = useState('dark')
+  const { theme, setTheme } = useTheme()
   const [pollingInterval, setPollingInterval] = useState('30')
   const [modalOpen, setModalOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
-    const stored = localStorage.getItem('theme') || 'dark'
-    setTheme(stored)
   }, [])
-
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
-  }
 
   const handleCacheSuccess = () => {
     setToast('Server cache cleared successfully.')
@@ -1512,13 +1501,13 @@ export function SettingsPage() {
           <div className="flex gap-2">
             <button
               className={`px-3 py-1.5 rounded text-xs border ${theme === 'dark' ? 'bg-[var(--foreground)] text-[var(--background)] font-bold' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
-              onClick={() => handleThemeChange('dark')}
+              onClick={() => setTheme('dark')}
             >
               Dark Mode
             </button>
             <button
               className={`px-3 py-1.5 rounded text-xs border ${theme === 'light' ? 'bg-[var(--foreground)] text-[var(--background)] font-bold' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
-              onClick={() => handleThemeChange('light')}
+              onClick={() => setTheme('light')}
             >
               Light Mode
             </button>
