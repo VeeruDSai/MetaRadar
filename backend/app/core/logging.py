@@ -45,6 +45,11 @@ def configure_structlog(json_logs: bool = True) -> None:
     )
 
 
+def get_logger(name: str = "metaradar") -> Any:
+    """Get a structured logger instance."""
+    return structlog.get_logger(name)
+
+
 # Default configuration on import
 configure_structlog(json_logs=True)
-logger = structlog.get_logger("metaradar")
+logger = get_logger("metaradar")

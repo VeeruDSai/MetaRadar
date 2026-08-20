@@ -384,6 +384,32 @@ export interface ConfirmWatchItemResponse {
   monitoring_window_days: number;
 }
 
+export interface ConfluenceEvidenceSourceItem {
+  source_name: string;
+  source_type: string;
+  external_id: string;
+  source_url?: string;
+  retrieved_at?: string;
+  published_at?: string;
+  verbatim_excerpt: string;
+  points_contributed: number;
+}
+
+export interface ConfluenceInspectResponse {
+  confluence_id: string;
+  development_id?: string;
+  development_title?: string;
+  score: number;
+  label: string;
+  confluence_type: string;
+  window_hours: number;
+  distinct_sources_count: number;
+  score_breakdown: Record<string, number>;
+  reasoning: string;
+  sources: ConfluenceEvidenceSourceItem[];
+  detected_at: string;
+}
+
 // Phase 6 & 7 Intelligence & Parity Types
 export interface ConfluenceAlertItem {
   confluence_id: string;
@@ -396,10 +422,15 @@ export interface ConfluenceAlertItem {
   calculation_version?: string;
   independent_sources_count?: number;
   score_breakdown?: Record<string, number>;
+  reasoning?: string;
+  evidence_sources?: ConfluenceEvidenceSourceItem[];
   signals: Array<{
     signal_id: string;
     title: string;
     signal_type: string;
+    source_id?: string;
+    external_id?: string;
+    canonical_url?: string;
     published_at?: string;
   }>;
 }

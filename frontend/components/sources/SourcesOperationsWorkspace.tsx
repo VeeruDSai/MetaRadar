@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import type { SourceRegistryItem } from '@/types/api'
-import { fetchSourcesHealth } from '@/lib/api'
+import { fetchSourcesHealth, triggerIngestAndPipelineSync } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { ErrorState } from '../common/ErrorState'
 import { EmptyState } from '../common/EmptyState'
@@ -10,6 +10,8 @@ import { EmptyState } from '../common/EmptyState'
 export function SourcesOperationsWorkspace() {
   const [sources, setSources] = useState<SourceRegistryItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<any | null>(null)
   const [error, setError] = useState<FormattedError | null>(null)
 
   const loadSources = useCallback(async () => {
@@ -28,6 +30,21 @@ export function SourcesOperationsWorkspace() {
   useEffect(() => {
     loadSources()
   }, [loadSources])
+
+  const handleLiveSync = async () => {
+    setSyncing(true)
+    setError(null)
+    setSyncResult(null)
+    try {
+      const res = await triggerIngestAndPipelineSync(undefined, 50)
+      setSyncResult(res)
+      await loadSources()
+    } catch (err) {
+      setError(formatError(err, 'Live web ingestion failed.'))
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status.toUpperCase()) {
@@ -52,20 +69,54 @@ export function SourcesOperationsWorkspace() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-slate-100">Source Connectors & Health Operations</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time connector status, latency metrics, HTTP return codes, and ingestion telemetry across configured providers.
+            Real-time connector status, latency metrics, HTTP return codes, and live public ingestion telemetry across configured providers.
           </p>
         </div>
-        <button
-          onClick={loadSources}
-          className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 transition"
-        >
-          Refresh Sources
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={loadSources}
+            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 transition"
+          >
+            Refresh Health
+          </button>
+          <button
+            onClick={handleLiveSync}
+            disabled={syncing}
+            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-semibold text-white shadow-md transition flex items-center gap-1.5"
+          >
+            {syncing ? (
+              <>
+                <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Ingesting Live Data...</span>
+              </>
+            ) : (
+              <>
+                <span>⚡</span>
+                <span>Trigger Live Web Ingestion</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {syncResult && (
+        <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/80 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-emerald-300">✓ Live Web Ingestion & Pipeline Sync Complete</span>
+            <span className="font-mono text-slate-400">Duration: {syncResult.ingestion?.duration_s}s</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] text-slate-300 pt-1">
+            <div>Fetched: <span className="text-emerald-400 font-bold">{syncResult.ingestion?.total_fetched || 0}</span></div>
+            <div>New Bronze: <span className="text-emerald-400 font-bold">{syncResult.ingestion?.total_new_bronze || 0}</span></div>
+            <div>Signals Promoted: <span className="text-blue-400 font-bold">{syncResult.pipeline?.signals_processed || 0}</span></div>
+            <div>Confluences: <span className="text-purple-400 font-bold">{syncResult.pipeline?.confluences_count || 0}</span></div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <ErrorState

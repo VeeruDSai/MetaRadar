@@ -448,3 +448,40 @@ export async function clearCache(signal?: AbortSignal): Promise<CacheClearRespon
     signal
   )
 }
+
+export async function triggerIngestionRun(
+  connector_ids?: string[],
+  force_backfill: boolean = false,
+  signal?: AbortSignal
+): Promise<any> {
+  return apiFetch<any>(
+    '/ingestion/run',
+    {
+      method: 'POST',
+      body: JSON.stringify({ connector_ids, force_backfill }),
+    },
+    signal
+  )
+}
+
+export async function triggerIngestAndPipelineSync(
+  connector_ids?: string[],
+  batch_size: number = 50,
+  signal?: AbortSignal
+): Promise<any> {
+  return apiFetch<any>(
+    '/ingestion/sync-live',
+    {
+      method: 'POST',
+      body: JSON.stringify({ connector_ids, batch_size }),
+    },
+    signal
+  )
+}
+
+export async function inspectConfluence(
+  confluence_id: string,
+  signal?: AbortSignal
+): Promise<any> {
+  return apiFetch<any>(`/confluence/${encodeURIComponent(confluence_id)}/inspect`, undefined, signal)
+}

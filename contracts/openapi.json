@@ -385,6 +385,50 @@
         }
       }
     },
+    "/api/v1/confluence/{confluence_id}/inspect": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Inspect Confluence",
+        "description": "Backward Trace Inspectability: Answers 'Why this confluence score?' with full verbatim citations,\nsource URLs, retrieval timestamps, and exact mathematical breakdown.",
+        "operationId": "inspect_confluence_api_v1_confluence__confluence_id__inspect_get",
+        "parameters": [
+          {
+            "name": "confluence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Confluence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfluenceInspectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/lifecycles": {
       "get": {
         "tags": [
@@ -920,6 +964,132 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingestion/run": {
+      "post": {
+        "tags": [
+          "Live Ingestion & Data Connectors"
+        ],
+        "summary": "Trigger Live Connector Ingestion",
+        "description": "Fetches live biomedical data from public APIs into raw_signals_bronze and logs health status.",
+        "operationId": "trigger_ingestion_run_api_v1_ingestion_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/IngestionRunRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Trigger Ingestion Run Api V1 Ingestion Run Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingestion/sync-live": {
+      "post": {
+        "tags": [
+          "Live Ingestion & Data Connectors"
+        ],
+        "summary": "Live Ingest & End-to-End Pipeline Sync",
+        "description": "Fetches live data from public APIs into bronze, then promotes unpromoted records through the LangGraph intelligence pipeline.",
+        "operationId": "trigger_ingest_and_pipeline_sync_api_v1_ingestion_sync_live_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/IngestionSyncLiveRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Trigger Ingest And Pipeline Sync Api V1 Ingestion Sync Live Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingestion/status": {
+      "get": {
+        "tags": [
+          "Live Ingestion & Data Connectors"
+        ],
+        "summary": "Get Ingestion Health & Queue Status",
+        "description": "Returns recent connector health logs and unpromoted bronze queue count.",
+        "operationId": "get_ingestion_status_api_v1_ingestion_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Ingestion Status Api V1 Ingestion Status Get"
                 }
               }
             }
@@ -1748,6 +1918,24 @@
               }
             ],
             "title": "Score Breakdown"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning"
+          },
+          "evidence_sources": {
+            "items": {
+              "$ref": "#/components/schemas/ConfluenceEvidenceSourceItem"
+            },
+            "type": "array",
+            "title": "Evidence Sources"
           }
         },
         "type": "object",
@@ -1759,6 +1947,161 @@
           "created_at"
         ],
         "title": "ConfluenceAlertItem"
+      },
+      "ConfluenceEvidenceSourceItem": {
+        "properties": {
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type"
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "verbatim_excerpt": {
+            "type": "string",
+            "title": "Verbatim Excerpt"
+          },
+          "points_contributed": {
+            "type": "number",
+            "title": "Points Contributed",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_name",
+          "source_type",
+          "external_id",
+          "verbatim_excerpt"
+        ],
+        "title": "ConfluenceEvidenceSourceItem"
+      },
+      "ConfluenceInspectResponse": {
+        "properties": {
+          "confluence_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Confluence Id"
+          },
+          "development_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Development Id"
+          },
+          "development_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Development Title"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "confluence_type": {
+            "type": "string",
+            "title": "Confluence Type"
+          },
+          "window_hours": {
+            "type": "integer",
+            "title": "Window Hours",
+            "default": 48
+          },
+          "distinct_sources_count": {
+            "type": "integer",
+            "title": "Distinct Sources Count"
+          },
+          "score_breakdown": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Score Breakdown"
+          },
+          "reasoning": {
+            "type": "string",
+            "title": "Reasoning"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ConfluenceEvidenceSourceItem"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Detected At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confluence_id",
+          "score",
+          "label",
+          "confluence_type",
+          "distinct_sources_count",
+          "reasoning",
+          "detected_at"
+        ],
+        "title": "ConfluenceInspectResponse"
       },
       "ConfluenceSummarySchema": {
         "properties": {
@@ -2402,6 +2745,60 @@
         },
         "type": "object",
         "title": "HealthResponse"
+      },
+      "IngestionRunRequest": {
+        "properties": {
+          "connector_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connector Ids",
+            "description": "Optional list of connector IDs to run: pubmed, clinical_trials, fda, ema, newsapi. If None, runs all."
+          },
+          "force_backfill": {
+            "type": "boolean",
+            "title": "Force Backfill",
+            "description": "Whether to force backfill window replay instead of incremental rolling window.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "IngestionRunRequest"
+      },
+      "IngestionSyncLiveRequest": {
+        "properties": {
+          "connector_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connector Ids",
+            "description": "Connector IDs to execute before pipeline promotion."
+          },
+          "batch_size": {
+            "type": "integer",
+            "title": "Batch Size",
+            "description": "Max signals to promote through LangGraph pipeline.",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "title": "IngestionSyncLiveRequest"
       },
       "LifecycleSummarySchema": {
         "properties": {

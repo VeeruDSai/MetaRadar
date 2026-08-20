@@ -8,6 +8,8 @@ from app.schemas.intelligence import (
     DataMode,
     ConfidenceType,
     ConfluenceAlertItem,
+    ConfluenceInspectResponse,
+    ConfluenceEvidenceSourceItem,
     LifecycleTimelineItem,
     ContradictionItem,
     MissingSignalWatchItem,

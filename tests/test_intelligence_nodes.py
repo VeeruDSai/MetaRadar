@@ -452,8 +452,28 @@ async def test_node_calibrate_applies_feedback_gradient_updates():
 
 @pytest.mark.asyncio
 async def test_pipeline_runner_end_to_end_execution():
+    sample_signals = [
+        {
+            "id": "e2e_sig_1",
+            "title": "FDA Grants Priority Review for Gene Therapy in Haemophilia B",
+            "source_id": "fda",
+            "signal_type": "REGULATORY",
+            "content": "Supplemental Biologics License Application (sBLA) for Hemgenix (etranacogene dezaparvovec) accepted under Priority Review for expanded indications in haemophilia B.",
+            "disease": "haemophilia_b",
+            "published_at": "2026-08-15T00:00:00Z"
+        },
+        {
+            "id": "e2e_sig_2",
+            "title": "Phase 3 Trial Demonstrates Long-Term Durability",
+            "source_id": "clinical_trials",
+            "signal_type": "CLINICAL_TRIAL",
+            "content": "Phase 3 clinical trial results (NCT03569891) demonstrate sustained Factor IX expression and long-term hemostatic efficacy in severe haemophilia B patients over 36 months.",
+            "disease": "haemophilia_b",
+            "published_at": "2026-08-16T00:00:00Z"
+        }
+    ]
     runner = PipelineRunner(session=None)
-    final_state = await runner.run(batch_size=3)
+    final_state = await runner.run(batch_size=2, raw_signals=sample_signals)
 
     assert final_state["pipeline_run_id"] is not None
     assert final_state["signals_processed"] >= 1

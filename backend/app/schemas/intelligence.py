@@ -22,6 +22,32 @@ class ConfidenceType(str, Enum):
     HUMAN_VALIDATION = "human_validation"
 
 
+class ConfluenceEvidenceSourceItem(BaseModel):
+    source_name: str
+    source_type: str
+    external_id: str
+    source_url: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    verbatim_excerpt: str
+    points_contributed: float = 0.0
+
+
+class ConfluenceInspectResponse(BaseModel):
+    confluence_id: UUID
+    development_id: Optional[UUID] = None
+    development_title: Optional[str] = None
+    score: float
+    label: str
+    confluence_type: str
+    window_hours: int = 48
+    distinct_sources_count: int
+    score_breakdown: Dict[str, float] = Field(default_factory=dict)
+    reasoning: str
+    sources: List[ConfluenceEvidenceSourceItem] = Field(default_factory=list)
+    detected_at: datetime
+
+
 class ConfluenceAlertItem(BaseModel):
     confluence_id: UUID
     development_id: UUID
@@ -34,6 +60,8 @@ class ConfluenceAlertItem(BaseModel):
     calculation_version: Optional[str] = "confluence_v2.0"
     independent_sources_count: Optional[int] = None
     score_breakdown: Optional[Dict[str, float]] = None
+    reasoning: Optional[str] = None
+    evidence_sources: List[ConfluenceEvidenceSourceItem] = Field(default_factory=list)
 
 
 class LifecycleTimelineItem(BaseModel):

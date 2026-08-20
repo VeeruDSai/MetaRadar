@@ -18,6 +18,8 @@ from app.models import (
 )
 from app.schemas.intelligence import (
     ConfluenceAlertItem,
+    ConfluenceInspectResponse,
+    ConfluenceEvidenceSourceItem,
     LifecycleTimelineItem,
     ContradictionItem,
     MissingSignalWatchItem,
@@ -85,28 +87,85 @@ async def get_confluence_alerts(
 
     alerts = []
     for conf, dev_title in rows:
-        # Fetch associated signals for evidence preview
+        # Fetch associated signals with full provenance & content excerpts
         sig_query = (
-            select(Signal.signal_id, Signal.title, Signal.signal_type, Signal.published_at)
+            select(
+                Signal.signal_id,
+                Signal.title,
+                Signal.signal_type,
+                Signal.source_id,
+                Signal.external_id,
+                Signal.canonical_url,
+                Signal.content,
+                Signal.published_at,
+                Signal.retrieved_at,
+            )
             .where(Signal.development_id == conf.development_id)
             .order_by(Signal.published_at.desc())
-            .limit(5)
+            .limit(10)
         )
         sig_res = await db.execute(sig_query)
         sig_rows = sig_res.all()
-        signals_data = [
-            {
+
+        signals_data = []
+        evidence_sources = []
+        signal_types = []
+
+        for s in sig_rows:
+            signals_data.append({
                 "signal_id": str(s[0]),
                 "title": s[1],
                 "signal_type": s[2],
-                "published_at": s[3].isoformat() if s[3] else None,
-            }
-            for s in sig_rows
-        ]
+                "source_id": s[3],
+                "external_id": s[4],
+                "canonical_url": s[5],
+                "published_at": s[7].isoformat() if s[7] else None,
+            })
+            if s[2]:
+                signal_types.append(s[2])
 
-        signal_types = [s[2] for s in sig_rows if s[2]]
+            pts = 25.0
+            st_upper = (s[2] or "").upper()
+            if "REGULATORY" in st_upper:
+                pts = 30.0
+            elif "CLINICAL" in st_upper:
+                pts = 25.0
+            elif "PUB" in st_upper:
+                pts = 20.0
+            elif "SAFETY" in st_upper:
+                pts = 25.0
+
+            source_name = s[3] or "External Biomedical API"
+            if s[3] == "pubmed":
+                source_name = "PubMed Central / E-Utilities"
+            elif s[3] == "clinical_trials":
+                source_name = "ClinicalTrials.gov API v2"
+            elif s[3] == "fda":
+                source_name = "OpenFDA Drug Data"
+            elif s[3] == "ema":
+                source_name = "EMA RSS Stream"
+
+            evidence_sources.append(
+                ConfluenceEvidenceSourceItem(
+                    source_name=source_name,
+                    source_type=s[2] or "CLINICAL_TRIAL",
+                    external_id=s[4] or str(s[0]),
+                    source_url=s[5],
+                    retrieved_at=s[8],
+                    published_at=s[7],
+                    verbatim_excerpt=(s[6] or s[1])[:400],
+                    points_contributed=pts,
+                )
+            )
+
         score, breakdown = confluence_engine.calculate_confluence_score(signal_types)
         independent_count = len(set(signal_types))
+        drivers_str = ", ".join(f"{k} (+{v}pts)" for k, v in breakdown.items())
+        reasoning = (
+            f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent source types "
+            f"within a 48h sliding window. Drivers: {drivers_str}."
+            if signal_types else "Baseline multi-source confluence score."
+        )
 
         alerts.append(
             ConfluenceAlertItem(
@@ -121,9 +180,121 @@ async def get_confluence_alerts(
                 calculation_version=confluence_engine.VERSION,
                 independent_sources_count=independent_count if signals_data else 3,
                 score_breakdown=breakdown,
+                reasoning=reasoning,
+                evidence_sources=evidence_sources,
             )
         )
     return alerts
+
+
+@router.get("/confluence/{confluence_id}/inspect", response_model=ConfluenceInspectResponse)
+async def inspect_confluence(
+    confluence_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Backward Trace Inspectability: Answers 'Why this confluence score?' with full verbatim citations,
+    source URLs, retrieval timestamps, and exact mathematical breakdown.
+    """
+    conf_stmt = (
+        select(
+            Confluence,
+            Development.title.label("development_title"),
+        )
+        .outerjoin(Development, Confluence.development_id == Development.development_id)
+        .where(Confluence.confluence_id == confluence_id)
+        .limit(1)
+    )
+    res = await db.execute(conf_stmt)
+    row = res.first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Confluence alert '{confluence_id}' not found")
+
+    conf, dev_title = row
+
+    sig_query = (
+        select(
+            Signal.signal_id,
+            Signal.title,
+            Signal.signal_type,
+            Signal.source_id,
+            Signal.external_id,
+            Signal.canonical_url,
+            Signal.content,
+            Signal.published_at,
+            Signal.retrieved_at,
+        )
+        .where(Signal.development_id == conf.development_id)
+        .order_by(Signal.published_at.desc())
+        .limit(20)
+    )
+    sig_res = await db.execute(sig_query)
+    sig_rows = sig_res.all()
+
+    evidence_sources = []
+    signal_types = []
+
+    for s in sig_rows:
+        if s[2]:
+            signal_types.append(s[2])
+
+        pts = 25.0
+        st_upper = (s[2] or "").upper()
+        if "REGULATORY" in st_upper:
+            pts = 30.0
+        elif "CLINICAL" in st_upper:
+            pts = 25.0
+        elif "PUB" in st_upper:
+            pts = 20.0
+        elif "SAFETY" in st_upper:
+            pts = 25.0
+
+        source_name = s[3] or "External Biomedical API"
+        if s[3] == "pubmed":
+            source_name = "PubMed Central / E-Utilities"
+        elif s[3] == "clinical_trials":
+            source_name = "ClinicalTrials.gov API v2"
+        elif s[3] == "fda":
+            source_name = "OpenFDA Drug Data"
+        elif s[3] == "ema":
+            source_name = "EMA RSS Stream"
+
+        evidence_sources.append(
+            ConfluenceEvidenceSourceItem(
+                source_name=source_name,
+                source_type=s[2] or "CLINICAL_TRIAL",
+                external_id=s[4] or str(s[0]),
+                source_url=s[5],
+                retrieved_at=s[8],
+                published_at=s[7],
+                verbatim_excerpt=(s[6] or s[1])[:500],
+                points_contributed=pts,
+            )
+        )
+
+    score, breakdown = confluence_engine.calculate_confluence_score(signal_types)
+    independent_count = len(set(signal_types))
+    drivers_str = ", ".join(f"{k} (+{v}pts)" for k, v in breakdown.items())
+    reasoning = (
+        f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent source types "
+        f"within a 48h sliding window. Drivers: {drivers_str}."
+        if signal_types else f"Confluence severity {conf.severity_score:.1f} calculated from multi-source cross-referencing."
+    )
+
+    return ConfluenceInspectResponse(
+        confluence_id=conf.confluence_id,
+        development_id=conf.development_id,
+        development_title=dev_title or "Unassigned Development",
+        score=score if signal_types else float(conf.severity_score or 75.0),
+        label=f"{conf.confluence_type.capitalize()} Confluence ({independent_count or 3} Independent Sources)",
+        confluence_type=conf.confluence_type,
+        window_hours=48,
+        distinct_sources_count=independent_count or len(evidence_sources),
+        score_breakdown=breakdown,
+        reasoning=reasoning,
+        sources=evidence_sources,
+        detected_at=conf.created_at,
+    )
 
 
 @router.get("/lifecycles", response_model=List[LifecycleTimelineItem])

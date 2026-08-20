@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     registry,
     cache,
     observability,
+    ingestion,
 )
 
 # Initialize structured JSON logging
@@ -73,6 +74,7 @@ app.include_router(registry.router, prefix=f"{settings.API_V1_STR}", tags=["Regi
 app.include_router(observability.router, prefix=f"{settings.API_V1_STR}", tags=["Observability & System Health"])
 app.include_router(cache.router, prefix=f"{settings.API_V1_STR}", tags=["Cache Management"])
 app.include_router(pipeline.router, prefix=f"{settings.API_V1_STR}", tags=["Pipeline Execution"])
+app.include_router(ingestion.router, prefix=f"{settings.API_V1_STR}", tags=["Live Ingestion & Data Connectors"])
 app.include_router(search.router, prefix=f"{settings.API_V1_STR}/search", tags=["Search & Retrieval"])
 app.include_router(feedback.router, prefix=f"{settings.API_V1_STR}", tags=["Stakeholder Calibration & Feedback"])
 

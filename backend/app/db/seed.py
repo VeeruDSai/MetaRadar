@@ -25,13 +25,16 @@ async def seed_data():
     async with async_session_factory() as session:
         print("[SEED] Seeding MetaRadar reference and synthetic landscape data...")
 
-        # 1. Sources
+        # 1. Sources (Include both canonical connector IDs and legacy keys)
         sources_data = [
-            {"source_id": "pubmed", "name": "PubMed MEDLINE", "freshness_class": "batch", "syndication_group": "Literature"},
-            {"source_id": "clinicaltrials", "name": "ClinicalTrials.gov", "freshness_class": "near_real_time", "syndication_group": "Trial Registries"},
-            {"source_id": "openfda", "name": "openFDA Regulatory Disclosures", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+            {"source_id": "pubmed", "name": "PubMed MEDLINE (E-Utilities)", "freshness_class": "batch", "syndication_group": "Literature"},
+            {"source_id": "clinical_trials", "name": "ClinicalTrials.gov API v2", "freshness_class": "near_real_time", "syndication_group": "Trial Registries"},
+            {"source_id": "fda", "name": "openFDA Drugs & Adverse Events", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+            {"source_id": "ema", "name": "European Medicines Agency", "freshness_class": "delayed", "syndication_group": "Regulatory"},
             {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "quota_remaining": 100},
-            {"source_id": "ema_rss", "name": "European Medicines Agency RSS", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+            {"source_id": "clinicaltrials", "name": "ClinicalTrials.gov (Legacy)", "freshness_class": "near_real_time", "syndication_group": "Trial Registries"},
+            {"source_id": "openfda", "name": "openFDA Regulatory Disclosures (Legacy)", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+            {"source_id": "ema_rss", "name": "European Medicines Agency RSS (Legacy)", "freshness_class": "delayed", "syndication_group": "Regulatory"},
         ]
         for s in sources_data:
             existing = await session.get(Source, s["source_id"])
