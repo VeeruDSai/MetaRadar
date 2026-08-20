@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DevelopmentSummary(BaseModel):
@@ -24,4 +24,25 @@ class SourceRegistryItem(BaseModel):
     status: str
     quota_remaining: Optional[int] = None
     last_success: Optional[datetime] = None
-    connector_status: str = "LIVE"
+    connector_status: str = "NEVER_CONNECTED"
+    last_attempted: Optional[datetime] = None
+    latency_ms: Optional[int] = None
+    records_fetched: int = 0
+    records_accepted: int = 0
+    records_rejected: int = 0
+    http_status: Optional[int] = None
+
+
+class SourceHealthLogItem(BaseModel):
+    id: UUID
+    source_id: str
+    pipeline_run_id: Optional[UUID] = None
+    checked_at: datetime
+    connector_status: str
+    http_status: Optional[int] = None
+    latency_ms: Optional[int] = None
+    records_fetched: int = 0
+    records_accepted: int = 0
+    records_rejected: int = 0
+    last_error: Optional[str] = None
+    error_code: Optional[str] = None

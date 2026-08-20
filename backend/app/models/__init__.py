@@ -43,6 +43,32 @@ class Source(Base):
     last_success = Column(DateTime(timezone=True), nullable=True)
     last_error = Column(Text, nullable=True)
 
+    # Health & Operational Telemetry
+    connector_status = Column(String(50), default="NEVER_CONNECTED", nullable=False)
+    last_attempted = Column(DateTime(timezone=True), nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    records_fetched = Column(Integer, default=0, nullable=False)
+    records_accepted = Column(Integer, default=0, nullable=False)
+    records_rejected = Column(Integer, default=0, nullable=False)
+    http_status = Column(Integer, nullable=True)
+
+
+class SourceHealthLog(Base):
+    __tablename__ = "source_health_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_id = Column(String(100), ForeignKey("sources.source_id"), nullable=False)
+    pipeline_run_id = Column(UUID(as_uuid=True), ForeignKey("pipeline_runs.pipeline_run_id"), nullable=True)
+    checked_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    connector_status = Column(String(50), nullable=False)
+    http_status = Column(Integer, nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    records_fetched = Column(Integer, default=0, nullable=False)
+    records_accepted = Column(Integer, default=0, nullable=False)
+    records_rejected = Column(Integer, default=0, nullable=False)
+    last_error = Column(Text, nullable=True)
+    error_code = Column(String(50), nullable=True)
+
 
 class Company(Base):
     __tablename__ = "companies"
@@ -147,12 +173,7 @@ class RawSignalBronze(Base):
 
 
 class ConnectorState(Base):
-    """Per-connector per-profile incremental run state (D-11).
-
-    Survives restarts, is queryable and auditable. `cursor` is a free-form
-    JSON string per source (e.g. NewsAPI quota bookkeeping:
-    {"quota_remaining": N, "quota_window_date": "YYYY-MM-DD"}).
-    """
+    """Per-connector per-profile incremental run state (D-11)."""
 
     __tablename__ = "connector_state"
 
@@ -201,6 +222,12 @@ class Signal(Base):
     published_at = Column(DateTime(timezone=True), nullable=False)
     retrieved_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
+    # Truthfulness, DataMode & Provenance
+    data_mode = Column(String(50), default="live", nullable=False)
+    is_synthetic = Column(Boolean, default=False, nullable=False)
+    confidence_type = Column(String(50), nullable=True)
+    confidence_rationale = Column(Text, nullable=True)
+
     facts = Column(JSONB, nullable=True)
     interpretation = Column(Text, nullable=True)
     speculation = Column(Text, nullable=True)
@@ -239,6 +266,28 @@ class Contradiction(Base):
     confidence = Column(Float, nullable=False)
     description = Column(Text, nullable=False)
     detected_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Excerpts & Provenance
+    claim_a_excerpt = Column(Text, nullable=True)
+    claim_b_excerpt = Column(Text, nullable=True)
+    claim_a_evidence_id = Column(UUID(as_uuid=True), nullable=True)
+    claim_b_evidence_id = Column(UUID(as_uuid=True), nullable=True)
+    confidence_type = Column(String(50), default="nli_heuristic", nullable=False)
+
+
+class CalibrationRun(Base):
+    __tablename__ = "calibration_runs"
+
+    run_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    triggered_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(50), default="completed", nullable=False)
+    feedback_count = Column(Integer, default=0, nullable=False)
+    previous_weights = Column(JSONB, nullable=True)
+    new_weights = Column(JSONB, nullable=True)
+    affected_functions = Column(JSONB, nullable=True)
+    reason = Column(Text, nullable=True)
+    scoring_version = Column(String(50), default="haemophilia_v2.0", nullable=False)
 
 
 class CalibrationHistory(Base):
@@ -290,6 +339,11 @@ class CalibrationFeedback(Base):
     action_appropriate = Column(Boolean, nullable=False)
     comments = Column(Text, nullable=True)
     submitted_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Idempotency Tracking
+    is_applied = Column(Boolean, default=False, nullable=False)
+    applied_at = Column(DateTime(timezone=True), nullable=True)
+    calibration_run_id = Column(UUID(as_uuid=True), ForeignKey("calibration_runs.run_id"), nullable=True)
 
 
 class WatchItem(Base):
