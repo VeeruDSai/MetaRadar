@@ -540,20 +540,23 @@ item = {
 | A5 | Backend `Signal` model columns from migration 004 (`confidence_type`, `confidence_rationale`) are unused by the serializer today | Priority Score Consistency | If they are populated by scoring, the "no confidence column" claim narrows; serializer line 134's `getattr(s, "confidence", 0.85)` proves `confidence` itself doesn't exist |
 | A6 | `provenance_status` values proposed (`complete`/`missing_url`/`synthetic`) are a new contract not present anywhere | API Contract Changes | UI-SPEC uses prose states (`SOURCE URL UNAVAILABLE (test fixture)`); exact enum spelling must be locked in plan |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Confluence semantics direction** — switch backend to distinct `source_id` counts (recommended) or keep `signal_type` and reword UI copy?
    - What we know: backend + invariant test lock signal_type; UI copy says source types; live data can never fire confluence today.
    - What's unclear: user directive (DIR-15) permits either fix.
    - Recommendation: distinct source_ids; update node_confluence, ConfluenceEngine, and the invariant test together; surface counts verbatim in UI.
+   - RESOLVED: distinct `source_id` counting locked in 08-02 Task 3 (services/confluence.py + workflows/nodes/confluence.py + invariant test + ConfluenceWorkspace copy all switch together).
 2. **`external_id` uniqueness contract** — NewsAPI articles have no stable numeric id; what identifies a NewsAPI record across runs (url as id? title+publishedAt hash)?
    - What we know: NewsAPI article dict has `url`; runner fingerprints `sig:{source}:{ext_id}`.
    - What's unclear: dedup behavior for the same article re-fetched.
    - Recommendation: use article URL as external_id for NewsAPI; document in connector.
+   - RESOLVED: NewsAPI article URL is the external_id — locked in 08-01 Task 2 (newsapi.py flattens `article.url` to top-level raw_payload `url`/`external_id` provenance keys).
 3. **`confidence` field** — Signal has no confidence column; should phase 08 add one, or drop confidence from the UI?
    - What we know: serializer fabricates 0.85; UI renders `{confidence}%`.
    - What's unclear: whether confidence has a real definition (confidence_type exists but is not populated on signals).
    - Recommendation: drop fabricated confidence; render `confidence_type`/`confidence_rationale` when present, else omit the metric.
+   - RESOLVED: confidence dropped/omitted when absent — locked in 08-01 Task 1 (serializer deletes the 0.85 fabrication and emits confidence_type/confidence_rationale only when populated; mappers.ts emits `raw.confidence ?? undefined`).
 
 ## Environment Availability
 
