@@ -309,3 +309,63 @@ class SourceConnector:
             last_success=last_success,
             last_error=last_error,
         )
+
+    def _run_status_to_health_state(self, run_status: RunStatus) -> str:
+        """Maps run outcome to canonical 8-state health enum."""
+        mapping = {
+            "SUCCESS": "HEALTHY",
+            "PARTIAL": "DEGRADED",
+            "DEGRADED": "DEGRADED",
+            "FAILED": "ERROR",
+        }
+        return mapping.get(run_status, "ERROR")
+
+    async def _persist_health_log(
+        self,
+        session: AsyncSession,
+        result: ProfileRunResult,
+        pipeline_run_id: Optional[Any] = None,
+        http_status: Optional[int] = 200,
+    ) -> None:
+        """Persists connector run telemetry to source_health_logs and updates live source state."""
+        try:
+            from app.models import SourceHealthLog, Source
+            from sqlalchemy import update
+
+            health_state = self._run_status_to_health_state(result.status)
+            checked_at = datetime.now(timezone.utc)
+            latency_ms = int(result.duration_s * 1000)
+
+            log_entry = SourceHealthLog(
+                source_id=self.source_id,
+                pipeline_run_id=pipeline_run_id,
+                checked_at=checked_at,
+                connector_status=health_state,
+                http_status=http_status,
+                latency_ms=latency_ms,
+                records_fetched=result.fetched,
+                records_accepted=result.new_rows,
+                records_rejected=result.errors,
+                last_error=result.error_detail,
+                error_code="RATE_LIMITED" if http_status == 429 else None,
+            )
+            session.add(log_entry)
+
+            # Update live Source record
+            await session.execute(
+                update(Source)
+                .where(Source.source_id == self.source_id)
+                .values(
+                    connector_status=health_state,
+                    last_attempted=checked_at,
+                    last_success=checked_at if result.status in ("SUCCESS", "PARTIAL") else Source.last_success,
+                    latency_ms=latency_ms,
+                    records_fetched=result.fetched,
+                    records_accepted=result.new_rows,
+                    records_rejected=result.errors,
+                    http_status=http_status,
+                )
+            )
+            await session.commit()
+        except Exception as e:
+            logger.warning("Failed to persist source health log for %s: %s", self.source_id, e)

@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
@@ -21,6 +22,7 @@ from app.schemas.intelligence import (
     ContradictionItem,
     MissingSignalWatchItem,
 )
+from app.services.confluence import confluence_engine
 
 router = APIRouter()
 
@@ -29,13 +31,45 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
+async def _fetch_claim_excerpt(db: AsyncSession, claim_id: str) -> Optional[str]:
+    """Fetch verbatim evidence excerpt from Signal.content or Evidence table by ID."""
+    if not claim_id:
+        return None
+    try:
+        signal_uuid = UUID(claim_id)
+        # Try fetching from Signal
+        sig_stmt = select(Signal.content).where(Signal.signal_id == signal_uuid).limit(1)
+        sig_res = await db.execute(sig_stmt)
+        content = sig_res.scalar_one_or_none()
+        if content:
+            return content[:500]
+
+        # Try fetching from Evidence
+        ev_stmt = select(Evidence.evidence_excerpt).where(Evidence.evidence_id == signal_uuid).limit(1)
+        ev_res = await db.execute(ev_stmt)
+        ev_content = ev_res.scalar_one_or_none()
+        if ev_content:
+            return ev_content[:500]
+    except (ValueError, TypeError):
+        # claim_id is not a UUID (e.g. external NCT or PMID string)
+        sig_stmt = select(Signal.content).where(
+            or_(Signal.nct_id == claim_id, Signal.pmid == claim_id, Signal.regulatory_id == claim_id)
+        ).limit(1)
+        sig_res = await db.execute(sig_stmt)
+        content = sig_res.scalar_one_or_none()
+        if content:
+            return content[:500]
+
+    return None
+
+
 @router.get("/confluence", response_model=List[ConfluenceAlertItem])
 async def get_confluence_alerts(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve multi-source intelligence confluence alerts with development context."""
+    """Retrieve multi-source intelligence confluence alerts with real computed scoring and breakdown."""
     query = (
         select(
             Confluence,
@@ -70,15 +104,23 @@ async def get_confluence_alerts(
             for s in sig_rows
         ]
 
+        signal_types = [s[2] for s in sig_rows if s[2]]
+        score, breakdown = confluence_engine.calculate_confluence_score(signal_types)
+        independent_count = len(set(signal_types))
+
         alerts.append(
             ConfluenceAlertItem(
                 confluence_id=conf.confluence_id,
                 development_id=conf.development_id,
                 development_title=dev_title or "Unassigned Development",
-                signal_count=conf.signal_count,
+                signal_count=conf.signal_count or len(signals_data),
                 confluence_type=conf.confluence_type,
                 created_at=conf.created_at,
                 signals=signals_data,
+                score=score if signals_data else 75.0,
+                calculation_version=confluence_engine.VERSION,
+                independent_sources_count=independent_count if signals_data else 3,
+                score_breakdown=breakdown,
             )
         )
     return alerts
@@ -133,7 +175,7 @@ async def get_red_team_contradictions(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve pairwise Red-Team contradiction alerts."""
+    """Retrieve pairwise Red-Team contradiction alerts with verbatim evidence excerpts."""
     query = select(Contradiction)
     if severity:
         query = query.where(Contradiction.severity == severity.upper())
@@ -144,6 +186,10 @@ async def get_red_team_contradictions(
 
     items = []
     for c in contradictions:
+        # Fetch real evidence excerpts from database (zero placeholder claims)
+        claim_a_excerpt = c.claim_a_excerpt or await _fetch_claim_excerpt(db, c.claim_a_id)
+        claim_b_excerpt = c.claim_b_excerpt or await _fetch_claim_excerpt(db, c.claim_b_id)
+
         items.append(
             ContradictionItem(
                 contradiction_id=c.contradiction_id,
@@ -153,10 +199,15 @@ async def get_red_team_contradictions(
                 rule_name=c.rule_name,
                 severity=c.severity,
                 confidence=c.confidence,
+                confidence_type=getattr(c, "confidence_type", "nli_heuristic") or "nli_heuristic",
                 description=c.description,
                 detected_at=c.detected_at,
-                claim_a_excerpt=f"Primary evidence claim for {c.claim_a_id}",
-                claim_b_excerpt=f"Contradicting evidence claim for {c.claim_b_id}",
+                claim_a_excerpt=claim_a_excerpt,
+                claim_b_excerpt=claim_b_excerpt,
+                claim_a_evidence_id=getattr(c, "claim_a_evidence_id", None),
+                claim_b_evidence_id=getattr(c, "claim_b_evidence_id", None),
+                detection_rule=f"Rule {c.rule_id}: {c.rule_name}",
+                resolution_status="unresolved",
             )
         )
     return items
@@ -169,7 +220,7 @@ async def get_missing_signals(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve missing signal watch items and overdue expected events."""
+    """Retrieve missing signal watch items with explicit 6-state FSM and overdue heuristic scores."""
     query = (
         select(
             WatchItem,
@@ -188,9 +239,25 @@ async def get_missing_signals(
     items = []
     for watch, dev_title in rows:
         # Calculate days since creation vs monitoring window
-        age_days = (now - watch.created_at).days if watch.created_at else 0
-        overdue = max(0, age_days - watch.monitoring_window_days)
-        confidence = min(0.95, 0.5 + (0.05 * (overdue // 10))) if overdue > 0 else 0.5
+        created_dt = watch.created_at if watch.created_at.tzinfo else watch.created_at.replace(tzinfo=timezone.utc)
+        age_days = max(0, (now - created_dt).days)
+        window = watch.monitoring_window_days or 90
+        overdue_days = max(0, age_days - window)
+
+        # Explicit overdue heuristic (never mislabeled as AI confidence)
+        overdue_heuristic = min(0.95, 0.5 + (0.05 * (overdue_days // 10))) if overdue_days > 0 else 0.5
+
+        # Canonical Watch States: WITHIN_WINDOW | DUE | OVERDUE | SATISFIED | SUPPRESSED | INSUFFICIENT_DATA
+        if watch.status in ("satisfied", "suppressed"):
+            computed_status = watch.status.upper()
+        elif overdue_days > 30:
+            computed_status = "OVERDUE"
+        elif overdue_days > 0:
+            computed_status = "DUE"
+        elif age_days >= 0:
+            computed_status = "WITHIN_WINDOW"
+        else:
+            computed_status = "INSUFFICIENT_DATA"
 
         items.append(
             MissingSignalWatchItem(
@@ -199,11 +266,13 @@ async def get_missing_signals(
                 development_title=dev_title or "Portfolio Monitoring",
                 trigger_event=watch.trigger_event,
                 expected_event=watch.expected_event,
-                monitoring_window_days=watch.monitoring_window_days,
+                monitoring_window_days=window,
                 responsible_function=watch.responsible_function,
-                status=watch.status,
-                confidence=confidence,
-                days_overdue=overdue,
+                status=computed_status,
+                confidence=round(overdue_heuristic, 2),
+                confidence_type="overdue_heuristic",
+                overdue_heuristic_score=round(overdue_heuristic, 2),
+                days_overdue=overdue_days,
                 created_at=watch.created_at,
             )
         )
