@@ -101,7 +101,8 @@ const nav = [
   { href: '/calibrate', label: 'Calibrate', icon: Gauge },
 ]
 const secondary = [
-  { href: '/sources', label: 'Sources', icon: BookOpen },
+  { href: '/sources', label: 'Sources & Connectors', icon: BookOpen },
+  { href: '/observability', label: 'Observability & Logs', icon: Database },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

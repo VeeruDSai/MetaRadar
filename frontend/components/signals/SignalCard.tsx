@@ -1,0 +1,75 @@
+'use client'
+
+import React from 'react'
+import type { Signal } from '@/types/api'
+import { DataModeBadge } from '../common/DataModeBadge'
+
+export interface SignalCardProps {
+  signal: Signal
+  onSelect?: (signal: Signal) => void
+}
+
+export function SignalCard({ signal, onSelect }: SignalCardProps) {
+  const severityColors = {
+    critical: 'bg-red-950/40 border-red-800/60 text-red-300',
+    high: 'bg-orange-950/40 border-orange-800/60 text-orange-300',
+    medium: 'bg-amber-950/40 border-amber-800/60 text-amber-300',
+    low: 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300',
+    neutral: 'bg-slate-900 border-slate-800 text-slate-300',
+  }
+
+  const priorityKey = (signal.severity || 'medium').toLowerCase() as keyof typeof severityColors
+  const badgeClass = severityColors[priorityKey] || severityColors.medium
+
+  const breakdown = signal.score_breakdown
+
+  return (
+    <div
+      onClick={() => onSelect?.(signal)}
+      className="group relative rounded-xl border border-slate-800 bg-slate-900/50 p-5 hover:bg-slate-900 hover:border-slate-700 transition cursor-pointer space-y-3 shadow-sm"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${badgeClass}`}>
+            {signal.priority || signal.severity}
+          </span>
+          <DataModeBadge mode={signal.data_mode} isSynthetic={signal.is_synthetic} />
+          <span className="text-xs text-slate-500 font-mono">{signal.detectedAt}</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="text-right">
+            <div className="text-xs font-mono font-semibold text-emerald-400">
+              {breakdown?.total !== undefined ? `${breakdown.total} pts` : (signal.score ? `${signal.score} pts` : 'Unscored')}
+            </div>
+            <div className="text-[10px] text-slate-500">
+              {signal.scoring_status === 'not_computed' ? 'Not computed' : 'Priority Score'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-slate-200 group-hover:text-blue-400 transition line-clamp-2">
+          {signal.title}
+        </h3>
+        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+          {signal.summary || signal.content}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs text-slate-500">
+        <div className="flex items-center gap-2">
+          {signal.sources?.map((s, i) => (
+            <span key={i} className="text-[11px] font-mono bg-slate-800/80 px-2 py-0.5 rounded text-slate-300">
+              {s.name}
+            </span>
+          ))}
+        </div>
+        <span className="text-xs text-blue-400 group-hover:underline">
+          View Evidence →
+        </span>
+      </div>
+    </div>
+  )
+}
