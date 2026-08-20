@@ -74,18 +74,20 @@ All five connectors extend `SourceConnector` in `backend/app/connectors/base.py`
 
 ## Monitoring & Observability
 
-**Error Tracking:**
-- None external; stdlib `logging` throughout backend
+**Error Tracking & Structured Logging:**
+- `structlog` configured across FastAPI and background services with automated secret scrubbing (`_scrub_secrets`) and PII redaction (`backend/app/core/logging.py`)
+- Correlation ID propagation via `X-Request-ID` middleware (`backend/app/core/middleware.py`)
+- Source connector operational telemetry and error capture persisted to `source_health_logs` table
 
-**Logs:**
-- Console via `logging.basicConfig` (`backend/app/main.py`)
-- File logs: `logs/backend.log`, `logs/frontend.log` written by `start.py`; `start.py` also polls health endpoints and prints telemetry every ~9s
-
-**Health endpoints** (`backend/app/api/v1/endpoints/health.py`):
+**Health & Ingestion Operations Endpoints:**
 - `GET /api/v1/health` — liveness
 - `GET /api/v1/health/ready` — DB (mandatory) + Redis (non-blocking)
 - `GET /api/v1/health/models` — Ollama availability (real HTTP probe to `/api/tags`), Grok configured/fallback enabled, embedding model info
-- `GET /api/v1/health/connectors` — per-connector status incl. quota, last success/error from `connector_state` (D-22 honest health)
+- `GET /api/v1/health/connectors` — per-connector status incl. quota, last success/error from `connector_state`
+- `GET /api/v1/sources/health` — live source connector latency and HTTP status telemetry
+- `POST /api/v1/ingestion/run` — trigger live background connector ingestion
+- `POST /api/v1/ingestion/sync-live` — synchronized live connector fetch + LangGraph pipeline promotion
+- `GET /api/v1/confluence/{id}/inspect` — explainable confluence backward trace with verbatim quotes and points breakdown
 
 ## CI/CD & Deployment
 

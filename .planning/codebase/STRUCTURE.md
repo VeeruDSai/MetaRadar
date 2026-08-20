@@ -76,16 +76,16 @@
 
 **`backend/app/api/v1/endpoints/`:**
 - Purpose: HTTP routers — one file per feature area
-- Contains: `health.py` (`/health`, `/health/ready`, `/health/models`, `/health/connectors`), `signals.py` (`/signals`, `/overview`, `/athena`), `pipeline.py` (`/pipeline/run`, `/pipeline/status/{id}`), `search.py` (`/search`), `feedback.py` (`/feedback`, `/feedback/summary`, `/calibrate`, `/calibration/weights`, `/watch-items/confirm`), `intelligence.py` (`/confluence`, `/lifecycles`, `/red-team`, `/missing-signals`), `registry.py` (`/developments`, `/sources`), `cache.py` (`/cache/clear`)
-- Pattern: each file defines `router = APIRouter()`; registered in `backend/app/main.py:59-66`
+- Contains: `health.py` (`/health`, `/health/ready`, `/health/models`, `/health/connectors`), `signals.py` (`/signals`, `/overview`, `/athena`), `pipeline.py` (`/pipeline/run`, `/pipeline/status/{id}`), `ingestion.py` (`/ingestion/run`, `/ingestion/sync-live`, `/ingestion/status`), `search.py` (`/search`), `feedback.py` (`/feedback`, `/feedback/summary`, `/calibrate`, `/calibration/weights`, `/watch-items/confirm`), `intelligence.py` (`/confluence`, `/confluence/{id}/inspect`, `/lifecycles`, `/red-team`, `/missing-signals`), `registry.py` (`/developments`, `/sources`, `/sources/health`), `cache.py` (`/cache/clear`)
+- Pattern: each file defines `router = APIRouter()`; registered in `backend/app/main.py`
 
 **`backend/app/workflows/`:**
 - Purpose: LangGraph intelligence engine
-- Contains: `graph.py` (11-node linear StateGraph), `state.py` (MetaRadarState + reducers), `runner.py` (PipelineRunner), `nodes/` (11 `node_<name>` functions)
+- Contains: `graph.py` (10-node linear StateGraph), `state.py` (MetaRadarState + reducers), `runner.py` (PipelineRunner with DB persistence & promotion), `nodes/` (10 `node_<name>` functions)
 
 **`backend/app/services/`:**
 - Purpose: Reusable business logic consumed by endpoints AND workflow nodes
-- Contains: `embeddings.py` (EmbeddingService), `vector_query.py` (VectorQueryService), `calibration.py` (StakeholderCalibrationService + HeuristicWatchParser), `deduplication.py` (fingerprints + bronze persistence), `pii.py` (PIIPHIScrubber), `redteam.py` (RedTeamNLIService), `source_independence.py` (SourceIndependenceClassifier), `embeddings_backfill.py` (CLI backfill script)
+- Contains: `ingestion.py` (IngestionService), `embeddings.py` (EmbeddingService), `vector_query.py` (VectorQueryService), `calibration.py` (StakeholderCalibrationService + HeuristicWatchParser), `deduplication.py` (fingerprints + bronze persistence), `pii.py` (PIIPHIScrubber), `redteam.py` (RedTeamNLIService), `source_independence.py` (SourceIndependenceClassifier), `scoring.py` (PriorityScoringService), `confluence.py` (ConfluenceEngine), `embeddings_backfill.py` (CLI backfill script)
 
 **`backend/app/connectors/`:**
 - Purpose: External source adapters, all extending `SourceConnector`
@@ -97,14 +97,13 @@
 
 **`backend/app/schemas/`:**
 - Purpose: Pydantic request/response models
-- Contains: `__init__.py` (main schemas incl. SignalSchema, OverviewResponse, calibration schemas), `intelligence.py` (confluence/lifecycle/red-team/missing-signal items), `registry.py` (DevelopmentSummary, SourceRegistryItem)
+- Contains: `__init__.py` (main schemas incl. SignalSchema, OverviewResponse, calibration schemas), `intelligence.py` (confluence/lifecycle/red-team/missing-signal/inspect items), `registry.py` (DevelopmentSummary, SourceRegistryItem)
 
 **`backend/app/models/__init__.py`:**
-- Purpose: Single-module ORM layer — all tables (PipelineRun, Source, Company, Asset, ClinicalTrial, Development, Event, LifecycleEvent, Confluence, RawSignalBronze, ConnectorState, Evidence, Signal, Contradiction, CalibrationHistory, ScoringWeights, SignalRouting, CalibrationFeedback, WatchItem, AuditLog)
-- Note: 317 lines; split by domain if it grows further
+- Purpose: Single-module ORM layer — all tables (PipelineRun, Source, Company, Asset, ClinicalTrial, Development, Event, LifecycleEvent, Confluence, RawSignalBronze, ConnectorState, Evidence, Signal, Contradiction, CalibrationHistory, ScoringWeights, SignalRouting, CalibrationFeedback, WatchItem, SourceHealthLog, AuditLog)
 
 **`backend/alembic/versions/`:**
-- Purpose: Schema migrations — `001_initial_v51_schema.py`, `002_phase1_connector_state_and_cross_source.py`, `003_contradictions_scoring.py`
+- Purpose: Schema migrations — `001_initial_v51_schema.py`, `002_phase1_connector_state_and_cross_source.py`, `003_contradictions_scoring.py`, `004_phase7_truthfulness_and_provenance.py`
 - Pattern: sequential numeric prefixes; async env in `backend/alembic/env.py` reads `settings.DATABASE_URL`
 
 **`config/`:**

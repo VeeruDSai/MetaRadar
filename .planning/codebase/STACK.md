@@ -35,21 +35,23 @@
 - Pydantic v2 + pydantic-settings - Validation and settings (`backend/app/core/config.py`, `backend/app/schemas/`)
 
 **AI/ML:**
-- LangGraph >=0.2.0 - 11-node intelligence pipeline graph (`backend/app/workflows/graph.py`)
-- Ollama - Local LLM sidecar serving `gemma3:4b` (`backend/app/providers/gemma.py`)
+**AI/ML & Ingestion:**
+- LangGraph >=0.2.0 - 10-node intelligence pipeline graph (`backend/app/workflows/graph.py`, `backend/app/workflows/runner.py`)
+- Live Biomedical Ingestion - Real public HTTP connectors (`PubMed`, `ClinicalTrials.gov`, `OpenFDA`, `EMA RSS`) in `backend/app/connectors/`
+- Ollama - Local LLM sidecar serving `gemma3:4b` with deterministic fallback (`backend/app/providers/gemma.py`)
 - fastembed >=0.4.0 - ONNX CPU embeddings, `sentence-transformers/all-MiniLM-L6-v2` (384-dim) (`backend/app/services/embeddings.py`)
 - pgvector >=0.2.5 - Vector column type + HNSW index for hybrid search (`backend/app/models/__init__.py`, `backend/app/services/vector_query.py`)
 
 **Testing:**
-- pytest >=8.0.0, pytest-asyncio, pytest-cov - Backend test suite (`pytest.ini`, `tests/`)
-- Frontend: no JS test framework detected; CI runs `tsc --noEmit`, ESLint, and `next build` instead (`.github/workflows/ci.yml`)
+- pytest >=8.0.0, pytest-asyncio, pytest-cov - Backend test suite (`pytest.ini`, `tests/` - 91 passed tests)
+- Frontend: `tsc --noEmit`, ESLint 10, Next.js build validation in `.github/workflows/ci.yml`
 
 **Build/Dev:**
 - uvicorn - ASGI server (`start.py`, `backend/Dockerfile`)
 - Alembic - DB migrations (`backend/alembic/`, `backend/alembic.ini`)
 - ESLint 10 + eslint-config-next - Frontend linting (`frontend/eslint.config.mjs`)
 - Tailwind CSS 4 + PostCSS - Styling pipeline (`frontend/postcss.config.mjs`, `frontend/components.json`)
-- shadcn/ui (style "base-nova") - Component system (`frontend/components.json`)
+- shadcn/ui - Component system (`frontend/components.json`)
 
 ## Key Dependencies
 
@@ -60,13 +62,13 @@
 - `pgvector` - Vector search capability (`backend/app/models/__init__.py`)
 - `langgraph` - Pipeline orchestration (`backend/app/workflows/graph.py`)
 - `fastembed` - Local CPU embeddings (`backend/app/services/embeddings.py`)
-- `httpx` - All outbound HTTP (connectors, Ollama, xAI Grok) (`backend/app/connectors/base.py`, `backend/app/providers/`)
+- `httpx` - Outbound HTTP for public biomedical APIs (PubMed, ClinicalTrials, FDA, EMA, NewsAPI) and LLM providers
 - `redis` - Cache health/clear endpoints (`backend/app/api/v1/endpoints/cache.py`, `backend/app/api/v1/endpoints/health.py`)
 
 **Infrastructure:**
 - `pydantic` + `pydantic-settings` - Schema + env config (`backend/app/core/config.py`)
 - `pyyaml` - Domain config loading (`backend/app/core/domain_config.py`)
-- `alembic` - Schema migrations (`backend/alembic/versions/001_initial_v51_schema.py`)
+- `alembic` - Schema migrations (`backend/alembic/versions/`)
 - `python-dotenv` - Local env loading
 
 **Frontend UI libs:**
@@ -74,24 +76,23 @@
 - `recharts` 3 - Charts/trends (`frontend/lib/api.ts` trend mappers)
 - `lucide-react` - Icons
 - `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`, `@base-ui/react` - shadcn/ui styling stack
-- `shadcn` CLI 4 - Component scaffolding
 
 ## Configuration
 
 **Environment:**
-- pydantic-settings reads `.env` (from `backend/app/core/config.py` — `env_file=".env"`); `.env` is NOT committed; template at `.env.example`
+- pydantic-settings reads `.env` (`backend/app/core/config.py`); `.env` template at `.env.example`
 - Key configs: `DATABASE_URL`, `REDIS_URL`, `LLM_PROVIDER`, `LOCAL_LLM_MODEL`, `LLM_DEVICE`, `LLM_DTYPE`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS`, `ENABLE_GROK_FALLBACK`, `XAI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_MODEL_REVISION`, `EMBEDDING_DIMENSION`, `RAW_SIGNAL_RETENTION_DAYS`, `NEWSAPI_KEY`, `CORS_ORIGINS`
-- Frontend env: `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api/v1` in `frontend/lib/api.ts`); `NEXT_PUBLIC_API_BASE_URL` used in `docker-compose.yml`
-- Domain config: `config/haemophilia.yaml` (disease area, assets, connector query profiles, routing matrix), path overridable via `DOMAIN_CONFIG_PATH` (`backend/app/core/domain_config.py` line 128)
+- Frontend env: `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api/v1` in `frontend/lib/api.ts`)
+- Domain config: `config/haemophilia.yaml` (disease area, assets, connector query profiles, routing matrix), path overridable via `DOMAIN_CONFIG_PATH`
 
 **Build:**
-- `frontend/next.config.mjs` — minimal (images unoptimized)
+- `frontend/next.config.mjs` — Next.js 16 App Router configuration
 - `frontend/tsconfig.json` — strict mode, path alias `@/*` → `./*`
 - `frontend/eslint.config.mjs` — ESLint 10 flat config
 - `backend/alembic.ini` — migration location `alembic`, asyncpg URL
 - `docker-compose.yml` — full service stack (postgres, redis, backend, backend-gpu profile, frontend, ollama)
 - `pytest.ini` — `asyncio_mode = auto`, `testpaths = tests`, `pythonpath = backend .`
-- Contract sync: `scripts/export_openapi.py` regenerates `contracts/openapi.json` and `frontend/types/api.ts`; CI enforces `git diff --exit-code` on it
+- Contract sync: `scripts/export_openapi.py` regenerates `contracts/openapi.json` and `frontend/types/api.ts`
 
 ## Platform Requirements
 

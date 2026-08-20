@@ -17,13 +17,13 @@ MetaRadar v5.1 is a near-real-time competitive intelligence platform for the hae
 │                               │ HTTP /api/v1 (CORS)               │
 │                               ▼                                  │
 │  FastAPI Backend (backend/app/main.py → uvicorn app.main:app)    │
-│  ├─ api/v1/endpoints/*  8 routers (health, signals, pipeline,     │
+│  ├─ api/v1/endpoints/*  9 routers (health, signals, pipeline,     │
 │  │                       search, feedback, intelligence,          │
-│  │                       registry, cache)                         │
+│  │                       registry, cache, ingestion)              │
 │  ├─ schemas/            Pydantic request/response contracts       │
-│  ├─ services/           business logic (embedding, vector query,  │
-│  │                       calibration, PII scrub, red-team, dedup)  │
-│  ├─ workflows/          LangGraph 11-node pipeline + PipelineRunner│
+│  ├─ services/           business logic (ingestion, embedding,     │
+│  │                       vector query, calibration, PII, dedup)   │
+│  ├─ workflows/          LangGraph 10-node pipeline + PipelineRunner│
 │  ├─ connectors/         5 source adapters (bronze persistence)    │
 │  └─ providers/          LLM fallback chain (Gemma→Grok→Degraded)  │
 ├───────────────────────────────┬──────────────────────────────────┤
@@ -40,7 +40,8 @@ MetaRadar v5.1 is a near-real-time competitive intelligence platform for the hae
 | FastAPI app factory | Creates app, CORS, registers 9 routers, correlation ID middleware, structlog | `backend/app/main.py` |
 | Settings singleton | pydantic-settings env config (DB, Redis, LLM, CORS) | `backend/app/core/config.py` |
 | Domain config | YAML-driven haemophilia ontology + connector query blocks, cached | `backend/app/core/domain_config.py` → `config/haemophilia.yaml` |
-| API endpoints | HTTP surface: signals, overview, athena, search, pipeline, feedback, registry, cache, health, observability | `backend/app/api/v1/endpoints/*.py` |
+| API endpoints | HTTP surface: signals, overview, athena, search, pipeline, feedback, registry, cache, health, ingestion | `backend/app/api/v1/endpoints/*.py` |
+| Ingestion Service | Live public connector execution, bronze storage, and telemetry | `backend/app/services/ingestion.py` |
 | Pydantic schemas | Request/response contracts; canonical OpenAPI source | `backend/app/schemas/__init__.py`, `backend/app/schemas/intelligence.py`, `backend/app/schemas/registry.py` |
 | SQLAlchemy models | 22 ORM tables (signals, bronze, developments, calibration, watch items, health logs, runs) | `backend/app/models/__init__.py` |
 | DB session | Async engine, `get_db` dependency, advisory locks | `backend/app/db/session.py` |
@@ -49,9 +50,9 @@ MetaRadar v5.1 is a near-real-time competitive intelligence platform for the hae
 | LLM providers | `LLMProvider` base + Gemma (Ollama), Grok (xAI), Degraded BART | `backend/app/providers/` |
 | ProviderFactory | Fallback chain orchestrator (singleton) | `backend/app/providers/factory.py` |
 | LangGraph state | `MetaRadarState` TypedDict with typed reducers | `backend/app/workflows/state.py` |
-| LangGraph graph | 11-node linear pipeline assembly/compile | `backend/app/workflows/graph.py` |
+| LangGraph graph | 10-node linear pipeline assembly/compile | `backend/app/workflows/graph.py` |
 | PipelineRunner | Async orchestrator; PipelineRun DB lifecycle; `ainvoke` execution | `backend/app/workflows/runner.py` |
-| Workflow nodes | 11 node functions (ingest → calibrate) | `backend/app/workflows/nodes/` |
+| Workflow nodes | 10 node functions (ingest → calibrate) | `backend/app/workflows/nodes/` |
 | Priority Scoring Service | Deterministic 4-factor scoring (Novelty 25%, Clinical 30%, Regulatory 25%, Recency 20%) | `backend/app/services/scoring.py` |
 | Confluence Engine | Multi-source convergence detection (≥3 sources in 48h) | `backend/app/services/confluence.py` |
 | Structured Logging | Structlog JSON logging with secret/PII auto-redaction | `backend/app/core/logging.py` |

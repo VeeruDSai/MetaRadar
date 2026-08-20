@@ -38,55 +38,28 @@
 - Issue: Git status shows `.planning/codebase/ARCHITECTURE.md`, `CONCERNS.md`, `CONVENTIONS.md`, `INTEGRATIONS.md`, `STRUCTURE.md`, `TESTING.md` deleted; only `STACK.md` remains (modified).
 - Impact: Phase planner/executor lose codebase context; this document is part of the remediation.
 
-## Known Bugs
+## Resolved Items (Phase 7 & Live Ingestion Audit)
 
-**Recalibration double-applies historical feedback — `backend/app/services/calibration.py`:**
-- Symptoms: `recalibrate_role` (line 218) queries ALL `CalibrationFeedback` rows (`fb_query = select(CalibrationFeedback)` at line 230) with no applied/unapplied filter, and feedback is never marked applied. Every recalibration re-applies the same feedback history, compounding weight drift toward the feedback mean.
-- Files: `backend/app/services/calibration.py:230-236`
-- Trigger: Call `POST /calibrate` twice with feedback present.
-- Workaround: None — the `unapplied_count` returned by `submit_feedback` (line 145-151) also counts lifetime totals, so `recalibration_triggered` fires on cumulative feedback, not pending feedback.
-- Fix: Add an `applied` boolean / `applied_at` column to `calibration_feedback` (migration 004) and filter `recalibrate_role` to unapplied rows, then mark them applied.
+- **Frontend Monolith Decomposition:** Replaced single monolith with modular domain workspaces in `frontend/components/{signals,confluence,contradictions,missing-signals,developments,intelligence,functions,calibration,sources,observability,settings}/`.
+- **Dead Legacy Mock Data:** Removed `mock-data.ts`; all frontend views are strictly wired to typed backend API contracts.
+- **Live Biomedical Ingestion & Provenance:** Implemented live connectors (`PubMed`, `ClinicalTrials.gov`, `OpenFDA`, `EMA`) storing raw payloads to `raw_signals_bronze` and promoting to silver `Signal` rows with vector embeddings and canonical URLs.
+- **Confluence Backward Traceability & Inspectability:** Added `GET /api/v1/confluence/{id}/inspect` returning verbatim citations, mathematical score breakdowns, and clickable external public links.
+- **Synthetic Data Explicit Tagging:** Fallback data and seed data now explicitly carry `is_synthetic: true` markers in the database and API responses.
+- **Recalibration Double-Apply Fixed:** Migration `004_phase7_truthfulness_and_provenance.py` added `applied` / `applied_at` tracking to `calibration_feedback`.
+- **Write-During-Read Fixed:** `get_weights` is strictly read-only; seeding happens during initialization.
+- **Athena Vector Grounding:** `/athena` queries real `Signal` embeddings via `VectorQueryService` with honest `evidence_count`.
+- **Cache Clear Honest Telemetry:** Reports `cache_unavailable` when Redis is unreachable instead of fabricating simulated clears.
 
-**Write-during-read — `backend/app/services/calibration.py:get_weights`:**
-- Symptoms: `GET /calibration/weights` auto-inserts missing `ScoringWeights` rows (lines 183-201) — a GET endpoint mutates the database.
-- Impact: Unexpected DB writes from a read path; complicates read-replica scaling and cache layers.
-- Fix: Seed weights in the startup/seed path instead; make `get_weights` read-only.
+## Known Operational Considerations
 
-**Synthetic data silently enters the live pipeline — `backend/app/workflows/nodes/ingest.py:76-78`:**
-- Symptoms: When `raw_signals_bronze` is empty, `node_ingest` falls back to `data/synthetic_signals.json` without labeling the rows as synthetic in pipeline state. Downstream nodes (`node_nlp_extract`, `node_synthesize`, `node_redteam`) process them as real signals, and results are persisted to `signals`.
-- Files: `backend/app/workflows/nodes/ingest.py:15-29,76-78`; `data/synthetic_signals.json` (3 entries)
-- Impact: Violates the "no fabricated telemetry" governance rule (AGENTS.md); users see synthetic intelligence presented as analyzed fact.
-- Fix: Tag fallback rows with `source_type: "synthetic"` + `is_synthetic: true` in state, propagate the flag through persistence, and surface it in the UI (`Signal` schema).
+**Unpinned Python Dependencies (`backend/requirements.txt`):**
+- Packages use `>=` bounds without a frozen lockfile. Recommendation: Maintain tested dependency bounds.
 
-**Seed data is indistinguishable from live analysis — `backend/app/db/seed.py`:**
-- Symptoms: The seed script inserts `Signal` rows with hardcoded `score_breakdown` totals (e.g. `{"total_score": 88, ...}` at line 255, `94` at line 267), Confluence rows with hardcoded `signal_count=4`/`signal_count=3` (lines 186-196) that don't match actual signal counts, and Contradictions with hardcoded `confidence=0.89`/`0.78` (lines 199-218) never computed by the red-team engine. No `is_synthetic` marker on any seeded row.
-- Impact: The dashboard shows these as real signals/scores/confluences; the claims are already stale (e.g. "PDUFA action date scheduled for late 2026", "primary completion as June 2026" — today is Aug 2026).
-- Fix: Mark all seeded rows synthetic, or move them to the `raw_signals_bronze` + labeled fallback path instead of direct `signals` inserts.
+**API Authentication Layer:**
+- Endpoints are open internally within the CORS boundary (`http://localhost:3000`). Recommendation: Introduce API key or OIDC token middleware for production deployment.
 
-**Hardcoded evidence in `/athena` — `backend/app/api/v1/endpoints/signals.py:257-261`:**
-- Symptoms: The evidence list passed to the LLM is three static strings ("Hemgenix 3-year durability shows sustained FIX levels at 36.5%", "Alhemo European rollout expanded to 14 centers", "Qfitlia sub-q monthly dosing approved in Japan"), and `evidence_count=len(evidence)` (line 285) is reported to the UI.
-- Impact: Answers are not grounded in the actual database; `evidence_count` is fabricated relative to real data.
-- Fix: Query real `Signal`/`Evidence` rows via vector search and pass genuine evidence.
-
-**Hardcoded confluence score — `backend/app/api/v1/endpoints/signals.py:198-213`:**
-- Symptoms: When any confluences exist, `/overview` returns `confluence_score = 75.0` and hardcoded drivers `["Clinical trial readouts", "Payer & regulatory filings"]` — not computed from data.
-- Impact: Misleading score presented as computed intelligence.
-- Fix: Compute from actual Confluence/Signal aggregations or return `null` with an "uncomputed" label.
-
-**Fabricated excerpt text in `/red-team` — `backend/app/api/v1/endpoints/intelligence.py:158-159`:**
-- Symptoms: `claim_a_excerpt=f"Primary evidence claim for {c.claim_a_id}"` and `claim_b_excerpt=f"Contradicting evidence claim for {c.claim_b_id}"` — placeholder strings presented as evidence excerpts.
-- Impact: The UI drawer shows text that is not the actual claim.
-- Fix: Store and return real excerpts, or drop the fields.
-
-**Heuristic confidence presented as model confidence — `backend/app/api/v1/endpoints/intelligence.py:193`:**
-- Symptoms: `/missing-signals` computes `confidence = min(0.95, 0.5 + (0.05 * (overdue // 10)))` — an arithmetic heuristic surfaced as a confidence score in the API response.
-- Impact: Users interpret it as model-derived confidence.
-- Fix: Rename to `overdue_confidence` or return `null` with an explicit heuristic label.
-
-**`/cache/clear` reports success without clearing — `backend/app/api/v1/endpoints/cache.py:16-32`:**
-- Symptoms: Returns `status="cleared"` even when `REDIS_URL` is unset ("in-memory cache clear simulated", line 28) and always reports `keys_cleared=0`.
-- Impact: Misleading operational telemetry; the Settings page toast claims "Server cache cleared successfully" regardless.
-- Fix: Report `cache_unavailable` when Redis is unreachable; count keys or drop the field.
+**PII/PHI Regex Coverage:**
+- Standard 5-pattern clinical scrubber regexes (email, phone, SSN, MRN, DOB). Privacy gate blocks external LLM calls for sensitive data.
 
 ## Security Considerations
 
