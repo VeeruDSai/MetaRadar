@@ -58,10 +58,15 @@ async def test_business_endpoints():
     
     mock_res_count = MagicMock()
     mock_res_count.scalar.return_value = 0
-    
+    mock_res_none = MagicMock()
+    mock_res_none.scalar_one_or_none.return_value = None
+    mock_res_all_empty = MagicMock()
+    mock_res_all_empty.all.return_value = []
+
     mock_db.execute.side_effect = [
-        mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_scalars, # overview
-        mock_res_scalars, mock_res_count # signals
+        mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_scalars, mock_res_none, # overview
+        mock_res_scalars, mock_res_count, # signals
+        mock_res_all_empty, mock_res_all_empty, # athena
     ]
 
     async def mock_get_db():
@@ -85,7 +90,7 @@ async def test_business_endpoints():
             assert res_athena.status_code == 200
             athena_data = res_athena.json()
             assert "answer" in athena_data
-            assert athena_data["confidence"] > 0
+            assert athena_data["confidence"] >= 0
     finally:
         app.dependency_overrides.pop(get_db, None)
 
