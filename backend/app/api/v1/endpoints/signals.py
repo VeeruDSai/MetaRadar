@@ -31,6 +31,11 @@ from app.providers.base import ProviderCapability, DataClassification
 
 router = APIRouter()
 
+# Athena evidence gate: maximum pgvector cosine distance for a signal to count
+# as cited evidence (similarity >= 0.65). Single source of truth — the query
+# filter and the docstring contract must never drift apart again.
+MAX_EVIDENCE_DISTANCE = 0.35
+
 
 def _serialize_signal(s: Signal) -> SignalSchema:
     """Helper to convert SQLAlchemy Signal model into a typed SignalSchema instance with honest scoring telemetry and provenance."""
@@ -314,7 +319,7 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         query_vec = await embedding_service.embed_text(scrubbed_prompt)
 
         # Query pgvector cosine distance: Signal.embedding <=> query_vec
-        # Cosine distance < 0.35 (similarity >= 0.65)
+        # Candidates require distance < MAX_EVIDENCE_DISTANCE (similarity >= 0.65)
         stmt = (
             select(
                 Signal.signal_id,
@@ -326,7 +331,7 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
                 Signal.embedding.op("<=>")(query_vec).label("distance"),
             )
             .where(Signal.embedding.isnot(None))
-            .where(Signal.embedding.op("<=>")(query_vec) < 0.40)
+            .where(Signal.embedding.op("<=>")(query_vec) < MAX_EVIDENCE_DISTANCE)
             .order_by("distance")
             .limit(5)
         )
