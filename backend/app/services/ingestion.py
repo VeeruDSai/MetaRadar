@@ -45,27 +45,45 @@ class IngestionService:
         total_duplicates = 0
         per_source_results: Dict[str, Any] = {}
 
+        from app.core.config import configuration_error_for
+
         for conn in connectors_to_run:
             conn_start = time.perf_counter()
             conn_results: List[ProfileRunResult] = []
             conn_status = "HEALTHY"
             error_msg: Optional[str] = None
+            config_err = configuration_error_for(conn.source_id)
 
             try:
                 # Execute all profiles for this connector
                 conn_results = await conn.run_all_profiles(self.session, force_backfill=force_backfill)
                 resolved_status = conn._resolve_run_status(conn_results)
 
-                if resolved_status == "FAILED":
-                    conn_status = "UNHEALTHY"
-                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "All profiles failed"
-                elif resolved_status in ("DEGRADED", "PARTIAL"):
-                    conn_status = "DEGRADED"
-                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail)
-
                 conn_fetched = sum(r.fetched for r in conn_results)
                 conn_new = sum(r.new_rows for r in conn_results)
                 conn_dups = sum(r.duplicates for r in conn_results)
+
+                # Precedence: CONFIGURATION_ERROR > UNHEALTHY > DEGRADED > HEALTHY
+                if config_err:
+                    conn_status = "CONFIGURATION_ERROR"
+                    error_msg = config_err
+                elif resolved_status == "CONFIGURATION_ERROR":
+                    conn_status = "CONFIGURATION_ERROR"
+                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "Configuration error"
+                elif resolved_status == "FAILED":
+                    conn_status = "UNHEALTHY"
+                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "All profiles failed"
+                elif conn_fetched == 0:
+                    conn_status = "DEGRADED"
+                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "0 records fetched"
+                elif conn_new == 0:
+                    conn_status = "DEGRADED"
+                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "0 new records accepted (all duplicates or filtered)"
+                elif resolved_status in ("DEGRADED", "PARTIAL"):
+                    conn_status = "DEGRADED"
+                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail)
+                else:
+                    conn_status = "HEALTHY"
 
                 total_fetched += conn_fetched
                 total_new += conn_new
@@ -98,6 +116,7 @@ class IngestionService:
                     src_obj.records_rejected = conn_dups
                     src_obj.last_attempted = now_utc
                     src_obj.last_error = error_msg
+                    src_obj.configuration_error_message = config_err
                     if conn_status == "HEALTHY":
                         src_obj.last_success = now_utc
 

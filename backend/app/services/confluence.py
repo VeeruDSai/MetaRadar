@@ -98,17 +98,21 @@ class ConfluenceEngine:
                 else:
                     break
 
-            distinct_types = set(s.get("signal_type", "CLINICAL_TRIAL").upper() for s in window_signals)
-            if len(distinct_types) >= min_sources:
+            distinct_source_ids = set(
+                (s.get("source_id") or s.get("source_name") or s.get("signal_type", "SOURCE")).lower()
+                for s in window_signals
+            )
+            if len(distinct_source_ids) >= min_sources:
+                distinct_types = set(s.get("signal_type", "CLINICAL_TRIAL").upper() for s in window_signals)
                 score, breakdown = self.calculate_confluence_score(list(distinct_types))
-                confluence_type = "confirmed" if len(distinct_types) >= 4 else "emerging"
+                confluence_type = "confirmed" if len(distinct_source_ids) >= 4 else "emerging"
 
                 return ConfluenceResult(
                     confluence_id=uuid.uuid4(),
                     development_id=development_id,
                     asset_id=asset_id,
                     signal_count=len(window_signals),
-                    independent_sources_count=len(distinct_types),
+                    independent_sources_count=len(distinct_source_ids),
                     signal_types=list(distinct_types),
                     signal_ids=[str(s.get("signal_id") or s.get("id")) for s in window_signals],
                     score=score,

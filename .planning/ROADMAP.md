@@ -42,9 +42,9 @@ Phase 07: Trustworthy Intelligence Reconciliation & Platform Hardening (IN PROGR
 
 Plans:
 
-- [ ] 08-01-PLAN.md — Provenance end-to-end: migration 005, connector raw_payload keys, honest serializer/mapper, EvidenceDrawer SOURCE PROVENANCE/VERBATIM EVIDENCE/TRACE, TEST FIXTURE/SYNTHETIC badges
-- [ ] 08-02-PLAN.md — Source honesty & observability: CONFIGURATION_ERROR reporting, real connector telemetry, per-attempt ingestion logs, truthful confluence source_id semantics + per-evidence traceability
-- [ ] 08-03-PLAN.md — Canonical design system: banned-class grep gate, token sweep of 9 workspaces, typography/font/theme gates, UI-SPEC §10 manual matrix
+- [x] 08-01-PLAN.md — Provenance end-to-end: migration 005, connector raw_payload keys, honest serializer/mapper, EvidenceDrawer SOURCE PROVENANCE/VERBATIM EVIDENCE/TRACE, TEST FIXTURE/SYNTHETIC badges
+- [x] 08-02-PLAN.md — Source honesty & observability: CONFIGURATION_ERROR reporting, real connector telemetry, per-attempt ingestion logs, truthful confluence source_id semantics + per-evidence traceability
+- [x] 08-03-PLAN.md — Canonical design system: banned-class grep gate, token sweep of 9 workspaces, typography/font/theme gates, UI-SPEC §10 manual matrix
 
 ---
 

@@ -222,8 +222,8 @@ export async function fetchOverview(signal?: AbortSignal): Promise<DashboardOver
       id: l.id,
       name: l.name,
       stage: l.stage,
-      momentum: l.momentum || 70,
-      confidence: l.confidence || 85,
+      momentum: l.momentum,
+      confidence: l.confidence,
       lastChanged: l.last_changed || 'Recently',
       signals: l.signals || 0,
     })),
@@ -235,8 +235,8 @@ export async function fetchOverview(signal?: AbortSignal): Promise<DashboardOver
     health: {
       api: data.health?.api || 'healthy',
       lastSync: data.last_sync || data.health?.last_sync || 'Just now',
-      latencyMs: data.health?.latency_ms || 120,
-      sourceCount: data.health?.source_count || data.health?.sourceCount || 0,
+      latencyMs: data.health?.latency_ms ?? 0,
+      sourceCount: data.health?.source_count ?? data.health?.sourceCount ?? 0,
     },
   }
 }
@@ -292,18 +292,20 @@ export async function askAthena(prompt: string, signal?: AbortSignal): Promise<A
 // ---------------------------------------------------------------------------
 
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthStatus> {
+  const t0 = performance.now()
   const ready = await apiFetch<HealthReadyResponse>('/health/ready', undefined, signal).catch(() => ({
     status: 'degraded' as const,
     database: false,
     redis: false,
     timestamp: new Date().toISOString(),
   }))
+  const latency = Math.round(performance.now() - t0)
 
   return {
     api: ready.status === 'ready' ? 'healthy' : 'degraded',
     lastSync: 'Live',
-    latencyMs: 85,
-    sourceCount: 6,
+    latencyMs: latency,
+    sourceCount: 5,
   }
 }
 

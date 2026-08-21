@@ -116,11 +116,16 @@ async def get_ingestion_status(
     logs_res = await session.execute(logs_stmt)
     recent_logs = [
         {
-            "log_id": str(log.log_id),
+            "id": str(log.id),
+            "log_id": str(log.id),
             "source_id": log.source_id,
             "connector_status": log.connector_status,
             "latency_ms": log.latency_ms,
-            "error_message": log.error_message,
+            "http_status": log.http_status,
+            "records_fetched": log.records_fetched,
+            "records_accepted": log.records_accepted,
+            "records_rejected": log.records_rejected,
+            "last_error": log.last_error,
             "checked_at": log.checked_at.isoformat() if log.checked_at else None,
         }
         for log in logs_res.scalars().all()

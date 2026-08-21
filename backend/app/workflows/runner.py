@@ -201,15 +201,13 @@ class PipelineRunner:
                 elif not isinstance(ret_at, datetime):
                     ret_at = now
 
-                # Construct appropriate external source URL if missing
+                # Construct appropriate external source URL if missing (only for sources with public web landing pages)
                 url = sig.get("url") or sig.get("canonical_url")
                 if not url:
                     if source == "pubmed" and ext_id:
                         url = f"https://pubmed.ncbi.nlm.nih.gov/{ext_id}/"
                     elif source == "clinical_trials" and ext_id:
                         url = f"https://clinicaltrials.gov/study/{ext_id}"
-                    elif source == "fda" and ext_id:
-                        url = f"https://api.fda.gov/drug/drugsfda.json?search=openfda.application_number:{ext_id}"
 
                 raw_prio = sig.get("priority", "MEDIUM")
                 if isinstance(raw_prio, (int, float)):
@@ -217,18 +215,31 @@ class PipelineRunner:
                 else:
                     priority_str = str(raw_prio).upper()
 
+                is_synth = bool(sig.get("is_synthetic", False))
+                data_mode = sig.get("data_mode") or ("test_fixture" if is_synth else "live")
+                provenance_status = sig.get("provenance_status") or ("fixture" if is_synth else "available" if url else "missing_url")
+                source_name = sig.get("source_name") or (source.upper().replace("_", " ") if source else None)
+                evidence_text = sig.get("evidence_text") or sig.get("content") or sig.get("title")
+                raw_ref = sig.get("raw_record_reference")
+
                 stmt = pg_insert(Signal).values(
                     signal_id=sig_uuid,
                     fingerprint=fp,
                     source_id=source,
+                    source_name=source_name,
+                    external_id=ext_id,
                     pmid=pmid,
                     nct_id=nct_id,
                     regulatory_id=reg_id,
                     title=sig.get("title", ""),
                     content=sig.get("content", ""),
                     canonical_url=url,
+                    evidence_text=evidence_text,
+                    raw_record_reference=raw_ref,
+                    provenance_status=provenance_status,
                     published_at=pub_at,
                     retrieved_at=ret_at,
+                    ingested_at=now,
                     signal_type=sig.get("signal_type", "CLINICAL_TRIAL"),
                     disease=sig.get("disease", "haemophilia_a"),
                     facts=sig.get("facts") or [],
@@ -237,17 +248,24 @@ class PipelineRunner:
                     priority=priority_str,
                     score_breakdown=sig.get("score_breakdown") or {},
                     development_id=dev_uuid,
-                    data_mode="live",
-                    is_synthetic=bool(sig.get("is_synthetic", False)),
+                    data_mode=data_mode,
+                    is_synthetic=is_synth,
                     pipeline_run_id=run_uuid,
                     embedding=embedding,
                 ).on_conflict_do_update(
                     index_elements=["fingerprint"],
                     set_={
+                        "source_name": source_name,
+                        "external_id": ext_id,
                         "title": sig.get("title", ""),
                         "content": sig.get("content", ""),
                         "retrieved_at": ret_at,
                         "canonical_url": url,
+                        "evidence_text": evidence_text,
+                        "raw_record_reference": raw_ref,
+                        "provenance_status": provenance_status,
+                        "data_mode": data_mode,
+                        "is_synthetic": is_synth,
                         "facts": sig.get("facts") or [],
                         "interpretation": sig.get("interpretation") or "",
                         "speculation": sig.get("speculation") or "",

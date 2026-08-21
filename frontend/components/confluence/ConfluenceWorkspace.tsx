@@ -42,13 +42,13 @@ export function ConfluenceWorkspace() {
         confluence_id: item.confluence_id,
         development_id: item.development_id,
         development_title: item.development_title,
-        score: item.score || 75.0,
-        label: `${item.confluence_type || 'Confirmed'} Confluence (${item.independent_sources_count || 3} Independent Sources)`,
+        score: item.score ?? 0.0,
+        label: `${item.confluence_type || 'Confirmed'} Confluence (${item.independent_sources_count ?? 0} Independent Sources)`,
         confluence_type: item.confluence_type || 'confirmed',
         window_hours: 48,
-        distinct_sources_count: item.independent_sources_count || 3,
+        distinct_sources_count: item.independent_sources_count ?? 0,
         score_breakdown: item.score_breakdown || {},
-        reasoning: item.reasoning || `Score of ${item.score || 75.0} calculated from ${item.independent_sources_count || 3} independent sources converging in 48h.`,
+        reasoning: item.reasoning || `Score of ${item.score ?? 0.0} calculated from ${item.independent_sources_count ?? 0} distinct independent source providers converging in 48h.`,
         sources: item.evidence_sources || [],
         detected_at: item.created_at,
       })
@@ -61,14 +61,14 @@ export function ConfluenceWorkspace() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Multi-Source Confluence Alerts</h1>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            Independent signals converging on the same development within a 48-hour window (≥3 distinct source types required).
+          <h2 className="text-xl font-bold text-[var(--foreground)]">Multi-Source Confluence Alerts</h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
+            Independent signals converging on the same development within a 48-hour window (≥3 distinct independent source providers required).
           </p>
         </div>
         <button
           onClick={loadAlerts}
-          className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
+          className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-[var(--foreground)] text-xs transition border border-[var(--border)]"
         >
           Refresh Confluences
         </button>
@@ -88,7 +88,7 @@ export function ConfluenceWorkspace() {
       {loading && (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-slate-800" />
+            <div key={i} className="h-32 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
           ))}
         </div>
       )}
@@ -96,7 +96,7 @@ export function ConfluenceWorkspace() {
       {!loading && !error && alerts.length === 0 && (
         <EmptyState
           title="No active confluence alerts detected"
-          description="A confluence alert triggers when ≥3 independent signal types converge on a single development within 48 hours."
+          description="A confluence alert triggers when ≥3 distinct independent source providers converge on a single development within 48 hours."
         />
       )}
 
@@ -105,7 +105,7 @@ export function ConfluenceWorkspace() {
           {alerts.map((item) => (
             <div
               key={item.confluence_id}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 space-y-4 shadow-sm"
+              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4 shadow-xs"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
@@ -113,24 +113,24 @@ export function ConfluenceWorkspace() {
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800/60">
                       {item.confluence_type || 'Emerging'} Confluence
                     </span>
-                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
-                      {item.independent_sources_count || item.signal_count} Sources Converged
+                    <span className="text-xs font-mono text-[var(--muted-foreground)]">
+                      {item.independent_sources_count ?? item.signal_count} Distinct Sources Converged
                     </span>
                   </div>
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-200">
+                  <h3 className="text-base font-semibold text-[var(--foreground)]">
                     {item.development_title || 'Haemophilia Development'}
                   </h3>
                   {item.reasoning && (
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">{item.reasoning}</p>
+                    <p className="text-xs text-[var(--muted-foreground)] leading-relaxed font-sans">{item.reasoning}</p>
                   )}
                 </div>
 
                 <div className="text-right shrink-0 space-y-2">
                   <div>
                     <div className="text-sm font-mono font-bold text-purple-600 dark:text-purple-400">
-                      Score: {item.score !== undefined ? `${item.score} / 100` : '75.0'}
+                      Score: {item.score !== undefined ? `${item.score} / 100` : '0.0 / 100'}
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
+                    <div className="text-[10px] text-[var(--muted-foreground)] font-mono">
                       Engine: {item.calculation_version || 'confluence_v2.0'}
                     </div>
                   </div>
@@ -147,11 +147,11 @@ export function ConfluenceWorkspace() {
               {/* Score breakdown chips */}
               {item.score_breakdown && Object.keys(item.score_breakdown).length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
-                  <span className="text-slate-500 text-[11px]">Score Calculation Drivers:</span>
+                  <span className="text-[var(--muted-foreground)] text-[11px]">Score Calculation Drivers:</span>
                   {Object.entries(item.score_breakdown).map(([k, v]) => (
                     <span
                       key={k}
-                      className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] border border-slate-200 dark:border-slate-700"
+                      className="px-2 py-0.5 rounded bg-[var(--surface-muted)] text-[var(--foreground)] font-mono text-[11px] border border-[var(--border)]"
                     >
                       {k.replace(/_/g, ' ')}: +{v} pts
                     </span>
@@ -161,22 +161,22 @@ export function ConfluenceWorkspace() {
 
               {/* Signals list preview */}
               {item.signals && item.signals.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <div className="space-y-2 pt-2 border-t border-[var(--border)]">
+                  <div className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
                     Contributing Evidence Signals
                   </div>
                   <div className="space-y-1.5">
                     {item.signals.map((s, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/40"
+                        className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-[var(--surface-subtle)] border border-[var(--border)]"
                       >
-                        <span className="text-slate-800 dark:text-slate-300 font-medium truncate max-w-md">{s.title}</span>
+                        <span className="text-[var(--foreground)] font-medium truncate max-w-md">{s.title}</span>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <span className="text-slate-500 font-mono text-[11px]">
+                          <span className="text-[var(--muted-foreground)] font-mono text-[11px]">
                             {s.signal_type}
                           </span>
-                          {s.canonical_url && (
+                          {s.canonical_url ? (
                             <a
                               href={s.canonical_url}
                               target="_blank"
@@ -185,6 +185,10 @@ export function ConfluenceWorkspace() {
                             >
                               Source URL ↗
                             </a>
+                          ) : (
+                            <span className="text-[10px] font-mono text-[var(--muted-foreground)]">
+                              SOURCE URL UNAVAILABLE
+                            </span>
                           )}
                         </div>
                       </div>
@@ -199,16 +203,16 @@ export function ConfluenceWorkspace() {
 
       {/* Backward Trace Inspect Modal / Drawer */}
       {inspectTarget && (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex justify-end">
           <div
-            className="w-full max-w-2xl bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 h-full overflow-y-auto p-6 space-y-6 shadow-2xl flex flex-col justify-between"
+            className="w-full max-w-2xl bg-[var(--card)] border-l border-[var(--border)] h-full overflow-y-auto p-6 space-y-6 shadow-2xl flex flex-col justify-between"
             role="dialog"
             aria-modal="true"
             aria-label="Confluence Evidence Backward Trace"
           >
             <div className="space-y-6">
               {/* Header */}
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-start justify-between gap-4 pb-4 border-b border-[var(--border)]">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800/60">
@@ -218,13 +222,13 @@ export function ConfluenceWorkspace() {
                       Score: {inspectTarget.score} / 100
                     </span>
                   </div>
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  <h3 className="text-lg font-semibold text-[var(--foreground)]">
                     {inspectTarget.development_title || 'Haemophilia Development'}
-                  </h2>
+                  </h3>
                 </div>
                 <button
                   onClick={() => setInspectTarget(null)}
-                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition"
+                  className="p-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-[var(--muted-foreground)] transition"
                   aria-label="Close inspector"
                 >
                   ✕
@@ -232,25 +236,25 @@ export function ConfluenceWorkspace() {
               </div>
 
               {/* Explainable Reasoning Answer */}
-              <div className="bg-slate-50 dark:bg-slate-950/70 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-400">
+              <div className="bg-[var(--surface-subtle)] p-4 rounded-xl border border-[var(--border)] space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-400">
                   Inspectable Mathematical Reasoning
-                </h3>
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                </h4>
+                <p className="text-xs text-[var(--foreground)] leading-relaxed font-sans">
                   {inspectTarget.reasoning}
                 </p>
-                <div className="text-[11px] text-slate-500 font-mono pt-1">
-                  Time Window: Sliding {inspectTarget.window_hours} hours · Threshold: ≥3 independent source categories
+                <div className="text-[11px] text-[var(--muted-foreground)] font-mono pt-1">
+                  Time Window: Sliding {inspectTarget.window_hours} hours · Threshold: ≥3 distinct independent source providers
                 </div>
               </div>
 
               {/* Verbatim Independent Sources Chain */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
                   Unbroken Backward Trace: Verbatim Source Excerpts ({inspectTarget.sources.length} Verified Sources)
-                </h3>
+                </h4>
                 {inspectTarget.sources.length === 0 ? (
-                  <div className="text-xs text-slate-500 italic p-3 bg-slate-50 dark:bg-slate-950/40 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div className="text-xs text-[var(--muted-foreground)] italic p-3 bg-[var(--surface-subtle)] rounded-lg border border-[var(--border)]">
                     No verbatim citations linked for this development.
                   </div>
                 ) : (
@@ -258,14 +262,14 @@ export function ConfluenceWorkspace() {
                     {inspectTarget.sources.map((src, i) => (
                       <div
                         key={i}
-                        className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-2.5"
+                        className="p-4 rounded-xl bg-[var(--surface-subtle)] border border-[var(--border)] space-y-2.5"
                       >
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-50 text-purple-700 border border-purple-200 dark:bg-slate-800 dark:text-purple-300 font-medium">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 font-medium">
                               {src.source_name}
                             </span>
-                            <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">
+                            <span className="text-[11px] font-mono text-[var(--muted-foreground)]">
                               ID: {src.external_id}
                             </span>
                           </div>
@@ -275,12 +279,12 @@ export function ConfluenceWorkspace() {
                         </div>
 
                         {/* Verbatim Excerpt */}
-                        <div className="p-3 rounded-lg bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-300 leading-relaxed font-sans select-text">
+                        <div className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)] leading-relaxed font-sans select-text">
                           &ldquo;{src.verbatim_excerpt}&rdquo;
                         </div>
 
                         {/* Provenance URLs & Timestamps */}
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-1">
+                        <div className="flex items-center justify-between text-[11px] text-[var(--muted-foreground)] font-mono pt-1">
                           <div>
                             {src.published_at && `Published: ${src.published_at.slice(0, 10)}`}
                           </div>
@@ -295,7 +299,9 @@ export function ConfluenceWorkspace() {
                               <span>↗</span>
                             </a>
                           ) : (
-                            <span className="text-slate-500">No public URL attached</span>
+                            <span className="text-[10px] font-mono text-[var(--muted-foreground)]">
+                              SOURCE URL UNAVAILABLE
+                            </span>
                           )}
                         </div>
                       </div>
@@ -305,10 +311,10 @@ export function ConfluenceWorkspace() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+            <div className="pt-4 border-t border-[var(--border)] flex justify-end">
               <button
                 onClick={() => setInspectTarget(null)}
-                className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
+                className="px-4 py-2 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
               >
                 Close Inspector
               </button>

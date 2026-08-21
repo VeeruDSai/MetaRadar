@@ -310,22 +310,23 @@ class SourceConnector:
             last_error=last_error,
         )
 
-    def _run_status_to_health_state(self, run_status: RunStatus) -> str:
-        """Maps run outcome to canonical 8-state health enum."""
+    def _run_status_to_health_state(self, run_status: str) -> str:
+        """Maps run outcome to canonical health enum."""
         mapping = {
             "SUCCESS": "HEALTHY",
             "PARTIAL": "DEGRADED",
             "DEGRADED": "DEGRADED",
-            "FAILED": "ERROR",
+            "FAILED": "UNHEALTHY",
+            "CONFIGURATION_ERROR": "CONFIGURATION_ERROR",
         }
-        return mapping.get(run_status, "ERROR")
+        return mapping.get(run_status, "UNHEALTHY")
 
     async def _persist_health_log(
         self,
         session: AsyncSession,
         result: ProfileRunResult,
         pipeline_run_id: Optional[Any] = None,
-        http_status: Optional[int] = 200,
+        http_status: Optional[int] = None,
     ) -> None:
         """Persists connector run telemetry to source_health_logs and updates live source state."""
         try:

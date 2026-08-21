@@ -33,73 +33,18 @@ router = APIRouter()
 
 
 def _serialize_signal(s: Signal) -> SignalSchema:
-    """Helper to convert SQLAlchemy Signal model into a typed SignalSchema instance with honest scoring telemetry."""
+    """Helper to convert SQLAlchemy Signal model into a typed SignalSchema instance with honest scoring telemetry and provenance."""
     score_breakdown = None
     scoring_status = "computed"
 
     if s.score_breakdown and isinstance(s.score_breakdown, dict):
         try:
-            bd_dict = dict(s.score_breakdown)
-            # If total is 0 but total_score or sub-factors exist
-            if bd_dict.get("total", 0) == 0:
-                if bd_dict.get("total_score"):
-                    bd_dict["total"] = float(bd_dict["total_score"])
-                elif any(bd_dict.get(k) for k in ("novelty", "clinical", "regulatory", "recency")):
-                    bd_dict["total"] = round(
-                        (bd_dict.get("novelty", 0) * 0.25) +
-                        (bd_dict.get("clinical", 0) * 0.30) +
-                        (bd_dict.get("regulatory", 0) * 0.25) +
-                        (bd_dict.get("recency", 0) * 0.20),
-                        1
-                    )
-
-            # If 4-factor component scores are missing, compute them from text or total
-            if not any(bd_dict.get(k) for k in ("novelty", "clinical", "regulatory", "recency")):
-                if s.content or s.title:
-                    computed = priority_scorer.score_text(
-                        text=f"{s.title} {s.content or ''}",
-                        published_at=s.published_at,
-                        novelty_distance=0.5,
-                    )
-                    if computed:
-                        bd_dict["novelty"] = computed.novelty
-                        bd_dict["clinical"] = computed.clinical
-                        bd_dict["regulatory"] = computed.regulatory
-                        bd_dict["recency"] = computed.recency
-                        bd_dict["total"] = computed.total
-                        bd_dict["version"] = computed.version
-                elif bd_dict.get("total", 0) > 0:
-                    tot = bd_dict["total"]
-                    bd_dict["novelty"] = round(tot * 0.25, 1)
-                    bd_dict["clinical"] = round(tot * 0.30, 1)
-                    bd_dict["regulatory"] = round(tot * 0.25, 1)
-                    bd_dict["recency"] = round(tot * 0.20, 1)
-
-            score_breakdown = ScoreBreakdownSchema(**bd_dict)
+            score_breakdown = ScoreBreakdownSchema(**s.score_breakdown)
         except Exception:
             score_breakdown = None
-
-    # If score_breakdown is null in DB, attempt deterministic on-the-fly evaluation or mark as not_computed
-    if score_breakdown is None:
-        if s.content or s.title:
-            computed = priority_scorer.score_text(
-                text=f"{s.title} {s.content or ''}",
-                published_at=s.published_at,
-                novelty_distance=0.5,
-            )
-            if computed:
-                score_breakdown = ScoreBreakdownSchema(
-                    novelty=computed.novelty,
-                    clinical=computed.clinical,
-                    regulatory=computed.regulatory,
-                    recency=computed.recency,
-                    total=computed.total,
-                    version=computed.version,
-                )
-            else:
-                scoring_status = "not_computed"
-        else:
             scoring_status = "not_computed"
+    else:
+        scoring_status = "not_computed"
 
     model_metadata = None
     if s.model_metadata and isinstance(s.model_metadata, dict):
@@ -108,32 +53,64 @@ def _serialize_signal(s: Signal) -> SignalSchema:
         except Exception:
             model_metadata = None
 
-    data_mode = getattr(s, "data_mode", "live") or "live"
-    is_synthetic = getattr(s, "is_synthetic", False) or False
-    confidence_type = getattr(s, "confidence_type", "extraction") or "extraction"
+    is_synth = getattr(s, "is_synthetic", False) or False
+    data_mode = getattr(s, "data_mode", None) or ("test_fixture" if is_synth else "live")
+    raw_url = getattr(s, "canonical_url", None)
+    canonical_url = raw_url.strip() if (raw_url and isinstance(raw_url, str) and raw_url.strip()) else None
+
+    prov_status = getattr(s, "provenance_status", None)
+    if not prov_status:
+        if is_synth:
+            prov_status = "fixture"
+        elif canonical_url:
+            prov_status = "available"
+        else:
+            prov_status = "missing_url"
+
+    confidence_type = getattr(s, "confidence_type", None) or ("fixture" if is_synth else "extraction")
     confidence_rationale = getattr(s, "confidence_rationale", None)
+    raw_confidence = getattr(s, "confidence", None)
+    confidence = float(raw_confidence) if raw_confidence is not None else None
+
+    ext_id = (
+        getattr(s, "external_id", None)
+        or getattr(s, "pmid", None)
+        or getattr(s, "nct_id", None)
+        or getattr(s, "regulatory_id", None)
+        or str(s.signal_id)
+    )
+    source_name = getattr(s, "source_name", None) or (s.source_id.upper().replace("_", " ") if s.source_id else "UNKNOWN")
+    evidence_text = getattr(s, "evidence_text", None) or s.content or s.title
+    raw_record_ref = getattr(s, "raw_record_reference", None)
+    ingested_at = getattr(s, "ingested_at", None) or s.retrieved_at or s.created_at
 
     return SignalSchema(
         signal_id=s.signal_id,
         source_id=s.source_id,
+        source_name=source_name,
+        external_id=ext_id,
         development_id=s.development_id,
         pipeline_run_id=s.pipeline_run_id,
         pmid=s.pmid,
         nct_id=s.nct_id,
         regulatory_id=s.regulatory_id,
         fingerprint=s.fingerprint,
-        canonical_url=s.canonical_url,
+        canonical_url=canonical_url,
         signal_type=s.signal_type,
         disease=s.disease,
         title=s.title,
         content=s.content,
         published_at=s.published_at,
         retrieved_at=s.retrieved_at,
+        ingested_at=ingested_at,
         data_mode=data_mode,
-        is_synthetic=is_synthetic,
-        confidence=getattr(s, "confidence", 0.85) or 0.85,
+        is_synthetic=is_synth,
+        confidence=confidence,
         confidence_type=confidence_type,
         confidence_rationale=confidence_rationale,
+        provenance_status=prov_status,
+        evidence_text=evidence_text,
+        raw_record_reference=raw_record_ref,
         scoring_status=scoring_status,
         facts=s.facts or [],
         interpretation=s.interpretation,
@@ -269,12 +246,14 @@ async def get_overview(db: AsyncSession = Depends(get_db)):
     latest_conf = (await db.execute(latest_conf_stmt)).scalar_one_or_none()
 
     if latest_conf:
-        # Fetch signal types for this confluence
-        conf_sigs_stmt = select(Signal.signal_type).where(Signal.development_id == latest_conf.development_id)
-        conf_types = [r[0] for r in (await db.execute(conf_sigs_stmt)).all() if r[0]]
+        # Fetch signals for this development to get distinct sources and types
+        conf_sigs_stmt = select(Signal.source_id, Signal.signal_type).where(Signal.development_id == latest_conf.development_id)
+        conf_rows = (await db.execute(conf_sigs_stmt)).all()
+        conf_sources = set(r[0] for r in conf_rows if r[0])
+        conf_types = [r[1] for r in conf_rows if r[1]]
         computed_score, drivers_dict = confluence_engine.calculate_confluence_score(conf_types)
-        confluence_score = computed_score if conf_types else 75.0
-        confluence_label = f"Confluence: {latest_conf.confluence_type.capitalize()} ({len(set(conf_types)) or 3} independent sources)"
+        confluence_score = computed_score if conf_types else 0.0
+        confluence_label = f"Confluence: {latest_conf.confluence_type.capitalize()} ({len(conf_sources)} independent sources)" if conf_sources else f"Confluence: {latest_conf.confluence_type.capitalize()}"
         confluence_drivers = [f"{st.replace('_', ' ').title()} (+{int(wt)} pts)" for st, wt in drivers_dict.items()]
     else:
         confluence_score = 0.0

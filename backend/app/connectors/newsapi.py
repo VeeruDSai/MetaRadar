@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, date, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.core.config import settings
+from app.core.config import settings, configuration_error_for
 from app.connectors.base import (
     ConnectorFetchError,
     ProfileRunResult,
@@ -47,6 +47,18 @@ class NewsAPIConnector(SourceConnector):
         force_backfill: bool = False,
     ) -> ProfileRunResult:
         started = datetime.now(timezone.utc)
+        config_err = configuration_error_for("newsapi")
+        if config_err:
+            self.status = "configuration_error"
+            self.last_error = config_err
+            return ProfileRunResult(
+                profile_id=profile_id,
+                status="CONFIGURATION_ERROR",
+                fetched=0,
+                error_detail=self.last_error,
+                duration_s=(datetime.now(timezone.utc) - started).total_seconds(),
+            )
+
         profile = next(
             (p for p in (self.config.profiles if self.config else []) if p.id == profile_id),
             None,
@@ -71,17 +83,6 @@ class NewsAPIConnector(SourceConnector):
                 status="DEGRADED",
                 fetched=0,
                 error_detail="NewsAPI daily quota exhausted",
-                duration_s=(datetime.now(timezone.utc) - started).total_seconds(),
-            )
-
-        if not settings.NEWSAPI_KEY:
-            self.status = "degraded"
-            self.last_error = "NEWSAPI_KEY not set"
-            return ProfileRunResult(
-                profile_id=profile_id,
-                status="DEGRADED",
-                fetched=0,
-                error_detail="NEWSAPI_KEY not set",
                 duration_s=(datetime.now(timezone.utc) - started).total_seconds(),
             )
 
@@ -210,6 +211,10 @@ class NewsAPIConnector(SourceConnector):
             "fingerprint": fingerprint,
             "title": title,
             "description": scrubbed,
+            "source_name": publisher or "NewsAPI",
+            "signal_type": "NEWS",
+            "url": url or None,
+            "evidence_text": scrubbed or description or title,
             "entity_terms": entities,
             "pii_scrubbed": True,
             "retrieved_at": retrieved_at.isoformat(),

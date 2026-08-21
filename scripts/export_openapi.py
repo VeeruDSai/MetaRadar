@@ -82,6 +82,8 @@ export interface SignalSource {
 export interface Signal {
   signal_id?: string;
   source_id?: string;
+  source_name?: string;
+  external_id?: string;
   development_id?: string;
   pipeline_run_id?: string;
   pmid?: string;
@@ -95,6 +97,7 @@ export interface Signal {
   content?: string;
   published_at?: string;
   retrieved_at?: string;
+  ingested_at?: string;
   
   // Truthfulness, DataMode & Provenance
   data_mode?: DataMode;
@@ -102,6 +105,9 @@ export interface Signal {
   confidence?: number;
   confidence_type?: ConfidenceType;
   confidence_rationale?: string;
+  provenance_status?: "available" | "missing_url" | "missing_provider_field" | "invalid_url" | "fixture";
+  evidence_text?: string;
+  raw_record_reference?: string;
   scoring_status?: "computed" | "not_computed";
 
   facts?: string[];
@@ -205,6 +211,7 @@ export interface ConnectorHealthStatus {
   freshness_class: string;
   quota_remaining?: number;
   last_success?: string;
+  last_attempted?: string;
   last_error?: string;
   connector_status?: string;
   latency_ms?: number;
@@ -212,6 +219,7 @@ export interface ConnectorHealthStatus {
   records_accepted?: number;
   records_rejected?: number;
   http_status?: number;
+  configuration_error_message?: string;
 }
 
 export interface HealthConnectorsResponse {
@@ -537,6 +545,7 @@ export interface SourceRegistryItem {
   records_accepted: number;
   records_rejected: number;
   http_status?: number;
+  configuration_error_message?: string | null;
 }
 
 export interface SourceHealthLogItem {

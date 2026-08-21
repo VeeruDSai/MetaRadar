@@ -49,10 +49,11 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Frontend Typecheck, Lint & Build
+      - name: Frontend Typecheck, Lint, Banned Class Gate & Build
         run: |
           cd frontend
           pnpm install --frozen-lockfile=false
           pnpm exec tsc --noEmit
+          pnpm run check:banned-classes
           pnpm lint
           pnpm build

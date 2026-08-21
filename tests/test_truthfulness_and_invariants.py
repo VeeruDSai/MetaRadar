@@ -78,26 +78,35 @@ def test_priority_scoring_decay_over_time():
 
 
 # ---------------------------------------------------------------------------
-# Invariant 2: Confluence Multi-Source Convergence Engine (>= 3 Sources)
+# Invariant 2: Confluence Multi-Source Convergence Engine (>= 3 Distinct Providers)
 # ---------------------------------------------------------------------------
 def test_confluence_engine_threshold():
     engine = ConfluenceEngine()
     dev_id = uuid.uuid4()
     now = datetime.now(timezone.utc)
 
-    # 2 signals from different signal types -> should not meet threshold (< 3 distinct types)
+    # 3 signals from SAME source provider (e.g. pubmed) -> should NOT meet threshold (< 3 distinct providers)
+    signals_same_provider = [
+        {"signal_id": "sig-1", "source_id": "pubmed", "signal_type": "PUBLICATIONS", "published_at": now.isoformat()},
+        {"signal_id": "sig-2", "source_id": "pubmed", "signal_type": "PUBLICATIONS", "published_at": now.isoformat()},
+        {"signal_id": "sig-3", "source_id": "pubmed", "signal_type": "PUBLICATIONS", "published_at": now.isoformat()},
+    ]
+    res_same = engine.detect_confluence_in_signals(signals_same_provider, development_id=dev_id)
+    assert res_same is None
+
+    # 2 signals from 2 distinct providers -> should not meet threshold (< 3)
     signals_2_sources = [
-        {"signal_id": "sig-1", "signal_type": "PUBLICATIONS", "published_at": now.isoformat()},
-        {"signal_id": "sig-2", "signal_type": "CLINICAL_TRIAL", "published_at": now.isoformat()},
+        {"signal_id": "sig-1", "source_id": "pubmed", "signal_type": "PUBLICATIONS", "published_at": now.isoformat()},
+        {"signal_id": "sig-2", "source_id": "clinical_trials", "signal_type": "CLINICAL_TRIAL", "published_at": now.isoformat()},
     ]
     res_2 = engine.detect_confluence_in_signals(signals_2_sources, development_id=dev_id)
     assert res_2 is None
 
-    # 3 signals from 3 distinct signal types -> eligible confluence
+    # 3 signals from 3 distinct source providers -> eligible confluence
     signals_3_sources = [
-        {"signal_id": "sig-1", "signal_type": "PUBLICATIONS", "published_at": now.isoformat()},
-        {"signal_id": "sig-2", "signal_type": "CLINICAL_TRIAL", "published_at": now.isoformat()},
-        {"signal_id": "sig-3", "signal_type": "REGULATORY", "published_at": now.isoformat()},
+        {"signal_id": "sig-1", "source_id": "pubmed", "signal_type": "PUBLICATIONS", "published_at": now.isoformat()},
+        {"signal_id": "sig-2", "source_id": "clinical_trials", "signal_type": "CLINICAL_TRIAL", "published_at": now.isoformat()},
+        {"signal_id": "sig-3", "source_id": "fda", "signal_type": "REGULATORY", "published_at": now.isoformat()},
     ]
     res_3 = engine.detect_confluence_in_signals(signals_3_sources, development_id=dev_id)
     assert res_3 is not None
@@ -147,20 +156,34 @@ async def test_correlation_id_propagation():
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Invariant 5: Athena Vector Search Insufficient Evidence Handling
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_athena_insufficient_evidence_response():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        # Querying an empty or non-matching prompt
-        res = await ac.post("/api/v1/athena", json={"prompt": "xyznonexistentnovelty123456"})
-        assert res.status_code == 200
-        data = res.json()
-        assert "answer" in data
-        assert "mode" in data
-        assert data["evidence_count"] == 0
-        assert data["mode"] == "insufficient_evidence"
-        assert "No sufficiently relevant evidence" in data["answer"]
+    mock_db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalars.return_value.all.return_value = []
+    mock_res.fetchall.return_value = []
+    mock_db.execute.return_value = mock_res
+
+    async def override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            # Querying an empty or non-matching prompt
+            res = await ac.post("/api/v1/athena", json={"prompt": "xyznonexistentnovelty123456"})
+            assert res.status_code == 200
+            data = res.json()
+            assert "answer" in data
+            assert "mode" in data
+            assert data["evidence_count"] == 0
+            assert data["mode"] == "insufficient_evidence"
+            assert "No sufficiently relevant evidence" in data["answer"]
+    finally:
+        app.dependency_overrides.pop(get_db, None)
 
 
 # ---------------------------------------------------------------------------
@@ -168,16 +191,34 @@ async def test_athena_insufficient_evidence_response():
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_get_endpoints_read_only():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        endpoints = [
-            "/api/v1/health",
-            "/api/v1/health/ready",
-            "/api/v1/health/models",
-            "/api/v1/health/connectors",
-            "/api/v1/observability/activity",
-            "/api/v1/sources/health",
-            "/api/v1/calibration/weights",
-        ]
-        for ep in endpoints:
-            res = await ac.get(ep)
-            assert res.status_code == 200, f"Failed on endpoint: {ep}"
+    mock_db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalars.return_value.all.return_value = []
+    mock_res.scalars.return_value.first.return_value = None
+    mock_res.scalar_one_or_none.return_value = None
+    mock_res.scalar.return_value = 0
+    mock_res.fetchall.return_value = []
+    mock_db.execute.return_value = mock_res
+    mock_db.add = MagicMock()
+    mock_db.commit = AsyncMock()
+
+    async def override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            endpoints = [
+                "/api/v1/health",
+                "/api/v1/health/ready",
+                "/api/v1/health/models",
+                "/api/v1/health/connectors",
+                "/api/v1/observability/activity",
+                "/api/v1/sources/health",
+                "/api/v1/calibration/weights",
+            ]
+            for ep in endpoints:
+                res = await ac.get(ep)
+                assert res.status_code == 200, f"Failed on endpoint: {ep}"
+    finally:
+        app.dependency_overrides.pop(get_db, None)

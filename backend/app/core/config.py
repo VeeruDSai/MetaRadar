@@ -56,3 +56,18 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def configuration_error_for(source_id: str) -> Optional[str]:
+    """Pure, side-effect-free evaluator for connector and model configuration state."""
+    src = source_id.lower().strip()
+    if src == "newsapi":
+        key = (settings.NEWSAPI_KEY or "").strip()
+        if not key or key.lower() in ("your_newsapi_key_here", "placeholder", "xxx", "none"):
+            return "CONFIGURATION_ERROR: NEWSAPI_KEY missing (required) — get a key at https://newsapi.org/register (NewsAPI developer account) and set NEWSAPI_KEY in .env"
+    if src in ("grok", "xai") and settings.ENABLE_GROK_FALLBACK:
+        key = (settings.XAI_API_KEY or "").strip()
+        if not key or key.lower() in ("your_xai_api_key_here", "placeholder", "xxx", "none"):
+            return "CONFIGURATION_ERROR: XAI_API_KEY missing (required when ENABLE_GROK_FALLBACK=true) — get a key from https://console.x.ai and set XAI_API_KEY in .env"
+    return None
+

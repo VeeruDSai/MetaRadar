@@ -23,7 +23,14 @@ def _load_synthetic_fallback(limit: int = 50) -> List[Dict[str, Any]]:
         try:
             with open(data_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            return data[:limit]
+            tagged = []
+            for item in data[:limit]:
+                copied = dict(item)
+                copied["is_synthetic"] = True
+                copied["data_mode"] = "test_fixture"
+                copied["provenance_status"] = "fixture"
+                tagged.append(copied)
+            return tagged
         except Exception as e:
             logger.warning(f"Failed to load synthetic dataset from {data_path}: {e}")
     return []
@@ -59,16 +66,24 @@ async def node_ingest(state: MetaRadarState, session: Optional[AsyncSession] = N
 
             for row in bronze_rows:
                 payload = row.raw_payload or {}
+                url = payload.get("url")
+                prov_status = payload.get("provenance_status", "available" if url else "missing_url")
                 sig = {
                     "id": str(row.id),
                     "source_id": row.source_id,
+                    "source_name": payload.get("source_name") or row.source_id.upper().replace("_", " "),
                     "external_id": row.external_id,
                     "title": payload.get("title", ""),
                     "content": payload.get("content", payload.get("abstract", "")),
                     "published_at": payload.get("published_at", row.retrieved_at.isoformat() if row.retrieved_at else datetime.now(timezone.utc).isoformat()),
                     "signal_type": payload.get("signal_type", "CLINICAL_TRIAL"),
                     "disease": payload.get("disease", "haemophilia_a"),
-                    "url": payload.get("url", ""),
+                    "url": url,
+                    "evidence_text": payload.get("evidence_text") or payload.get("abstract") or payload.get("description") or payload.get("title", ""),
+                    "provenance_status": prov_status,
+                    "raw_record_reference": f"bronze:{row.id}",
+                    "data_mode": payload.get("data_mode", "live"),
+                    "is_synthetic": bool(payload.get("is_synthetic", False)),
                     "cross_source_group_id": str(row.cross_source_group_id) if row.cross_source_group_id else None
                 }
                 raw_signals.append(sig)

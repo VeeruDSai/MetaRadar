@@ -41,9 +41,9 @@ export function MissingSignalsWorkspace() {
       case 'SATISFIED':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800/80'
       case 'SUPPRESSED':
-        return 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+        return 'bg-[var(--surface-muted)] text-[var(--muted-foreground)] border-[var(--border)]'
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800'
+        return 'bg-[var(--surface-subtle)] text-[var(--foreground)] border-[var(--border)]'
     }
   }
 
@@ -51,8 +51,11 @@ export function MissingSignalsWorkspace() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Missing Signal Watch Engine</h1>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+          <div className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)] mb-0.5">
+            Expected Event Horizon & Horizon Scan
+          </div>
+          <h2 className="text-xl font-bold text-[var(--foreground)]">Missing Signal Watch Engine</h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
             Proactive monitoring for expected regulatory or clinical events that have not yet materialized within their expected time windows.
           </p>
         </div>
@@ -61,7 +64,7 @@ export function MissingSignalsWorkspace() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200"
+            className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)]"
           >
             <option value="">All Watch States</option>
             <option value="OVERDUE">Overdue</option>
@@ -73,7 +76,7 @@ export function MissingSignalsWorkspace() {
 
           <button
             onClick={loadMissingSignals}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
+            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
           >
             Refresh
           </button>
@@ -94,7 +97,7 @@ export function MissingSignalsWorkspace() {
       {loading && (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-slate-800" />
+            <div key={i} className="h-32 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
           ))}
         </div>
       )}
@@ -111,7 +114,7 @@ export function MissingSignalsWorkspace() {
           {items.map((item) => (
             <div
               key={item.watch_id}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 space-y-3 shadow-sm"
+              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-3 shadow-xs"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
@@ -119,7 +122,7 @@ export function MissingSignalsWorkspace() {
                     <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadge(item.status)}`}>
                       {item.status}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--surface-subtle)] text-[var(--foreground)] border border-[var(--border)]">
                       {item.responsible_function}
                     </span>
                     {item.days_overdue > 0 && (
@@ -128,16 +131,16 @@ export function MissingSignalsWorkspace() {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">
+                  <h3 className="text-sm font-semibold text-[var(--foreground)]">
                     {item.development_title || 'Portfolio Monitoring Asset'}
                   </h3>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-xs font-mono font-semibold text-slate-900 dark:text-slate-300">
+                  <div className="text-xs font-mono font-semibold text-[var(--foreground)]">
                     Window: {item.monitoring_window_days} days
                   </div>
-                  <div className="text-[10px] text-slate-500 font-mono">
+                  <div className="text-[10px] text-[var(--muted-foreground)] font-mono">
                     Overdue Heuristic: {item.overdue_heuristic_score !== undefined ? `${Math.round(item.overdue_heuristic_score * 100)}%` : `${Math.round(item.confidence * 100)}%`}
                   </div>
                 </div>
@@ -145,13 +148,13 @@ export function MissingSignalsWorkspace() {
 
               {/* Trigger vs Expected Event description */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
-                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <div className="text-[10px] font-semibold uppercase text-slate-500 mb-1">Observed Trigger Event</div>
-                  <div className="text-slate-700 dark:text-slate-300">{item.trigger_event}</div>
+                <div className="p-3 rounded-lg bg-[var(--surface-subtle)] border border-[var(--border)]">
+                  <div className="text-[10px] font-semibold uppercase text-[var(--muted-foreground)] mb-1">Observed Trigger Event</div>
+                  <div className="text-[var(--foreground)]">{item.trigger_event}</div>
                 </div>
-                <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-slate-950/60 border border-amber-200 dark:border-slate-800">
+                <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
                   <div className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-400 mb-1">Expected Milestone Event</div>
-                  <div className="text-slate-900 dark:text-slate-300 font-medium">{item.expected_event}</div>
+                  <div className="text-[var(--foreground)] font-medium">{item.expected_event}</div>
                 </div>
               </div>
             </div>

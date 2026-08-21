@@ -33,14 +33,17 @@ export function DevelopmentsWorkspace() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Competitive Developments Registry</h1>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+          <div className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)] mb-0.5">
+            Asset Tracking & Competitor Pipeline
+          </div>
+          <h2 className="text-xl font-bold text-[var(--foreground)]">Competitive Developments Registry</h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
             Canonical disease-area development tracks linking clinical trials, regulatory filings, and competitor milestones.
           </p>
         </div>
         <button
           onClick={loadDevelopments}
-          className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs dark:text-slate-200 transition border border-slate-200 dark:border-slate-700"
+          className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
         >
           Refresh Registry
         </button>
@@ -60,7 +63,7 @@ export function DevelopmentsWorkspace() {
       {loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-slate-100 dark:bg-slate-900/40 animate-pulse border border-slate-200 dark:border-slate-800" />
+            <div key={i} className="h-32 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
           ))}
         </div>
       )}
@@ -77,7 +80,7 @@ export function DevelopmentsWorkspace() {
           {developments.map((d) => (
             <div
               key={d.development_id}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 space-y-3 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition"
+              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-3 shadow-xs hover:border-[var(--border-subtle)] transition"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
@@ -85,23 +88,23 @@ export function DevelopmentsWorkspace() {
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800/60">
                       Stage: {d.current_stage || 'Announced'}
                     </span>
-                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                    <span className="text-xs font-mono text-[var(--muted-foreground)]">
                       {d.disease || 'Haemophilia'}
                     </span>
                   </div>
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-200">{d.title}</h3>
+                  <h3 className="text-base font-semibold text-[var(--foreground)]">{d.title}</h3>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-[var(--surface-subtle)] text-[var(--foreground)] border border-[var(--border)]">
                     {d.signal_count} signals
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
-                <div>Asset: <span className="text-slate-900 dark:text-slate-200 font-medium">{d.asset_name || 'N/A'}</span></div>
-                <div>Sponsor: <span className="text-slate-900 dark:text-slate-200 font-medium">{d.company_name || 'Competitor'}</span></div>
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+                <div>Asset: <span className="text-[var(--foreground)] font-medium">{d.asset_name || 'N/A'}</span></div>
+                <div>Sponsor: <span className="text-[var(--foreground)] font-medium">{d.company_name || 'Competitor'}</span></div>
               </div>
             </div>
           ))}

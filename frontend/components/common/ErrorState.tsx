@@ -72,7 +72,7 @@ export function ErrorState({
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-300">{message}</p>
+          <p className="text-sm text-[var(--foreground)]">{message}</p>
         </div>
 
         {onRetry && (
@@ -86,14 +86,14 @@ export function ErrorState({
       </div>
 
       {requestId && (
-        <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/60 rounded-md px-3 py-1.5 border border-slate-800">
-          <span className="text-slate-500">Correlation ID:</span>
-          <code className="font-mono text-slate-300 select-all">{requestId}</code>
+        <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] bg-[var(--surface-subtle)] rounded-md px-3 py-1.5 border border-[var(--border)]">
+          <span className="text-[var(--muted-foreground)]">Correlation ID:</span>
+          <code className="font-mono text-[var(--foreground)] select-all">{requestId}</code>
           <button
             type="button"
             onClick={handleCopyRequestId}
             aria-label="Copy correlation ID"
-            className="ml-auto text-slate-400 hover:text-slate-200 transition text-[11px] px-1.5 py-0.5 rounded hover:bg-slate-800"
+            className="ml-auto text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition text-[11px] px-1.5 py-0.5 rounded hover:bg-[var(--surface-muted)]"
           >
             {copied ? '✓ Copied' : 'Copy ID'}
           </button>
@@ -104,7 +104,7 @@ export function ErrorState({
         <div>
           <button
             type="button"
-            className="text-xs text-slate-400 hover:text-slate-200 transition flex items-center gap-1"
+            className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition flex items-center gap-1"
             onClick={() => setDetailsOpen((v) => !v)}
             aria-expanded={detailsOpen}
           >
@@ -112,7 +112,7 @@ export function ErrorState({
           </button>
 
           {detailsOpen && (
-            <pre className="mt-2 text-[11px] font-mono text-slate-400 bg-slate-950/80 rounded-lg p-3 overflow-x-auto border border-slate-800">
+            <pre className="mt-2 text-[11px] font-mono text-[var(--muted-foreground)] bg-[var(--surface-muted)] rounded-lg p-3 overflow-x-auto border border-[var(--border)]">
               {JSON.stringify(
                 {
                   endpoint,

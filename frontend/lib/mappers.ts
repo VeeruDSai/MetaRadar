@@ -11,6 +11,8 @@ export interface RawSignalPayload {
   signal_id?: string
   id?: string
   source_id?: string
+  source_name?: string
+  external_id?: string
   development_id?: string
   pipeline_run_id?: string
   pmid?: string
@@ -24,11 +26,15 @@ export interface RawSignalPayload {
   content?: string
   published_at?: string
   retrieved_at?: string
+  ingested_at?: string
   data_mode?: DataMode
   is_synthetic?: boolean
   confidence?: number
   confidence_type?: ConfidenceType
   confidence_rationale?: string
+  provenance_status?: "available" | "missing_url" | "missing_provider_field" | "invalid_url" | "fixture"
+  evidence_text?: string
+  raw_record_reference?: string
   scoring_status?: "computed" | "not_computed"
   facts?: string[]
   interpretation?: string
@@ -89,56 +95,19 @@ export function mapSignal(raw: RawSignalPayload): Signal {
   const severity = severityMap[priorityStr] || 'medium'
   const timeLabel = raw.detectedAt || formatTimeAgo(raw.published_at || raw.created_at)
 
-  // Compute honest score
-  let score = 50
+  // Use honest score from score_breakdown or raw score without fabricating arbitrary constants
+  let score = 0
   if (raw.score_breakdown?.total !== undefined && raw.score_breakdown.total > 0) {
     score = Math.round(raw.score_breakdown.total)
-  } else if (raw.score_breakdown?.total_score !== undefined && raw.score_breakdown.total_score > 0) {
-    score = Math.round(raw.score_breakdown.total_score)
   } else if (raw.score !== undefined && raw.score > 0) {
     score = Math.round(raw.score)
-  } else if (priorityStr === 'CRITICAL') {
-    score = 85
-  } else if (priorityStr === 'HIGH') {
-    score = 70
-  } else if (priorityStr === 'MEDIUM') {
-    score = 50
-  } else if (priorityStr === 'LOW') {
-    score = 30
   }
 
-  // Ensure score_breakdown is populated with valid 4-factor subscores
-  let score_breakdown: ScoreBreakdown = raw.score_breakdown || {
-    novelty: Math.round(score * 0.25 * 10) / 10,
-    clinical: Math.round(score * 0.30 * 10) / 10,
-    regulatory: Math.round(score * 0.25 * 10) / 10,
-    recency: Math.round(score * 0.20 * 10) / 10,
-    total: score,
-    version: raw.scoring_model_version || 'haemophilia_v2.0',
-  }
+  const score_breakdown: ScoreBreakdown | undefined = raw.score_breakdown
 
-  if (
-    score_breakdown.novelty === 0 &&
-    score_breakdown.clinical === 0 &&
-    score_breakdown.regulatory === 0 &&
-    score_breakdown.recency === 0
-  ) {
-    score_breakdown = {
-      ...score_breakdown,
-      novelty: Math.round(score * 0.25 * 10) / 10,
-      clinical: Math.round(score * 0.30 * 10) / 10,
-      regulatory: Math.round(score * 0.25 * 10) / 10,
-      recency: Math.round(score * 0.20 * 10) / 10,
-      total: score,
-    }
-  } else if (!score_breakdown.total || score_breakdown.total === 0) {
-    score_breakdown = {
-      ...score_breakdown,
-      total: score,
-    }
-  }
-
-  const confidence = raw.confidence !== undefined ? Math.round(raw.confidence <= 1 ? raw.confidence * 100 : raw.confidence) : 85
+  const confidence = raw.confidence !== undefined && raw.confidence !== null
+    ? Math.round(raw.confidence <= 1 ? raw.confidence * 100 : raw.confidence)
+    : undefined
 
   // Map sources
   let sources: SignalSource[] = []
@@ -147,7 +116,7 @@ export function mapSignal(raw: RawSignalPayload): Signal {
   } else if (raw.source_id) {
     sources = [{
       id: raw.source_id,
-      name: raw.source_id.toUpperCase().replace(/_/g, ' '),
+      name: raw.source_name || raw.source_id.toUpperCase().replace(/_/g, ' '),
       type: raw.signal_type || 'SOURCE',
       credibility: 90,
       url: raw.canonical_url,
@@ -156,13 +125,16 @@ export function mapSignal(raw: RawSignalPayload): Signal {
 
   // Map stakeholders
   const stakeholders: Record<string, number> = raw.stakeholders || {
-    Clinical: score_breakdown?.clinical ? Math.round(score_breakdown.clinical * 3.3) : 75,
-    Regulatory: score_breakdown?.regulatory ? Math.round(score_breakdown.regulatory * 4.0) : 70,
-    Market: 65,
-    Operations: 60,
+    Clinical: score_breakdown?.clinical ? Math.round(score_breakdown.clinical * 3.3) : 0,
+    Regulatory: score_breakdown?.regulatory ? Math.round(score_breakdown.regulatory * 4.0) : 0,
+    Market: 0,
+    Operations: 0,
   }
 
   const summary = raw.summary || raw.content || (raw.facts && raw.facts.length > 0 ? raw.facts.join(' ') : raw.title)
+  const is_synth = Boolean(raw.is_synthetic)
+  const data_mode = raw.data_mode || (is_synth ? 'test_fixture' : 'live')
+  const prov_status = raw.provenance_status || (is_synth ? 'fixture' : raw.canonical_url ? 'available' : 'missing_url')
 
   return {
     ...raw,
@@ -179,9 +151,17 @@ export function mapSignal(raw: RawSignalPayload): Signal {
     sources,
     stakeholders,
     score_breakdown,
-    data_mode: raw.data_mode || 'live',
-    is_synthetic: raw.is_synthetic || false,
-    scoring_status: raw.scoring_status || 'computed',
+    data_mode,
+    is_synthetic: is_synth,
+    scoring_status: raw.scoring_status || (score_breakdown ? 'computed' : 'not_computed'),
     confidence_type: raw.confidence_type || 'extraction',
+    confidence_rationale: raw.confidence_rationale,
+    source_name: raw.source_name || (raw.source_id ? raw.source_id.toUpperCase().replace(/_/g, ' ') : undefined),
+    external_id: raw.external_id || raw.pmid || raw.nct_id || raw.regulatory_id || sid,
+    canonical_url: raw.canonical_url,
+    provenance_status: prov_status,
+    evidence_text: raw.evidence_text || raw.content || raw.title,
+    raw_record_reference: raw.raw_record_reference,
+    ingested_at: raw.ingested_at || raw.retrieved_at || raw.created_at,
   }
 }

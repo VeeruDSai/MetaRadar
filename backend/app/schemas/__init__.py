@@ -91,6 +91,8 @@ class EvidenceSchema(BaseModel):
 class SignalSchema(BaseModel):
     signal_id: UUID
     source_id: str
+    source_name: Optional[str] = None
+    external_id: Optional[str] = None
     development_id: Optional[UUID] = None
     pipeline_run_id: Optional[UUID] = None
     pmid: Optional[str] = None
@@ -104,6 +106,7 @@ class SignalSchema(BaseModel):
     content: str
     published_at: datetime
     retrieved_at: datetime
+    ingested_at: Optional[datetime] = None
 
     # Truthfulness, DataMode & Provenance
     data_mode: str = "live"
@@ -111,6 +114,9 @@ class SignalSchema(BaseModel):
     confidence: Optional[float] = None
     confidence_type: Optional[str] = None
     confidence_rationale: Optional[str] = None
+    provenance_status: str = "available"
+    evidence_text: Optional[str] = None
+    raw_record_reference: Optional[str] = None
     scoring_status: str = "computed"
 
     facts: List[str] = Field(default_factory=list)
@@ -185,6 +191,7 @@ class ConnectorHealthStatus(BaseModel):
     freshness_class: str
     quota_remaining: Optional[int] = None
     last_success: Optional[datetime] = None
+    last_attempted: Optional[datetime] = None
     last_error: Optional[str] = None
     connector_status: str = "NEVER_CONNECTED"
     latency_ms: Optional[int] = None
@@ -192,6 +199,7 @@ class ConnectorHealthStatus(BaseModel):
     records_accepted: int = 0
     records_rejected: int = 0
     http_status: Optional[int] = None
+    configuration_error_message: Optional[str] = None
 
 
 class HealthConnectorsResponse(BaseModel):

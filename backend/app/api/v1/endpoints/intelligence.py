@@ -180,9 +180,9 @@ async def get_confluence_alerts(
                 confluence_type=conf.confluence_type,
                 created_at=conf.created_at,
                 signals=signals_data,
-                score=score if signals_data else 75.0,
+                score=score if signals_data else 0.0,
                 calculation_version=confluence_engine.VERSION,
-                independent_sources_count=independent_count if signals_data else 3,
+                independent_sources_count=independent_count if signals_data else 0,
                 score_breakdown=breakdown,
                 reasoning=reasoning,
                 evidence_sources=evidence_sources,
@@ -240,10 +240,13 @@ async def inspect_confluence(
 
     evidence_sources = []
     signal_types = []
+    distinct_source_ids = set()
 
     for s in sig_rows:
         if s[2]:
             signal_types.append(s[2])
+        if s[3]:
+            distinct_source_ids.add(s[3])
 
         pts = 25.0
         st_upper = (s[2] or "").upper()
@@ -251,22 +254,24 @@ async def inspect_confluence(
             pts = 30.0
         elif "CLINICAL" in st_upper:
             pts = 25.0
-        elif "PUB" in st_upper:
+        elif "PUBLICATION" in st_upper:
             pts = 20.0
-        elif "SAFETY" in st_upper:
-            pts = 25.0
+        elif "PATENT" in st_upper or "COMMERCIAL" in st_upper:
+            pts = 10.0
 
-        source_name = s[3] or "External Biomedical API"
+        ext_id = s[9] or s[10] or s[11] or (s[4][:12] if s[4] else str(s[0]))
+        source_name = (s[3] or "Source").replace("_", " ").title()
         if s[3] == "pubmed":
-            source_name = "PubMed Central / E-Utilities"
+            source_name = "PubMed Central"
         elif s[3] == "clinical_trials":
-            source_name = "ClinicalTrials.gov API v2"
+            source_name = "ClinicalTrials.gov"
+        elif s[3] == "newsapi":
+            source_name = "News & Commercial"
         elif s[3] == "fda":
-            source_name = "OpenFDA Drug Data"
+            source_name = "OpenFDA Direct"
         elif s[3] == "ema":
             source_name = "EMA RSS Stream"
 
-        ext_id = s[9] or s[10] or s[11] or s[4] or str(s[0])
         evidence_sources.append(
             ConfluenceEvidenceSourceItem(
                 source_name=source_name,
@@ -281,10 +286,10 @@ async def inspect_confluence(
         )
 
     score, breakdown = confluence_engine.calculate_confluence_score(signal_types)
-    independent_count = len(set(signal_types))
+    independent_count = len(distinct_source_ids)
     drivers_str = ", ".join(f"{k} (+{v}pts)" for k, v in breakdown.items())
     reasoning = (
-        f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent source types "
+        f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent sources "
         f"within a 48h sliding window. Drivers: {drivers_str}."
         if signal_types else "Confluence calculated from multi-source cross-referencing."
     )
@@ -293,11 +298,11 @@ async def inspect_confluence(
         confluence_id=conf.confluence_id,
         development_id=conf.development_id,
         development_title=dev_title or "Unassigned Development",
-        score=score if signal_types else 75.0,
-        label=f"{conf.confluence_type.capitalize()} Confluence ({independent_count or 3} Independent Sources)",
+        score=score if signal_types else 0.0,
+        label=f"{conf.confluence_type.capitalize()} Confluence ({independent_count} Independent Sources)",
         confluence_type=conf.confluence_type,
         window_hours=48,
-        distinct_sources_count=independent_count or len(evidence_sources),
+        distinct_sources_count=independent_count,
         score_breakdown=breakdown,
         reasoning=reasoning,
         sources=evidence_sources,

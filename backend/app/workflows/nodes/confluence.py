@@ -140,8 +140,12 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
                     else:
                         break
 
-                distinct_types = set(s.get("signal_type", "CLINICAL_TRIAL") for s in window_signals)
-                if len(distinct_types) >= min_signals:
+                distinct_sources = set(
+                    (s.get("source_id") or s.get("source_name") or s.get("signal_type", "SOURCE")).lower()
+                    for s in window_signals
+                )
+                if len(distinct_sources) >= min_signals:
+                    distinct_types = set(s.get("signal_type", "CLINICAL_TRIAL") for s in window_signals)
                     # Calculate weighted severity
                     severity_score = sum(
                         SIGNAL_TYPE_CREDIBILITY.get(st, 0.7) for st in distinct_types
@@ -151,10 +155,11 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
                         "asset_id": a_id,
                         "development_id": window_signals[0].get("development_id"),
                         "signal_count": len(window_signals),
+                        "independent_sources_count": len(distinct_sources),
                         "signal_types": list(distinct_types),
                         "signal_ids": [s.get("id") or s.get("fingerprint") for s in window_signals],
                         "severity_score": round(severity_score, 2),
-                        "confluence_type": "confirmed" if len(distinct_types) >= 4 else "emerging",
+                        "confluence_type": "confirmed" if len(distinct_sources) >= 4 else "emerging",
                         "detected_at": datetime.now(timezone.utc).isoformat()
                     }
                     confluent_stories.append(story)

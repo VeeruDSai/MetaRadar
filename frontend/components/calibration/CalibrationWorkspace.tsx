@@ -73,8 +73,8 @@ export function CalibrationWorkspace() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Stakeholder Calibration & Weight Governance</h1>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+          <h2 className="text-xl font-bold text-[var(--foreground)]">Stakeholder Calibration & Weight Governance</h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
             Bounded batch weight optimization based on domain expert feedback with immutable audit runs.
           </p>
         </div>
@@ -83,7 +83,7 @@ export function CalibrationWorkspace() {
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200"
+            className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)]"
           >
             <option value="">All 6 Canonical Roles</option>
             <option value="REGULATORY">Regulatory Affairs</option>
@@ -97,7 +97,7 @@ export function CalibrationWorkspace() {
           <button
             onClick={handleRecalibrate}
             disabled={calibrating}
-            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
+            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
           >
             {calibrating ? 'Executing Batch...' : 'Run Calibration'}
           </button>
@@ -119,10 +119,10 @@ export function CalibrationWorkspace() {
       {weightsData && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
               Active Calibrated Scoring Weights ({weightsData.version})
-            </h2>
-            <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+            </h3>
+            <span className="text-xs font-mono text-[var(--muted-foreground)]">
               Pending Feedback: {weightsData.pending_feedback_count ?? 0} items
             </span>
           </div>
@@ -131,29 +131,29 @@ export function CalibrationWorkspace() {
             {weightsData.weights.map((w) => (
               <div
                 key={w.stakeholder_function}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 space-y-3 shadow-sm"
+                className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 space-y-3 shadow-xs"
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-200">
+                  <h4 className="text-xs font-semibold text-[var(--foreground)]">
                     {w.stakeholder_function.replace(/_/g, ' ')}
-                  </h3>
-                  <span className="text-[10px] text-slate-500 font-mono">
+                  </h4>
+                  <span className="text-[10px] text-[var(--muted-foreground)] font-mono">
                     {w.updated_at ? new Date(w.updated_at).toLocaleDateString() : 'Active'}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="p-2 rounded bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-500">Impact</div>
-                    <div className="font-mono font-semibold text-slate-900 dark:text-slate-200">{w.impact_weight.toFixed(2)}</div>
+                  <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
+                    <div className="text-[10px] text-[var(--muted-foreground)]">Impact</div>
+                    <div className="font-mono font-semibold text-[var(--foreground)]">{w.impact_weight.toFixed(2)}</div>
                   </div>
-                  <div className="p-2 rounded bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-500">Urgency</div>
-                    <div className="font-mono font-semibold text-slate-900 dark:text-slate-200">{w.urgency_weight.toFixed(2)}</div>
+                  <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
+                    <div className="text-[10px] text-[var(--muted-foreground)]">Urgency</div>
+                    <div className="font-mono font-semibold text-[var(--foreground)]">{w.urgency_weight.toFixed(2)}</div>
                   </div>
-                  <div className="p-2 rounded bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-500">Novelty</div>
-                    <div className="font-mono font-semibold text-slate-900 dark:text-slate-200">{w.novelty_weight.toFixed(2)}</div>
+                  <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
+                    <div className="text-[10px] text-[var(--muted-foreground)]">Novelty</div>
+                    <div className="font-mono font-semibold text-[var(--foreground)]">{w.novelty_weight.toFixed(2)}</div>
                   </div>
                 </div>
               </div>
@@ -164,36 +164,36 @@ export function CalibrationWorkspace() {
 
       {/* Recalibration Outcome & Side-by-Side Comparison */}
       {recalibrationResult && (
-        <div className="rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/20 dark:bg-slate-900/70 p-6 space-y-4 shadow-md">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
+        <div className="rounded-xl border border-blue-200 dark:border-blue-900/40 bg-[var(--card)] p-6 space-y-4 shadow-md">
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
               Recalibration Run Results ({recalibrationResult.calibration_version})
-            </h2>
-            <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+            </h3>
+            <span className="text-xs font-mono text-[var(--muted-foreground)]">
               Applied Feedback: {recalibrationResult.applied_feedback_count} submissions
             </span>
           </div>
 
           {recalibrationResult.comparisons && recalibrationResult.comparisons.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">
+              <h4 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">
                 Side-by-Side Routing Before / After Comparison
-              </h3>
+              </h4>
               <div className="space-y-2">
                 {recalibrationResult.comparisons.map((c, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-lg bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs grid grid-cols-1 md:grid-cols-2 gap-3"
+                    className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs grid grid-cols-1 md:grid-cols-2 gap-3"
                   >
                     <div className="space-y-1">
-                      <div className="text-[10px] text-slate-500 uppercase">Baseline Routing</div>
-                      <div className="text-slate-800 dark:text-slate-300">Priority: <strong>{c.baseline_priority}</strong> (Score: {Math.round(c.baseline_relevance_score * 100)}%)</div>
-                      <div className="text-slate-600 dark:text-slate-400 text-[11px]">{c.baseline_suggested_action}</div>
+                      <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Baseline Routing</div>
+                      <div className="text-[var(--foreground)]">Priority: <strong>{c.baseline_priority}</strong> (Score: {Math.round(c.baseline_relevance_score * 100)}%)</div>
+                      <div className="text-[var(--muted-foreground)] text-[11px]">{c.baseline_suggested_action}</div>
                     </div>
-                    <div className="space-y-1 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 md:pl-3 pt-2 md:pt-0">
+                    <div className="space-y-1 border-t md:border-t-0 md:border-l border-[var(--border)] md:pl-3 pt-2 md:pt-0">
                       <div className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-semibold">Calibrated Outcome (+{c.confidence_uplift_pct}%)</div>
                       <div className="text-emerald-700 dark:text-emerald-300">Priority: <strong>{c.calibrated_priority}</strong> (Score: {Math.round(c.calibrated_relevance_score * 100)}%)</div>
-                      <div className="text-slate-700 dark:text-slate-300 text-[11px]">{c.calibrated_suggested_action}</div>
+                      <div className="text-[var(--foreground)] text-[11px]">{c.calibrated_suggested_action}</div>
                     </div>
                   </div>
                 ))}
@@ -202,23 +202,23 @@ export function CalibrationWorkspace() {
           )}
 
           {recalibrationResult.watch_rule_suggestions && recalibrationResult.watch_rule_suggestions.length > 0 && (
-            <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-              <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase">
+            <div className="space-y-3 pt-3 border-t border-[var(--border)]">
+              <h4 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase">
                 Suggested Monitoring Watch Rules
-              </h3>
+              </h4>
               <div className="space-y-2">
                 {recalibrationResult.watch_rule_suggestions.map((sug) => (
                   <div
                     key={sug.suggestion_id}
-                    className="p-3 rounded-lg bg-amber-50/40 dark:bg-slate-950/60 border border-amber-200 dark:border-amber-800/40 text-xs flex items-center justify-between gap-3"
+                    className="p-3 rounded-lg bg-[var(--surface-subtle)] border border-amber-200 dark:border-amber-800/40 text-xs flex items-center justify-between gap-3"
                   >
                     <div className="space-y-0.5">
-                      <div className="font-semibold text-slate-900 dark:text-slate-200">{sug.expected_event}</div>
-                      <div className="text-slate-600 dark:text-slate-400 text-[11px]">{sug.rationale} ({sug.responsible_function})</div>
+                      <div className="font-semibold text-[var(--foreground)]">{sug.expected_event}</div>
+                      <div className="text-[var(--muted-foreground)] text-[11px]">{sug.rationale} ({sug.responsible_function})</div>
                     </div>
                     <button
                       onClick={() => handleConfirmWatch(sug)}
-                      className="px-3 py-1 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 rounded text-slate-950 font-semibold text-xs shrink-0 transition shadow-xs"
+                      className="px-3 py-1 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 rounded text-neutral-950 font-semibold text-xs shrink-0 transition shadow-xs"
                     >
                       Confirm Rule
                     </button>
@@ -232,13 +232,13 @@ export function CalibrationWorkspace() {
 
       {/* Immutable Run History Table */}
       {weightsData?.run_history && weightsData.run_history.length > 0 && (
-        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+        <div className="space-y-3 pt-4 border-t border-[var(--border)]">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
             Immutable Calibration Audit Run Log
-          </h2>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 overflow-x-auto shadow-sm">
-            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-              <thead className="bg-slate-50 dark:bg-slate-950/80 text-[11px] text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
+          </h3>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-x-auto shadow-xs">
+            <table className="w-full text-left text-xs text-[var(--foreground)]">
+              <thead className="bg-[var(--surface-subtle)] text-[11px] text-[var(--muted-foreground)] uppercase border-b border-[var(--border)]">
                 <tr>
                   <th className="p-3">Run ID</th>
                   <th className="p-3">Triggered At</th>
@@ -247,10 +247,10 @@ export function CalibrationWorkspace() {
                   <th className="p-3">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
+              <tbody className="divide-y divide-[var(--border)] font-mono">
                 {weightsData.run_history.map((run) => (
-                  <tr key={run.run_id} className="hover:bg-slate-50 dark:hover:bg-slate-850">
-                    <td className="p-3 font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate max-w-xs">{run.run_id}</td>
+                  <tr key={run.run_id} className="hover:bg-[var(--surface-subtle)]">
+                    <td className="p-3 font-mono text-[11px] text-[var(--muted-foreground)] truncate max-w-xs">{run.run_id}</td>
                     <td className="p-3 text-[11px]">{new Date(run.triggered_at).toLocaleString()}</td>
                     <td className="p-3 text-blue-600 dark:text-blue-400">{run.scoring_version}</td>
                     <td className="p-3">{run.feedback_count} submissions</td>

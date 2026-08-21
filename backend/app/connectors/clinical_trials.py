@@ -167,20 +167,31 @@ class ClinicalTrialsConnector(SourceConnector):
             if i.get("name")
         ]
 
+        description_module = protocol.get("descriptionModule") or {}
+        brief_summary = (description_module.get("briefSummary") or "").strip()
+
         first_post = status_module.get("studyFirstPostDateStruct") or {}
         published_at = self._parse_date(first_post.get("date"), retrieved_at)
 
         url = f"https://clinicaltrials.gov/study/{nct_id}"
         fingerprint = generate_fingerprint(nct_id=nct_id, title=title, published_at=published_at)
-        content = " ".join(conditions + interventions)
+        content_parts = [p for p in [title, brief_summary, " ".join(conditions + interventions)] if p]
+        content = "\n".join(content_parts)
         content_hash = hashlib.sha256(f"{nct_id}:{content}".encode("utf-8")).hexdigest()
 
+        evidence_parts = [p for p in [title, brief_summary, f"Conditions: {', '.join(conditions)}" if conditions else "", f"Interventions: {', '.join(interventions)}" if interventions else "", f"Status: {status}" if status else ""] if p]
+        evidence_text = ". ".join(evidence_parts)
         raw_payload = {
             "external_id": nct_id,
             "fingerprint": fingerprint,
             "title": title,
+            "brief_summary": brief_summary,
             "status": status,
             "sponsor": sponsor,
+            "source_name": "ClinicalTrials.gov",
+            "signal_type": "CLINICAL_TRIAL",
+            "url": url,
+            "evidence_text": evidence_text,
             "phase": ",".join(phases),
             "conditions": conditions,
             "interventions": interventions,

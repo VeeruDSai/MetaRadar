@@ -63,12 +63,22 @@ async def get_sources_registry(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve registered data sources with freshness classes and live status."""
+    from app.core.config import configuration_error_for
+
     query = select(Source).order_by(Source.name.asc())
     result = await db.execute(query)
     sources = result.scalars().all()
 
     items = []
     for s in sources:
+        config_err = configuration_error_for(s.source_id)
+        if config_err:
+            conn_status = "CONFIGURATION_ERROR"
+            err_msg = config_err
+        else:
+            conn_status = s.connector_status or "NEVER_CONNECTED"
+            err_msg = s.configuration_error_message
+
         items.append(
             SourceRegistryItem(
                 source_id=s.source_id,
@@ -78,7 +88,14 @@ async def get_sources_registry(
                 status=s.status,
                 quota_remaining=s.quota_remaining,
                 last_success=s.last_success,
-                connector_status="LIVE" if s.status == "active" else "DEGRADED",
+                connector_status=conn_status,
+                last_attempted=s.last_attempted,
+                latency_ms=s.latency_ms,
+                records_fetched=s.records_fetched or 0,
+                records_accepted=s.records_accepted or 0,
+                records_rejected=s.records_rejected or 0,
+                http_status=s.http_status,
+                configuration_error_message=err_msg,
             )
         )
     return items

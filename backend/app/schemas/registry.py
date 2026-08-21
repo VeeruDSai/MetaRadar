@@ -31,6 +31,7 @@ class SourceRegistryItem(BaseModel):
     records_accepted: int = 0
     records_rejected: int = 0
     http_status: Optional[int] = None
+    configuration_error_message: Optional[str] = None
 
 
 class SourceHealthLogItem(BaseModel):

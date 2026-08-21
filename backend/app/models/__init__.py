@@ -51,6 +51,7 @@ class Source(Base):
     records_accepted = Column(Integer, default=0, nullable=False)
     records_rejected = Column(Integer, default=0, nullable=False)
     http_status = Column(Integer, nullable=True)
+    configuration_error_message = Column(Text, nullable=True)
 
 
 class SourceHealthLog(Base):
@@ -206,6 +207,8 @@ class Signal(Base):
 
     signal_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id = Column(String(100), ForeignKey("sources.source_id"), nullable=False)
+    source_name = Column(String(255), nullable=True)
+    external_id = Column(String(100), nullable=True)
     development_id = Column(UUID(as_uuid=True), ForeignKey("developments.development_id"), nullable=True)
     pipeline_run_id = Column(UUID(as_uuid=True), ForeignKey("pipeline_runs.pipeline_run_id"), nullable=True)
 
@@ -221,12 +224,16 @@ class Signal(Base):
     content = Column(Text, nullable=False)
     published_at = Column(DateTime(timezone=True), nullable=False)
     retrieved_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    ingested_at = Column(DateTime(timezone=True), default=utc_now, nullable=True)
 
     # Truthfulness, DataMode & Provenance
     data_mode = Column(String(50), default="live", nullable=False)
     is_synthetic = Column(Boolean, default=False, nullable=False)
     confidence_type = Column(String(50), nullable=True)
     confidence_rationale = Column(Text, nullable=True)
+    provenance_status = Column(String(50), default="available", nullable=False)
+    evidence_text = Column(Text, nullable=True)
+    raw_record_reference = Column(String(255), nullable=True)
 
     facts = Column(JSONB, nullable=True)
     interpretation = Column(Text, nullable=True)
@@ -251,6 +258,9 @@ class Signal(Base):
         Index("uix_signals_regulatory_id", "regulatory_id", unique=True, postgresql_where=(regulatory_id.isnot(None))),
         Index("uix_signals_fingerprint", "fingerprint", unique=True),
         Index("uix_signals_canonical_url", "canonical_url", unique=True, postgresql_where=(canonical_url.isnot(None))),
+        Index("ix_signals_source_name", "source_name"),
+        Index("ix_signals_external_id", "external_id"),
+        Index("ix_signals_provenance_status", "provenance_status"),
     )
 
 

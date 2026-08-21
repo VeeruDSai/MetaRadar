@@ -141,7 +141,7 @@ class OpenFDAConnector(SourceConnector):
         scrubbed, _, _ = PIIPHIScrubber.scrub(content)
 
         published_at = self._parse_date(action_date, retrieved_at)
-        url = f"https://api.fda.gov/drug/drugsfda.json?search=openfda.application_number:{application_number}"
+        url = None
         fingerprint = generate_fingerprint(regulatory_id=application_number, title=title, published_at=published_at)
         content_hash = hashlib.sha256(
             f"{application_number}:{scrubbed}".encode("utf-8")
@@ -154,6 +154,11 @@ class OpenFDAConnector(SourceConnector):
             "brand_name": brand_names,
             "substance_name": substances,
             "sponsor_name": sponsors,
+            "source_name": "openFDA",
+            "signal_type": "REGULATORY",
+            "url": None,
+            "evidence_text": scrubbed or content or title,
+            "provenance_status": "missing_url",
             "action_date": action_date,
             "entities": list({*substances, *brand_names}),
             "pii_scrubbed": True,
@@ -168,7 +173,7 @@ class OpenFDAConnector(SourceConnector):
             external_id=application_number,
             title=title,
             content=scrubbed or title,
-            url=url,
+            url=None,
             published_at=published_at,
             publisher=sponsors[0] if sponsors else None,
             raw_hash=content_hash,
