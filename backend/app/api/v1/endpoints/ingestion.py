@@ -81,8 +81,17 @@ async def trigger_ingest_and_pipeline_sync(
     errors = final_state.get("errors", [])
     pipeline_status = "completed" if len(errors) == 0 else "partial"
 
+    # Honest run status derived from per-source connector results — never an
+    # unconditional "success" (AGENTS.md rule #4: no fabricated behavior).
+    source_statuses = [r.get("status") for r in (ingest_telemetry.get("results") or {}).values()]
+    ingestion_status = (
+        "success"
+        if source_statuses and all(s == "HEALTHY" for s in source_statuses)
+        else "partial"
+    )
+
     return {
-        "status": "success" if ingest_telemetry["total_fetched"] >= 0 else "partial",
+        "status": ingestion_status,
         "ingestion": ingest_telemetry,
         "pipeline": {
             "pipeline_run_id": final_state.get("pipeline_run_id"),
