@@ -208,7 +208,7 @@ class Signal(Base):
     signal_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id = Column(String(100), ForeignKey("sources.source_id"), nullable=False)
     source_name = Column(String(255), nullable=True)
-    external_id = Column(String(100), nullable=True)
+    external_id = Column(String(255), nullable=True)
     development_id = Column(UUID(as_uuid=True), ForeignKey("developments.development_id"), nullable=True)
     pipeline_run_id = Column(UUID(as_uuid=True), ForeignKey("pipeline_runs.pipeline_run_id"), nullable=True)
 

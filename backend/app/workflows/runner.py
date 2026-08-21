@@ -164,7 +164,9 @@ class PipelineRunner:
                 sig_raw_id = sig.get("id") or sig.get("signal_id")
                 sig_uuid = uuid.UUID(str(sig_raw_id)) if sig_raw_id and len(str(sig_raw_id)) == 36 else uuid.uuid4()
                 source = sig.get("source_id", "pubmed")
-                ext_id = sig.get("external_id", str(sig_uuid))
+                ext_id = sig.get("external_id") or str(sig_uuid)
+                if len(ext_id) > 255:
+                    ext_id = ext_id[:255]
                 fp = sig.get("fingerprint") or f"sig:{source}:{ext_id}"
 
                 pmid = ext_id if source == "pubmed" else None
