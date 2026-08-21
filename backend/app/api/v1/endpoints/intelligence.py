@@ -113,6 +113,7 @@ async def get_confluence_alerts(
         signals_data = []
         evidence_sources = []
         signal_types = []
+        distinct_source_ids = set()
 
         for s in sig_rows:
             ext_id = s[9] or s[10] or s[11] or s[4] or str(s[0])
@@ -127,6 +128,8 @@ async def get_confluence_alerts(
             })
             if s[2]:
                 signal_types.append(s[2])
+            if s[3]:
+                distinct_source_ids.add(s[3])
 
             # Canonical engine weights — keeps evidence points identical to score_breakdown.
             pts = SIGNAL_TYPE_WEIGHTS.get((s[2] or "").upper(), 10.0)
@@ -155,7 +158,7 @@ async def get_confluence_alerts(
             )
 
         score, breakdown = confluence_engine.calculate_confluence_score(signal_types)
-        independent_count = len(set(signal_types))
+        independent_count = len(distinct_source_ids)
         drivers_str = ", ".join(f"{k} (+{v}pts)" for k, v in breakdown.items())
         reasoning = (
             f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent source types "
