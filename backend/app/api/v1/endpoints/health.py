@@ -1,4 +1,5 @@
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,13 @@ from app.schemas import (
 )
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
+
+# Timezone-aware epoch used to normalize NULL timestamps in comparisons.
+# Never compare tz-aware datetimes against naive datetime.min — that raises
+# TypeError and (behind a broad except) silently aborts the whole preload loop.
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 _CONNECTOR_NAMES = {
     "pubmed": "NCBI PubMed",
@@ -103,10 +111,15 @@ async def get_health_connectors(session: AsyncSession = Depends(get_db)):
         )
         for row in state_res.scalars().all():
             prev = preloaded_states.get(row.source_id)
-            if prev is None or (row.updated_at or datetime.min) >= (prev.updated_at or datetime.min):
+            if prev is None:
+                preloaded_states[row.source_id] = row
+            elif (row.updated_at or _EPOCH) >= (prev.updated_at or _EPOCH):
                 preloaded_states[row.source_id] = row
     except Exception:
-        pass
+        logger.warning(
+            "Failed to preload connector states; falling back to per-connector lookups",
+            exc_info=True,
+        )
 
     statuses = []
     for connector in ALL_CONNECTORS:
