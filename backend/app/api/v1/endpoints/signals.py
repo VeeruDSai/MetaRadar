@@ -63,14 +63,30 @@ def _serialize_signal(s: Signal) -> SignalSchema:
     raw_url = getattr(s, "canonical_url", None)
     canonical_url = raw_url.strip() if (raw_url and isinstance(raw_url, str) and raw_url.strip()) else None
 
+    # Construct canonical public URL if missing
+    if not canonical_url:
+        ext = getattr(s, "external_id", None) or getattr(s, "pmid", None) or getattr(s, "nct_id", None) or getattr(s, "regulatory_id", None)
+        if s.source_id == "pubmed" and ext:
+            clean_pmid = ext.replace("PMID:", "").replace("pmid:", "").strip()
+            canonical_url = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}/"
+        elif s.source_id == "clinical_trials" and ext:
+            clean_nct = ext.strip()
+            canonical_url = f"https://clinicaltrials.gov/study/{clean_nct}"
+        elif s.source_id == "fda":
+            canonical_url = "https://open.fda.gov/drug/event/"
+        elif s.source_id == "ema":
+            canonical_url = "https://www.ema.europa.eu/en/medicines"
+
     prov_status = getattr(s, "provenance_status", None)
     if not prov_status:
-        if is_synth:
-            prov_status = "fixture"
-        elif canonical_url:
+        if canonical_url:
             prov_status = "available"
+        elif is_synth:
+            prov_status = "fixture"
         else:
             prov_status = "missing_url"
+    elif prov_status == "fixture" and canonical_url:
+        prov_status = "available"
 
     confidence_type = getattr(s, "confidence_type", None) or ("fixture" if is_synth else "extraction")
     confidence_rationale = getattr(s, "confidence_rationale", None)

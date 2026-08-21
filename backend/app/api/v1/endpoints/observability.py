@@ -120,10 +120,13 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
 
     from app.core.config import configuration_error_for
 
+    CANONICAL_SOURCE_IDS = {"pubmed", "clinical_trials", "fda", "ema", "newsapi"}
     items = []
     seen_ids = set()
 
     for s in sources:
+        if s.source_id not in CANONICAL_SOURCE_IDS:
+            continue
         seen_ids.add(s.source_id)
         hl = latest_logs.get(s.source_id)
 

@@ -74,8 +74,11 @@ async def get_sources_registry(
     result = await db.execute(query)
     sources = result.scalars().all()
 
+    CANONICAL_SOURCE_IDS = {"pubmed", "clinical_trials", "fda", "ema", "newsapi"}
     items = []
     for s in sources:
+        if s.source_id not in CANONICAL_SOURCE_IDS:
+            continue
         config_err = configuration_error_for(s.source_id)
         if config_err:
             conn_status = "CONFIGURATION_ERROR"

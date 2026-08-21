@@ -16,6 +16,7 @@ from app.models import (
     Signal,
 )
 from app.services.embeddings import embedding_service
+from app.services.scoring import priority_scorer
 from app.workflows.graph import build_graph
 from app.workflows.state import MetaRadarState, create_initial_state
 
@@ -218,15 +219,31 @@ class PipelineRunner:
                 url = sig.get("url") or sig.get("canonical_url")
                 if not url:
                     if source == "pubmed" and ext_id:
-                        url = f"https://pubmed.ncbi.nlm.nih.gov/{ext_id}/"
+                        clean_pmid = ext_id.replace("PMID:", "").replace("pmid:", "").strip()
+                        url = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}/"
                     elif source == "clinical_trials" and ext_id:
-                        url = f"https://clinicaltrials.gov/study/{ext_id}"
+                        clean_nct = ext_id.strip()
+                        url = f"https://clinicaltrials.gov/study/{clean_nct}"
+                    elif source == "fda":
+                        url = "https://open.fda.gov/drug/event/"
+                    elif source == "ema":
+                        url = "https://www.ema.europa.eu/en/medicines"
 
-                raw_prio = sig.get("priority", "MEDIUM")
-                if isinstance(raw_prio, (int, float)):
+                # Multi-Factor Deterministic Priority Scoring (Novelty 25% + Clinical 30% + Regulatory 25% + Recency 20%)
+                score_breakdown = sig.get("score_breakdown")
+                if not score_breakdown or not isinstance(score_breakdown, dict) or not score_breakdown.get("total"):
+                    text_to_score = f"{sig.get('title', '')} {sig.get('content', '')}"
+                    sb = priority_scorer.score_text(text_to_score, pub_at, novelty_distance=0.6)
+                    if sb:
+                        score_breakdown = sb.to_dict()
+
+                raw_prio = sig.get("priority")
+                if not raw_prio and score_breakdown and score_breakdown.get("priority_level"):
+                    priority_str = score_breakdown["priority_level"]
+                elif isinstance(raw_prio, (int, float)):
                     priority_str = "CRITICAL" if raw_prio >= 0.85 else "HIGH" if raw_prio >= 0.65 else "MEDIUM"
                 else:
-                    priority_str = str(raw_prio).upper()
+                    priority_str = str(raw_prio or "MEDIUM").upper()
 
                 is_synth = bool(sig.get("is_synthetic", False))
                 data_mode = sig.get("data_mode") or ("test_fixture" if is_synth else "live")
@@ -259,7 +276,7 @@ class PipelineRunner:
                     interpretation=sig.get("interpretation") or "",
                     speculation=sig.get("speculation") or "",
                     priority=priority_str,
-                    score_breakdown=sig.get("score_breakdown") or {},
+                    score_breakdown=score_breakdown or {},
                     development_id=dev_uuid,
                     data_mode=data_mode,
                     is_synthetic=is_synth,
@@ -283,7 +300,7 @@ class PipelineRunner:
                         "interpretation": sig.get("interpretation") or "",
                         "speculation": sig.get("speculation") or "",
                         "priority": priority_str,
-                        "score_breakdown": sig.get("score_breakdown") or {},
+                        "score_breakdown": score_breakdown or {},
                         "pipeline_run_id": run_uuid,
                     }
                 )

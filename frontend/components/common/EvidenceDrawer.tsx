@@ -138,12 +138,12 @@ export function EvidenceDrawer({
           </div>
 
           <div className="mt-2">
-            {signal.canonical_url && !isFixture ? (
+            {signal.canonical_url ? (
               <a
                 href={signal.canonical_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-white transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-white transition hover:opacity-90"
                 style={{ background: 'var(--primary)' }}
               >
                 <span>Open Original Source</span>
