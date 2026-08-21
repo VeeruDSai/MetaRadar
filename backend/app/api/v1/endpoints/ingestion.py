@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -115,10 +115,14 @@ async def trigger_ingest_and_pipeline_sync(
 async def get_ingestion_status(
     session: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
-    # Unpromoted bronze count
-    unpromoted_stmt = select(RawSignalBronze).where(RawSignalBronze.pipeline_run_id.is_(None))
+    # Unpromoted bronze count (SQL COUNT — never materialize every row)
+    unpromoted_stmt = (
+        select(func.count())
+        .select_from(RawSignalBronze)
+        .where(RawSignalBronze.pipeline_run_id.is_(None))
+    )
     unpromoted_res = await session.execute(unpromoted_stmt)
-    unpromoted_count = len(unpromoted_res.scalars().all())
+    unpromoted_count = int(unpromoted_res.scalar() or 0)
 
     # Recent health logs per source
     logs_stmt = select(SourceHealthLog).order_by(desc(SourceHealthLog.checked_at)).limit(20)
