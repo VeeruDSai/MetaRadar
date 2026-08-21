@@ -79,8 +79,7 @@ async def get_health_models():
     finally:
         # Close the lazily-created httpx.AsyncClient so the connection pool
         # is not leaked on every /health/models poll.
-        if provider._client is not None:
-            await provider._client.aclose()
+        await provider.aclose()
     return HealthModelsResponse(
         llm_provider=settings.LLM_PROVIDER,
         ollama_host=settings.OLLAMA_HOST,
