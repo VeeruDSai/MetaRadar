@@ -33,6 +33,18 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
+def _derive_external_id(row) -> str:
+    """Derive a stable external identifier for evidence traceability.
+
+    Prefers real source identifiers (pmid / nct / regulatory), then a truncated
+    fingerprint, then the signal UUID. Shared by the confluence list and inspect
+    handlers so both views render identical external_id values.
+    """
+    pmid, nct_id, reg_id = row[9], row[10], row[11]
+    fingerprint, signal_id = row[4], row[0]
+    return pmid or nct_id or reg_id or (fingerprint[:12] if fingerprint else str(signal_id))
+
+
 async def _fetch_claim_excerpt(db: AsyncSession, claim_id: str) -> Optional[str]:
     """Fetch verbatim evidence excerpt from Signal.content or Evidence table by ID."""
     if not claim_id:
@@ -116,7 +128,7 @@ async def get_confluence_alerts(
         distinct_source_ids = set()
 
         for s in sig_rows:
-            ext_id = s[9] or s[10] or s[11] or s[4] or str(s[0])
+            ext_id = _derive_external_id(s)
             signals_data.append({
                 "signal_id": str(s[0]),
                 "title": s[1],
@@ -148,7 +160,7 @@ async def get_confluence_alerts(
                 ConfluenceEvidenceSourceItem(
                     source_name=source_name,
                     source_type=s[2] or "CLINICAL_TRIAL",
-                    external_id=s[4] or str(s[0]),
+                    external_id=_derive_external_id(s),
                     source_url=s[5],
                     retrieved_at=s[8],
                     published_at=s[7],
@@ -246,7 +258,7 @@ async def inspect_confluence(
         # Canonical engine weights — keeps evidence points identical to score_breakdown.
         pts = SIGNAL_TYPE_WEIGHTS.get((s[2] or "").upper(), 10.0)
 
-        ext_id = s[9] or s[10] or s[11] or (s[4][:12] if s[4] else str(s[0]))
+        ext_id = _derive_external_id(s)
         source_name = (s[3] or "Source").replace("_", " ").title()
         if s[3] == "pubmed":
             source_name = "PubMed Central"
