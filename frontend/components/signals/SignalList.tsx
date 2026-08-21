@@ -19,30 +19,43 @@ export function SignalList() {
   // Filters
   const [severityFilter, setSeverityFilter] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState<string>('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('')
   const [sourceFilter, setSourceFilter] = useState<string>('')
 
-  const loadSignals = useCallback(async () => {
+  // Debounce search input so typing does not fire one request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  const loadSignals = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
     setError(null)
     try {
       const params: SignalFilterParams = {
         limit: 30,
         severity: severityFilter || undefined,
-        entity: searchTerm.trim() || undefined,
+        entity: debouncedSearchTerm.trim() || undefined,
         source: sourceFilter || undefined,
       }
-      const data = await fetchSignals(params)
+      const data = await fetchSignals(params, signal)
+      if (signal?.aborted) return
       setSignals(data.signals)
       setTotal(data.total)
     } catch (err) {
+      // Superseded requests are aborted by the effect cleanup; ignore them
+      // so a slow earlier response can never clobber newer results.
+      if (signal?.aborted || (err instanceof Error && err.name === 'AbortError')) return
       setError(formatError(err, 'Failed to fetch signals.'))
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
-  }, [severityFilter, searchTerm, sourceFilter])
+  }, [severityFilter, debouncedSearchTerm, sourceFilter])
 
   useEffect(() => {
-    loadSignals()
+    const controller = new AbortController()
+    loadSignals(controller.signal)
+    return () => controller.abort()
   }, [loadSignals])
 
   const handleFeedback = async (feedback: any) => {
@@ -98,7 +111,7 @@ export function SignalList() {
           </select>
 
           <button
-            onClick={loadSignals}
+            onClick={() => loadSignals()}
             className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
           >
             Refresh
