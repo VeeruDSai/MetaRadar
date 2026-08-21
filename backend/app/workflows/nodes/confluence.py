@@ -49,7 +49,6 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
         dev_by_asset: Dict[str, Dict[str, Any]] = {}
 
         for dev in existing_developments:
-            dev_id = str(dev.get("development_id", dev.get("id", "")))
             if dev.get("nct_id"):
                 dev_by_nct[dev["nct_id"].upper()] = dev
             if dev.get("asset_id"):
@@ -120,17 +119,17 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
             a_id = sig.get("asset_id") or sig.get("disease", "haemophilia")
             asset_groups.setdefault(a_id, []).append(sig)
 
+        def parse_date(s):
+            try:
+                return datetime.fromisoformat(s.get("published_at", "").replace("Z", "+00:00"))
+            except Exception:
+                return datetime.now(timezone.utc)
+
         for a_id, group in asset_groups.items():
             if len(group) < min_signals:
                 continue
 
             # Sort by published_at
-            def parse_date(s):
-                try:
-                    return datetime.fromisoformat(s.get("published_at", "").replace("Z", "+00:00"))
-                except Exception:
-                    return datetime.now(timezone.utc)
-
             sorted_group = sorted(group, key=parse_date)
 
             for i in range(len(sorted_group)):
