@@ -11,11 +11,14 @@ CONFLUENCE_VERSION = "confluence_v2.0"
 SIGNAL_TYPE_WEIGHTS = {
     "REGULATORY": 30.0,
     "CLINICAL_TRIAL": 25.0,
+    "TRIAL": 25.0,
     "PUBLICATIONS": 20.0,
+    "PUBLICATION": 20.0,
     "CONGRESS": 15.0,
     "SAFETY": 25.0,
     "ACCESS": 15.0,
     "COMMERCIAL_PATENT": 10.0,
+    "PATENT": 10.0,
 }
 
 

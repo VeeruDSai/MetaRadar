@@ -364,7 +364,7 @@ async def seed_data():
                 "fingerprint": "fp_seed_02",
                 "source_id": "clinical_trials",
                 "source_name": "ClinicalTrials.gov",
-                "development_id": dev3_id,
+                "development_id": dev1_id,
                 "external_id": "NCT04869267",
                 "pmid": None,
                 "nct_id": "NCT04869267",
@@ -396,13 +396,13 @@ async def seed_data():
                 "fingerprint": "fp_seed_03",
                 "source_id": "fda",
                 "source_name": "openFDA Regulatory",
-                "development_id": dev2_id,
+                "development_id": dev1_id,
                 "external_id": "BLA761083",
                 "pmid": None,
                 "nct_id": None,
                 "regulatory_id": "BLA761083",
                 "signal_type": "REGULATORY",
-                "disease": "haemophilia_b",
+                "disease": "haemophilia_a",
                 "title": "FDA Priority Review Granted for Subcutaneous Anti-TFPI Prophylaxis Expansion",
                 "content": "Supplemental Biologics License Application (sBLA) accepted under Priority Review with a PDUFA action date scheduled for late 2026.",
                 "canonical_url": "https://open.fda.gov/drug/event/",
@@ -424,6 +424,38 @@ async def seed_data():
                     "version": "haemophilia_v2.0",
                 },
             },
+            {
+                "fingerprint": "fp_seed_04",
+                "source_id": "ema",
+                "source_name": "European Medicines Agency",
+                "development_id": dev1_id,
+                "external_id": "EMA-CHMP-2026-04",
+                "pmid": None,
+                "nct_id": None,
+                "regulatory_id": "EMA-CHMP-2026-04",
+                "signal_type": "SAFETY",
+                "disease": "haemophilia_a",
+                "title": "EMA CHMP Concludes 5-Year Safety Review for Gene Transfer Vectors",
+                "content": "European Medicines Agency CHMP committee confirms positive benefit-risk ratio with stable long-term transaminitis profile across adult cohorts.",
+                "canonical_url": "https://www.ema.europa.eu/en/medicines",
+                "published_at": now - timedelta(days=2),
+                "retrieved_at": now,
+                "ingested_at": now,
+                "data_mode": "test_fixture",
+                "is_synthetic": True,
+                "provenance_status": "available",
+                "evidence_text": "European Medicines Agency CHMP committee confirms positive benefit-risk ratio with stable long-term transaminitis profile across adult cohorts.",
+                "priority": "HIGH",
+                "score_breakdown": {
+                    "novelty": 19.0,
+                    "clinical": 25.0,
+                    "regulatory": 22.0,
+                    "recency": 16.0,
+                    "total": 82.0,
+                    "priority_level": "HIGH",
+                    "version": "haemophilia_v2.0",
+                },
+            },
         ]
 
         for s_data in signal_rows:
@@ -437,6 +469,7 @@ async def seed_data():
                 sig_obj.score_breakdown = s_data["score_breakdown"]
                 sig_obj.canonical_url = s_data["canonical_url"]
                 sig_obj.external_id = s_data["external_id"]
+                sig_obj.development_id = s_data["development_id"]
                 sig_obj.pmid = s_data["pmid"]
                 sig_obj.nct_id = s_data["nct_id"]
                 sig_obj.regulatory_id = s_data["regulatory_id"]

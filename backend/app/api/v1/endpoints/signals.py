@@ -263,28 +263,29 @@ async def get_overview(db: AsyncSession = Depends(get_db)):
         )
 
     # 4. Confluence summary with real computed score from database
-    latest_conf_stmt = select(Confluence).order_by(Confluence.created_at.desc()).limit(1)
-    latest_conf = (await db.execute(latest_conf_stmt)).scalar_one_or_none()
+    all_confs_stmt = select(Confluence).order_by(Confluence.created_at.desc()).limit(10)
+    all_confs = (await db.execute(all_confs_stmt)).scalars().all()
 
-    if latest_conf:
-        # Fetch signals for this development to get distinct sources and types
-        conf_sigs_stmt = select(Signal.source_id, Signal.signal_type).where(Signal.development_id == latest_conf.development_id)
+    best_score = 0.0
+    best_label = "No active confluences"
+    best_drivers: List[str] = []
+
+    for conf in all_confs:
+        conf_sigs_stmt = select(Signal.source_id, Signal.signal_type).where(Signal.development_id == conf.development_id)
         conf_rows = (await db.execute(conf_sigs_stmt)).all()
         conf_sources = set(r[0] for r in conf_rows if r[0])
         conf_types = [r[1] for r in conf_rows if r[1]]
-        computed_score, drivers_dict = confluence_engine.calculate_confluence_score(conf_types)
-        confluence_score = computed_score if conf_types else 0.0
-        confluence_label = f"Confluence: {latest_conf.confluence_type.capitalize()} ({len(conf_sources)} independent sources)" if conf_sources else f"Confluence: {latest_conf.confluence_type.capitalize()}"
-        confluence_drivers = [f"{st.replace('_', ' ').title()} (+{int(wt)} pts)" for st, wt in drivers_dict.items()]
-    else:
-        confluence_score = 0.0
-        confluence_label = "No active confluences"
-        confluence_drivers = []
+        if conf_types:
+            c_score, d_dict = confluence_engine.calculate_confluence_score(conf_types)
+            if c_score > best_score:
+                best_score = c_score
+                best_label = f"Confluence: {conf.confluence_type.capitalize()} ({len(conf_sources)} independent sources)" if conf_sources else f"Confluence: {conf.confluence_type.capitalize()}"
+                best_drivers = [f"{st.replace('_', ' ').title()} (+{int(wt)} pts)" for st, wt in d_dict.items()]
 
     confluence_summary = ConfluenceSummarySchema(
-        score=confluence_score,
-        label=confluence_label,
-        drivers=confluence_drivers,
+        score=best_score,
+        label=best_label,
+        drivers=best_drivers,
         updated_at="Just now"
     )
 
