@@ -1961,7 +1961,7 @@ export function SignalDrawer({
                 <strong>{source.name}</strong>
                 <small>{source.type}</small>
               </span>
-              <Badge>{source.credibility}%</Badge>
+              <Badge>{source.credibility != null ? `${source.credibility}%` : '—'}</Badge>
             </div>
           ))
         ) : (

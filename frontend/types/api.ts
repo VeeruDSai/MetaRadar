@@ -46,7 +46,7 @@ export interface SignalSource {
   id: string;
   name: string;
   type: string;
-  credibility: number;
+  credibility?: number;
   url?: string;
 }
 

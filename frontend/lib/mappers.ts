@@ -14,6 +14,7 @@ export interface RawSignalPayload {
   source_name?: string
   external_id?: string
   development_id?: string
+  credibility?: number
   pipeline_run_id?: string
   pmid?: string
   nct_id?: string
@@ -91,7 +92,9 @@ export function mapSignal(raw: RawSignalPayload): Signal {
     low: 'low',
   }
 
-  const sid = raw.signal_id || raw.id || `SIG-${Math.random().toString(36).substring(2, 7)}`
+  // Deterministic identity: fall back to the stable fingerprint, never a random
+  // id that changes on every re-map and breaks React row identity.
+  const sid = raw.signal_id || raw.id || raw.fingerprint || 'SIG-UNKNOWN'
   const priorityStr = (raw.priority || 'MEDIUM').toUpperCase()
   const severity = severityMap[priorityStr] || 'medium'
   const timeLabel = raw.detectedAt || formatTimeAgo(raw.published_at || raw.created_at)
@@ -110,27 +113,26 @@ export function mapSignal(raw: RawSignalPayload): Signal {
     ? Math.round(raw.confidence <= 1 ? raw.confidence * 100 : raw.confidence)
     : undefined
 
-  // Map sources
+  // Map sources — credibility is only set when the backend actually supplies it.
   let sources: SignalSource[] = []
   if (raw.sources && raw.sources.length > 0) {
     sources = raw.sources
   } else if (raw.source_id) {
-    sources = [{
+    const derived: SignalSource = {
       id: raw.source_id,
       name: raw.source_name || raw.source_id.toUpperCase().replace(/_/g, ' '),
       type: raw.signal_type || 'SOURCE',
-      credibility: 90,
       url: raw.canonical_url,
-    }]
+    }
+    if (raw.credibility !== undefined && raw.credibility !== null) {
+      derived.credibility = raw.credibility
+    }
+    sources = [derived]
   }
 
-  // Map stakeholders
-  const stakeholders: Record<string, number> = raw.stakeholders || {
-    Clinical: score_breakdown?.clinical ? Math.round(score_breakdown.clinical * 3.3) : 0,
-    Regulatory: score_breakdown?.regulatory ? Math.round(score_breakdown.regulatory * 4.0) : 0,
-    Market: 0,
-    Operations: 0,
-  }
+  // Map stakeholders — render only real backend data; never invent values
+  // via magic multipliers applied to unrelated score components.
+  const stakeholders: Record<string, number> = raw.stakeholders || {}
 
   const summary = raw.summary || raw.content || (raw.facts && raw.facts.length > 0 ? raw.facts.join(' ') : raw.title)
   const is_synth = Boolean(raw.is_synthetic)
