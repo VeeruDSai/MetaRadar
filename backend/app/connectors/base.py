@@ -328,7 +328,13 @@ class SourceConnector:
         pipeline_run_id: Optional[Any] = None,
         http_status: Optional[int] = None,
     ) -> None:
-        """Persists connector run telemetry to source_health_logs and updates live source state."""
+        """Persists connector run telemetry to source_health_logs and updates live source state.
+
+        Canonical ``records_rejected`` definition (shared with IngestionService):
+        records fetched but NOT accepted into bronze — i.e. dedup/filter
+        rejections (``result.duplicates``). Profile errors are never counted as
+        rejected records; they surface via ``connector_status`` and ``last_error``.
+        """
         try:
             from app.models import SourceHealthLog, Source
             from sqlalchemy import update
@@ -346,7 +352,7 @@ class SourceConnector:
                 latency_ms=latency_ms,
                 records_fetched=result.fetched,
                 records_accepted=result.new_rows,
-                records_rejected=result.errors,
+                records_rejected=result.duplicates,
                 last_error=result.error_detail,
                 error_code="RATE_LIMITED" if http_status == 429 else None,
             )
@@ -363,7 +369,7 @@ class SourceConnector:
                     latency_ms=latency_ms,
                     records_fetched=result.fetched,
                     records_accepted=result.new_rows,
-                    records_rejected=result.errors,
+                    records_rejected=result.duplicates,
                     http_status=http_status,
                 )
             )

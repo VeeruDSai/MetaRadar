@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors import ALL_CONNECTORS
+from app.connectors.base import ProfileRunResult, SourceConnector
 from app.models import SourceHealthLog, Source
 from sqlalchemy import select
 from app.core.logging import get_logger
@@ -48,6 +49,7 @@ class IngestionService:
         from app.core.config import configuration_error_for
 
         for conn in connectors_to_run:
+            conn_start = time.perf_counter()
             conn_start = time.perf_counter()
             conn_results: List[ProfileRunResult] = []
             conn_status = "HEALTHY"
@@ -93,6 +95,8 @@ class IngestionService:
                 now_utc = datetime.now(timezone.utc)
 
                 # Record health log in database
+                # records_rejected = fetched but not accepted (dedup rejections) —
+                # same canonical definition as SourceConnector._persist_health_log.
                 health_log = SourceHealthLog(
                     source_id=conn.source_id,
                     connector_status=conn_status,
