@@ -159,6 +159,7 @@ class PipelineRunner:
         await self._session.flush()
 
         # 2. Persist Signals with Embeddings & Provenance
+        failed_signal_ids: set = set()
         for sig in final_state.get("scored_signals", []) or final_state.get("validated_signals", []):
             try:
                 sig_raw_id = sig.get("id") or sig.get("signal_id")
@@ -279,6 +280,9 @@ class PipelineRunner:
                 await self._session.execute(stmt)
             except Exception as e:
                 logger.warning(f"Could not persist signal {sig.get('title')}: {e}")
+                failed_raw_id = sig.get("id") or sig.get("signal_id")
+                if failed_raw_id:
+                    failed_signal_ids.add(str(failed_raw_id))
 
         # 3. Persist Confluences
         for story in final_state.get("confluent_stories", []):
@@ -301,11 +305,14 @@ class PipelineRunner:
                 logger.warning(f"Could not persist confluence {story}: {e}")
 
         # 4. Mark Bronze Records as Promoted
+        # Only promote bronze rows whose silver persistence succeeded — rows whose
+        # insert failed stay unpromoted (pipeline_run_id IS NULL) so the next run
+        # can retry them instead of being silently lost.
         try:
             bronze_ids = [
                 uuid.UUID(str(s["id"]))
                 for s in final_state.get("raw_signals", [])
-                if s.get("id") and len(str(s["id"])) == 36
+                if s.get("id") and len(str(s["id"])) == 36 and str(s["id"]) not in failed_signal_ids
             ]
             if bronze_ids:
                 upd_stmt = (
