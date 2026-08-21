@@ -186,6 +186,27 @@ def start_docker_services(skip_docker: bool):
     wait_for_backing_service("127.0.0.1", 6379, "Redis (port 6379)", max_retries=15, delay=1.0)
 
 
+def apply_database_migrations():
+    backend_dir = BASE_DIR / "backend"
+    alembic_ini = backend_dir / "alembic.ini"
+    if alembic_ini.exists():
+        print("  [DATABASE] Ensuring schema migrations are up to date (alembic upgrade head)...")
+        try:
+            res = subprocess.run(
+                [sys.executable, "-m", "alembic", "upgrade", "head"],
+                cwd=str(backend_dir),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if res.returncode == 0:
+                print("  [DATABASE] Schema migrations verified and up to date.")
+            else:
+                print(f"  [DATABASE WARNING] Alembic output: {res.stderr.strip()}", file=sys.stderr)
+        except Exception as e:
+            print(f"  [DATABASE WARNING] Could not run alembic upgrade: {e}", file=sys.stderr)
+
+
 def check_endpoint_health(url: str, timeout: float = 1.5) -> bool:
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "MetaRadar-Launcher/5.1"})
@@ -277,8 +298,9 @@ def main():
     print(" Version 5.1.0 | Fast In-Memory Pipelines (No Celery) | Local Gemma")
     print("=" * 70)
 
-    # 1. Backing Services
+    # 1. Backing Services & Database Migrations
     start_docker_services(args.no_docker)
+    apply_database_migrations()
 
     # 2. Launch Backend
     backend_proc = None

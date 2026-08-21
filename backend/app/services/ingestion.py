@@ -159,6 +159,12 @@ class IngestionService:
                 error_str = str(e)
                 logger.error(f"Connector '{conn.source_id}' execution failed: {error_str}", exc_info=True)
 
+                # Rollback aborted transaction so session is clean for subsequent connectors
+                try:
+                    await self.session.rollback()
+                except Exception:
+                    pass
+
                 try:
                     health_log = SourceHealthLog(
                         source_id=conn.source_id,
@@ -173,7 +179,10 @@ class IngestionService:
                     self.session.add(health_log)
                     await self.session.commit()
                 except Exception:
-                    pass
+                    try:
+                        await self.session.rollback()
+                    except Exception:
+                        pass
 
                 per_source_results[conn.source_id] = {
                     "source_id": conn.source_id,
