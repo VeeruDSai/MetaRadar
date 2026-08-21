@@ -133,7 +133,8 @@ export function mapSearchResult(r: any): Signal {
     signal_type: r.signal_type,
     disease: r.disease,
     priority: r.priority,
-    score: Math.round((r.similarity_score || 0.5) * 100),
+    // Only use the real similarity score; never invent a default relevance.
+    score: typeof r.similarity_score === 'number' ? Math.round(r.similarity_score * 100) : 0,
     created_at: r.created_at,
   })
 }
@@ -301,11 +302,20 @@ export async function fetchHealth(signal?: AbortSignal): Promise<HealthStatus> {
   }))
   const latency = Math.round(performance.now() - t0)
 
+  // Real connector count from the connectors health endpoint; 0 when the
+  // telemetry is unavailable — never a hardcoded fabricated count.
+  const connectors = await apiFetch<{ connectors?: unknown[] }>(
+    '/health/connectors',
+    undefined,
+    signal
+  ).catch(() => ({ connectors: [] as unknown[] }))
+  const sourceCount = Array.isArray(connectors?.connectors) ? connectors.connectors.length : 0
+
   return {
     api: ready.status === 'ready' ? 'healthy' : 'degraded',
     lastSync: 'Live',
     latencyMs: latency,
-    sourceCount: 5,
+    sourceCount,
   }
 }
 
