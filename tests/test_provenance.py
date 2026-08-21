@@ -125,6 +125,7 @@ def test_serialize_signal_not_computed_on_null_breakdown():
 def test_synthetic_fallback_tagging():
     """Synthetic fallback records must be explicitly tagged as test_fixture."""
     items = _load_synthetic_fallback(limit=10)
+    assert len(items) > 0, "synthetic fallback returned no items — check dataset path"
     for item in items:
         assert item.get("is_synthetic") is True
         assert item.get("data_mode") == "test_fixture"
