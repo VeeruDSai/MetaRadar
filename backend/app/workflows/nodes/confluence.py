@@ -86,7 +86,12 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
                     "title": sig.get("title", f"Development: {asset_id or 'Haemophilia'}"),
                     "disease": disease,
                     "asset_id": asset_id,
-                    "company_id": company,
+                    # company_id must reference companies.company_id (slug PKs like
+                    # "novo-nordisk"). Extracted values here are display names
+                    # ("Novo Nordisk") or "Unknown" — writing them into the FK
+                    # either violates the constraint or creates junk rows. Leave
+                    # None until a proper name→id resolution exists (WR-12).
+                    "company_id": None,
                     "current_stage": "announced",
                     "nct_id": nct_ids[0] if nct_ids else None,
                     "created_at": datetime.now(timezone.utc).isoformat(),
