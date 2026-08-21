@@ -196,6 +196,7 @@ class ClinicalTrialsConnector(SourceConnector):
             "conditions": conditions,
             "interventions": interventions,
             "entities": list({*conditions, *interventions}),
+            "published_at": published_at.isoformat(),
             "retrieved_at": retrieved_at.isoformat(),
             "connector_version": self.connector_version,
             "study": study,  # verbatim APIv2 study object (D-23)

@@ -195,6 +195,7 @@ class PubMedConnector(SourceConnector):
             "url": url,
             "evidence_text": scrubbed,
             "pub_date": pub_year,
+            "published_at": published_at.isoformat(),
             "mesh_terms": mesh_terms,
             "entities": mesh_terms,
             "pii_scrubbed": True,

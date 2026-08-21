@@ -217,6 +217,7 @@ class NewsAPIConnector(SourceConnector):
             "evidence_text": scrubbed or description or title,
             "entity_terms": entities,
             "pii_scrubbed": True,
+            "published_at": published_at.isoformat(),
             "retrieved_at": retrieved_at.isoformat(),
             "connector_version": self.connector_version,
             "article": article,  # verbatim NewsAPI article object (D-23)

@@ -160,6 +160,7 @@ class OpenFDAConnector(SourceConnector):
             "evidence_text": scrubbed or content or title,
             "provenance_status": "missing_url",
             "action_date": action_date,
+            "published_at": published_at.isoformat(),
             "entities": list({*substances, *brand_names}),
             "pii_scrubbed": True,
             "retrieved_at": retrieved_at.isoformat(),

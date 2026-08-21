@@ -76,6 +76,8 @@ async def node_ingest(state: MetaRadarState, session: Optional[AsyncSession] = N
                     "external_id": row.external_id,
                     "title": payload.get("title", ""),
                     "content": payload.get("content", payload.get("abstract", "")),
+                    # Real publication date from the connector when available;
+                    # retrieval time only as an explicit legacy-row fallback.
                     "published_at": payload.get("published_at", row.retrieved_at.isoformat() if row.retrieved_at else datetime.now(timezone.utc).isoformat()),
                     "signal_type": payload.get("signal_type", "CLINICAL_TRIAL"),
                     "disease": payload.get("disease", "haemophilia_a"),

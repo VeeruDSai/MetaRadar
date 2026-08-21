@@ -150,6 +150,7 @@ class EMARSSConnector(SourceConnector):
             "link": link,
             "guid": guid,
             "pub_date": pub_date_raw,
+            "published_at": published_at.isoformat(),
             "entities": [],
             "pii_scrubbed": True,
             "retrieved_at": retrieved_at.isoformat(),
