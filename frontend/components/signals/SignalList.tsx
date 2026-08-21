@@ -92,8 +92,8 @@ export function SignalList() {
             <option value="">All Sources</option>
             <option value="pubmed">PubMed</option>
             <option value="clinical_trials">ClinicalTrials.gov</option>
-            <option value="openfda">OpenFDA</option>
-            <option value="ema_rss">EMA RSS</option>
+            <option value="fda">OpenFDA</option>
+            <option value="ema">EMA RSS</option>
             <option value="newsapi">NewsAPI</option>
           </select>
 
