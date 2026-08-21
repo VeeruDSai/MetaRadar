@@ -32,12 +32,12 @@ jobs:
         run: |
           pytest -v
 
-      - name: Verify OpenAPI to TypeScript Contract Sync
+      - name: Verify TypeScript Contract Canonical Copy Is Unchanged
         env:
           PYTHONPATH: backend:.
         run: |
           python scripts/export_openapi.py
-          git diff --exit-code frontend/types/api.ts || (echo "TypeScript API contract is out of sync! Run python scripts/export_openapi.py" && exit 1)
+          git diff --exit-code frontend/types/api.ts || (echo "frontend/types/api.ts differs from the canonical template in scripts/export_openapi.py — edit the template, then run python scripts/export_openapi.py" && exit 1)
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
