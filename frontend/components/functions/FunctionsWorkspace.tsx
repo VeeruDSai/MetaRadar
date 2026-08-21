@@ -101,7 +101,9 @@ export function FunctionsWorkspace() {
                 <div className="p-2.5 rounded-lg bg-[var(--surface-subtle)] border border-[var(--border)]">
                   <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Approval Rate</div>
                   <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
-                    {role.action_approval_rate ? `${Math.round(role.action_approval_rate * 100)}%` : '100%'}
+                    {/* Backend reports action_approval_rate already as a percentage (0-100).
+                        Render 0% faithfully instead of falling into a fabricated default. */}
+                    {role.action_approval_rate != null ? `${role.action_approval_rate}%` : '—'}
                   </div>
                 </div>
               </div>
