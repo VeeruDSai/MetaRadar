@@ -14,26 +14,25 @@ logger = logging.getLogger(__name__)
 
 def _load_synthetic_fallback(limit: int = 50) -> List[Dict[str, Any]]:
     """Loads fallback pre-curated signals from synthetic dataset if bronze is empty."""
-    # ingest.py lives at <repo>/backend/app/workflows/nodes/ → parents[4] is the repo root,
-    # where data/synthetic_signals.json actually lives.
-    data_path = Path(__file__).resolve().parents[4] / "data" / "synthetic_signals.json"
+    data_path = Path(__file__).resolve().parents[3] / "data" / "synthetic_signals.json"
     if not data_path.exists():
-        logger.error(f"Synthetic fallback dataset missing at {data_path}")
-        return []
+        # Fallback relative to project root
+        data_path = Path(__file__).resolve().parents[4] / "backend" / "app" / "data" / "synthetic_signals.json"
 
-    try:
-        with open(data_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        tagged = []
-        for item in data[:limit]:
-            copied = dict(item)
-            copied["is_synthetic"] = True
-            copied["data_mode"] = "test_fixture"
-            copied["provenance_status"] = "fixture"
-            tagged.append(copied)
-        return tagged
-    except Exception as e:
-        logger.warning(f"Failed to load synthetic dataset from {data_path}: {e}")
+    if data_path.exists():
+        try:
+            with open(data_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            tagged = []
+            for item in data[:limit]:
+                copied = dict(item)
+                copied["is_synthetic"] = True
+                copied["data_mode"] = "test_fixture"
+                copied["provenance_status"] = "fixture"
+                tagged.append(copied)
+            return tagged
+        except Exception as e:
+            logger.warning(f"Failed to load synthetic dataset from {data_path}: {e}")
     return []
 
 
