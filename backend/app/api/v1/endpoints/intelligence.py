@@ -24,7 +24,7 @@ from app.schemas.intelligence import (
     ContradictionItem,
     MissingSignalWatchItem,
 )
-from app.services.confluence import confluence_engine
+from app.services.confluence import SIGNAL_TYPE_WEIGHTS, confluence_engine
 
 router = APIRouter()
 
@@ -128,16 +128,8 @@ async def get_confluence_alerts(
             if s[2]:
                 signal_types.append(s[2])
 
-            pts = 25.0
-            st_upper = (s[2] or "").upper()
-            if "REGULATORY" in st_upper:
-                pts = 30.0
-            elif "CLINICAL" in st_upper:
-                pts = 25.0
-            elif "PUB" in st_upper:
-                pts = 20.0
-            elif "SAFETY" in st_upper:
-                pts = 25.0
+            # Canonical engine weights — keeps evidence points identical to score_breakdown.
+            pts = SIGNAL_TYPE_WEIGHTS.get((s[2] or "").upper(), 10.0)
 
             source_name = s[3] or "External Biomedical API"
             if s[3] == "pubmed":
@@ -248,16 +240,8 @@ async def inspect_confluence(
         if s[3]:
             distinct_source_ids.add(s[3])
 
-        pts = 25.0
-        st_upper = (s[2] or "").upper()
-        if "REGULATORY" in st_upper:
-            pts = 30.0
-        elif "CLINICAL" in st_upper:
-            pts = 25.0
-        elif "PUBLICATION" in st_upper:
-            pts = 20.0
-        elif "PATENT" in st_upper or "COMMERCIAL" in st_upper:
-            pts = 10.0
+        # Canonical engine weights — keeps evidence points identical to score_breakdown.
+        pts = SIGNAL_TYPE_WEIGHTS.get((s[2] or "").upper(), 10.0)
 
         ext_id = s[9] or s[10] or s[11] or (s[4][:12] if s[4] else str(s[0]))
         source_name = (s[3] or "Source").replace("_", " ").title()
