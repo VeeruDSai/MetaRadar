@@ -1,6 +1,7 @@
 [
   {
     "source_id": "pubmed",
+    "external_id": "38491023",
     "pmid": "38491023",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_b",
@@ -20,6 +21,7 @@
   },
   {
     "source_id": "newsapi",
+    "external_id": "CSL-PR-2026-03-18",
     "regulatory_id": "CSL-PR-2026-03-18",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_b",
@@ -38,6 +40,7 @@
   },
   {
     "source_id": "ash_congress",
+    "external_id": "ASH-2026-ABS-1042",
     "regulatory_id": "ASH-2026-ABS-1042",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_b",
