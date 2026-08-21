@@ -412,7 +412,29 @@ async def get_missing_signals(
         .outerjoin(Development, WatchItem.development_id == Development.development_id)
     )
     if status:
-        query = query.where(WatchItem.status == status)
+        bucket = status.strip().upper()
+        if bucket in ("SATISFIED", "SUPPRESSED"):
+            # Stored lifecycle values are lowercase.
+            query = query.where(WatchItem.status == bucket.lower())
+        elif bucket in ("OVERDUE", "DUE", "WITHIN_WINDOW"):
+            # Computed buckets never exist as stored status values; translate them
+            # into date-window comparisons mirroring the per-row computation below:
+            #   overdue_days = max(0, age_days - window), window defaults to 90,
+            #   OVERDUE when overdue_days > 30, DUE when 0 < overdue_days <= 30.
+            age_days = func.extract("epoch", func.now() - WatchItem.created_at) / 86400.0
+            window_days = func.coalesce(WatchItem.monitoring_window_days, 90)
+            overdue_days = func.greatest(age_days - window_days, 0.0)
+            query = query.where(WatchItem.status.notin_(("satisfied", "suppressed")))
+            if bucket == "OVERDUE":
+                query = query.where(overdue_days > 30)
+            elif bucket == "DUE":
+                query = query.where(overdue_days > 0, overdue_days <= 30)
+            else:  # WITHIN_WINDOW
+                query = query.where(overdue_days <= 0)
+        else:
+            # Unknown value: fall back to exact stored-status match so garbage
+            # input still returns an empty result set instead of everything.
+            query = query.where(WatchItem.status == status)
 
     query = query.order_by(WatchItem.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(query)
