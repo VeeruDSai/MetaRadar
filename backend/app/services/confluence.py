@@ -39,7 +39,8 @@ class ConfluenceEngine:
     Deterministic multi-source confluence detection service.
     
     A valid confluence requires:
-      - >= min_sources independent signal types (default: 3)
+      - >= min_sources distinct source providers (default: 3) — counted via
+        distinct source_id/source_name, NOT signal types
       - Signals published within a sliding time window (default: 48h)
       - Matched to the same canonical development / drug asset
     """
@@ -98,8 +99,15 @@ class ConfluenceEngine:
                 else:
                     break
 
+            # ``or`` chain (not .get defaults) so explicit None values from
+            # upstream can never be stringified into a phantom "none" source.
             distinct_source_ids = set(
-                (s.get("source_id") or s.get("source_name") or s.get("signal_type", "SOURCE")).lower()
+                (
+                    s.get("source_id")
+                    or s.get("source_name")
+                    or s.get("signal_type")
+                    or "SOURCE"
+                ).lower()
                 for s in window_signals
             )
             if len(distinct_source_ids) >= min_sources:
