@@ -235,9 +235,15 @@ export function EvidenceDrawer({
               <div>Signal ID: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.signal_id || signal.id}</span></div>
               <div>Raw Record Ref: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.raw_record_reference || 'N/A'}</span></div>
               <div className="col-span-2">Fingerprint: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.fingerprint || 'N/A'}</span></div>
-              <div className="col-span-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-sans mt-1">
-                ✓ PII/PHI scrubber evaluated prior to bronze persistence. HIPAA Safe Harbor compliant.
-              </div>
+              {signal.pii_scrubbed === true ? (
+                <div className="col-span-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-sans mt-1">
+                  ✓ PII/PHI scrubber evaluated prior to bronze persistence.
+                </div>
+              ) : (
+                <div className="col-span-2 text-[10px] text-[var(--muted-foreground)] font-sans italic mt-1">
+                  PII/PHI scrub status unknown for this record.
+                </div>
+              )}
             </div>
           </div>
 
