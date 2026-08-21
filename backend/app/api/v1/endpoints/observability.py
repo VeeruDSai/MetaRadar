@@ -56,8 +56,9 @@ async def get_system_activity(
                     }
                 )
             )
-    except Exception as e:
-        logger.debug(f"PipelineRun activity query skipped: {e}")
+    except Exception:
+        # An outage must never look like "no activity" — surface it loudly.
+        logger.error("PipelineRun activity query failed — activity feed is degraded", exc_info=True)
 
     # 2. Fetch recent Source Health Logs
     try:
@@ -86,8 +87,8 @@ async def get_system_activity(
                     }
                 )
             )
-    except Exception as e:
-        logger.debug(f"SourceHealthLog activity query skipped: {e}")
+    except Exception:
+        logger.error("SourceHealthLog activity query failed — activity feed is degraded", exc_info=True)
 
     # Sort all activity combined by timestamp desc
     activity_items.sort(key=lambda x: x.timestamp, reverse=True)
@@ -101,8 +102,8 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
         query = select(Source).order_by(Source.source_id)
         result = await db.execute(query)
         sources = result.scalars().all()
-    except Exception as e:
-        logger.debug(f"Sources query skipped: {e}")
+    except Exception:
+        logger.error("Sources query failed — registry health is degraded", exc_info=True)
         sources = []
 
     # Query latest SourceHealthLog per source_id
@@ -114,8 +115,8 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
         for l in all_logs:
             if l.source_id not in latest_logs:
                 latest_logs[l.source_id] = l
-    except Exception as e:
-        logger.debug(f"Latest health logs query skipped: {e}")
+    except Exception:
+        logger.error("Latest health-logs query failed — registry health is degraded", exc_info=True)
 
     from app.core.config import configuration_error_for
 
