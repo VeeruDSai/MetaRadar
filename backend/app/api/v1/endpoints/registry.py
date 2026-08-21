@@ -32,7 +32,12 @@ async def get_developments_registry(
     )
 
     if disease:
-        query = query.where(Development.disease.ilike(f"%{disease}%"))
+        # Escape LIKE wildcards so user input matches literally (a search for
+        # "100%" must not match everything); backslash is the escape character.
+        escaped_disease = (
+            disease.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        query = query.where(Development.disease.ilike(f"%{escaped_disease}%", escape="\\"))
     if stage:
         query = query.where(Development.current_stage == stage)
 
