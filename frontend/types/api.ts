@@ -49,7 +49,7 @@ export interface SignalSource {
   id: string;
   name: string;
   type: string;
-  credibility: number;
+  credibility?: number;
   url?: string;
 }
 
@@ -76,6 +76,7 @@ export interface Signal {
   // Truthfulness, DataMode & Provenance
   data_mode?: DataMode;
   is_synthetic?: boolean;
+  pii_scrubbed?: boolean;
   confidence?: number;
   confidence_type?: ConfidenceType;
   confidence_rationale?: string;
