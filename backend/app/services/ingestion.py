@@ -48,8 +48,9 @@ class IngestionService:
 
         from app.core.config import configuration_error_for
 
+        logger.info(f"[INGESTION] Starting live ingestion run for {len(connectors_to_run)} connector(s): {[c.source_id for c in connectors_to_run]}")
+
         for conn in connectors_to_run:
-            conn_start = time.perf_counter()
             conn_start = time.perf_counter()
             conn_results: List[ProfileRunResult] = []
             conn_status = "HEALTHY"
@@ -93,6 +94,11 @@ class IngestionService:
 
                 latency_ms = (time.perf_counter() - conn_start) * 1000.0
                 now_utc = datetime.now(timezone.utc)
+
+                logger.info(
+                    f"[INGESTION] Connector '{conn.source_id}' -> status: {conn_status}, "
+                    f"fetched: {conn_fetched}, new_bronze: {conn_new}, duplicates: {conn_dups}, latency: {latency_ms:.1f}ms"
+                )
 
                 # Record health log in database
                 # records_rejected = fetched but not accepted (dedup rejections) —
@@ -181,6 +187,10 @@ class IngestionService:
                 }
 
         duration_s = (datetime.now(timezone.utc) - started_at).total_seconds()
+        logger.info(
+            f"[INGESTION] Run completed in {duration_s:.2f}s -> "
+            f"Total fetched: {total_fetched}, New Bronze records: {total_new}, Duplicates: {total_duplicates}"
+        )
 
         return {
             "ingestion_run_id": str(uuid.uuid4()),

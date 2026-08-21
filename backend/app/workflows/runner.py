@@ -85,6 +85,7 @@ class PipelineRunner:
                 logger.warning(f"Failed to fetch unpromoted bronze signals: {e}")
 
         signals_input = raw_signals if raw_signals is not None else fetched_bronze
+        logger.info(f"[PIPELINE] Starting LangGraph pipeline run {run_id_str[:8]} with {len(signals_input)} input signal(s)")
         initial_state = create_initial_state(
             pipeline_run_id=run_id_str,
             raw_signals=signals_input,
@@ -93,6 +94,12 @@ class PipelineRunner:
 
         try:
             final_state = await self._graph.ainvoke(initial_state)
+            logger.info(
+                f"[PIPELINE] Pipeline run {run_id_str[:8]} complete -> "
+                f"signals_processed: {final_state.get('signals_processed', 0)}, "
+                f"confluences: {len(final_state.get('confluence_alerts', []))}, "
+                f"contradictions: {len(final_state.get('contradictions', []))}"
+            )
 
             # 3. Persist output entities to database
             if self._session is not None:

@@ -115,7 +115,7 @@ export function CalibrationWorkspace() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadWeights}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
+            className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded text-xs font-medium border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)] transition"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             <span>Refresh</span>
@@ -123,7 +123,7 @@ export function CalibrationWorkspace() {
           <button
             onClick={handleRecalibrate}
             disabled={calibrating}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-semibold text-white"
+            className="inline-flex items-center gap-1.5 px-4 h-8 rounded text-xs font-semibold text-white transition border border-transparent"
             style={{ background: 'var(--primary)', opacity: calibrating ? 0.7 : 1 }}
           >
             <Sliders size={13} />

@@ -116,7 +116,7 @@ export function SourcesOperationsWorkspace() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadSources}
-            className="filter-bar button inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
+            className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded text-xs font-medium border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)] transition"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             <span>Refresh Health</span>
@@ -124,7 +124,7 @@ export function SourcesOperationsWorkspace() {
           <button
             onClick={handleLiveSync}
             disabled={syncing}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-semibold text-white transition"
+            className="inline-flex items-center gap-1.5 px-4 h-8 rounded text-xs font-semibold text-white transition border border-transparent"
             style={{ background: 'var(--primary)', opacity: syncing ? 0.7 : 1 }}
           >
             {syncing ? (

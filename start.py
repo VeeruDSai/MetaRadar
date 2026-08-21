@@ -300,14 +300,18 @@ def main():
         print(" Running in daemon mode. Outputting to logs/.")
         return
 
-    # Live telemetry display loop
+    # Live telemetry & operational log streamer loop
     backend_url = f"http://localhost:{args.port_backend}/api/v1/health"
     frontend_url = f"http://localhost:{args.port_frontend}"
+    backend_log_file = LOGS_DIR / "backend.log"
+    backend_log_pos = 0
+    if backend_log_file.exists():
+        backend_log_pos = backend_log_file.stat().st_size
 
     iteration = 0
     try:
         while True:
-            time.sleep(3)
+            time.sleep(1.5)
             iteration += 1
 
             # Check process lifespans
@@ -322,13 +326,32 @@ def main():
                 cleanup_processes()
                 sys.exit(1)
 
-            b_ok = check_endpoint_health(backend_url) if backend_proc else None
-            f_ok = check_endpoint_health(frontend_url) if frontend_proc else None
+            # Stream real-time operational events from backend
+            if backend_log_file.exists():
+                try:
+                    with open(backend_log_file, "r", encoding="utf-8", errors="replace") as f:
+                        f.seek(backend_log_pos)
+                        new_chunk = f.read()
+                        backend_log_pos = f.tell()
+                        if new_chunk:
+                            for raw_line in new_chunk.splitlines():
+                                line = raw_line.strip()
+                                if not line:
+                                    continue
+                                # Surface operational events (ingestion, pipeline, errors, warnings)
+                                if any(marker in line for marker in ["[INGESTION]", "[PIPELINE]", "ERROR", "WARNING"]):
+                                    print(f"  {line}")
+                                elif any(k in line.lower() for k in ["/api/v1/ingestion", "ingest", "confluence", "contradiction", "recalibration"]):
+                                    print(f"  [OP-LOG] {line}")
+                except Exception:
+                    pass
 
-            b_status = "ONLINE (200 OK)" if b_ok else ("STARTING..." if b_ok is False else "DISABLED")
-            f_status = "ONLINE (200 OK)" if f_ok else ("STARTING..." if f_ok is False else "DISABLED")
-
-            if iteration % 3 == 0:
+            # Heartbeat telemetry (every ~15 seconds)
+            if iteration % 10 == 0:
+                b_ok = check_endpoint_health(backend_url) if backend_proc else None
+                f_ok = check_endpoint_health(frontend_url) if frontend_proc else None
+                b_status = "ONLINE (200 OK)" if b_ok else ("STARTING..." if b_ok is False else "DISABLED")
+                f_status = "ONLINE (200 OK)" if f_ok else ("STARTING..." if f_ok is False else "DISABLED")
                 print(f"  [TELEMETRY] Backend: {b_status} | Frontend: {f_status} | Active PID(s): {[p.pid for p in active_processes]}")
 
     except KeyboardInterrupt:
