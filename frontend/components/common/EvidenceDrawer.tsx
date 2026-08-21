@@ -31,6 +31,7 @@ export function EvidenceDrawer({
   const [comments, setComments] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedbackSuccess, setFeedbackSuccess] = useState(false)
+  const [feedbackError, setFeedbackError] = useState<string | null>(null)
 
   if (!isOpen || !signal) return null
 
@@ -39,6 +40,8 @@ export function EvidenceDrawer({
     if (!onFeedbackSubmit || !signal.signal_id) return
 
     setSubmitting(true)
+    setFeedbackSuccess(false)
+    setFeedbackError(null)
     try {
       await onFeedbackSubmit({
         signal_id: signal.signal_id,
@@ -50,6 +53,12 @@ export function EvidenceDrawer({
       })
       setFeedbackSuccess(true)
       setTimeout(() => setFeedbackSuccess(false), 3000)
+    } catch (err) {
+      setFeedbackError(
+        err instanceof Error && err.message
+          ? `Feedback submission failed: ${err.message}`
+          : 'Feedback submission failed. Please try again.'
+      )
     } finally {
       setSubmitting(false)
     }
@@ -238,7 +247,7 @@ export function EvidenceDrawer({
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
                 Stakeholder Calibration Feedback
               </h3>
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                 <div>
                   <label className="block text-[var(--muted-foreground)] mb-1 font-medium">Your Function</label>
                   <select
@@ -265,6 +274,17 @@ export function EvidenceDrawer({
                     className="w-full bg-[var(--card)] border border-[var(--border)] rounded px-2.5 py-1.5 text-[var(--foreground)] text-xs"
                   />
                 </div>
+                <div>
+                  <label className="block text-[var(--muted-foreground)] mb-1 font-medium">Urgency (1-5)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={urgency}
+                    onChange={(e) => setUrgency(Number(e.target.value))}
+                    className="w-full bg-[var(--card)] border border-[var(--border)] rounded px-2.5 py-1.5 text-[var(--foreground)] text-xs"
+                  />
+                </div>
               </div>
 
               <div>
@@ -278,7 +298,7 @@ export function EvidenceDrawer({
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <button
                   type="submit"
                   disabled={submitting}
@@ -288,6 +308,11 @@ export function EvidenceDrawer({
                 </button>
                 {feedbackSuccess && (
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Feedback recorded!</span>
+                )}
+                {feedbackError && (
+                  <span role="alert" className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                    {feedbackError}
+                  </span>
                 )}
               </div>
             </form>
