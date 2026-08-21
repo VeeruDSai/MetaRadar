@@ -103,4 +103,38 @@ async def get_sources_registry(
                 configuration_error_message=err_msg,
             )
         )
+
+    seen_ids = {s.source_id for s in sources}
+    canonical_fallbacks = [
+        {"source_id": "pubmed", "name": "PubMed MEDLINE (E-Utilities)", "freshness_class": "batch", "syndication_group": "Literature"},
+        {"source_id": "clinical_trials", "name": "ClinicalTrials.gov API v2", "freshness_class": "near_real_time", "syndication_group": "Trial Registries"},
+        {"source_id": "fda", "name": "openFDA Drugs & Adverse Events", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+        {"source_id": "ema", "name": "European Medicines Agency", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+        {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "quota_remaining": 100},
+    ]
+    for c in canonical_fallbacks:
+        if c["source_id"] not in seen_ids:
+            seen_ids.add(c["source_id"])
+            config_err = configuration_error_for(c["source_id"])
+            conn_status = "CONFIGURATION_ERROR" if config_err else "NEVER_CONNECTED"
+            items.append(
+                SourceRegistryItem(
+                    source_id=c["source_id"],
+                    name=c["name"],
+                    freshness_class=c["freshness_class"],
+                    syndication_group=c.get("syndication_group", "Public Feed"),
+                    status="active",
+                    quota_remaining=c.get("quota_remaining"),
+                    last_success=None,
+                    connector_status=conn_status,
+                    last_attempted=None,
+                    latency_ms=None,
+                    records_fetched=0,
+                    records_accepted=0,
+                    records_rejected=0,
+                    http_status=None,
+                    configuration_error_message=config_err,
+                )
+            )
+
     return items

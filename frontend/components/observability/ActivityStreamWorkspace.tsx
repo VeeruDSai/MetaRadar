@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import type { ActivityLogItem } from '@/types/api'
 import { fetchActivityLogs } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
+import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { EmptyState } from '../common/EmptyState'
+import { Database, RefreshCw } from 'lucide-react'
 
 export function ActivityStreamWorkspace() {
   const [logs, setLogs] = useState<ActivityLogItem[]>([])
@@ -33,38 +34,62 @@ export function ActivityStreamWorkspace() {
 
   const filteredLogs = levelFilter ? logs.filter((l) => l.level === levelFilter) : logs
 
+  const getBadgeTone = (level: string): 'critical' | 'high' | 'medium' | 'low' | 'neutral' => {
+    switch (level?.toUpperCase()) {
+      case 'ERROR':
+        return 'critical'
+      case 'WARNING':
+        return 'high'
+      case 'INFO':
+        return 'low'
+      default:
+        return 'neutral'
+    }
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)] mb-0.5">
-            Audit Trail & Diagnostic Stream
-          </div>
-          <h2 className="text-xl font-bold text-[var(--foreground)]">System Activity & Observability Stream</h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            End-to-end structured JSON telemetry, correlation tracing (X-Request-ID), and pipeline execution logs.
-          </p>
-        </div>
+    <>
+      <SectionTitle
+        eyebrow="Audit Trail & Diagnostic Stream"
+        title="Observability & Ingestion Logs"
+        detail="End-to-end structured JSON telemetry, correlation tracing (X-Request-ID), and pipeline execution logs."
+      />
 
-        <div className="flex items-center gap-2">
-          <select
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)]"
-          >
-            <option value="">All Log Levels</option>
-            <option value="INFO">INFO</option>
-            <option value="WARNING">WARNING</option>
-            <option value="ERROR">ERROR</option>
-          </select>
-
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div className="filter-bar">
           <button
-            onClick={loadLogs}
-            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
+            className={levelFilter === '' ? 'filter-active' : ''}
+            onClick={() => setLevelFilter('')}
           >
-            Refresh Stream
+            All Log Levels
+          </button>
+          <button
+            className={levelFilter === 'INFO' ? 'filter-active' : ''}
+            onClick={() => setLevelFilter('INFO')}
+          >
+            INFO
+          </button>
+          <button
+            className={levelFilter === 'WARNING' ? 'filter-active' : ''}
+            onClick={() => setLevelFilter('WARNING')}
+          >
+            WARNING
+          </button>
+          <button
+            className={levelFilter === 'ERROR' ? 'filter-active' : ''}
+            onClick={() => setLevelFilter('ERROR')}
+          >
+            ERROR
           </button>
         </div>
+
+        <button
+          onClick={loadLogs}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
+        >
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh Stream</span>
+        </button>
       </div>
 
       {error && (
@@ -79,58 +104,43 @@ export function ActivityStreamWorkspace() {
       )}
 
       {loading && (
-        <div className="space-y-3">
+        <div className="grid gap-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
+            <Card key={i} className="animate-pulse h-16" />
           ))}
         </div>
       )}
 
       {!loading && !error && filteredLogs.length === 0 && (
-        <EmptyState
-          title="No activity events found"
-          description="System events and connector runs will appear here as the platform processes pipeline workloads."
-        />
+        <Card className="empty-state">
+          <Database size={28} />
+          <p>No activity events found</p>
+          <span>System events and connector runs will appear here as the platform processes pipeline workloads.</span>
+        </Card>
       )}
 
       {!loading && !error && filteredLogs.length > 0 && (
-        <div className="space-y-2">
+        <div className="grid gap-2">
           {filteredLogs.map((log) => {
             const isExpanded = expandedId === log.id
-            const isError = log.level === 'ERROR'
-            const isWarn = log.level === 'WARNING'
 
             return (
-              <div
+              <Card
                 key={log.id}
-                className={`rounded-xl border p-4 space-y-2 transition ${
-                  isError
-                    ? 'border-red-200 bg-red-50/50 dark:border-red-800/40 dark:bg-red-950/20'
-                    : isWarn
-                    ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-950/20'
-                    : 'border-[var(--border)] bg-[var(--card)] shadow-xs'
-                }`}
+                className="cursor-pointer transition hover:border-[var(--border-selected)]"
               >
                 <div
-                  className="flex items-start justify-between gap-3 cursor-pointer select-none"
+                  className="flex items-start justify-between gap-3 select-none"
                   onClick={() => setExpandedId(isExpanded ? null : log.id)}
                 >
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider ${
-                        isError
-                          ? 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
-                          : isWarn
-                          ? 'bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
-                          : 'bg-[var(--surface-subtle)] text-[var(--foreground)] border border-[var(--border)]'
-                      }`}
-                    >
+                    <Badge tone={getBadgeTone(log.level)}>
                       {log.level}
-                    </span>
+                    </Badge>
                     <span className="text-xs font-mono font-semibold text-[var(--foreground)]">
                       {log.service} :: {log.component}
                     </span>
-                    <span className="text-xs text-[var(--muted-foreground)] font-mono text-[11px]">
+                    <span className="text-[11px] text-[var(--muted-foreground)] font-mono">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
@@ -141,42 +151,37 @@ export function ActivityStreamWorkspace() {
                         {log.duration_ms} ms
                       </span>
                     )}
-                    <span className="text-xs text-[var(--muted-foreground)]">
+                    <span className="text-xs text-[var(--muted-foreground)] font-mono">
                       {isExpanded ? '▲' : '▼'}
                     </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-[var(--foreground)] leading-relaxed font-sans">
+                <p className="text-xs text-[var(--foreground)] leading-relaxed m-0 mt-2 font-sans">
                   {log.message}
                 </p>
 
-                {/* Expanded Technical Diagnostics */}
                 {isExpanded && (
-                  <div className="pt-2 border-t border-[var(--border)] space-y-2 text-xs font-mono">
-                    <div className="grid grid-cols-2 gap-2 text-[var(--muted-foreground)] text-[11px]">
-                      <div>Event: <span className="text-[var(--foreground)]">{log.event}</span></div>
-                      <div>Status: <span className="text-[var(--foreground)]">{log.status}</span></div>
-                      {log.request_id && (
-                        <div>Request ID: <span className="text-[var(--foreground)]">{log.request_id}</span></div>
-                      )}
-                      {log.pipeline_run_id && (
-                        <div>Pipeline Run: <span className="text-[var(--foreground)]">{log.pipeline_run_id}</span></div>
-                      )}
+                  <div className="pt-2 border-t border-[var(--border)] mt-2 text-xs space-y-1.5 font-mono">
+                    <div className="flex justify-between text-[11px] text-[var(--muted-foreground)]">
+                      <span>Request ID: <code className="text-[var(--foreground)]">{log.request_id || 'N/A'}</code></span>
+                      <span>Event: <code className="text-[var(--foreground)]">{log.event}</code></span>
                     </div>
-
                     {log.details && (
-                      <pre className="p-3 rounded-lg bg-[var(--surface-subtle)] border border-[var(--border)] text-[11px] text-[var(--foreground)] overflow-x-auto">
-                        {JSON.stringify(log.details, null, 2)}
+                      <pre
+                        className="p-2.5 rounded text-[11px] overflow-x-auto border border-[var(--border)]"
+                        style={{ background: 'var(--surface-secondary)' }}
+                      >
+                        {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
                       </pre>
                     )}
                   </div>
                 )}
-              </div>
+              </Card>
             )
           })}
         </div>
       )}
-    </div>
+    </>
   )
 }

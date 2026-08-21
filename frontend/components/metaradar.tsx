@@ -120,11 +120,21 @@ export function Badge({
 export function Card({
   children,
   className = '',
+  style,
+  role,
+  'aria-live': ariaLive,
 }: {
-  children: React.ReactNode
+  children?: React.ReactNode
   className?: string
+  style?: React.CSSProperties
+  role?: string
+  'aria-live'?: 'off' | 'assertive' | 'polite'
 }) {
-  return <section className={`panel ${className}`}>{children}</section>
+  return (
+    <section className={`panel ${className}`} style={style} role={role} aria-live={ariaLive}>
+      {children}
+    </section>
+  )
 }
 
 export function SectionTitle({

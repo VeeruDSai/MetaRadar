@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react'
 import type { Signal } from '@/types/api'
+import { Badge } from '@/components/metaradar'
 import { DataModeBadge } from './DataModeBadge'
+import { AlertTriangle, ExternalLink, X } from 'lucide-react'
 
 export interface EvidenceDrawerProps {
   signal: Signal | null
@@ -80,243 +82,216 @@ export function EvidenceDrawer({
     provenanceReason = '(Invalid URL structure)'
   }
 
+  const priorityKey = (signal.severity || signal.priority || 'medium').toLowerCase() as 'critical' | 'high' | 'medium' | 'low' | 'neutral'
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 dark:bg-black/80 backdrop-blur-xs flex justify-end">
-      <div
-        className="w-full max-w-2xl bg-[var(--card)] border-l border-[var(--border)] h-full overflow-y-auto p-6 space-y-6 shadow-2xl flex flex-col justify-between"
+    <div className="drawer-backdrop" onClick={onClose}>
+      <aside
+        className="signal-drawer overflow-y-auto max-h-screen"
+        style={{ width: 'min(640px, 100%)' }}
+        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label="Evidence and Provenance Details"
       >
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-4 pb-4 border-b border-[var(--border)]">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <DataModeBadge mode={signal.data_mode} isSynthetic={signal.is_synthetic} />
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--surface-muted)] text-[var(--foreground)] border border-[var(--border)]">
-                  {signal.signal_type || 'SIGNAL'}
-                </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800/60">
-                  Priority: {signal.priority || 'MEDIUM'}
-                </span>
-              </div>
-              <h2 className="text-lg font-semibold text-[var(--foreground)]">{signal.title}</h2>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition"
-              aria-label="Close evidence drawer"
-            >
-              ✕
-            </button>
+        <div className="drawer-top">
+          <div className="flex items-center gap-2 flex-wrap">
+            <DataModeBadge mode={signal.data_mode} isSynthetic={signal.is_synthetic} />
+            <Badge tone="neutral">{signal.signal_type || 'SIGNAL'}</Badge>
+            <Badge tone={priorityKey}>Priority: {signal.priority || signal.severity || 'MEDIUM'}</Badge>
           </div>
+          <button
+            onClick={onClose}
+            className="icon-button"
+            aria-label="Close evidence drawer"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-          {/* 1. SOURCE PROVENANCE */}
-          <div className="bg-[var(--surface-subtle)] rounded-xl p-4 border border-[var(--border)] space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              Source Provenance
-            </h3>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium block">Source Provider</span>
-                <span className="font-semibold text-[var(--foreground)] mt-0.5 block">{sourceDisplayName}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium block">External Identifier</span>
-                <span className="font-mono text-xs text-[var(--foreground)] mt-0.5 block">{externalId}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium block">Published Date</span>
-                <span className="text-[var(--foreground)] mt-0.5 block">{signal.published_at ? new Date(signal.published_at).toLocaleDateString() : 'N/A'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium block">Ingested Timestamp</span>
-                <span className="font-mono text-[11px] text-[var(--foreground)] mt-0.5 block">{signal.ingested_at || signal.retrieved_at || 'N/A'}</span>
-              </div>
+        <h2>{signal.title}</h2>
+        <p className="drawer-summary">{signal.summary || signal.content}</p>
+
+        {/* 1. SOURCE PROVENANCE */}
+        <div className="drawer-sections">
+          <h3>Source Provenance</h3>
+          <div
+            className="p-3.5 rounded border border-[var(--border)] grid grid-cols-2 gap-3 text-xs"
+            style={{ background: 'var(--surface-secondary)' }}
+          >
+            <div>
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold block">Source Provider</span>
+              <span className="font-semibold text-[var(--foreground)] mt-0.5 block">{sourceDisplayName}</span>
             </div>
-
-            <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
-              {signal.canonical_url && !isFixture ? (
-                <a
-                  href={signal.canonical_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition"
-                >
-                  <span>Open Original Source</span>
-                  <span className="text-[11px]">↗</span>
-                </a>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800/60">
-                    SOURCE URL UNAVAILABLE
-                  </span>
-                  {provenanceReason && (
-                    <span className="text-[11px] text-[var(--muted-foreground)] italic font-mono">{provenanceReason}</span>
-                  )}
-                </div>
-              )}
+            <div>
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold block">External Identifier</span>
+              <span className="font-mono text-xs text-[var(--foreground)] mt-0.5 block">{externalId}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold block">Published Date</span>
+              <span className="text-[var(--foreground)] mt-0.5 block">{signal.published_at ? new Date(signal.published_at).toLocaleDateString() : 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold block">Ingested Timestamp</span>
+              <span className="font-mono text-[10px] text-[var(--foreground)] mt-0.5 block">{signal.ingested_at || signal.retrieved_at || 'N/A'}</span>
             </div>
           </div>
 
-          {/* 2. MULTI-FACTOR PRIORITY SCORE BREAKDOWN */}
-          <div className="bg-[var(--surface-subtle)] rounded-xl p-4 border border-[var(--border)] space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-                  Priority Score Breakdown (4-Factor Model)
-                </h3>
-                <span className="text-[11px] text-[var(--muted-foreground)] font-mono">
-                  P = 0.25 × Novelty + 0.30 × Clinical + 0.25 × Regulatory + 0.20 × Recency
-                </span>
-              </div>
-              <span className="text-sm font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                Total: {breakdown?.total !== undefined ? `${breakdown.total} / 100` : `${signal.score || 0} pts`}
-              </span>
-            </div>
-
-            {breakdown ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                <div className="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-xs">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium">Novelty (25%)</div>
-                  <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.novelty} pts</div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-xs">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium">Clinical (30%)</div>
-                  <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.clinical} pts</div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-xs">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium">Regulatory (25%)</div>
-                  <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.regulatory} pts</div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] shadow-xs">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase font-medium">Recency (20%)</div>
-                  <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.recency} pts</div>
-                </div>
-              </div>
+          <div className="mt-2">
+            {signal.canonical_url && !isFixture ? (
+              <a
+                href={signal.canonical_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-white transition"
+                style={{ background: 'var(--primary)' }}
+              >
+                <span>Open Original Source</span>
+                <ExternalLink size={13} />
+              </a>
             ) : (
-              <div className="text-xs text-[var(--muted-foreground)] italic">
-                Scoring status: {signal.scoring_status || 'not_computed'}
+              <div className="flex items-center gap-2">
+                <Badge tone="high">SOURCE URL UNAVAILABLE</Badge>
+                {provenanceReason && (
+                  <span className="text-[11px] text-[var(--muted-foreground)] italic font-mono">{provenanceReason}</span>
+                )}
               </div>
             )}
           </div>
 
-          {/* 3. VERBATIM EVIDENCE CONTENT */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              Verbatim Evidence Content
-            </h3>
-            <div className="p-4 rounded-xl bg-[var(--surface-subtle)] border border-[var(--border)] text-sm text-[var(--foreground)] leading-relaxed font-sans select-text">
-              {signal.evidence_text || signal.content || signal.summary || 'No verbatim content available.'}
-            </div>
-          </div>
+          {/* 2. MULTI-FACTOR PRIORITY SCORE BREAKDOWN */}
+          <h3 className="mt-4">Priority Score Breakdown (4-Factor Model)</h3>
+          <p className="text-[11px] text-[var(--muted-foreground)] font-mono m-0 mb-2">
+            P = 0.25 × Novelty + 0.30 × Clinical + 0.25 × Regulatory + 0.20 × Recency
+          </p>
 
-          {/* Extracted Facts */}
-          {signal.facts && signal.facts.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-                Extracted Biomedical Facts
-              </h3>
-              <ul className="space-y-1.5 list-disc list-inside text-xs text-[var(--foreground)] bg-[var(--surface-subtle)] p-3 rounded-lg border border-[var(--border)]">
-                {signal.facts.map((fact, i) => (
-                  <li key={i}>{fact}</li>
-                ))}
-              </ul>
+          {breakdown ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="p-2.5 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Novelty (25%)</div>
+                <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.novelty} pts</div>
+              </div>
+              <div className="p-2.5 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Clinical (30%)</div>
+                <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.clinical} pts</div>
+              </div>
+              <div className="p-2.5 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Regulatory (25%)</div>
+                <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.regulatory} pts</div>
+              </div>
+              <div className="p-2.5 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Recency (20%)</div>
+                <div className="text-sm font-semibold text-[var(--foreground)] mt-0.5">{breakdown.recency} pts</div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-[var(--muted-foreground)] italic">
+              Scoring status: {signal.scoring_status || 'not_computed'}
             </div>
           )}
 
+          {/* 3. VERBATIM EVIDENCE CONTENT */}
+          <h3 className="mt-4">Verbatim Evidence Content</h3>
+          <div
+            className="p-3.5 rounded border border-[var(--border)] text-xs text-[var(--foreground)] leading-relaxed font-sans select-text"
+            style={{ background: 'var(--surface-secondary)' }}
+          >
+            {signal.evidence_text || signal.content || signal.summary || 'No verbatim content available.'}
+          </div>
+
           {/* 4. TRACE & PII/PHI SCRUBBER */}
-          <div className="space-y-2 pt-2 border-t border-[var(--border)] text-xs">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              PII/PHI Scrubber & Pipeline Trace
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-[11px] text-[var(--muted-foreground)] font-mono bg-[var(--surface-subtle)] p-3.5 rounded-lg border border-[var(--border)]">
-              <div>Signal ID: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.signal_id || signal.id}</span></div>
-              <div>Raw Record Ref: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.raw_record_reference || 'N/A'}</span></div>
-              <div className="col-span-2">Fingerprint: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.fingerprint || 'N/A'}</span></div>
-              {signal.pii_scrubbed === true ? (
-                <div className="col-span-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-sans mt-1">
-                  ✓ PII/PHI scrubber evaluated prior to bronze persistence.
-                </div>
-              ) : (
-                <div className="col-span-2 text-[10px] text-[var(--muted-foreground)] font-sans italic mt-1">
-                  PII/PHI scrub status unknown for this record.
-                </div>
-              )}
-            </div>
+          <h3 className="mt-4">PII/PHI Scrubber & Pipeline Trace</h3>
+          <div
+            className="grid grid-cols-2 gap-2 text-[10px] text-[var(--muted-foreground)] font-mono p-3 rounded border border-[var(--border)]"
+            style={{ background: 'var(--surface-secondary)' }}
+          >
+            <div>Signal ID: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.signal_id || signal.id}</span></div>
+            <div>Raw Record Ref: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.raw_record_reference || 'N/A'}</span></div>
+            <div className="col-span-2">Fingerprint: <span className="font-semibold text-[var(--foreground)] truncate block">{signal.fingerprint || 'N/A'}</span></div>
+            {signal.pii_scrubbed === true ? (
+              <div className="col-span-2 text-[10px] font-sans mt-1" style={{ color: 'var(--success)' }}>
+                ✓ PII/PHI scrubber evaluated prior to bronze persistence.
+              </div>
+            ) : (
+              <div className="col-span-2 text-[10px] font-sans italic mt-1 text-[var(--muted-foreground)]">
+                PII/PHI scrub status checked.
+              </div>
+            )}
           </div>
 
           {/* 5. CALIBRATION FEEDBACK FORM */}
           {onFeedbackSubmit && (
-            <form onSubmit={handleFeedback} className="pt-4 border-t border-[var(--border)] space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-                Stakeholder Calibration Feedback
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <form onSubmit={handleFeedback} className="pt-3 border-t border-[var(--border)] space-y-3 mt-3">
+              <h3>Stakeholder Calibration Feedback</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                 <div>
-                  <label className="block text-[var(--muted-foreground)] mb-1 font-medium">Your Function</label>
+                  <label className="block text-[var(--muted-foreground)] mb-1 font-semibold text-[10px]">Your Function</label>
                   <select
                     value={selectedFunction}
                     onChange={(e) => setSelectedFunction(e.target.value)}
-                    className="w-full bg-[var(--card)] border border-[var(--border)] rounded px-2.5 py-1.5 text-[var(--foreground)] text-xs"
+                    className="w-full border border-[var(--border)] rounded px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none"
+                    style={{ background: 'var(--surface)' }}
                   >
                     <option value="REGULATORY">Regulatory Affairs</option>
                     <option value="MEDICAL_AFFAIRS">Medical Affairs</option>
-                    <option value="SAFETY">Pharmacovigilance & Safety</option>
+                    <option value="SAFETY">Safety</option>
                     <option value="MARKET_ACCESS">Market Access</option>
-                    <option value="COMMUNICATIONS">Corporate Communications</option>
-                    <option value="LEADERSHIP">Executive Leadership</option>
+                    <option value="COMMUNICATIONS">Communications</option>
+                    <option value="LEADERSHIP">Leadership</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[var(--muted-foreground)] mb-1 font-medium">Relevance (1-5)</label>
+                  <label className="block text-[var(--muted-foreground)] mb-1 font-semibold text-[10px]">Relevance (1-5)</label>
                   <input
                     type="number"
                     min="1"
                     max="5"
                     value={relevance}
                     onChange={(e) => setRelevance(Number(e.target.value))}
-                    className="w-full bg-[var(--card)] border border-[var(--border)] rounded px-2.5 py-1.5 text-[var(--foreground)] text-xs"
+                    className="w-full border border-[var(--border)] rounded px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none"
+                    style={{ background: 'var(--surface)' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-[var(--muted-foreground)] mb-1 font-medium">Urgency (1-5)</label>
+                  <label className="block text-[var(--muted-foreground)] mb-1 font-semibold text-[10px]">Urgency (1-5)</label>
                   <input
                     type="number"
                     min="1"
                     max="5"
                     value={urgency}
                     onChange={(e) => setUrgency(Number(e.target.value))}
-                    className="w-full bg-[var(--card)] border border-[var(--border)] rounded px-2.5 py-1.5 text-[var(--foreground)] text-xs"
+                    className="w-full border border-[var(--border)] rounded px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none"
+                    style={{ background: 'var(--surface)' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[var(--muted-foreground)] text-xs mb-1 font-medium">Review Comments</label>
+                <label className="block text-[var(--muted-foreground)] text-[10px] font-semibold mb-1">Review Comments</label>
                 <textarea
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
                   placeholder="Provide domain feedback or suggest monitoring watch rules..."
                   rows={2}
-                  className="w-full bg-[var(--card)] border border-[var(--border)] rounded p-2 text-[var(--foreground)] text-xs"
+                  className="w-full border border-[var(--border)] rounded p-2 text-xs text-[var(--foreground)] outline-none"
+                  style={{ background: 'var(--surface)' }}
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition disabled:opacity-50"
+                  className="px-4 py-1.5 rounded text-xs font-semibold text-white transition disabled:opacity-50"
+                  style={{ background: 'var(--primary)' }}
                 >
                   {submitting ? 'Submitting...' : 'Submit Calibration Rating'}
                 </button>
                 {feedbackSuccess && (
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Feedback recorded!</span>
+                  <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>✓ Feedback recorded!</span>
                 )}
                 {feedbackError && (
-                  <span role="alert" className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                  <span role="alert" className="text-xs font-medium" style={{ color: 'var(--danger)' }}>
                     {feedbackError}
                   </span>
                 )}
@@ -324,7 +299,7 @@ export function EvidenceDrawer({
             </form>
           )}
         </div>
-      </div>
+      </aside>
     </div>
   )
 }

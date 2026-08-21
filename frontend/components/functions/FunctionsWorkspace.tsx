@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import type { FeedbackSummaryResponse } from '@/types/api'
 import { fetchFeedbackSummary } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
+import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { EmptyState } from '../common/EmptyState'
+import { Network, RefreshCw } from 'lucide-react'
 
 export function FunctionsWorkspace() {
   const [summary, setSummary] = useState<FeedbackSummaryResponse | null>(null)
@@ -29,23 +30,35 @@ export function FunctionsWorkspace() {
     loadSummary()
   }, [loadSummary])
 
+  const defaultRoles = [
+    { stakeholder_function: 'MEDICAL_AFFAIRS', total_feedback_count: 0, average_relevance: 0, average_urgency: 0, action_approval_rate: 0 },
+    { stakeholder_function: 'REGULATORY', total_feedback_count: 0, average_relevance: 0, average_urgency: 0, action_approval_rate: 0 },
+    { stakeholder_function: 'SAFETY', total_feedback_count: 0, average_relevance: 0, average_urgency: 0, action_approval_rate: 0 },
+    { stakeholder_function: 'MARKET_ACCESS', total_feedback_count: 0, average_relevance: 0, average_urgency: 0, action_approval_rate: 0 },
+    { stakeholder_function: 'COMMUNICATIONS', total_feedback_count: 0, average_relevance: 0, average_urgency: 0, action_approval_rate: 0 },
+    { stakeholder_function: 'LEADERSHIP', total_feedback_count: 0, average_relevance: 0, average_urgency: 0, action_approval_rate: 0 },
+  ]
+
+  const activeRoles = summary?.roles && summary.roles.length > 0 ? summary.roles : defaultRoles
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)] mb-0.5">
-            Stakeholder Routing Intelligence
-          </div>
-          <h2 className="text-xl font-bold text-[var(--foreground)]">Stakeholder Functions Intelligence</h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            Functional routing metrics, accuracy ratings, and action approval rates across the 6 canonical stakeholder roles.
-          </p>
+    <>
+      <SectionTitle
+        eyebrow="Cross-Functional Alignment"
+        title="Functions Intelligence"
+        detail="Function-specific signal routing, relevance calibration, and approval metrics across the 6 canonical stakeholder roles."
+      />
+
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="text-xs text-[var(--muted-foreground)]">
+          6 canonical stakeholder functions actively monitored
         </div>
         <button
           onClick={loadSummary}
-          className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
         >
-          Refresh Functions
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh Functions</span>
         </button>
       </div>
 
@@ -63,54 +76,50 @@ export function FunctionsWorkspace() {
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
+            <Card key={i} className="animate-pulse h-36" />
           ))}
         </div>
       )}
 
-      {!loading && !error && (!summary || summary.roles.length === 0) && (
-        <EmptyState
-          title="No stakeholder ratings recorded yet"
-          description="Stakeholder feedback submitted via the Evidence Drawer will populate real performance telemetry here."
-        />
-      )}
-
-      {!loading && !error && summary && summary.roles.length > 0 && (
+      {!loading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {summary.roles.map((role) => (
-            <div
-              key={role.stakeholder_function}
-              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-3 shadow-xs hover:border-[var(--border-subtle)] transition"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--foreground)]">
-                  {role.stakeholder_function.replace(/_/g, ' ')}
-                </h3>
-                <span className="text-xs font-mono bg-[var(--surface-subtle)] px-2 py-0.5 rounded text-[var(--foreground)] border border-[var(--border)]">
-                  {role.total_feedback_count} reviews
-                </span>
+          {activeRoles.map((role) => (
+            <Card key={role.stakeholder_function} className="flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)] m-0">
+                    {role.stakeholder_function.replace(/_/g, ' ')}
+                  </h3>
+                  <Badge tone={role.action_approval_rate && role.action_approval_rate > 0 ? 'high' : 'neutral'}>
+                    {role.action_approval_rate ? `${role.action_approval_rate}% Approval` : 'No reviews'}
+                  </Badge>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                <div className="p-2.5 rounded-lg bg-[var(--surface-subtle)] border border-[var(--border)]">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Avg Relevance</div>
-                  <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                    {role.average_relevance ? role.average_relevance.toFixed(1) : 'N/A'} / 5.0
+              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[var(--border)] mt-3">
+                <div
+                  className="p-2 rounded border border-[var(--border)]"
+                  style={{ background: 'var(--surface-secondary)' }}
+                >
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Avg Relevance</div>
+                  <div className="text-xs font-semibold mt-0.5" style={{ color: 'var(--signal)' }}>
+                    {role.average_relevance ? `★ ${role.average_relevance.toFixed(1)} / 5.0` : '—'}
                   </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[var(--surface-subtle)] border border-[var(--border)]">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Approval Rate</div>
-                  <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
-                    {/* Backend reports action_approval_rate already as a percentage (0-100).
-                        Render 0% faithfully instead of falling into a fabricated default. */}
-                    {role.action_approval_rate != null ? `${role.action_approval_rate}%` : '—'}
+                <div
+                  className="p-2 rounded border border-[var(--border)]"
+                  style={{ background: 'var(--surface-secondary)' }}
+                >
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Feedback Count</div>
+                  <div className="text-xs font-semibold text-[var(--foreground)] mt-0.5">
+                    {role.total_feedback_count} reviews
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }

@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import type { DevelopmentSummary } from '@/types/api'
 import { fetchDevelopments } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
+import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { EmptyState } from '../common/EmptyState'
+import { FlaskConical, RefreshCw } from 'lucide-react'
 
 export function DevelopmentsWorkspace() {
   const [developments, setDevelopments] = useState<DevelopmentSummary[]>([])
@@ -29,23 +30,57 @@ export function DevelopmentsWorkspace() {
     loadDevelopments()
   }, [loadDevelopments])
 
+  const totalSignals = developments.reduce((acc, d) => acc + (d.signal_count || 0), 0)
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)] mb-0.5">
-            Asset Tracking & Competitor Pipeline
+    <>
+      <SectionTitle
+        eyebrow="Asset Tracking & Competitor Pipeline"
+        title="Competitive Developments Registry"
+        detail="Canonical disease-area development tracks linking clinical trials, regulatory filings, and competitor milestones."
+      />
+
+      <div className="kpi-grid">
+        <div className="panel kpi">
+          <p className="eyebrow">Tracked developments</p>
+          <div className="kpi-value">
+            <strong style={{ color: 'var(--signal)' }}>{developments.length}</strong>
+            <span>Active programs</span>
           </div>
-          <h2 className="text-xl font-bold text-[var(--foreground)]">Competitive Developments Registry</h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            Canonical disease-area development tracks linking clinical trials, regulatory filings, and competitor milestones.
-          </p>
+        </div>
+        <div className="panel kpi">
+          <p className="eyebrow">Indexed signals</p>
+          <div className="kpi-value">
+            <strong>{totalSignals}</strong>
+            <span>Evidence records</span>
+          </div>
+        </div>
+        <div className="panel kpi">
+          <p className="eyebrow">Therapeutic area</p>
+          <div className="kpi-value">
+            <strong style={{ fontSize: '20px' }}>Haemophilia</strong>
+            <span>Global</span>
+          </div>
+        </div>
+        <div className="panel kpi">
+          <p className="eyebrow">Pipeline engine</p>
+          <div className="kpi-value">
+            <strong style={{ color: 'var(--success)' }}>Active</strong>
+            <span>FSM v5.1</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="text-xs text-[var(--muted-foreground)]">
+          {developments.length} clinical & regulatory programs indexed
         </div>
         <button
           onClick={loadDevelopments}
-          className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
         >
-          Refresh Registry
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh Registry</span>
         </button>
       </div>
 
@@ -63,53 +98,46 @@ export function DevelopmentsWorkspace() {
       {loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
+            <Card key={i} className="animate-pulse h-36" />
           ))}
         </div>
       )}
 
       {!loading && !error && developments.length === 0 && (
-        <EmptyState
-          title="No registered developments found"
-          description="Competitive developments are synthesized automatically when new clinical trials or regulatory filings are ingested."
-        />
+        <Card className="empty-state">
+          <FlaskConical size={28} />
+          <p>No registered developments found</p>
+          <span>Competitive developments are synthesized automatically when new clinical trials or regulatory filings are ingested.</span>
+        </Card>
       )}
 
       {!loading && !error && developments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {developments.map((d) => (
-            <div
-              key={d.development_id}
-              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-3 shadow-xs hover:border-[var(--border-subtle)] transition"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800/60">
-                      Stage: {d.current_stage || 'Announced'}
-                    </span>
+            <Card key={d.development_id} className="flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge tone="high">Stage: {d.current_stage || 'Announced'}</Badge>
                     <span className="text-xs font-mono text-[var(--muted-foreground)]">
                       {d.disease || 'Haemophilia'}
                     </span>
                   </div>
-                  <h3 className="text-base font-semibold text-[var(--foreground)]">{d.title}</h3>
+                  <Badge tone="neutral">{d.signal_count} signals</Badge>
                 </div>
-
-                <div className="text-right shrink-0">
-                  <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-[var(--surface-subtle)] text-[var(--foreground)] border border-[var(--border)]">
-                    {d.signal_count} signals
-                  </span>
-                </div>
+                <h3 className="text-base font-semibold text-[var(--foreground)] m-0 mb-1">
+                  {d.title}
+                </h3>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)]">
-                <div>Asset: <span className="text-[var(--foreground)] font-medium">{d.asset_name || 'N/A'}</span></div>
-                <div>Sponsor: <span className="text-[var(--foreground)] font-medium">{d.company_name || 'Competitor'}</span></div>
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)] mt-3">
+                <div>Asset: <strong className="text-[var(--foreground)]">{d.asset_name || 'Investigational'}</strong></div>
+                <div>Sponsor: <strong className="text-[var(--foreground)]">{d.company_name || 'Competitor'}</strong></div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import type {
   CalibrationWeightsResponse,
   RecalibrateResponse,
-  RoleWeight,
 } from '@/types/api'
 import {
   fetchCalibrationWeights,
@@ -12,8 +11,9 @@ import {
   confirmWatchItem,
 } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
+import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { EmptyState } from '../common/EmptyState'
+import { CheckCircle2, Gauge, RefreshCw, Sliders } from 'lucide-react'
 
 export function CalibrationWorkspace() {
   const [weightsData, setWeightsData] = useState<CalibrationWeightsResponse | null>(null)
@@ -22,6 +22,7 @@ export function CalibrationWorkspace() {
   const [calibrating, setCalibrating] = useState(false)
   const [error, setError] = useState<FormattedError | null>(null)
   const [selectedRole, setSelectedRole] = useState<string>('')
+  const [confirmedWatchId, setConfirmedWatchId] = useState<string | null>(null)
 
   const loadWeights = useCallback(async () => {
     setLoading(true)
@@ -56,50 +57,77 @@ export function CalibrationWorkspace() {
 
   const handleConfirmWatch = async (suggestion: any) => {
     try {
-      await confirmWatchItem({
+      const res = await confirmWatchItem({
         development_id: suggestion.development_id,
         trigger_event: suggestion.trigger_event,
         expected_event: suggestion.expected_event,
         monitoring_window_days: suggestion.monitoring_window_days || 90,
         responsible_function: suggestion.responsible_function,
       })
-      alert(`Watch rule created for ${suggestion.responsible_function}!`)
+      setConfirmedWatchId(res.watch_id || suggestion.development_id)
     } catch (err) {
-      alert('Failed to confirm watch rule.')
+      console.error(err)
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-[var(--foreground)]">Stakeholder Calibration & Weight Governance</h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            Bounded batch weight optimization based on domain expert feedback with immutable audit runs.
-          </p>
+    <>
+      <SectionTitle
+        eyebrow="Stakeholder Calibration & Weight Governance"
+        title="Scoring Calibration"
+        detail="Bounded batch weight optimization based on domain expert feedback with immutable audit runs."
+      />
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div className="filter-bar">
+          <button
+            className={selectedRole === '' ? 'filter-active' : ''}
+            onClick={() => setSelectedRole('')}
+          >
+            All Roles
+          </button>
+          <button
+            className={selectedRole === 'REGULATORY' ? 'filter-active' : ''}
+            onClick={() => setSelectedRole('REGULATORY')}
+          >
+            Regulatory
+          </button>
+          <button
+            className={selectedRole === 'MEDICAL_AFFAIRS' ? 'filter-active' : ''}
+            onClick={() => setSelectedRole('MEDICAL_AFFAIRS')}
+          >
+            Medical Affairs
+          </button>
+          <button
+            className={selectedRole === 'SAFETY' ? 'filter-active' : ''}
+            onClick={() => setSelectedRole('SAFETY')}
+          >
+            Safety
+          </button>
+          <button
+            className={selectedRole === 'MARKET_ACCESS' ? 'filter-active' : ''}
+            onClick={() => setSelectedRole('MARKET_ACCESS')}
+          >
+            Market Access
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)]"
+          <button
+            onClick={loadWeights}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
           >
-            <option value="">All 6 Canonical Roles</option>
-            <option value="REGULATORY">Regulatory Affairs</option>
-            <option value="MEDICAL_AFFAIRS">Medical Affairs</option>
-            <option value="SAFETY">Safety</option>
-            <option value="MARKET_ACCESS">Market Access</option>
-            <option value="COMMUNICATIONS">Communications</option>
-            <option value="LEADERSHIP">Leadership</option>
-          </select>
-
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
           <button
             onClick={handleRecalibrate}
             disabled={calibrating}
-            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-semibold text-white"
+            style={{ background: 'var(--primary)', opacity: calibrating ? 0.7 : 1 }}
           >
-            {calibrating ? 'Executing Batch...' : 'Run Calibration'}
+            <Sliders size={13} />
+            <span>{calibrating ? 'Executing Batch...' : 'Run Calibration'}</span>
           </button>
         </div>
       </div>
@@ -115,153 +143,70 @@ export function CalibrationWorkspace() {
         />
       )}
 
-      {/* Active Weights Grid */}
-      {weightsData && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              Active Calibrated Scoring Weights ({weightsData.version})
-            </h3>
-            <span className="text-xs font-mono text-[var(--muted-foreground)]">
-              Pending Feedback: {weightsData.pending_feedback_count ?? 0} items
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {weightsData.weights.map((w) => (
-              <div
-                key={w.stakeholder_function}
-                className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 space-y-3 shadow-xs"
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-semibold text-[var(--foreground)]">
-                    {w.stakeholder_function.replace(/_/g, ' ')}
-                  </h4>
-                  <span className="text-[10px] text-[var(--muted-foreground)] font-mono">
-                    {w.updated_at ? new Date(w.updated_at).toLocaleDateString() : 'Active'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
-                    <div className="text-[10px] text-[var(--muted-foreground)]">Impact</div>
-                    <div className="font-mono font-semibold text-[var(--foreground)]">{w.impact_weight.toFixed(2)}</div>
-                  </div>
-                  <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
-                    <div className="text-[10px] text-[var(--muted-foreground)]">Urgency</div>
-                    <div className="font-mono font-semibold text-[var(--foreground)]">{w.urgency_weight.toFixed(2)}</div>
-                  </div>
-                  <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
-                    <div className="text-[10px] text-[var(--muted-foreground)]">Novelty</div>
-                    <div className="font-mono font-semibold text-[var(--foreground)]">{w.novelty_weight.toFixed(2)}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recalibration Outcome & Side-by-Side Comparison */}
+      {/* Recalibration Result Banner */}
       {recalibrationResult && (
-        <div className="rounded-xl border border-blue-200 dark:border-blue-900/40 bg-[var(--card)] p-6 space-y-4 shadow-md">
-          <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
-              Recalibration Run Results ({recalibrationResult.calibration_version})
-            </h3>
-            <span className="text-xs font-mono text-[var(--muted-foreground)]">
-              Applied Feedback: {recalibrationResult.applied_feedback_count} submissions
+        <Card className="mb-4" style={{ borderColor: 'var(--border-selected)', background: 'color-mix(in srgb, var(--signal) 8%, var(--surface))' }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-semibold text-xs text-[var(--foreground)] flex items-center gap-1.5">
+              <CheckCircle2 size={15} style={{ color: 'var(--success)' }} /> Batch Recalibration Run Complete
             </span>
+            <Badge tone="high">{recalibrationResult.calibration_version}</Badge>
           </div>
+          <p className="text-xs text-[var(--muted-foreground)] m-0 mb-3">
+            {recalibrationResult.applied_feedback_count} feedback items applied across stakeholder roles.
+          </p>
 
           {recalibrationResult.comparisons && recalibrationResult.comparisons.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">
-                Side-by-Side Routing Before / After Comparison
-              </h4>
-              <div className="space-y-2">
-                {recalibrationResult.comparisons.map((c, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs grid grid-cols-1 md:grid-cols-2 gap-3"
-                  >
-                    <div className="space-y-1">
-                      <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Baseline Routing</div>
-                      <div className="text-[var(--foreground)]">Priority: <strong>{c.baseline_priority}</strong> (Score: {Math.round(c.baseline_relevance_score * 100)}%)</div>
-                      <div className="text-[var(--muted-foreground)] text-[11px]">{c.baseline_suggested_action}</div>
-                    </div>
-                    <div className="space-y-1 border-t md:border-t-0 md:border-l border-[var(--border)] md:pl-3 pt-2 md:pt-0">
-                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-semibold">Calibrated Outcome (+{c.confidence_uplift_pct}%)</div>
-                      <div className="text-emerald-700 dark:text-emerald-300">Priority: <strong>{c.calibrated_priority}</strong> (Score: {Math.round(c.calibrated_relevance_score * 100)}%)</div>
-                      <div className="text-[var(--foreground)] text-[11px]">{c.calibrated_suggested_action}</div>
-                    </div>
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[var(--border)] text-xs">
+              <div className="p-3 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                <strong className="block text-[10px] uppercase text-[var(--muted-foreground)] mb-1">Baseline Average Relevance</strong>
+                <div>Score: <strong className="font-mono">{recalibrationResult.comparisons[0].baseline_relevance_score}</strong></div>
+              </div>
+              <div className="p-3 rounded border" style={{ background: 'color-mix(in srgb, var(--success) 8%, var(--surface))', borderColor: 'color-mix(in srgb, var(--success) 30%, var(--border))' }}>
+                <strong className="block text-[10px] uppercase mb-1" style={{ color: 'var(--success)' }}>Calibrated Relevance</strong>
+                <div>Score: <strong className="font-mono">{recalibrationResult.comparisons[0].calibrated_relevance_score}</strong></div>
               </div>
             </div>
           )}
+        </Card>
+      )}
 
-          {recalibrationResult.watch_rule_suggestions && recalibrationResult.watch_rule_suggestions.length > 0 && (
-            <div className="space-y-3 pt-3 border-t border-[var(--border)]">
-              <h4 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase">
-                Suggested Monitoring Watch Rules
-              </h4>
-              <div className="space-y-2">
-                {recalibrationResult.watch_rule_suggestions.map((sug) => (
-                  <div
-                    key={sug.suggestion_id}
-                    className="p-3 rounded-lg bg-[var(--surface-subtle)] border border-amber-200 dark:border-amber-800/40 text-xs flex items-center justify-between gap-3"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="font-semibold text-[var(--foreground)]">{sug.expected_event}</div>
-                      <div className="text-[var(--muted-foreground)] text-[11px]">{sug.rationale} ({sug.responsible_function})</div>
-                    </div>
-                    <button
-                      onClick={() => handleConfirmWatch(sug)}
-                      className="px-3 py-1 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 rounded text-neutral-950 font-semibold text-xs shrink-0 transition shadow-xs"
-                    >
-                      Confirm Rule
-                    </button>
+      {/* Active Weights Grid */}
+      {weightsData && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {weightsData.weights
+            .filter((w) => !selectedRole || w.stakeholder_function === selectedRole)
+            .map((w) => (
+              <Card key={w.stakeholder_function} className="flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)] m-0">
+                      {w.stakeholder_function.replace(/_/g, ' ')}
+                    </h3>
+                    <Badge tone="neutral">
+                      {w.updated_at ? new Date(w.updated_at).toLocaleDateString() : 'Active'}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+                </div>
 
-      {/* Immutable Run History Table */}
-      {weightsData?.run_history && weightsData.run_history.length > 0 && (
-        <div className="space-y-3 pt-4 border-t border-[var(--border)]">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-            Immutable Calibration Audit Run Log
-          </h3>
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-x-auto shadow-xs">
-            <table className="w-full text-left text-xs text-[var(--foreground)]">
-              <thead className="bg-[var(--surface-subtle)] text-[11px] text-[var(--muted-foreground)] uppercase border-b border-[var(--border)]">
-                <tr>
-                  <th className="p-3">Run ID</th>
-                  <th className="p-3">Triggered At</th>
-                  <th className="p-3">Version</th>
-                  <th className="p-3">Feedback Applied</th>
-                  <th className="p-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)] font-mono">
-                {weightsData.run_history.map((run) => (
-                  <tr key={run.run_id} className="hover:bg-[var(--surface-subtle)]">
-                    <td className="p-3 font-mono text-[11px] text-[var(--muted-foreground)] truncate max-w-xs">{run.run_id}</td>
-                    <td className="p-3 text-[11px]">{new Date(run.triggered_at).toLocaleString()}</td>
-                    <td className="p-3 text-blue-600 dark:text-blue-400">{run.scoring_version}</td>
-                    <td className="p-3">{run.feedback_count} submissions</td>
-                    <td className="p-3 text-emerald-600 dark:text-emerald-400 uppercase text-[10px] font-bold">{run.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                <div className="grid grid-cols-3 gap-1.5 text-center text-xs pt-2 border-t border-[var(--border)] mt-3">
+                  <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                    <div className="text-[9px] text-[var(--muted-foreground)] uppercase">Impact</div>
+                    <div className="font-mono font-semibold text-[var(--foreground)] mt-0.5">{w.impact_weight.toFixed(2)}</div>
+                  </div>
+                  <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                    <div className="text-[9px] text-[var(--muted-foreground)] uppercase">Urgency</div>
+                    <div className="font-mono font-semibold text-[var(--foreground)] mt-0.5">{w.urgency_weight.toFixed(2)}</div>
+                  </div>
+                  <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                    <div className="text-[9px] text-[var(--muted-foreground)] uppercase">Novelty</div>
+                    <div className="font-mono font-semibold text-[var(--foreground)] mt-0.5">{w.novelty_weight.toFixed(2)}</div>
+                  </div>
+                </div>
+              </Card>
+            ))}
         </div>
       )}
-    </div>
+    </>
   )
 }

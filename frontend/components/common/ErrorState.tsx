@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
+import { Card, Badge } from '@/components/metaradar'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 export interface ErrorStateProps {
   title?: string
@@ -37,16 +39,26 @@ export function ErrorState({
       <div
         role="alert"
         aria-live="assertive"
-        className="rounded-lg border border-red-500/30 bg-red-950/20 p-3 text-xs text-red-200 flex items-center justify-between gap-2"
+        className="p-3 rounded border text-xs flex items-center justify-between gap-2"
+        style={{
+          background: 'color-mix(in srgb, var(--danger) 8%, var(--surface))',
+          borderColor: 'color-mix(in srgb, var(--danger) 30%, var(--border))',
+          color: 'var(--danger)',
+        }}
       >
         <div className="flex items-center gap-2 truncate">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+          <AlertTriangle size={14} className="shrink-0" />
           <span className="truncate">{message}</span>
         </div>
         {onRetry && (
           <button
             onClick={onRetry}
-            className="px-2 py-1 bg-red-900/40 hover:bg-red-800/60 rounded text-red-100 transition shrink-0"
+            className="px-2 py-1 rounded text-xs font-semibold shrink-0 border"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--danger) 40%, var(--border))',
+              background: 'var(--surface)',
+              color: 'var(--foreground)',
+            }}
           >
             Retry
           </button>
@@ -56,44 +68,57 @@ export function ErrorState({
   }
 
   return (
-    <div
+    <Card
       role="alert"
       aria-live="assertive"
-      className="rounded-xl border border-red-500/30 bg-red-950/20 p-6 space-y-4 shadow-sm"
+      className="space-y-3"
+      style={{
+        background: 'color-mix(in srgb, var(--danger) 6%, var(--surface))',
+        borderColor: 'color-mix(in srgb, var(--danger) 30%, var(--border))',
+      }}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-            <h3 className="text-sm font-semibold text-red-400">{title}</h3>
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle size={16} style={{ color: 'var(--danger)' }} />
+            <strong className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>
+              {title}
+            </strong>
             {statusCode && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-red-900/60 text-red-200 border border-red-700/50">
-                HTTP {statusCode}
-              </span>
+              <Badge tone="critical">HTTP {statusCode}</Badge>
             )}
           </div>
-          <p className="text-sm text-[var(--foreground)]">{message}</p>
+          <p className="text-xs text-[var(--foreground)] m-0 leading-relaxed">{message}</p>
         </div>
 
         {onRetry && (
           <button
             onClick={onRetry}
-            className="shrink-0 px-3.5 py-1.5 rounded-lg bg-red-900/60 hover:bg-red-800 border border-red-700/60 text-xs font-medium text-red-100 transition shadow"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold border"
+            style={{
+              background: 'var(--surface)',
+              borderColor: 'color-mix(in srgb, var(--danger) 40%, var(--border))',
+              color: 'var(--foreground)',
+            }}
           >
-            Retry Request
+            <RefreshCw size={12} />
+            <span>Retry</span>
           </button>
         )}
       </div>
 
       {requestId && (
-        <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] bg-[var(--surface-subtle)] rounded-md px-3 py-1.5 border border-[var(--border)]">
+        <div
+          className="flex items-center gap-2 text-xs p-2 rounded border border-[var(--border)]"
+          style={{ background: 'var(--surface)' }}
+        >
           <span className="text-[var(--muted-foreground)]">Correlation ID:</span>
-          <code className="font-mono text-[var(--foreground)] select-all">{requestId}</code>
+          <code className="font-mono text-[var(--foreground)] text-[11px] select-all">{requestId}</code>
           <button
             type="button"
             onClick={handleCopyRequestId}
             aria-label="Copy correlation ID"
-            className="ml-auto text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition text-[11px] px-1.5 py-0.5 rounded hover:bg-[var(--surface-muted)]"
+            className="ml-auto text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-[11px] px-2 py-0.5 rounded border border-[var(--border)] bg-transparent"
           >
             {copied ? '✓ Copied' : 'Copy ID'}
           </button>
@@ -104,7 +129,7 @@ export function ErrorState({
         <div>
           <button
             type="button"
-            className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition flex items-center gap-1"
+            className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1 border-0 bg-transparent p-0"
             onClick={() => setDetailsOpen((v) => !v)}
             aria-expanded={detailsOpen}
           >
@@ -112,7 +137,10 @@ export function ErrorState({
           </button>
 
           {detailsOpen && (
-            <pre className="mt-2 text-[11px] font-mono text-[var(--muted-foreground)] bg-[var(--surface-muted)] rounded-lg p-3 overflow-x-auto border border-[var(--border)]">
+            <pre
+              className="mt-2 text-[11px] font-mono p-3 rounded border border-[var(--border)] overflow-x-auto"
+              style={{ background: 'var(--surface-secondary)', color: 'var(--muted-foreground)' }}
+            >
               {JSON.stringify(
                 {
                   endpoint,
@@ -127,6 +155,6 @@ export function ErrorState({
           )}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

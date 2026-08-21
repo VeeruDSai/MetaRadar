@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import type { SourceRegistryItem } from '@/types/api'
 import { fetchSourcesHealth, triggerIngestAndPipelineSync } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
+import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { EmptyState } from '../common/EmptyState'
+import { Activity, AlertTriangle, BookOpen, CheckCircle2, RefreshCw, Zap } from 'lucide-react'
 
 export function SourcesOperationsWorkspace() {
   const [sources, setSources] = useState<SourceRegistryItem[]>([])
@@ -46,59 +47,94 @@ export function SourcesOperationsWorkspace() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getBadgeTone = (status: string): 'critical' | 'high' | 'medium' | 'low' | 'neutral' => {
     switch (status.toUpperCase()) {
       case 'HEALTHY':
-        return 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800/80'
+        return 'low'
       case 'DEGRADED':
-        return 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800/80'
-      case 'CONFIGURATION_ERROR':
-        return 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800/80'
-      case 'RATE_LIMITED':
-        return 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-800/80'
-      case 'AUTH_FAILED':
-      case 'UNHEALTHY':
-      case 'ERROR':
-        return 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/80 dark:text-red-300 dark:border-red-800/80'
       case 'STALE':
-        return 'bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950/80 dark:text-yellow-300 dark:border-yellow-800/80'
+      case 'RATE_LIMITED':
+        return 'high'
+      case 'CONFIGURATION_ERROR':
+      case 'AUTH_FAILED':
+      case 'ERROR':
+      case 'UNHEALTHY':
+        return 'critical'
       case 'DISABLED':
-        return 'bg-[var(--surface-muted)] text-[var(--muted-foreground)] border border-[var(--border)]'
       case 'NEVER_CONNECTED':
       default:
-        return 'bg-[var(--surface-muted)] text-[var(--muted-foreground)] border border-[var(--border)]'
+        return 'neutral'
     }
   }
 
+  const healthyCount = sources.filter((s) => s.connector_status?.toUpperCase() === 'HEALTHY').length
+  const totalRecords = sources.reduce((acc, s) => acc + (s.records_accepted || 0), 0)
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-xl font-bold text-[var(--foreground)]">Source Connectors & Health Operations</h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            Real-time connector status, latency metrics, HTTP return codes, and live public ingestion telemetry across configured providers.
-          </p>
+    <>
+      <SectionTitle
+        eyebrow="Connector Registry & Health"
+        title="Sources & Connectors"
+        detail="Real-time connector status, latency metrics, HTTP return codes, and live public ingestion telemetry across configured providers."
+      />
+
+      <div className="kpi-grid">
+        <div className="panel kpi">
+          <p className="eyebrow">Configured sources</p>
+          <div className="kpi-value">
+            <strong>{sources.length}</strong>
+            <span>Active providers</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="panel kpi">
+          <p className="eyebrow">Healthy connectors</p>
+          <div className="kpi-value">
+            <strong style={{ color: 'var(--success)' }}>{healthyCount}</strong>
+            <span>{sources.length > 0 ? `${Math.round((healthyCount / sources.length) * 100)}% online` : '0%'}</span>
+          </div>
+        </div>
+        <div className="panel kpi">
+          <p className="eyebrow">Records accepted</p>
+          <div className="kpi-value">
+            <strong>{totalRecords}</strong>
+            <span>Bronze layer</span>
+          </div>
+        </div>
+        <div className="panel kpi">
+          <p className="eyebrow">Ingestion engine</p>
+          <div className="kpi-value">
+            <strong style={{ color: 'var(--signal)' }}>Live</strong>
+            <span>LangGraph pipeline</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="text-xs text-[var(--muted-foreground)]">
+          {sources.length} active connectors registered in pipeline
+        </div>
+        <div className="flex items-center gap-2">
           <button
             onClick={loadSources}
-            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
+            className="filter-bar button inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
           >
-            Refresh Health
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh Health</span>
           </button>
           <button
             onClick={handleLiveSync}
             disabled={syncing}
-            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-semibold text-white shadow-md transition flex items-center gap-1.5"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-semibold text-white transition"
+            style={{ background: 'var(--primary)', opacity: syncing ? 0.7 : 1 }}
           >
             {syncing ? (
               <>
-                <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <RefreshCw size={13} className="animate-spin" />
                 <span>Ingesting Live Data...</span>
               </>
             ) : (
               <>
-                <span>⚡</span>
+                <Zap size={13} />
                 <span>Trigger Live Web Ingestion</span>
               </>
             )}
@@ -107,18 +143,20 @@ export function SourcesOperationsWorkspace() {
       </div>
 
       {syncResult && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 dark:bg-emerald-950/40 dark:border-emerald-800/80 space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-emerald-800 dark:text-emerald-300">✓ Live Web Ingestion & Pipeline Sync Complete</span>
-            <span className="font-mono text-[var(--muted-foreground)]">Duration: {syncResult.ingestion?.duration_s}s</span>
+        <Card className="mb-4" style={{ borderColor: 'var(--border-selected)', background: 'color-mix(in srgb, var(--signal) 8%, var(--surface))' }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-semibold text-xs text-[var(--foreground)] flex items-center gap-1.5">
+              <CheckCircle2 size={15} style={{ color: 'var(--success)' }} /> Live Web Ingestion & Pipeline Sync Complete
+            </span>
+            <span className="font-mono text-[11px] text-[var(--muted-foreground)]">Duration: {syncResult.ingestion?.duration_s}s</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] text-[var(--foreground)] pt-1">
-            <div>Fetched: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{syncResult.ingestion?.total_fetched || 0}</span></div>
-            <div>New Bronze: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{syncResult.ingestion?.total_new_bronze || 0}</span></div>
-            <div>Signals Promoted: <span className="text-blue-600 dark:text-blue-400 font-bold">{syncResult.pipeline?.signals_processed || 0}</span></div>
-            <div>Confluences: <span className="text-purple-600 dark:text-purple-400 font-bold">{syncResult.pipeline?.confluences_count || 0}</span></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-[11px] text-[var(--foreground)] pt-2 border-t border-[var(--border)]">
+            <div>Fetched: <strong style={{ color: 'var(--success)' }}>{syncResult.ingestion?.total_fetched || 0}</strong></div>
+            <div>New Bronze: <strong style={{ color: 'var(--success)' }}>{syncResult.ingestion?.total_new_bronze || 0}</strong></div>
+            <div>Signals Promoted: <strong style={{ color: 'var(--primary)' }}>{syncResult.pipeline?.signals_processed || 0}</strong></div>
+            <div>Confluences: <strong style={{ color: 'var(--accent)' }}>{syncResult.pipeline?.confluences_count || 0}</strong></div>
           </div>
-        </div>
+        </Card>
       )}
 
       {error && (
@@ -135,69 +173,81 @@ export function SourcesOperationsWorkspace() {
       {loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-48 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
+            <Card key={i} className="animate-pulse h-48" />
           ))}
         </div>
       )}
 
       {!loading && !error && sources.length === 0 && (
-        <EmptyState
-          title="No sources configured"
-          description="Source connectors (PubMed, ClinicalTrials, OpenFDA, EMA, NewsAPI) populate automatically from the backend configuration."
-        />
+        <Card className="empty-state">
+          <BookOpen size={28} />
+          <p>No source connectors configured</p>
+          <span>Source connectors (PubMed, ClinicalTrials, OpenFDA, EMA, NewsAPI) populate automatically from the backend configuration.</span>
+        </Card>
       )}
 
       {!loading && !error && sources.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sources.map((s) => (
-            <div
-              key={s.source_id}
-              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4 shadow-xs hover:border-[var(--border-strong,var(--border))] transition flex flex-col justify-between"
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-[var(--foreground)] truncate">{s.name}</h3>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border shrink-0 ${getStatusBadge(s.connector_status)}`}>
+            <Card key={s.source_id} className="flex flex-col justify-between">
+              <div>
+                <div className="card-heading">
+                  <div>
+                    <h2 className="text-sm font-semibold truncate">{s.name}</h2>
+                    <p className="muted panel-subtitle font-mono text-[10px]">
+                      {s.source_id} · {s.freshness_class}
+                    </p>
+                  </div>
+                  <Badge tone={getBadgeTone(s.connector_status)}>
                     {s.connector_status}
-                  </span>
-                </div>
-
-                <div className="text-xs text-[var(--muted-foreground)] font-mono">
-                  Source ID: {s.source_id} • {s.freshness_class}
+                  </Badge>
                 </div>
 
                 {s.configuration_error_message && (
-                  <div className="p-2.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/80 text-[11px] font-sans leading-normal">
-                    <span className="font-semibold block mb-0.5">⚠️ Credential Configuration Required</span>
-                    {s.configuration_error_message}
+                  <div
+                    className="p-2.5 rounded text-[11px] leading-normal my-2 border"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--danger) 30%, transparent)',
+                      background: 'color-mix(in srgb, var(--danger) 10%, var(--surface))',
+                      color: 'var(--danger)',
+                    }}
+                  >
+                    <strong className="block mb-0.5">⚠️ Credential Configuration Required</strong>
+                    <span>{s.configuration_error_message}</span>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[var(--border)]">
-                <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Latency</div>
-                  <div className="font-mono text-[var(--foreground)] mt-0.5">{s.latency_ms !== null && s.latency_ms !== undefined ? `${s.latency_ms} ms` : 'N/A'}</div>
+              <div className="grid grid-cols-2 gap-2 text-xs pt-3 border-t border-[var(--border)] mt-3">
+                <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Latency</div>
+                  <div className="font-mono text-[var(--foreground)] mt-0.5 text-xs">
+                    {s.latency_ms !== null && s.latency_ms !== undefined ? `${s.latency_ms} ms` : 'N/A'}
+                  </div>
                 </div>
-                <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Records Accepted</div>
-                  <div className="font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">{s.records_accepted || 0}</div>
+                <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Accepted</div>
+                  <div className="font-mono mt-0.5 text-xs font-semibold" style={{ color: 'var(--success)' }}>
+                    {s.records_accepted || 0}
+                  </div>
                 </div>
-                <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase">HTTP Status</div>
-                  <div className="font-mono text-[var(--foreground)] mt-0.5">{s.http_status ? `${s.http_status}` : '-'}</div>
+                <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">HTTP Status</div>
+                  <div className="font-mono text-[var(--foreground)] mt-0.5 text-xs">
+                    {s.http_status ? `${s.http_status}` : '-'}
+                  </div>
                 </div>
-                <div className="p-2 rounded bg-[var(--surface-subtle)] border border-[var(--border)]">
-                  <div className="text-[10px] text-[var(--muted-foreground)] uppercase">Last Sync</div>
-                  <div className="font-mono text-[var(--foreground)] mt-0.5 text-[11px] truncate">
+                <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Last Sync</div>
+                  <div className="font-mono text-[var(--foreground)] mt-0.5 text-[10px] truncate">
                     {s.last_success ? new Date(s.last_success).toLocaleTimeString() : 'Never'}
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }

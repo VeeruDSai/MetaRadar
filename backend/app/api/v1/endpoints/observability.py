@@ -166,4 +166,47 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
             )
         )
 
+    # Ensure all canonical sources are surfaced even if database is empty/unseeded
+    canonical_fallbacks = [
+        {"source_id": "pubmed", "name": "PubMed MEDLINE (E-Utilities)", "freshness_class": "batch", "syndication_group": "Literature"},
+        {"source_id": "clinical_trials", "name": "ClinicalTrials.gov API v2", "freshness_class": "near_real_time", "syndication_group": "Trial Registries"},
+        {"source_id": "fda", "name": "openFDA Drugs & Adverse Events", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+        {"source_id": "ema", "name": "European Medicines Agency", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+        {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "quota_remaining": 100},
+    ]
+    for c in canonical_fallbacks:
+        if c["source_id"] not in seen_ids:
+            seen_ids.add(c["source_id"])
+            hl = latest_logs.get(c["source_id"])
+            config_err = configuration_error_for(c["source_id"])
+            if config_err:
+                conn_status = "CONFIGURATION_ERROR"
+                last_err = config_err
+                err_msg = config_err
+            else:
+                conn_status = hl.connector_status if hl else "NEVER_CONNECTED"
+                last_err = hl.last_error if hl else None
+                err_msg = None
+
+            items.append(
+                SourceRegistryItem(
+                    source_id=c["source_id"],
+                    name=c["name"],
+                    freshness_class=c["freshness_class"],
+                    syndication_group=c.get("syndication_group", "Public Feed"),
+                    status="active",
+                    quota_remaining=c.get("quota_remaining"),
+                    last_success=hl.checked_at if (hl and hl.connector_status == "HEALTHY") else None,
+                    last_error=last_err,
+                    connector_status=conn_status,
+                    last_attempted=hl.checked_at if hl else None,
+                    latency_ms=int(hl.latency_ms) if (hl and hl.latency_ms is not None) else None,
+                    records_fetched=hl.records_fetched if (hl and hl.records_fetched is not None) else 0,
+                    records_accepted=hl.records_accepted if (hl and hl.records_accepted is not None) else 0,
+                    records_rejected=hl.records_rejected if (hl and hl.records_rejected is not None) else 0,
+                    http_status=hl.http_status if hl else None,
+                    configuration_error_message=err_msg,
+                )
+            )
+
     return items

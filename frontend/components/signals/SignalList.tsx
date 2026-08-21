@@ -4,10 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react'
 import type { Signal, SignalFilterParams } from '@/types/api'
 import { fetchSignals, submitSignalFeedback } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
+import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { SignalCard } from './SignalCard'
 import { EvidenceDrawer } from '../common/EvidenceDrawer'
 import { ErrorState } from '../common/ErrorState'
-import { EmptyState } from '../common/EmptyState'
+import { Activity, RefreshCw, Search } from 'lucide-react'
 
 export function SignalList() {
   const [signals, setSignals] = useState<Signal[]>([])
@@ -22,7 +23,7 @@ export function SignalList() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('')
   const [sourceFilter, setSourceFilter] = useState<string>('')
 
-  // Debounce search input so typing does not fire one request per keystroke.
+  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300)
     return () => clearTimeout(timer)
@@ -43,8 +44,6 @@ export function SignalList() {
       setSignals(data.signals)
       setTotal(data.total)
     } catch (err) {
-      // Superseded requests are aborted by the effect cleanup; ignore them
-      // so a slow earlier response can never clobber newer results.
       if (signal?.aborted || (err instanceof Error && err.name === 'AbortError')) return
       setError(formatError(err, 'Failed to fetch signals.'))
     } finally {
@@ -63,44 +62,64 @@ export function SignalList() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header & Filter Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)] mb-0.5">
-            Ingested Signal Intelligence
-          </div>
-          <h2 className="text-xl font-bold text-[var(--foreground)]">Live Signals ({total})</h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            Real-time competitive signals parsed and prioritized across biomedical sources.
-          </p>
+    <>
+      <SectionTitle
+        eyebrow="Ingested Signal Intelligence"
+        title={`Live Signals (${total})`}
+        detail="Real-time competitive signals parsed and prioritized across biomedical sources."
+      />
+
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div className="filter-bar flex-wrap items-center">
+          <button
+            className={severityFilter === '' ? 'filter-active' : ''}
+            onClick={() => setSeverityFilter('')}
+          >
+            All Priorities
+          </button>
+          <button
+            className={severityFilter === 'CRITICAL' ? 'filter-active' : ''}
+            onClick={() => setSeverityFilter('CRITICAL')}
+          >
+            Critical
+          </button>
+          <button
+            className={severityFilter === 'HIGH' ? 'filter-active' : ''}
+            onClick={() => setSeverityFilter('HIGH')}
+          >
+            High
+          </button>
+          <button
+            className={severityFilter === 'MEDIUM' ? 'filter-active' : ''}
+            onClick={() => setSeverityFilter('MEDIUM')}
+          >
+            Medium
+          </button>
+          <button
+            className={severityFilter === 'LOW' ? 'filter-active' : ''}
+            onClick={() => setSeverityFilter('LOW')}
+          >
+            Low
+          </button>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <input
-            type="text"
-            placeholder="Search signals or entities..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-blue-500 shadow-xs"
-          />
-
-          <select
-            value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)] shadow-xs"
-          >
-            <option value="">All Priorities</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-          </select>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--foreground)]">
+            <Search size={13} className="text-[var(--muted-foreground)]" />
+            <input
+              type="text"
+              placeholder="Filter signals..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-transparent border-0 outline-none text-xs text-[var(--foreground)] placeholder-[var(--muted-foreground)] w-36 sm:w-44"
+            />
+          </div>
 
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)] shadow-xs"
+            className="px-2.5 py-1.5 rounded border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--foreground)] outline-none"
           >
             <option value="">All Sources</option>
             <option value="pubmed">PubMed</option>
@@ -112,14 +131,14 @@ export function SignalList() {
 
           <button
             onClick={() => loadSignals()}
-            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--surface-subtle)] text-xs text-[var(--foreground)] transition border border-[var(--border)]"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)]"
           >
-            Refresh
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      {/* Error state */}
       {error && (
         <ErrorState
           title={error.title}
@@ -131,30 +150,34 @@ export function SignalList() {
         />
       )}
 
-      {/* Loading state */}
       {loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-36 rounded-xl bg-[var(--surface-subtle)] animate-pulse border border-[var(--border)]" />
+            <Card key={i} className="animate-pulse h-40" />
           ))}
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && !error && signals.length === 0 && (
-        <EmptyState
-          title="No signals match the selected filters"
-          description="Try broadening your search term or clearing priority filters to view available signals."
-          actionLabel="Clear Filters"
-          onAction={() => {
-            setSeverityFilter('')
-            setSearchTerm('')
-            setSourceFilter('')
-          }}
-        />
+        <Card className="empty-state">
+          <Activity size={28} />
+          <p>No signals matched filter criteria</p>
+          <span>Try broadening your search term or clearing priority filters to view available signals.</span>
+          {(severityFilter || searchTerm || sourceFilter) && (
+            <button
+              onClick={() => {
+                setSeverityFilter('')
+                setSearchTerm('')
+                setSourceFilter('')
+              }}
+              className="mt-2 px-3.5 py-1.5 rounded text-xs font-semibold border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)] hover:border-[var(--signal)]"
+            >
+              Reset Filters
+            </button>
+          )}
+        </Card>
       )}
 
-      {/* Grid of Signal Cards */}
       {!loading && !error && signals.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {signals.map((sig) => (
@@ -174,6 +197,6 @@ export function SignalList() {
         onClose={() => setSelectedSignal(null)}
         onFeedbackSubmit={handleFeedback}
       />
-    </div>
+    </>
   )
 }
