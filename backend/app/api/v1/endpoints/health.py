@@ -1,17 +1,25 @@
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 from app.db.session import get_db
-from app.core.config import settings
-from app.models import ConnectorState
+from app.core.config import settings, configuration_error_for
+from app.models import ConnectorState, Source
 from app.connectors import ALL_CONNECTORS
 from app.schemas import (
     HealthResponse, HealthReadyResponse, HealthModelsResponse, HealthConnectorsResponse, ConnectorHealthStatus
 )
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
+
+# Timezone-aware epoch used to normalize NULL timestamps in comparisons.
+# Never compare tz-aware datetimes against naive datetime.min — that raises
+# TypeError and (behind a broad except) silently aborts the whole preload loop.
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 _CONNECTOR_NAMES = {
     "pubmed": "NCBI PubMed",
@@ -71,8 +79,7 @@ async def get_health_models():
     finally:
         # Close the lazily-created httpx.AsyncClient so the connection pool
         # is not leaked on every /health/models poll.
-        if provider._client is not None:
-            await provider._client.aclose()
+        await provider.aclose()
     return HealthModelsResponse(
         llm_provider=settings.LLM_PROVIDER,
         ollama_host=settings.OLLAMA_HOST,
@@ -88,46 +95,108 @@ async def get_health_models():
 
 @router.get("/connectors", response_model=HealthConnectorsResponse)
 async def get_health_connectors(session: AsyncSession = Depends(get_db)):
-    """Reports each live connector's honest status (D-22).
-
-    Reads the latest ConnectorState row per source for accurate
-    last_success / quota_remaining in ONE batched query (avoids one DB
-    connection attempt per connector); degrades to in-memory state when the
-    DB is unavailable so the endpoint never fabricates values or 500s on
-    auxiliary failure (fail-degrade pattern per signals.py).
-    """
-    preloaded = None  # None = DB read unavailable -> in-memory status
+    """Reports each live connector's honest status (D-22, REQ-P8-06, REQ-P8-07)."""
+    preloaded_sources = {}
+    preloaded_states = {}
     try:
-        result = await session.execute(
-            select(ConnectorState).where(
-                ConnectorState.source_id.in_([c.source_id for c in ALL_CONNECTORS])
-            )
+        src_res = await session.execute(
+            select(Source).where(Source.source_id.in_([c.source_id for c in ALL_CONNECTORS]))
         )
-        preloaded = {}
-        for row in result.scalars().all():
-            prev = preloaded.get(row.source_id)
-            if prev is None or (row.updated_at or datetime.min) >= (prev.updated_at or datetime.min):
-                preloaded[row.source_id] = row
+        for s in src_res.scalars().all():
+            preloaded_sources[s.source_id] = s
+
+        state_res = await session.execute(
+            select(ConnectorState).where(ConnectorState.source_id.in_([c.source_id for c in ALL_CONNECTORS]))
+        )
+        for row in state_res.scalars().all():
+            prev = preloaded_states.get(row.source_id)
+            if prev is None:
+                preloaded_states[row.source_id] = row
+            elif (row.updated_at or _EPOCH) >= (prev.updated_at or _EPOCH):
+                preloaded_states[row.source_id] = row
     except Exception:
-        preloaded = None
+        logger.warning(
+            "Failed to preload connector states; falling back to per-connector lookups",
+            exc_info=True,
+        )
 
     statuses = []
     for connector in ALL_CONNECTORS:
-        try:
-            connector_status = await connector.get_status(
-                None, preloaded.get(connector.source_id) if preloaded else None
+        config_err = configuration_error_for(connector.source_id)
+        source_row = preloaded_sources.get(connector.source_id)
+        state_row = preloaded_states.get(connector.source_id)
+
+        if config_err:
+            statuses.append(
+                ConnectorHealthStatus(
+                    source_id=connector.source_id,
+                    name=_CONNECTOR_NAMES.get(connector.source_id, connector.source_id),
+                    status="CONFIGURATION_ERROR",
+                    freshness_class=connector.freshness_class,
+                    quota_remaining=0,
+                    last_success=source_row.last_success if source_row else None,
+                    last_attempted=source_row.last_attempted if source_row else None,
+                    last_error=config_err,
+                    connector_status="CONFIGURATION_ERROR",
+                    latency_ms=source_row.latency_ms if source_row else None,
+                    records_fetched=source_row.records_fetched if source_row else 0,
+                    records_accepted=source_row.records_accepted if source_row else 0,
+                    records_rejected=source_row.records_rejected if source_row else 0,
+                    http_status=source_row.http_status if source_row else None,
+                    configuration_error_message=config_err,
+                )
             )
+            continue
+
+        if source_row:
+            statuses.append(
+                ConnectorHealthStatus(
+                    source_id=connector.source_id,
+                    name=_CONNECTOR_NAMES.get(connector.source_id, source_row.name or connector.source_id),
+                    tier=source_row.tier or (1 if connector.source_id in ("fda", "ema", "pubmed", "clinical_trials") else 3),
+                    status=source_row.connector_status or "NEVER_CONNECTED",
+                    freshness_class=source_row.freshness_class or connector.freshness_class,
+                    quota_remaining=source_row.quota_remaining,
+                    last_success=source_row.last_success,
+                    last_attempted=source_row.last_attempted,
+                    last_error=source_row.last_error,
+                    connector_status=source_row.connector_status or "NEVER_CONNECTED",
+                    latency_ms=source_row.latency_ms,
+                    duration_ms=float(source_row.latency_ms) if source_row.latency_ms else None,
+                    records_fetched=source_row.records_fetched or 0,
+                    records_accepted=source_row.records_accepted or 0,
+                    records_rejected=source_row.records_rejected or 0,
+                    records_new=source_row.records_new or source_row.records_accepted or 0,
+                    records_updated=source_row.records_updated or 0,
+                    records_duplicate=source_row.records_duplicate or source_row.records_rejected or 0,
+                    upstream_data_timestamp=source_row.upstream_data_timestamp,
+                    next_scheduled_run=source_row.next_scheduled_run,
+                    consecutive_failures=source_row.consecutive_failures or 0,
+                    backoff_minutes=source_row.backoff_minutes or 0,
+                    http_status=source_row.http_status,
+                    configuration_error_message=source_row.configuration_error_message,
+                )
+            )
+            continue
+
+        try:
+            conn_status = await connector.get_status(None, state_row)
         except Exception:
-            connector_status = await connector.get_status(None)
+            conn_status = await connector.get_status(None)
+
         statuses.append(
             ConnectorHealthStatus(
-                source_id=connector_status.source_id,
-                name=_CONNECTOR_NAMES.get(connector_status.source_id, connector_status.source_id),
-                status=connector_status.status,
+                source_id=conn_status.source_id,
+                name=_CONNECTOR_NAMES.get(conn_status.source_id, conn_status.source_id),
+                tier=1 if conn_status.source_id in ("fda", "ema", "pubmed", "clinical_trials") else 3,
+                status=conn_status.status,
                 freshness_class=connector.freshness_class,
-                quota_remaining=connector_status.quota_remaining,
-                last_success=connector_status.last_success,
-                last_error=connector_status.last_error,
+                quota_remaining=conn_status.quota_remaining,
+                last_success=conn_status.last_success,
+                last_error=conn_status.last_error,
+                connector_status="NEVER_CONNECTED",
             )
         )
+
     return HealthConnectorsResponse(connectors=statuses)
+

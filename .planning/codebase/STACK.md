@@ -1,54 +1,87 @@
+---
+doc_type: codebase-map
+focus: tech
+analysis_date: 2026-08-22
+---
+
 # Technology Stack
 
-**Analysis Date:** 2026-08-13 (Refreshed Post-Stabilization Baseline)
+**Analysis Date:** 2026-08-22
 
-> **Current state:** Frontend architecture reconciled and type-safe (Next.js 16 + React 19 + Tailwind 4 + Framer Motion + Base UI/shadcn, strict TypeScript, ESLint 10 flat config, verified production build). Backend core (FastAPI 0.115, Pydantic v2, SQLAlchemy 2.0 async, Alembic async scaffold, PII/PHI scrubber, Red-Team 19-rule registry, provider capability matrix, unified OpenAPI contract) stabilized with an 18-point `pytest` suite. Infrastructure Dockerfiles authored (`backend/Dockerfile`, `frontend/Dockerfile`) with `docker compose config` zero-warning validation.
+MetaRadar v5.1.0 — Continuously operating competitive intelligence radar for Haemophilia (Novo Nordisk GBS Hackathon 2026). Two-service application: FastAPI backend + Next.js frontend, backed by PostgreSQL 16 (pgvector), Redis 7, and an autonomous background scheduler.
 
-## Prescribed vs. Implemented Matrix
+## Languages & Runtimes
 
-| Layer | Prescribed (Master Plan / CLAUDE.md) | Actually in code | Status |
-|---|---|---|---|
-| Backend API | FastAPI 0.110+ | FastAPI `>=0.110.0` (`backend/app/main.py`); health + business endpoints (`/signals`, `/overview`, `/athena`) | ✅ Operational |
-| Workflow | LangGraph 10-node pipeline | Abstract connector base (`backend/app/connectors/base.py`) + pipeline runs schema | ⚠ Scaffold |
-| Scheduler | APScheduler in-process | Deferred to Phase 1 polling pipeline | ⚠ Planned |
-| ORM/DB | SQLAlchemy + asyncpg | SQLAlchemy 2.0 async + asyncpg (`backend/app/db/session.py`) | ✅ Verified |
-| Migration | Alembic async engine | `alembic.ini`, `env.py`, `script.py.mako`, `001_initial_v51_schema.py` | ✅ Configured |
-| Vector store | pgvector 384-dim | pgvector dep + `signals.embedding` column + HNSW index | ✅ Schema |
-| LLM reasoning | Local Gemma 3 4B → Grok → BART | Provider chain + real privacy gate + Degraded BART fallback (Cases A-F verified) | ✅ Verified (Mock/Fallback) |
-| Privacy Gate | PII/PHI scrubber + Privacy Gate | `PIIPHIScrubber` (email, phone, SSN, MRN, DOB regex) + `validate_privacy_gate` | ✅ Verified |
-| Red-Team NLI | 19-rule registry + NLI pre-filter | `RedTeamNLIService` with 19 rules (Rules A–S), priority gating, capping, & caching | ✅ Verified |
-| Frontend | Next.js 16, Tailwind 4, shadcn/ui, Recharts, Framer Motion | Next.js 16.3.0 + React 19 + Tailwind 4 + Framer Motion 13 + Recharts 3 + Base UI/shadcn | ✅ Verified |
-| API Contract | OpenAPI -> TypeScript contract | FastAPI OpenAPI -> `contracts/openapi.json` -> `frontend/types/api.ts` (deterministic 0-diff) | ✅ Verified |
-| Tests | Pytest backend suite + Frontend gates | 18-point `pytest` backend suite + `tsc --noEmit` + `eslint .` + `next build` | ✅ Verified |
+| Layer | Language | Runtime / Version |
+|---|---|---|
+| Backend | Python 3.11+ | asyncio throughout (`asyncpg`, async SQLAlchemy, background tasks) |
+| Frontend | TypeScript 5.7.3 | Node.js >=20.9.0, Next.js 16.3.0 (Turbopack) |
+| Orchestration scripts | Python 3 (`start.py`, `setup.py`, `export_openapi.py`) | stdlib + urllib |
+| Tooling script | JavaScript ESM (`scripts/check-banned-classes.mjs`) | Node |
 
-## Frontend
+## Core Frameworks
 
-**Runtime & Framework:**
-- **Next.js `16.3.0`** (App Router) running on **React `19.2.8`** + **TypeScript `5.7.3`** + **Node `20`** (pinned via `frontend/.nvmrc` and `engines` field in `package.json`).
-- Dynamic route dispatcher: `frontend/app/[section]/page.tsx` routes section requests (`/dashboard`, `/signals`, `/developments`, `/intelligence`, `/functions`, `/calibrate`, `/sources`, `/settings`) to UI components in `frontend/components/metaradar.tsx`; `/` redirects to `/dashboard`.
+### Backend (`backend/`)
+| Concern | Library | Pinned in `backend/requirements.txt` |
+|---|---|---|
+| Web framework | FastAPI | >=0.110.0 |
+| ASGI server | Uvicorn | >=0.28.0 |
+| Background scheduler | Native asyncio + PostgreSQL advisory locks (`app/services/scheduler.py`) | stdlib / asyncpg |
+| Validation/settings | Pydantic v2 + pydantic-settings | >=2.6.0 / >=2.2.0 |
+| ORM | SQLAlchemy 2.x (async) | >=2.0.28 |
+| Postgres driver | asyncpg | >=0.29.0 |
+| Migrations | Alembic (6 revisions in `backend/alembic/versions/`) | >=1.13.1 |
+| Vectors | pgvector (`pgvector.sqlalchemy.Vector`) | >=0.2.5 |
+| Cache | redis-py | >=5.0.3 |
+| Workflow engine | LangGraph StateGraph (11-node linear pipeline) | >=0.2.0 |
+| Embeddings | fastembed (`sentence-transformers/all-MiniLM-L6-v2`, 384-dim) | >=0.4.0 |
+| HTTP client | httpx | >=0.27.0 |
+| Logging | structlog + asgi-correlation-id | >=24.1.0 / >=4.3.0 |
+| Config files | PyYAML (`config/haemophilia.yaml` domain config) | >=6.0.1 |
 
-**Libraries & UI Systems:**
-- `framer-motion` `13.1.0` — drawer/signal-card animations (`AnimatePresence`, `motion`).
-- `recharts` `3.10.1` — trend visualization charts.
-- `lucide-react` `1.31.0` — icon set.
-- `@base-ui/react` `1.7.0` + `class-variance-authority` `0.7.1` + `clsx` `2.1.1` + `tailwind-merge` `3.6.0` — UI primitives and dynamic styling utilities (`frontend/lib/utils.ts`).
-- **Styling**: Tailwind CSS v4 (`@tailwindcss/postcss` `4.3.3`, `tailwindcss` `4.3.3`) with `@theme inline` tokens in `frontend/app/globals.css`.
-- **Quality Gates**: `frontend/eslint.config.mjs` native flat config with `@next/eslint-plugin-next` v16. `next.config.mjs` sets `typescript: { ignoreBuildErrors: false }` for strict build validation.
+Test dependencies: pytest, pytest-asyncio (auto mode), pytest-cov, pytest-httpx.
 
-## Backend
+### Frontend (`frontend/`)
+| Concern | Library |
+|---|---|
+| Framework | Next.js **16.3.0** (App Router, Turbopack build) |
+| UI runtime | React 19 + react-dom 19 |
+| Styling | Tailwind CSS v4 (`@tailwindcss/postcss` 4.3.3) + tw-animate-css |
+| Components | shadcn 4.8.0 + `@base-ui/react` 1.5.0, class-variance-authority, clsx, tailwind-merge |
+| Charts | recharts 3.10.1 |
+| Animation | framer-motion 13.1.0 |
+| Icons | lucide-react 1.16.0 |
+| Lint | ESLint 10 + eslint-config-next 16.3.0 |
+| Package manager | pnpm 9.15.5 (canonical `pnpm-lock.yaml`) |
 
-**Runtime & Infrastructure:**
-- **Python 3.11+** (CI pins `3.11` in `.github/workflows/ci.yml`).
-- **FastAPI `>=0.110.0`** — app in `backend/app/main.py`.
-- **Async SQLAlchemy 2.0** + **asyncpg** — database session in `backend/app/db/session.py`.
-- **Alembic** async migration engine in `backend/alembic/env.py`.
-- **Pydantic v2** — schemas in `backend/app/schemas/__init__.py`.
-- **PII/PHI Scrubber** — `backend/app/services/pii.py`.
-- **Red-Team Contradiction Service** — `backend/app/services/redteam.py` with 19 rules (Rules A–S).
-- **Test Infrastructure** — 18-point `pytest` test suite (`tests/test_config.py`, `tests/test_api_endpoints.py`, `tests/test_provider_matrix.py`, `tests/test_privacy_boundary.py`, `tests/test_redteam_behavior.py`, `tests/test_contract_drift.py`).
+## AI / Model Allocation (canonical — Master Plan §13.8)
 
-## Data & Container Infrastructure
+Provider chain implemented in `backend/app/providers/factory.py`:
+1. **Local Gemma 3 4B Instruct** (`google/gemma-3-4b-it`, Q4/int4, GPU-first via Ollama sidecar `gemma3:4b` at `OLLAMA_HOST`) — reasoning, Four-Question briefs, Ask Athena.
+2. **xAI Grok hosted fallback** (`ENABLE_GROK_FALLBACK=false` by default; privacy-gated by `DataClassification`).
+3. **Degraded BART factual summary** (`DegradedProvider`, summarize-only; no reasoning/actions).
 
-- **PostgreSQL 16 + pgvector**: `pgvector/pgvector:pg16` image; migration creates `vector` and `pg_trgm` extensions and HNSW index `signals_embedding_hnsw` (`m=16, ef_construction=64`).
-- **Redis 7**: `redis:7-alpine` image configured via `REDIS_URL`.
-- **Dockerfiles**: Authored `backend/Dockerfile` (Python 3.11-slim, uvicorn, non-root user) and `frontend/Dockerfile` (Node 20-alpine multi-stage build). `docker compose config` schema validated with zero warnings.
+Supporting models: embeddings `all-MiniLM-L6-v2` rev `e4bb823e...` (384-dim), deterministic entity extraction via domain config, NLI heuristics in `app/services/redteam.py`.
+
+## Infrastructure & Configuration
+
+- **Docker Compose** (`docker-compose.yml`): 5 services — postgres (`pgvector/pgvector:pg16`), redis (`redis:7-alpine`), backend (CPU profile), backend-gpu (`gpu` profile, CUDA), frontend, ollama (GPU device reservation). Healthchecks on all core services.
+- **Local orchestration**: `setup.py` (deps, docker, migrations, seed, model pull) → `start.py` (process launcher with telemetry, graceful shutdown, auto-applies Alembic migrations).
+- Ports: frontend 3000, backend 8000, postgres 5432, redis 6379, ollama 11434.
+
+### Configuration (`backend/app/core/config.py`)
+- **Scheduler**: `ENABLE_BACKGROUND_SCHEDULER` (default `True`), `SCHEDULER_CT_INTERVAL_MINUTES` (60), `SCHEDULER_PUBMED_INTERVAL_MINUTES` (60), `SCHEDULER_EMA_INTERVAL_MINUTES` (30), `SCHEDULER_FDA_INTERVAL_MINUTES` (30), `SCHEDULER_NEWS_INTERVAL_MINUTES` (15), `SCHEDULER_JITTER_PERCENT` (10), `SCHEDULER_MAX_BACKOFF_MINUTES` (240).
+- **Connector API Keys & Tools**: `NCBI_API_KEY`, `NCBI_TOOL`, `NCBI_EMAIL`, `OPENFDA_API_KEY`, `NEWSAPI_KEY`.
+- **Database & Cache**: `DATABASE_URL`, `REDIS_URL`.
+- **LLM & Embeddings**: `LLM_PROVIDER`, `LOCAL_LLM_MODEL`, `OLLAMA_HOST`, `XAI_API_KEY`, `ENABLE_GROK_FALLBACK`, `EMBEDDING_MODEL`.
+- **Domain Config**: `config/haemophilia.yaml` loaded by `backend/app/core/domain_config.py`.
+
+## Build & Verification Commands
+
+| Gate | Command |
+|---|---|
+| Frontend lint | `npm --prefix frontend run lint` (ESLint 10, zero-warning policy) |
+| Frontend build/TSC | `npm --prefix frontend run build` (Next 16 Turbopack; strict TS) |
+| Banned-class gate | `node scripts/check-banned-classes.mjs` (0 banned Tailwind slate/arbitrary-hex violations) |
+| Backend tests | `pytest tests/ -v -k "not test_database_connection"` (114 tests passing) |
+| Contract sync | `python scripts/export_openapi.py` → regenerates `contracts/openapi.json` and canonical `frontend/types/api.ts` |

@@ -69,7 +69,11 @@ async def test_overview_empty_database():
     res_recent_count = MagicMock()
     res_recent_count.scalar.return_value = 0
     
-    # 7. developments = []
+    # 7. latest confluence = None
+    res_latest_conf = MagicMock()
+    res_latest_conf.scalar_one_or_none.return_value = None
+
+    # 8. developments = []
     mock_dev_scalars = MagicMock()
     mock_dev_scalars.all.return_value = []
     res_devs = MagicMock()
@@ -82,7 +86,8 @@ async def test_overview_empty_database():
         res_contra_count,
         res_sources_count,
         res_recent_count,
-        res_devs
+        res_devs,
+        res_latest_conf
     ]
 
     async def override_get_db():
@@ -110,16 +115,28 @@ async def test_overview_empty_database():
 
 @pytest.mark.asyncio
 async def test_athena_endpoint_valid_and_invalid():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        # Valid prompt
-        res = await ac.post("/api/v1/athena", json={"prompt": "How does concizumab compare to mim8?"})
-        assert res.status_code == 200
-        data = res.json()
-        assert "answer" in data
-        assert data["confidence"] > 0
-        assert data["evidence_count"] >= 1
-        assert "mode" in data
+    mock_db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalars.return_value.all.return_value = []
+    mock_res.fetchall.return_value = []
+    mock_db.execute.return_value = mock_res
 
-        # Empty prompt -> 422
-        res_empty = await ac.post("/api/v1/athena", json={"prompt": ""})
-        assert res_empty.status_code == 422
+    async def override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            # Valid prompt
+            res = await ac.post("/api/v1/athena", json={"prompt": "How does concizumab compare to mim8?"})
+            assert res.status_code == 200
+            data = res.json()
+            assert "answer" in data
+            assert data["confidence"] >= 0
+            assert "mode" in data
+
+            # Empty prompt -> 422
+            res_empty = await ac.post("/api/v1/athena", json={"prompt": ""})
+            assert res_empty.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_db, None)

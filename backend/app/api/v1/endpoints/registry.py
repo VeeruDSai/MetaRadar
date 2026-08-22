@@ -32,7 +32,12 @@ async def get_developments_registry(
     )
 
     if disease:
-        query = query.where(Development.disease.ilike(f"%{disease}%"))
+        # Escape LIKE wildcards so user input matches literally (a search for
+        # "100%" must not match everything); backslash is the escape character.
+        escaped_disease = (
+            disease.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        query = query.where(Development.disease.ilike(f"%{escaped_disease}%", escape="\\"))
     if stage:
         query = query.where(Development.current_stage == stage)
 
@@ -63,12 +68,25 @@ async def get_sources_registry(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve registered data sources with freshness classes and live status."""
+    from app.core.config import configuration_error_for
+
     query = select(Source).order_by(Source.name.asc())
     result = await db.execute(query)
     sources = result.scalars().all()
 
+    CANONICAL_SOURCE_IDS = {"pubmed", "clinical_trials", "fda", "ema", "newsapi"}
     items = []
     for s in sources:
+        if s.source_id not in CANONICAL_SOURCE_IDS:
+            continue
+        config_err = configuration_error_for(s.source_id)
+        if config_err:
+            conn_status = "CONFIGURATION_ERROR"
+            err_msg = config_err
+        else:
+            conn_status = s.connector_status or "NEVER_CONNECTED"
+            err_msg = s.configuration_error_message
+
         items.append(
             SourceRegistryItem(
                 source_id=s.source_id,
@@ -78,7 +96,48 @@ async def get_sources_registry(
                 status=s.status,
                 quota_remaining=s.quota_remaining,
                 last_success=s.last_success,
-                connector_status="LIVE" if s.status == "active" else "DEGRADED",
+                connector_status=conn_status,
+                last_attempted=s.last_attempted,
+                latency_ms=s.latency_ms,
+                records_fetched=s.records_fetched or 0,
+                records_accepted=s.records_accepted or 0,
+                records_rejected=s.records_rejected or 0,
+                http_status=s.http_status,
+                configuration_error_message=err_msg,
             )
         )
+
+    seen_ids = {s.source_id for s in sources}
+    canonical_fallbacks = [
+        {"source_id": "pubmed", "name": "PubMed MEDLINE (E-Utilities)", "freshness_class": "batch", "syndication_group": "Literature"},
+        {"source_id": "clinical_trials", "name": "ClinicalTrials.gov API v2", "freshness_class": "near_real_time", "syndication_group": "Trial Registries"},
+        {"source_id": "fda", "name": "openFDA Drugs & Adverse Events", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+        {"source_id": "ema", "name": "European Medicines Agency", "freshness_class": "delayed", "syndication_group": "Regulatory"},
+        {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "quota_remaining": 100},
+    ]
+    for c in canonical_fallbacks:
+        if c["source_id"] not in seen_ids:
+            seen_ids.add(c["source_id"])
+            config_err = configuration_error_for(c["source_id"])
+            conn_status = "CONFIGURATION_ERROR" if config_err else "NEVER_CONNECTED"
+            items.append(
+                SourceRegistryItem(
+                    source_id=c["source_id"],
+                    name=c["name"],
+                    freshness_class=c["freshness_class"],
+                    syndication_group=c.get("syndication_group", "Public Feed"),
+                    status="active",
+                    quota_remaining=c.get("quota_remaining"),
+                    last_success=None,
+                    connector_status=conn_status,
+                    last_attempted=None,
+                    latency_ms=None,
+                    records_fetched=0,
+                    records_accepted=0,
+                    records_rejected=0,
+                    http_status=None,
+                    configuration_error_message=config_err,
+                )
+            )
+
     return items

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     CalibrationFeedback,
     CalibrationHistory,
+    CalibrationRun,
     ScoringWeights,
     Signal,
     SignalRouting,
@@ -19,6 +20,7 @@ from app.models import (
 )
 from app.schemas import (
     BeforeAfterComparisonSchema,
+    CalibrationRunSchema,
     CalibrationWeightsResponse,
     ConfirmWatchItemRequest,
     ConfirmWatchItemResponse,
@@ -143,7 +145,8 @@ class StakeholderCalibrationService:
 
         # Count unapplied feedback for this role
         stmt = select(func.count(CalibrationFeedback.feedback_id)).where(
-            CalibrationFeedback.stakeholder_function == req.stakeholder_function
+            CalibrationFeedback.stakeholder_function == req.stakeholder_function,
+            CalibrationFeedback.is_applied == False,
         )
         result = await self.session.execute(stmt)
         unapplied_count = result.scalar_one() or 1
@@ -159,29 +162,32 @@ class StakeholderCalibrationService:
             recalibration_triggered=recalibration_triggered,
         )
 
-    async def get_weights(self) -> CalibrationWeightsResponse:
-        """Retrieves active scoring weights across canonical functions, seeding defaults if missing."""
+    async def get_weights(self, include_history: bool = True) -> CalibrationWeightsResponse:
+        """
+        Fetches active role weights for all 6 canonical functions.
+        Seeds default 1.0 weights for any missing functions on first access.
+        """
+        now = datetime.now(timezone.utc)
         stmt = select(ScoringWeights)
         result = await self.session.execute(stmt)
-        existing_rows = {row.stakeholder_function: row for row in result.scalars().all()}
+        existing_rows = result.scalars().all()
 
+        existing_by_fn = {row.stakeholder_function: row for row in existing_rows}
         weights_list: List[RoleWeightSchema] = []
-        now = utc_now()
 
         for fn in CANONICAL_FUNCTIONS:
-            if fn in existing_rows:
-                r = existing_rows[fn]
+            if fn in existing_by_fn:
+                r = existing_by_fn[fn]
                 weights_list.append(
                     RoleWeightSchema(
                         stakeholder_function=r.stakeholder_function,
                         impact_weight=r.impact_weight,
                         urgency_weight=r.urgency_weight,
                         novelty_weight=r.novelty_weight,
-                        updated_at=r.updated_at or now,
+                        updated_at=r.updated_at,
                     )
                 )
             else:
-                # Seed default 1.0 (D-04)
                 new_row = ScoringWeights(
                     stakeholder_function=fn,
                     impact_weight=1.0,
@@ -213,21 +219,60 @@ class StakeholderCalibrationService:
         latest_hist = hist_res.scalar_one_or_none()
         version = latest_hist.version if latest_hist else "v1.0.0"
 
-        return CalibrationWeightsResponse(version=version, weights=weights_list)
+        run_history = []
+        pending_count = 0
+
+        if include_history:
+            # Query recent calibration runs
+            try:
+                runs_stmt = select(CalibrationRun).order_by(CalibrationRun.triggered_at.desc()).limit(10)
+                runs_res = await self.session.execute(runs_stmt)
+                run_rows = runs_res.scalars().all()
+                run_history = [
+                    CalibrationRunSchema(
+                        run_id=r.run_id,
+                        triggered_at=r.triggered_at,
+                        completed_at=r.completed_at,
+                        status=r.status,
+                        feedback_count=r.feedback_count,
+                        previous_weights=r.previous_weights,
+                        new_weights=r.new_weights,
+                        affected_functions=r.affected_functions,
+                        reason=r.reason,
+                        scoring_version=r.scoring_version,
+                    )
+                    for r in run_rows
+                ]
+            except Exception as e:
+                logger.debug(f"CalibrationRun query skipped: {e}")
+
+            # Query pending unapplied feedback count
+            try:
+                pending_stmt = select(func.count(CalibrationFeedback.feedback_id)).where(CalibrationFeedback.is_applied == False)
+                pending_count = (await self.session.execute(pending_stmt)).scalar() or 0
+            except Exception as e:
+                logger.debug(f"Pending feedback count query skipped: {e}")
+
+        return CalibrationWeightsResponse(
+            version=version,
+            weights=weights_list,
+            run_history=run_history,
+            pending_feedback_count=pending_count,
+        )
 
     async def recalibrate_role(
         self, stakeholder_function: Optional[str] = None
     ) -> RecalibrateResponse:
         """
-        Executes bounded batch weight recalibration for a single role or all roles (D-01, D-02, D-03).
+        Executes bounded batch weight recalibration exclusively over unapplied feedback (D-01, D-02, D-03).
         Computes side-by-side BEFORE/AFTER comparisons without overwriting baseline routing.
         """
         # 1. Fetch active weights
-        weights_resp = await self.get_weights()
+        weights_resp = await self.get_weights(include_history=False)
         active_weights = {w.stakeholder_function: w for w in weights_resp.weights}
 
-        # 2. Query feedback rows
-        fb_query = select(CalibrationFeedback)
+        # 2. Query ONLY UNAPPLIED feedback rows (Idempotency Guard)
+        fb_query = select(CalibrationFeedback).where(CalibrationFeedback.is_applied == False)
         if stakeholder_function:
             fb_query = fb_query.where(
                 CalibrationFeedback.stakeholder_function == stakeholder_function
@@ -252,9 +297,7 @@ class StakeholderCalibrationService:
             fn_feedback.setdefault(fb.stakeholder_function, []).append(fb)
 
         updated_weights_list: List[RoleWeightSchema] = []
-        weights_modified = False
         watch_suggestions: List[WatchRuleSuggestionSchema] = []
-
         now = utc_now()
 
         for fn, fbs in fn_feedback.items():
@@ -274,9 +317,6 @@ class StakeholderCalibrationService:
             new_impact = round(max(0.1, min(2.0, old_impact + delta_impact)), 3)
             new_urgency = round(max(0.1, min(2.0, old_urgency + delta_urgency)), 3)
             new_novelty = old_novelty  # Preserved unless explicit novelty feedback
-
-            if new_impact != old_impact or new_urgency != old_urgency:
-                weights_modified = True
 
             # Update in DB
             db_w_stmt = select(ScoringWeights).where(
@@ -329,7 +369,34 @@ class StakeholderCalibrationService:
         except Exception:
             new_version = f"v1.1.{int(now.timestamp()) % 1000}"
 
-        # 5. Insert history record
+        # 5. Create immutable CalibrationRun record
+        cal_run = CalibrationRun(
+            run_id=uuid.uuid4(),
+            triggered_at=now,
+            completed_at=now,
+            status="completed",
+            feedback_count=len(feedback_rows),
+            previous_weights={
+                fn: {"impact": w.impact_weight, "urgency": w.urgency_weight, "novelty": w.novelty_weight}
+                for fn, w in active_weights.items()
+            },
+            new_weights={
+                w.stakeholder_function: {"impact": w.impact_weight, "urgency": w.urgency_weight, "novelty": w.novelty_weight}
+                for w in updated_weights_list
+            },
+            affected_functions=list(fn_feedback.keys()),
+            reason=f"Recalibrated {len(feedback_rows)} unapplied feedback submissions for {stakeholder_function or 'all roles'}.",
+            scoring_version=new_version,
+        )
+        self.session.add(cal_run)
+
+        # 6. Mark feedback items as applied (Idempotency Lock)
+        for fb in feedback_rows:
+            fb.is_applied = True
+            fb.applied_at = now
+            fb.calibration_run_id = cal_run.run_id
+
+        # 7. Insert history record
         hist_entry = CalibrationHistory(
             version=new_version,
             weights={
@@ -344,7 +411,7 @@ class StakeholderCalibrationService:
         )
         self.session.add(hist_entry)
 
-        # 6. Recompute Calibrated Routing & BEFORE/AFTER Comparisons
+        # 8. Recompute Calibrated Routing & BEFORE/AFTER Comparisons
         comparisons: List[BeforeAfterComparisonSchema] = []
         routing_stmt = select(SignalRouting)
         routing_res = await self.session.execute(routing_stmt)
@@ -431,6 +498,7 @@ class StakeholderCalibrationService:
             calibration_version=new_version,
             stakeholder_function=stakeholder_function,
             applied_feedback_count=len(feedback_rows),
+            run_id=cal_run.run_id,
             updated_weights=updated_weights_list,
             comparisons=comparisons,
             watch_rule_suggestions=watch_suggestions,

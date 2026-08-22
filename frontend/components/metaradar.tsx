@@ -43,6 +43,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+import { useTheme } from '@/components/theme/ThemeProvider'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
@@ -65,6 +66,7 @@ import {
   recalibrateRole,
   searchSignals,
   submitFeedback,
+  triggerIngestAndPipelineSync,
 } from '@/lib/api'
 import { useLiveData } from '@/lib/hooks'
 import type {
@@ -101,7 +103,8 @@ const nav = [
   { href: '/calibrate', label: 'Calibrate', icon: Gauge },
 ]
 const secondary = [
-  { href: '/sources', label: 'Sources', icon: BookOpen },
+  { href: '/sources', label: 'Sources & Connectors', icon: BookOpen },
+  { href: '/observability', label: 'Observability & Logs', icon: Database },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -118,11 +121,21 @@ export function Badge({
 export function Card({
   children,
   className = '',
+  style,
+  role,
+  'aria-live': ariaLive,
 }: {
-  children: React.ReactNode
+  children?: React.ReactNode
   className?: string
+  style?: React.CSSProperties
+  role?: string
+  'aria-live'?: 'off' | 'assertive' | 'polite'
 }) {
-  return <section className={`panel ${className}`}>{children}</section>
+  return (
+    <section className={`panel ${className}`} style={style} role={role} aria-live={ariaLive}>
+      {children}
+    </section>
+  )
 }
 
 export function SectionTitle({
@@ -148,17 +161,13 @@ export function SectionTitle({
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const [dark, setDark] = useState(true)
+  const { isDark, toggleTheme } = useTheme()
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
 
   // Live health status polling (60s cadence)
   const { data: healthReady } = useLiveData<HealthReadyResponse>(getHealthReady, 60000)
   const { data: healthModels } = useLiveData<HealthModelsResponse>(getHealthModels, 60000)
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-  }, [dark])
 
   // Global ⌘K / Ctrl+K keyboard shortcut
   useEffect(() => {
@@ -173,6 +182,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  const [ingesting, setIngesting] = useState(false)
+  const [ingestNotice, setIngestNotice] = useState<string | null>(null)
+
+  const handleManualIngest = async () => {
+    setIngesting(true)
+    setIngestNotice(null)
+    try {
+      const res = await triggerIngestAndPipelineSync(undefined, 50)
+      const fetched = res.ingestion?.total_fetched ?? 0
+      const processed = res.pipeline?.signals_processed ?? 0
+      setIngestNotice(`Ingestion completed: ${fetched} fetched, ${processed} processed`)
+      setTimeout(() => setIngestNotice(null), 6000)
+    } catch (err) {
+      setIngestNotice('Ingestion encountered an error. Check sources telemetry.')
+      setTimeout(() => setIngestNotice(null), 6000)
+    } finally {
+      setIngesting(false)
+    }
+  }
 
   const links = [...nav, ...secondary]
   const isDegraded = healthReady?.status === 'degraded'
@@ -242,6 +271,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
         )}
+        {ingestNotice && (
+          <div className="px-4 py-2 bg-[var(--surface-hover)] border-b border-[var(--border)] text-xs text-[var(--foreground)] flex items-center justify-between animate-fadeIn">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
+              {ingestNotice}
+            </span>
+            <button onClick={() => setIngestNotice(null)} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-sm px-1">✕</button>
+          </div>
+        )}
 
         <header className="topbar">
           <button
@@ -262,6 +300,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="top-actions">
             <button
+              onClick={handleManualIngest}
+              disabled={ingesting}
+              className="inline-flex items-center gap-1.5 px-3 h-8 rounded text-xs font-semibold text-white transition"
+              style={{ background: 'var(--primary)', opacity: ingesting ? 0.7 : 1 }}
+              title="Manually trigger live public data ingestion and pipeline run"
+              aria-label="Ingest data now"
+            >
+              {ingesting ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin" />
+                  <span className="hidden sm:inline">Ingesting...</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={13} />
+                  <span className="hidden sm:inline">Ingest Data</span>
+                </>
+              )}
+            </button>
+            <button
               className="search-button"
               onClick={() => setSearchOpen(true)}
               aria-label="Search signals"
@@ -276,10 +334,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
             <button
               className="theme-toggle"
-              onClick={() => setDark(!dark)}
-              aria-label="Toggle theme"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
             >
-              {dark ? <Moon size={16} /> : <Sun size={16} />}
+              {isDark ? <Moon size={16} /> : <Sun size={16} />}
             </button>
           </div>
         </header>
@@ -1470,22 +1528,14 @@ export function SourcesPage() {
 
 export function SettingsPage() {
   const [mounted, setMounted] = useState(false)
-  const [theme, setTheme] = useState('dark')
+  const { theme, setTheme } = useTheme()
   const [pollingInterval, setPollingInterval] = useState('30')
   const [modalOpen, setModalOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
-    const stored = localStorage.getItem('theme') || 'dark'
-    setTheme(stored)
   }, [])
-
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
-  }
 
   const handleCacheSuccess = () => {
     setToast('Server cache cleared successfully.')
@@ -1511,13 +1561,13 @@ export function SettingsPage() {
           <div className="flex gap-2">
             <button
               className={`px-3 py-1.5 rounded text-xs border ${theme === 'dark' ? 'bg-[var(--foreground)] text-[var(--background)] font-bold' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
-              onClick={() => handleThemeChange('dark')}
+              onClick={() => setTheme('dark')}
             >
               Dark Mode
             </button>
             <button
               className={`px-3 py-1.5 rounded text-xs border ${theme === 'light' ? 'bg-[var(--foreground)] text-[var(--background)] font-bold' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
-              onClick={() => handleThemeChange('light')}
+              onClick={() => setTheme('light')}
             >
               Light Mode
             </button>
@@ -1971,7 +2021,7 @@ export function SignalDrawer({
                 <strong>{source.name}</strong>
                 <small>{source.type}</small>
               </span>
-              <Badge>{source.credibility}%</Badge>
+              <Badge>{source.credibility != null ? `${source.credibility}%` : '—'}</Badge>
             </div>
           ))
         ) : (

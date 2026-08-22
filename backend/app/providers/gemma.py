@@ -56,6 +56,16 @@ class GemmaProvider(LLMProvider):
             )
         return self._client
 
+    async def aclose(self) -> None:
+        """Close the lazily-created HTTP client, if one was created.
+
+        Public lifecycle hook so callers (e.g. /health/models) can release the
+        connection pool without reaching into the private ``_client`` attribute.
+        """
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
     async def _generate(self, prompt: str) -> str:
         """POST /api/generate to Ollama; returns the completion text.
 

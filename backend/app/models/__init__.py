@@ -36,12 +36,54 @@ class Source(Base):
     source_id = Column(String(100), primary_key=True)
     name = Column(String(255), nullable=False)
     freshness_class = Column(String(50), nullable=False)
+    tier = Column(Integer, default=1, nullable=False)
     syndication_group = Column(String(100), nullable=True)
     parent_source_id = Column(String(100), nullable=True)
     status = Column(String(50), default="active", nullable=False)
     quota_remaining = Column(Integer, nullable=True)
     last_success = Column(DateTime(timezone=True), nullable=True)
     last_error = Column(Text, nullable=True)
+
+    # Health & Operational Telemetry
+    connector_status = Column(String(50), default="NEVER_CONNECTED", nullable=False)
+    last_attempted = Column(DateTime(timezone=True), nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    records_fetched = Column(Integer, default=0, nullable=False)
+    records_accepted = Column(Integer, default=0, nullable=False)
+    records_rejected = Column(Integer, default=0, nullable=False)
+    records_new = Column(Integer, default=0, nullable=False)
+    records_updated = Column(Integer, default=0, nullable=False)
+    records_duplicate = Column(Integer, default=0, nullable=False)
+    upstream_data_timestamp = Column(String(100), nullable=True)
+    last_data_update = Column(DateTime(timezone=True), nullable=True)
+    next_scheduled_run = Column(DateTime(timezone=True), nullable=True)
+    consecutive_failures = Column(Integer, default=0, nullable=False)
+    backoff_minutes = Column(Integer, default=0, nullable=False)
+    http_status = Column(Integer, nullable=True)
+    configuration_error_message = Column(Text, nullable=True)
+
+
+class SourceHealthLog(Base):
+    __tablename__ = "source_health_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_id = Column(String(100), ForeignKey("sources.source_id"), nullable=False)
+    profile_id = Column(String(100), nullable=True)
+    pipeline_run_id = Column(UUID(as_uuid=True), ForeignKey("pipeline_runs.pipeline_run_id"), nullable=True)
+    checked_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    connector_status = Column(String(50), nullable=False)
+    http_status = Column(Integer, nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    duration_ms = Column(Float, nullable=True)
+    records_fetched = Column(Integer, default=0, nullable=False)
+    records_accepted = Column(Integer, default=0, nullable=False)
+    records_rejected = Column(Integer, default=0, nullable=False)
+    records_new = Column(Integer, default=0, nullable=False)
+    records_updated = Column(Integer, default=0, nullable=False)
+    records_duplicate = Column(Integer, default=0, nullable=False)
+    upstream_data_timestamp = Column(String(100), nullable=True)
+    last_error = Column(Text, nullable=True)
+    error_code = Column(String(50), nullable=True)
 
 
 class Company(Base):
@@ -133,7 +175,9 @@ class RawSignalBronze(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id = Column(String(100), ForeignKey("sources.source_id"), nullable=False)
+    source_tier = Column(Integer, default=1, nullable=False)
     external_id = Column(String(255), nullable=False)
+    event_type = Column(String(100), default="NEW", nullable=False)
     pipeline_run_id = Column(UUID(as_uuid=True), ForeignKey("pipeline_runs.pipeline_run_id"), nullable=True)
     retrieved_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     raw_payload = Column(JSONB, nullable=False)
@@ -147,12 +191,7 @@ class RawSignalBronze(Base):
 
 
 class ConnectorState(Base):
-    """Per-connector per-profile incremental run state (D-11).
-
-    Survives restarts, is queryable and auditable. `cursor` is a free-form
-    JSON string per source (e.g. NewsAPI quota bookkeeping:
-    {"quota_remaining": N, "quota_window_date": "YYYY-MM-DD"}).
-    """
+    """Per-connector per-profile incremental run state (D-11)."""
 
     __tablename__ = "connector_state"
 
@@ -185,13 +224,17 @@ class Signal(Base):
 
     signal_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id = Column(String(100), ForeignKey("sources.source_id"), nullable=False)
+    source_tier = Column(Integer, default=1, nullable=False)
+    source_name = Column(String(255), nullable=True)
+    external_id = Column(String(255), nullable=True)
+    event_type = Column(String(100), default="NEW", nullable=False)
     development_id = Column(UUID(as_uuid=True), ForeignKey("developments.development_id"), nullable=True)
     pipeline_run_id = Column(UUID(as_uuid=True), ForeignKey("pipeline_runs.pipeline_run_id"), nullable=True)
 
     pmid = Column(String(50), nullable=True)
     nct_id = Column(String(50), nullable=True)
     regulatory_id = Column(String(100), nullable=True)
-    fingerprint = Column(String(64), nullable=False)
+    fingerprint = Column(String(255), nullable=False)
     canonical_url = Column(Text, nullable=True)
 
     signal_type = Column(String(50), nullable=False)
@@ -200,6 +243,16 @@ class Signal(Base):
     content = Column(Text, nullable=False)
     published_at = Column(DateTime(timezone=True), nullable=False)
     retrieved_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    ingested_at = Column(DateTime(timezone=True), default=utc_now, nullable=True)
+
+    # Truthfulness, DataMode & Provenance
+    data_mode = Column(String(50), default="live", nullable=False)
+    is_synthetic = Column(Boolean, default=False, nullable=False)
+    confidence_type = Column(String(50), nullable=True)
+    confidence_rationale = Column(Text, nullable=True)
+    provenance_status = Column(String(50), default="available", nullable=False)
+    evidence_text = Column(Text, nullable=True)
+    raw_record_reference = Column(String(255), nullable=True)
 
     facts = Column(JSONB, nullable=True)
     interpretation = Column(Text, nullable=True)
@@ -219,11 +272,14 @@ class Signal(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     __table_args__ = (
-        Index("uix_signals_pmid", "pmid", unique=True, postgresql_where=(pmid.isnot(None))),
-        Index("uix_signals_nct_id", "nct_id", unique=True, postgresql_where=(nct_id.isnot(None))),
-        Index("uix_signals_regulatory_id", "regulatory_id", unique=True, postgresql_where=(regulatory_id.isnot(None))),
+        Index("ix_signals_pmid", "pmid", postgresql_where=(pmid.isnot(None))),
+        Index("ix_signals_nct_id", "nct_id", postgresql_where=(nct_id.isnot(None))),
+        Index("ix_signals_regulatory_id", "regulatory_id", postgresql_where=(regulatory_id.isnot(None))),
         Index("uix_signals_fingerprint", "fingerprint", unique=True),
-        Index("uix_signals_canonical_url", "canonical_url", unique=True, postgresql_where=(canonical_url.isnot(None))),
+        Index("ix_signals_canonical_url", "canonical_url", postgresql_where=(canonical_url.isnot(None))),
+        Index("ix_signals_source_name", "source_name"),
+        Index("ix_signals_external_id", "external_id"),
+        Index("ix_signals_provenance_status", "provenance_status"),
     )
 
 
@@ -239,6 +295,28 @@ class Contradiction(Base):
     confidence = Column(Float, nullable=False)
     description = Column(Text, nullable=False)
     detected_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Excerpts & Provenance
+    claim_a_excerpt = Column(Text, nullable=True)
+    claim_b_excerpt = Column(Text, nullable=True)
+    claim_a_evidence_id = Column(UUID(as_uuid=True), nullable=True)
+    claim_b_evidence_id = Column(UUID(as_uuid=True), nullable=True)
+    confidence_type = Column(String(50), default="nli_heuristic", nullable=False)
+
+
+class CalibrationRun(Base):
+    __tablename__ = "calibration_runs"
+
+    run_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    triggered_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(50), default="completed", nullable=False)
+    feedback_count = Column(Integer, default=0, nullable=False)
+    previous_weights = Column(JSONB, nullable=True)
+    new_weights = Column(JSONB, nullable=True)
+    affected_functions = Column(JSONB, nullable=True)
+    reason = Column(Text, nullable=True)
+    scoring_version = Column(String(50), default="haemophilia_v2.0", nullable=False)
 
 
 class CalibrationHistory(Base):
@@ -290,6 +368,11 @@ class CalibrationFeedback(Base):
     action_appropriate = Column(Boolean, nullable=False)
     comments = Column(Text, nullable=True)
     submitted_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Idempotency Tracking
+    is_applied = Column(Boolean, default=False, nullable=False)
+    applied_at = Column(DateTime(timezone=True), nullable=True)
+    calibration_run_id = Column(UUID(as_uuid=True), ForeignKey("calibration_runs.run_id"), nullable=True)
 
 
 class WatchItem(Base):

@@ -1,10 +1,15 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+from enum import Enum
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.intelligence import (
+    DataMode,
+    ConfidenceType,
     ConfluenceAlertItem,
+    ConfluenceInspectResponse,
+    ConfluenceEvidenceSourceItem,
     LifecycleTimelineItem,
     ContradictionItem,
     MissingSignalWatchItem,
@@ -12,6 +17,7 @@ from app.schemas.intelligence import (
 from app.schemas.registry import (
     DevelopmentSummary,
     SourceRegistryItem,
+    SourceHealthLogItem,
 )
 
 
@@ -43,14 +49,21 @@ class FactInterpretationSpeculationSchema(BaseModel):
 
 
 class ScoreBreakdownSchema(BaseModel):
-    impact: float
-    urgency: float
-    evidence_strength: float
-    strategic_relevance: float
-    novelty: float
-    routing_relevance: float
-    total_score: float
+    novelty: float = 0.0
+    clinical: float = 0.0
+    regulatory: float = 0.0
+    recency: float = 0.0
+    total: float = 0.0
+    version: str = "haemophilia_v2.0"
     reason: Optional[str] = None
+
+    # Legacy fields supported for backwards compatibility
+    impact: Optional[float] = None
+    urgency: Optional[float] = None
+    evidence_strength: Optional[float] = None
+    strategic_relevance: Optional[float] = None
+    routing_relevance: Optional[float] = None
+    total_score: Optional[float] = None
 
 
 class SourceSchema(BaseModel):
@@ -62,6 +75,9 @@ class SourceSchema(BaseModel):
     quota_remaining: Optional[int] = None
     last_success: Optional[datetime] = None
     last_error: Optional[str] = None
+    connector_status: str = "NEVER_CONNECTED"
+    latency_ms: Optional[int] = None
+    records_fetched: int = 0
 
 
 class EvidenceSchema(BaseModel):
@@ -75,6 +91,8 @@ class EvidenceSchema(BaseModel):
 class SignalSchema(BaseModel):
     signal_id: UUID
     source_id: str
+    source_name: Optional[str] = None
+    external_id: Optional[str] = None
     development_id: Optional[UUID] = None
     pipeline_run_id: Optional[UUID] = None
     pmid: Optional[str] = None
@@ -88,16 +106,29 @@ class SignalSchema(BaseModel):
     content: str
     published_at: datetime
     retrieved_at: datetime
+    ingested_at: Optional[datetime] = None
+
+    # Truthfulness, DataMode & Provenance
+    data_mode: str = "live"
+    is_synthetic: bool = False
+    confidence: Optional[float] = None
+    confidence_type: Optional[str] = None
+    confidence_rationale: Optional[str] = None
+    provenance_status: str = "available"
+    evidence_text: Optional[str] = None
+    raw_record_reference: Optional[str] = None
+    scoring_status: str = "computed"
+
     facts: List[str] = Field(default_factory=list)
     interpretation: Optional[str] = None
     speculation: Optional[str] = None
-    priority: str
+    priority: str = "MEDIUM"
     score_breakdown: Optional[ScoreBreakdownSchema] = None
     model_metadata: Optional[ModelMetadataSchema] = None
-    scoring_model_version: str
-    scoring_config_version: str
-    embedding_model_version: str
-    prompt_version: str
+    scoring_model_version: str = "haemophilia_v2.0"
+    scoring_config_version: str = "haemophilia_v1"
+    embedding_model_version: str = "v1"
+    prompt_version: str = "v1.0.0"
     created_at: datetime
 
 
@@ -158,13 +189,52 @@ class ConnectorHealthStatus(BaseModel):
     name: str
     status: str
     freshness_class: str
+    tier: int = 1
     quota_remaining: Optional[int] = None
     last_success: Optional[datetime] = None
+    last_attempted: Optional[datetime] = None
     last_error: Optional[str] = None
+    connector_status: str = "NEVER_CONNECTED"
+    latency_ms: Optional[int] = None
+    records_fetched: int = 0
+    records_accepted: int = 0
+    records_rejected: int = 0
+    records_new: int = 0
+    records_updated: int = 0
+    records_duplicate: int = 0
+    upstream_data_timestamp: Optional[str] = None
+    last_data_update: Optional[datetime] = None
+    next_scheduled_run: Optional[datetime] = None
+    consecutive_failures: int = 0
+    backoff_minutes: Optional[int] = None
+    http_status: Optional[int] = None
+    configuration_error_message: Optional[str] = None
 
 
 class HealthConnectorsResponse(BaseModel):
     connectors: List[ConnectorHealthStatus]
+    timestamp: datetime = Field(default_factory=utc_now)
+
+
+class SchedulerJobStatus(BaseModel):
+    connector_id: str
+    interval_minutes: int
+    next_run_at: Optional[datetime] = None
+    last_run_at: Optional[datetime] = None
+    last_status: str = "IDLE"
+    consecutive_failures: int = 0
+    current_backoff_minutes: int = 0
+    records_fetched_last_run: int = 0
+    records_new_last_run: int = 0
+    last_error: Optional[str] = None
+
+
+class SchedulerStatusResponse(BaseModel):
+    scheduler_enabled: bool
+    scheduler_running: bool
+    scheduler_started_at: Optional[datetime] = None
+    total_jobs: int = 0
+    active_jobs: List[SchedulerJobStatus] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=utc_now)
 
 
@@ -238,12 +308,25 @@ class AthenaQueryRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=500)
 
 
+class AthenaEvidenceCitation(BaseModel):
+    signal_id: str
+    title: str
+    source_id: str
+    canonical_url: Optional[str] = None
+    published_at: Optional[str] = None
+    excerpt: str
+    distance: float
+
+
 class AthenaQueryResponse(BaseModel):
     answer: str
     confidence: float
+    confidence_type: str = "model_reasoning"
     evidence_count: int
     mode: str = "reasoning"
     model_metadata: Optional[ModelMetadataSchema] = None
+    evidence: List[AthenaEvidenceCitation] = Field(default_factory=list)
+    response_type: str = "grounded_synthesis"
 
 
 class FeedbackSubmissionRequest(BaseModel):
@@ -289,9 +372,24 @@ class RoleWeightSchema(BaseModel):
     updated_at: datetime
 
 
+class CalibrationRunSchema(BaseModel):
+    run_id: UUID
+    triggered_at: datetime
+    completed_at: Optional[datetime] = None
+    status: str
+    feedback_count: int
+    previous_weights: Optional[Dict[str, Any]] = None
+    new_weights: Optional[Dict[str, Any]] = None
+    affected_functions: Optional[List[str]] = None
+    reason: Optional[str] = None
+    scoring_version: str
+
+
 class CalibrationWeightsResponse(BaseModel):
     version: str
     weights: List[RoleWeightSchema]
+    run_history: List[CalibrationRunSchema] = Field(default_factory=list)
+    pending_feedback_count: int = 0
 
 
 class WatchRuleSuggestionSchema(BaseModel):
@@ -321,6 +419,7 @@ class RecalibrateResponse(BaseModel):
     calibration_version: str
     stakeholder_function: Optional[str] = None
     applied_feedback_count: int
+    run_id: Optional[UUID] = None
     updated_weights: List[RoleWeightSchema] = Field(default_factory=list)
     comparisons: List[BeforeAfterComparisonSchema] = Field(default_factory=list)
     watch_rule_suggestions: List[WatchRuleSuggestionSchema] = Field(default_factory=list)
@@ -352,3 +451,18 @@ class ConfirmWatchItemResponse(BaseModel):
     status: str
     responsible_function: str
     monitoring_window_days: int
+
+
+class ActivityLogItem(BaseModel):
+    id: UUID
+    timestamp: datetime
+    level: str
+    service: str
+    component: str
+    event: str
+    status: str
+    duration_ms: Optional[float] = None
+    request_id: Optional[str] = None
+    pipeline_run_id: Optional[str] = None
+    message: str
+    details: Optional[Dict[str, Any]] = None

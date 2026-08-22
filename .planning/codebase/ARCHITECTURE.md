@@ -1,96 +1,62 @@
-<!-- refreshed: 2026-08-13 -->
-# Architecture Specification & System Topology
+---
+doc_type: codebase-map
+focus: arch
+analysis_date: 2026-08-22
+---
 
-**Analysis Date:** 2026-08-13 (Refreshed Post-Stabilization Baseline)
+# Architecture
 
-> **Current state:** Active Next.js 16 frontend under `frontend/app/` with strict TypeScript checking (`typescript: { ignoreBuildErrors: false }`), ESLint 10 flat config, Tailwind 4, Framer Motion, and Base UI/shadcn components. FastAPI backend (`backend/app/`) with Pydantic v2 schemas, async SQLAlchemy 2.0 ORM, async Alembic migration scaffolding, PII/PHI scrubber (`PIIPHIScrubber`), Red-Team 19-rule registry (`RedTeamNLIService`), LLM provider capability matrix (Local Gemma -> Grok fallback -> Degraded BART), and an 18-point `pytest` test suite. OpenAPI TypeScript contract is unified and auto-generated at `frontend/types/api.ts` with 0-diff drift validation. Dockerfiles authored for backend and frontend.
+**Analysis Date:** 2026-08-22
 
-## System Topology & Architecture Diagram
+## Architectural Pattern
 
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│            Next.js 16.3 Frontend (App Router, Tailwind 4)           │
-│  frontend/app/layout.tsx · app/page.tsx (→ /dashboard)             │
-│  frontend/app/[section]/page.tsx (dynamic route dispatcher)         │
-│  frontend/components/metaradar.tsx ('use client' UI components)    │
-│  frontend/types/api.ts (Canonical OpenAPI generated contract)      │
-└──────────────────────────────┬─────────────────────────────────────┘
-                               │   /api/v1 (REST, JSON) — CORS :3000
-                               ▼
-┌────────────────────────────────────────────────────────────────────┐
-│                  FastAPI Backend Architecture (v5.1.0)              │
-│  backend/app/main.py — FastAPI app factory + CORS                   │
-│  backend/app/api/v1/endpoints/ — /health, /signals, /overview, /athena │
-│  backend/app/core/config.py — pydantic-settings Settings            │
-│  backend/app/core/domain_config.py — YAML config loader             │
-│  backend/app/db/session.py — async SQLAlchemy engine                │
-│  backend/app/models/__init__.py — SQLAlchemy ORM schema             │
-│  backend/app/services/pii.py — PIIPHIScrubber regex service         │
-│  backend/app/services/redteam.py — RedTeamNLIService (Rules A–S)    │
-│  backend/app/services/deduplication.py — Fingerprinting & chunking │
-│  backend/app/providers/ — LLM provider abstraction & fallback chain │
-│  backend/app/connectors/base.py — SourceConnector interface         │
-└──────────┬──────────────────────────┬──────────────────────────────┘
-           │ asyncpg                  │ redis.asyncio
-           ▼                          ▼
-┌──────────────────────┐   ┌──────────────────────┐
-│ PostgreSQL 16 +      │   │ Redis 7              │
-│ pgvector (pg16 image)│   │ (docker-compose.yml) │
-│ + HNSW vector index  │   │ /0 db                │
-└──────────────────────┘   └──────────────────────┘
-```
+MetaRadar v5.1 is an autonomous, continuous competitive intelligence radar built as a layered service architecture with an explicit workflow engine core:
 
-## Component Matrix
+- **Autonomous Background Layer**: Persistent scheduler (`SourceScheduler` in `backend/app/services/scheduler.py`) independently polling configured sources with jitter, backoff, and distributed PostgreSQL advisory locks.
+- **Truthful Source Health Model**: Real-time state machine distinguishing `NO_NEW_DATA` from `DEGRADED`, `HEALTHY`, `STALE`, `FAILED`, `CONFIGURATION_ERROR`, and `NEVER_CONNECTED`.
+- **First-Stage Relevance Filter**: Deterministic `RelevanceGate` (`backend/app/services/relevance.py`) filtering bronze documents before AI execution.
+- **Decoupled Workflow Layer**: 11-stage LangGraph pipeline triggered strictly when new or updated records are detected.
+- **Inference Layer**: Provider fallback chain (`Local Gemma 3 4B` → `Grok API (privacy-gated)` → `Degraded BART`).
+- **Persistence Layer**: Async SQLAlchemy 2.0 with PostgreSQL 16 + pgvector and Redis 7 cache.
 
-### Backend Components
+## Layers & Responsibilities
 
-| Component | File Path | Responsibility |
+| Layer | Location | Responsibility |
 |---|---|---|
-| FastAPI Application | `backend/app/main.py` | App factory, CORS middleware, lifespan events, router mounting |
-| Application Settings | `backend/app/core/config.py` | Environment-driven `Settings` using Pydantic Settings v2 |
-| Domain Config Loader | `backend/app/core/domain_config.py` | YAML loader & validator for asset, signal, & routing configuration |
-| Database Session | `backend/app/db/session.py` | Async SQLAlchemy 2.0 engine, pool configuration, advisory locks |
-| ORM Models | `backend/app/models/__init__.py` | 17 SQLAlchemy models with timezone-aware datetimes and metadata |
-| Pydantic Schemas | `backend/app/schemas/__init__.py` | Pydantic response/request models with UTC datetime defaults |
-| Health Diagnostics | `backend/app/api/v1/endpoints/health.py` | Honest `/health`, `/health/ready`, `/health/models`, `/health/connectors` |
-| Signals & Athena API | `backend/app/api/v1/endpoints/signals.py` | Endpoints for `/signals`, `/overview`, and `/athena` |
-| PII / PHI Scrubber | `backend/app/services/pii.py` | Regex scrubbing for raw/nested PII & data classification |
-| Red-Team Optimizer | `backend/app/services/redteam.py` | 19-rule contradiction evaluation (Rules A–S) with priority gating |
-| Deduplication | `backend/app/services/deduplication.py` | Fingerprinting (pmid, nct, reg, sha256) & 256-token chunking |
-| Provider Chain | `backend/app/providers/*.py` | Local Gemma -> Grok fallback -> Degraded BART provider matrix |
-| Alembic Scaffold | `backend/alembic/env.py` | Async Alembic migration engine scaffold |
+| Ingestion & Schedulers | `backend/app/services/scheduler.py`, `backend/app/services/ingestion.py`, `backend/app/connectors/` | Continuous background polling, multi-feed source parsing, rate-limiting, advisory locking, bronze persistence |
+| Truthful Health Model | `backend/app/connectors/base.py`, `backend/app/api/v1/endpoints/health.py`, `observability.py` | Accurate health telemetry, timestamp updates on clean syncs, zero fabricated statuses |
+| Relevance Gate | `backend/app/services/relevance.py` | Deterministic classification (`DIRECTLY_RELEVANT`, `POTENTIALLY_RELEVANT`, `IRRELEVANT`) with explanation metadata |
+| HTTP API | `backend/app/api/v1/endpoints/*.py` | Request/response validation schemas (`app/schemas/`), DB session dependency injection |
+| Services | `backend/app/services/` | Calibration, confluence, deduplication, embeddings, pii scrubbing, redteam NLI, scoring, source independence, vector queries |
+| Intelligence Workflow | `backend/app/workflows/graph.py`, `runner.py`, `state.py`, `nodes/*.py` | 11-node LangGraph pipeline executing semantic extraction, confluence, red-team contradictions, synthesis, and calibration |
+| Providers | `backend/app/providers/` | Local Gemma GPU inference, Grok cloud fallback with privacy gate, BART degraded summarizer |
+| Persistence | `backend/app/models/__init__.py` (20 tables), `backend/app/db/session.py`, `alembic/versions/` | Entity relational models, Vector(384) embeddings, advisory locks |
+| Frontend | `frontend/app/page.tsx`, `frontend/components/<domain>/*.tsx`, `frontend/lib/api.ts` | Single-page radar workspace, source operations UI, typed API client |
 
-### Frontend Components
+## The 11-Node Intelligence Pipeline
 
-| Component | File Path | Responsibility |
-|---|---|---|
-| Root Layout | `frontend/app/layout.tsx` | HTML shell, font declarations, theme provider |
-| Section Dispatcher | `frontend/app/[section]/page.tsx` | Dynamic App Router dispatcher for all top-level sections |
-| Workspace Shell & Pages | `frontend/components/metaradar.tsx` | Client workspace (`Shell`, `DashboardPage`, `SignalsPage`, etc.) |
-| Canonical Contract | `frontend/types/api.ts` | Auto-generated OpenAPI TypeScript contract |
-| Legacy Contract Pointer | `frontend/src/types/api.ts` | Re-exports from `frontend/types/api.ts` |
-| Design System | `frontend/app/globals.css` | CSS-first Tailwind 4 design system with `@theme inline` tokens |
-| Lint Config | `frontend/eslint.config.mjs` | Native ESLint 10 flat config with `@next/eslint-plugin-next` |
-
-## Data Flow & Contract Pipeline
+Wired in `backend/app/workflows/graph.py`:
 
 ```
-Backend Pydantic Schemas (backend/app/schemas/__init__.py)
-  │
-  ▼
-FastAPI OpenAPI Generator (app.openapi())
-  │
-  ▼
-scripts/export_openapi.py
-  ├──> contracts/openapi.json
-  └──> frontend/types/api.ts (Canonical Contract)
-          ▲
-          └── frontend/src/types/api.ts (Re-export Pointer)
+node_ingest → node_validate → node_embed → node_nlp_extract → node_ontology_enrich
+→ node_confluence → node_lifecycle → node_redteam → node_missing_signal
+→ node_synthesize → node_calibrate → END
 ```
 
-## Quality & Security Enforcement
+State contract: `MetaRadarState` TypedDict in `backend/app/workflows/state.py` with explicit channel reducers (`replace_list` for signal deduplication, `merge_dicts` for metadata).
 
-- **Strict Type Checking**: `frontend/next.config.mjs` enforces `typescript: { ignoreBuildErrors: false }`.
-- **Flat Lint Config**: `frontend/eslint.config.mjs` enforces ESLint 10 flat rules across the frontend codebase.
-- **Backend Test Suite**: 18-point `pytest` suite tests configuration, API endpoints, provider matrix, PII scrubbing, privacy gate bypass prevention, Red-Team gating, and contract drift.
-- **Continuous Integration**: `.github/workflows/ci.yml` runs `pytest -v`, verifies contract sync, and executes frontend `tsc`, `lint`, and `build` gates with least-privilege `permissions: contents: read`.
+## Operational Radar Data Flow
+
+1. **Continuous autonomous monitoring**: `SourceScheduler` fires connector tasks on configured intervals (CT.gov: 60m, PubMed: 60m, EMA: 30m, FDA: 30m, NewsAPI: 15m) with ±10% jitter.
+2. **Distributed locking**: Task acquires PostgreSQL advisory lock (`try_advisory_lock`) to prevent duplicate runs across instances.
+3. **Multi-feed fetch & bronze landing**:
+   - ClinicalTrials.gov checks `dataTimestamp` metadata before fetching; diffs study changes.
+   - openFDA queries Drugs@FDA and parses MedWatch / Drug Safety RSS feeds.
+   - EMA parses Medicines RSS, EPARs updates, and Orphan designations.
+   - PII/PHI scrubber sanitizes abstracts and text.
+   - Raw payloads persisted immutably to `raw_signals_bronze` with SHA-256 content hashes and fingerprints.
+4. **Truthful health telemetry**: Run status is resolved and persisted to `source_health_logs` and `sources` (`NO_NEW_DATA`, `HEALTHY`, `DEGRADED`, etc.). `last_success` is updated on every clean synchronization.
+5. **Relevance Gate & Intelligence triggering**:
+   - If `records_new == 0`: LangGraph pipeline is **not** executed (saving compute).
+   - If `records_new > 0`: `RelevanceGate.evaluate()` filters bronze signals, and `PipelineRunner` triggers the 11-node graph on directly/potentially relevant records.
+6. **Synthesis & Calibration**: Generates Four-Question briefs (Q1–Q4) with epistemic tags (`FACT`, `INTERPRETATION`, `SPECULATION`) and role-specific calibrated relevance scores.

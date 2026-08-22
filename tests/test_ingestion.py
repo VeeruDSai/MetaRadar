@@ -658,7 +658,7 @@ async def test_health_connectors_endpoint():
         assert "quota_remaining" in conn
         assert "last_success" in conn
         assert "last_error" in conn
-        assert conn["status"] in ("active", "degraded", "error", "idle")
+        assert conn["status"] in ("active", "degraded", "error", "idle", "CONFIGURATION_ERROR", "HEALTHY", "UNHEALTHY", "DEGRADED")
 
 
 # --------------------------------------------------------------------------- #

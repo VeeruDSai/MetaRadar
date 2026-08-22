@@ -49,7 +49,6 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
         dev_by_asset: Dict[str, Dict[str, Any]] = {}
 
         for dev in existing_developments:
-            dev_id = str(dev.get("development_id", dev.get("id", "")))
             if dev.get("nct_id"):
                 dev_by_nct[dev["nct_id"].upper()] = dev
             if dev.get("asset_id"):
@@ -86,7 +85,12 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
                     "title": sig.get("title", f"Development: {asset_id or 'Haemophilia'}"),
                     "disease": disease,
                     "asset_id": asset_id,
-                    "company_id": company,
+                    # company_id must reference companies.company_id (slug PKs like
+                    # "novo-nordisk"). Extracted values here are display names
+                    # ("Novo Nordisk") or "Unknown" — writing them into the FK
+                    # either violates the constraint or creates junk rows. Leave
+                    # None until a proper name→id resolution exists (WR-12).
+                    "company_id": None,
                     "current_stage": "announced",
                     "nct_id": nct_ids[0] if nct_ids else None,
                     "created_at": datetime.now(timezone.utc).isoformat(),
@@ -115,17 +119,17 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
             a_id = sig.get("asset_id") or sig.get("disease", "haemophilia")
             asset_groups.setdefault(a_id, []).append(sig)
 
+        def parse_date(s):
+            try:
+                return datetime.fromisoformat(s.get("published_at", "").replace("Z", "+00:00"))
+            except Exception:
+                return datetime.now(timezone.utc)
+
         for a_id, group in asset_groups.items():
             if len(group) < min_signals:
                 continue
 
             # Sort by published_at
-            def parse_date(s):
-                try:
-                    return datetime.fromisoformat(s.get("published_at", "").replace("Z", "+00:00"))
-                except Exception:
-                    return datetime.now(timezone.utc)
-
             sorted_group = sorted(group, key=parse_date)
 
             for i in range(len(sorted_group)):
@@ -140,8 +144,12 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
                     else:
                         break
 
-                distinct_types = set(s.get("signal_type", "CLINICAL_TRIAL") for s in window_signals)
-                if len(distinct_types) >= min_signals:
+                distinct_sources = set(
+                    (s.get("source_id") or s.get("source_name") or s.get("signal_type", "SOURCE")).lower()
+                    for s in window_signals
+                )
+                if len(distinct_sources) >= min_signals:
+                    distinct_types = set(s.get("signal_type", "CLINICAL_TRIAL") for s in window_signals)
                     # Calculate weighted severity
                     severity_score = sum(
                         SIGNAL_TYPE_CREDIBILITY.get(st, 0.7) for st in distinct_types
@@ -151,10 +159,11 @@ async def node_confluence(state: MetaRadarState) -> Dict[str, Any]:
                         "asset_id": a_id,
                         "development_id": window_signals[0].get("development_id"),
                         "signal_count": len(window_signals),
+                        "independent_sources_count": len(distinct_sources),
                         "signal_types": list(distinct_types),
                         "signal_ids": [s.get("id") or s.get("fingerprint") for s in window_signals],
                         "severity_score": round(severity_score, 2),
-                        "confluence_type": "confirmed" if len(distinct_types) >= 4 else "emerging",
+                        "confluence_type": "confirmed" if len(distinct_sources) >= 4 else "emerging",
                         "detected_at": datetime.now(timezone.utc).isoformat()
                     }
                     confluent_stories.append(story)

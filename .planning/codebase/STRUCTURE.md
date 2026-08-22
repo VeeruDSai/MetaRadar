@@ -1,101 +1,74 @@
-# Codebase Structure & Directory Layout
+---
+doc_type: codebase-map
+focus: arch
+analysis_date: 2026-08-22
+---
 
-**Analysis Date:** 2026-08-13 (Refreshed Post-Stabilization Baseline)
+# Project Structure
 
-> **Current state:** Active Next.js 16 App Router tree consolidated under `frontend/app/` with canonical generated contract at `frontend/types/api.ts` and legacy pointer at `frontend/src/types/api.ts`. FastAPI backend modularized with async SQLAlchemy 2.0 models, async Alembic migration scaffolding, PII/PHI scrubber (`PIIPHIScrubber`), Red-Team 19-rule registry (`RedTeamNLIService`), and an 18-point `pytest` test suite (`tests/`). Infrastructure container images authored (`backend/Dockerfile`, `frontend/Dockerfile`).
+**Analysis Date:** 2026-08-22
 
-## Repository Layout
+## Root Layout
 
 ```
-novonordisk/                    # Repository Root (MetaRadar v5.1.0)
-├── AGENTS.md                   # Repository agent process standards & enforcers
-├── GEMINI.md                   # Repository Gemini process standards & enforcers
-├── CLAUDE.md                   # AI developer guidelines
-├── README.md                   # Project overview & quickstart
-├── .env.example                # Environment configuration template
-├── docker-compose.yml          # Container stack (postgres, redis, backend, frontend, gpu)
-├── .github/
-│   ├── workflows/ci.yml        # GitHub Actions CI workflow with least-privilege token
-│   └── pull_request_template.md # Mandatory pull request template
-├── backend/                    # FastAPI Backend (Python 3.11+)
-│   ├── Dockerfile              # Multi-stage non-root container image
-│   ├── requirements.txt        # Floor-pinned dependencies with pytest & async extensions
-│   ├── alembic.ini             # Async Alembic configuration
-│   ├── alembic/
-│   │   ├── env.py              # Async Alembic runner
-│   │   ├── script.py.mako      # Alembic migration script template
-│   │   └── versions/
-│   │       └── 001_initial_v51_schema.py   # Schema migration (17 tables + vector/pg_trgm + HNSW)
-│   └── app/
-│       ├── __init__.py
-│       ├── main.py             # FastAPI application factory & router registration
-│       ├── api/
-│       │   └── v1/
-│       │       ├── __init__.py
-│       │       └── endpoints/
-│       │           ├── health.py        # /health, /health/ready, /health/models, /health/connectors
-│       │           └── signals.py       # /signals, /overview, /athena
-│       ├── core/
-│       │   ├── config.py                # Pydantic Settings v2 configuration
-│       │   └── domain_config.py         # YAML domain configuration loader
-│       ├── db/
-│       │   └── session.py               # Async SQLAlchemy engine & session factory
-│       ├── models/
-│       │   └── __init__.py              # 17 SQLAlchemy ORM models
-│       ├── schemas/
-│       │   └── __init__.py              # Pydantic response/request schemas
-│       ├── services/
-│       │   ├── deduplication.py         # Fingerprinting & text chunking
-│       │   ├── pii.py                   # PIIPHIScrubber regex scrubbing
-│       │   └── redteam.py               # RedTeamNLIService with 19-rule registry (Rules A–S)
-│       ├── providers/
-│       │   ├── base.py                  # LLMProvider base & capability matrix
-│       │   ├── gemma.py                 # Local Gemma 3 4B provider
-│       │   ├── grok.py                  # Hosted xAI Grok provider with privacy gate
-│       │   ├── degraded.py              # Degraded BART fallback provider
-│       │   └── factory.py               # ProviderFactory fallback chain
-│       └── connectors/
-│           └── base.py                  # SourceConnector abstract base class
-├── frontend/                   # Next.js 16.3 Frontend
-│   ├── Dockerfile              # Multi-stage Node 20 alpine build
-│   ├── package.json            # Next 16.3, React 19, Tailwind 4, Framer Motion, Recharts
-│   ├── pnpm-lock.yaml          # Pnpm lockfile (minimum-release-age=0)
-│   ├── .pnpmrc                 # Local supply-chain policy
-│   ├── .nvmrc                  # Node 20 pinned runtime
-│   ├── eslint.config.mjs       # Native ESLint 10 flat config (@next/eslint-plugin-next)
-│   ├── next.config.mjs         # strict TS check (ignoreBuildErrors: false)
-│   ├── app/                    # Active App Router Tree
-│   │   ├── layout.tsx          # Root layout
-│   │   ├── page.tsx            # Redirects to /dashboard
-│   │   ├── [section]/page.tsx  # Dynamic section route dispatcher
-│   │   └── globals.css         # CSS-first Tailwind 4 design system
-│   ├── components/
-│   │   ├── metaradar.tsx       # UI Workspace (Shell, DashboardPage, SignalsPage, etc.)
-│   │   └── ui/button.tsx       # Base UI/shadcn button component
-│   ├── lib/
-│   │   ├── api.ts              # API interface seam
-│   │   ├── mock-data.ts        # Synthetic signal fixtures
-│   │   └── utils.ts            # clsx & tailwind-merge wrapper
-│   ├── types/
-│   │   └── api.ts              # CANONICAL OpenAPI generated TypeScript contract
-│   └── src/
-│       └── types/
-│           └── api.ts          # Legacy contract re-export pointer
-├── contracts/
-│   └── openapi.json            # OpenAPI 3.1 schema snapshot
-├── config/
-│   └── haemophilia.yaml        # Haemophilia domain specification
-├── scripts/
-│   └── export_openapi.py       # OpenAPI JSON & TypeScript contract generator
-├── tests/                      # Dedicated Backend Pytest Test Suite
-│   ├── pytest.ini              # Pytest configuration
-│   ├── test_config.py          # Domain config & settings validation
-│   ├── test_api_endpoints.py   # FastAPI endpoints verification
-│   ├── test_provider_matrix.py # Cases A–F provider matrix fallback tests
-│   ├── test_privacy_boundary.py# PII scrubbing & privacy gate bypass prevention
-│   ├── test_redteam_behavior.py# Red-Team priority gating, capping, & caching
-│   └── test_contract_drift.py  # OpenAPI to TypeScript contract drift validation
-└── docs/                       # Specifications & Repository Process Rules
-    ├── rules/                  # CANONICAL process standards (ENGINEERING, DOD, WORKFLOW, etc.)
-    └── audits/                 # Audits & verification matrix
+novonordisk/
+├── backend/                  # FastAPI service (Python)
+│   ├── alembic/              # Migrations: 001_initial_v51_schema … 006_widen_signals_external_id
+│   ├── app/
+│   │   ├── api/v1/endpoints/ # cache, feedback, health, ingestion, intelligence, observability, pipeline, registry, search, signals
+│   │   ├── connectors/       # base + pubmed, clinical_trials, newsapi, fda, ema
+│   │   ├── core/             # config.py, domain_config.py, logging.py, middleware.py
+│   │   ├── db/               # session.py (engine/get_db/advisory locks), seed.py
+│   │   ├── models/           # __init__.py — all 20 SQLAlchemy tables in one module
+│   │   ├── providers/        # base, factory, gemma, grok, degraded
+│   │   ├── schemas/          # Pydantic models (intelligence, registry, observability)
+│   │   ├── services/         # scheduler, relevance, calibration, confluence, deduplication, embeddings(+_backfill), ingestion, pii, redteam, scoring, source_independence, vector_query
+│   │   ├── workflows/        # graph.py (11 nodes), runner.py, state.py, nodes/*.py
+│   │   └── main.py           # FastAPI entry point & lifespan scheduler manager
+│   ├── Dockerfile
+│   └── requirements.txt      # runtime AND test deps together
+├── frontend/                 # Next.js 16 app (pnpm)
+│   ├── app/                  # layout.tsx, page.tsx, globals.css
+│   ├── components/           # 19 .tsx across 14 domain dirs: signals(2), common(4), ui, theme,
+│   │                         # calibration, confluence, contradictions, developments, functions,
+│   │                         # intelligence, missing-signals, observability, settings, sources + metaradar.tsx (root shell)
+│   │                         # Note: SourcesOperationsWorkspace.tsx renders truthful health badges, tiers, scheduler metrics
+│   ├── lib/                  # api.ts (typed client), errors.ts, hooks.ts, mappers.ts, utils.ts
+│   ├── types/api.ts          # CANONICAL generated API types (from contracts/openapi.json)
+│   ├── next.config.mjs       # images.unoptimized only
+│   ├── package.json          # pnpm@9.15.5, node >=20.9.0
+│   └── tsconfig.json         # strict TypeScript; `@/*` path alias
+├── config/haemophilia.yaml   # Domain rules: assets, confluence thresholds, source tiers, query profiles
+├── contracts/openapi.json    # Canonical OpenAPI 3.1 contract
+├── data/synthetic_signals.json # 500-signal synthetic fallback dataset
+├── docs/                     # Master plan v5.0, SRS, SDD, UI doc, risk/guardrails + docs/rules/* process standards
+├── scripts/                  # export_openapi.py, check-banned-classes.mjs, generate_parity_matrix.py, apply_phase7_migrations.py, test_live_ingestion_e2e.py
+├── tests/                    # 23 pytest files (root-level, NOT backend/tests)
+├── logs/                     # start.py telemetry output
+├── setup.py / start.py       # Bootstrap & unified launcher
+├── pytest.ini                # testpaths=tests, pythonpath = backend .
+├── docker-compose.yml        # postgres, redis, backend(+gpu profile), frontend, ollama
+└── .env / .env.example       # secrets local-only
 ```
+
+## Key Locations by Task
+
+| Task | Files |
+|---|---|
+| Configure background ingestion scheduler | `backend/app/services/scheduler.py`, `backend/app/core/config.py` |
+| Add/modify API endpoint | `backend/app/api/v1/endpoints/*.py`, schema in `backend/app/schemas/`, then run `python scripts/export_openapi.py` |
+| Modify DB schema | New Alembic revision in `backend/alembic/versions/` + model in `backend/app/models/__init__.py` |
+| Modify data connector / feed | `backend/app/connectors/`, register in `config/haemophilia.yaml` |
+| Modify relevance filtering | `backend/app/services/relevance.py` |
+| Change pipeline behavior | Node in `backend/app/workflows/nodes/`, wire in `graph.py`, state channels in `state.py` |
+| Swap/configure LLM | `backend/app/core/config.py` env keys + `backend/app/providers/factory.py` chain |
+| Domain/scoring rules | `config/haemophilia.yaml` (loaded via `backend/app/core/domain_config.py`) |
+| Frontend feature | Component under `frontend/components/<domain>/`, API call via `frontend/lib/api.ts` |
+| UI styling tokens | Theme system; banned classes enforced by `scripts/check-banned-classes.mjs` |
+
+## Naming & Organization Conventions
+
+- **Python**: snake_case modules/functions; PascalCase classes; node functions named `node_<step>`; tables plural snake_case; UUID PKs `<entity>_id`; version columns suffixed `_version`.
+- **TypeScript/React**: PascalCase component files matching export (`SignalCard.tsx`); camelCase lib functions prefixed `get*` for fetchers; one component per file.
+- **Contract Synchronization**: Generated types live exclusively in `frontend/types/api.ts` generated from `scripts/export_openapi.py`.
+- **Tests**: `tests/test_<area>.py` mirrors the area under test.

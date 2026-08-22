@@ -1,45 +1,55 @@
-# Integrations & API Surface
+---
+doc_type: codebase-map
+focus: tech
+analysis_date: 2026-08-22
+---
 
-**Analysis Date:** 2026-08-13 (Refreshed Post-Stabilization Baseline)
+# External Integrations
 
-> **Status note:** Backend API endpoints (`/api/v1/health`, `/health/ready`, `/health/models`, `/health/connectors`, `/signals`, `/overview`, `/athena`) are registered in `backend/app/main.py` and covered by an 18-point `pytest` suite. PII/PHI scrubbing and Grok privacy gating (`validate_privacy_gate`) are fully tested. Contradiction detection uses a 19-rule registry (Rules A–S) with priority gating, candidate capping, and caching. The frontend API contract is unified and auto-generated at `frontend/types/api.ts` with zero-diff drift verification in CI. External connectors (PubMed, ClinicalTrials.gov, OpenFDA, NewsAPI, EMA) use the `SourceConnector` abstract base (`backend/app/connectors/base.py`) with honest health status reporting, ready to be wired in Phase 1.
+**Analysis Date:** 2026-08-22
 
-## Data Sources & External Integrations
+## Data Source Connectors
 
-| Source | Status | Implementation File | Configuration | Data Pipeline Destination |
+All connectors implement the shared `SourceConnector` contract (`backend/app/connectors/base.py`): isolated, idempotent, incremental (per-connector `ConnectorState` cursor), quota-aware, retrying (`max_retries=3`, base delay 1.5s, timeout 30s), and observable. Connectors persist immutable bronze rows only — never intelligence.
+
+| Connector | File | Profiles & Feeds | Auth / Credentials | Capabilities & Notes |
 |---|---|---|---|---|
-| NCBI PubMed / E-utilities | **Scaffold / Honest Status** | `backend/app/api/v1/endpoints/health.py` | Keyless | `raw_signals_bronze` -> `signals` |
-| ClinicalTrials.gov (v2) | **Scaffold / Honest Status** | `backend/app/api/v1/endpoints/health.py` | Keyless | `raw_signals_bronze` -> `signals` |
-| NewsAPI | **Scaffold / Configured** | `backend/app/core/config.py` (`NEWSAPI_KEY`) | `NEWSAPI_KEY` | `raw_signals_bronze` -> `signals` |
-| OpenFDA | **Scaffold / Honest Status** | `backend/app/api/v1/endpoints/health.py` | Keyless | `raw_signals_bronze` -> `signals` |
-| EMA RSS | **Scaffold / Honest Status** | `backend/app/api/v1/endpoints/health.py` | Keyless | `raw_signals_bronze` -> `signals` |
-| Congress Abstracts | **Scaffold / Honest Status** | `backend/app/api/v1/endpoints/health.py` | Keyless | `raw_signals_bronze` -> `signals` |
-| Synthetic Signals | **Synthetic Provider** | `backend/app/api/v1/endpoints/signals.py` | Embedded | Fallback signal demonstration |
+| NCBI PubMed | `backend/app/connectors/pubmed.py` | `haemophilia_clinical`, `haemophilia_safety`, `competitive_news` | Keyless public E-utilities + `NCBI_API_KEY`, `NCBI_TOOL`, `NCBI_EMAIL` | Tier 1 Authoritative. PII-scrubbed abstracts, verbatim XML persisted. |
+| ClinicalTrials.gov v2 | `backend/app/connectors/clinical_trials.py` | `haemophilia_trials`, `novo_pipeline` | Keyless API v2 | Tier 1 Authoritative. `dataTimestamp` tracking to avoid redundant fetches; diff change event detection (`NEW_TRIAL`, `STATUS_CHANGED`, `RECRUITMENT_UPDATE`, `RESULTS_POSTED`, `STUDY_COMPLETED`, etc.). |
+| openFDA Drugs & Safety | `backend/app/connectors/fda.py` | `haemophilia_approvals`, `fda_medwatch_safety`, `fda_drug_safety_comms` | Keyless public + `OPENFDA_API_KEY` | Tier 1 Authoritative. Multi-feed adapter: Drugs@FDA API + FDA MedWatch RSS + Drug Safety Communications RSS. |
+| European Medicines Agency (EMA) | `backend/app/connectors/ema.py` | `haemophilia_ema`, `ema_epars`, `ema_orphan_designations` | Keyless public RSS feeds | Tier 1 Authoritative. Multi-feed RSS adapter: Medicines RSS, EPAR updates RSS, and Orphan Designations RSS. |
+| NewsAPI | `backend/app/connectors/newsapi.py` | `haemophilia_market`, `gene_therapy_news` | `NEWSAPI_KEY` (tracked daily quota) | Tier 3 Discovery. Daily 100 req/day quota gate; graceful fallback and `CONFIGURATION_ERROR` diagnostics. |
 
-## Internal Provider & Security Integrations
+Synthetic fallback: `data/synthetic_signals.json` (500 curated signals, `is_synthetic=true`, never presented as live). Seeded via `backend/app/db/seed.py`.
 
-- **Local Gemma 3 4B** (`google/gemma-3-4b-it`):
-  - Abstracted via `GemmaProvider` (`backend/app/providers/gemma.py`). Returns structured reasoning payload and `ModelMetadataSchema`.
-- **xAI Grok Fallback** (`grok-beta`):
-  - Abstracted via `GrokProvider` (`backend/app/providers/grok.py`). Enforces strict `validate_privacy_gate`: only `PUBLIC` or `SYNTHETIC` payloads pass; `CONFIDENTIAL`, `PATIENT_IDENTIFIABLE`, or `UNKNOWN` payloads are blocked with `PermissionError`.
-- **BART Degraded Mode** (`facebook/bart-large-cnn`):
-  - Abstracted via `DegradedProvider` (`backend/app/providers/degraded.py`). Supports `SUMMARIZE` capability; `reasoning_available = False`, `actions_available = False`.
-- **PII / PHI Scrubber**:
-  - `PIIPHIScrubber` (`backend/app/services/pii.py`) scrubs email, phone, SSN, MRN, and patient DOB patterns using redaction tokens (`[EMAIL_REDACTED]`, `[PHONE_REDACTED]`, `[SSN_REDACTED]`, `[MRN_REDACTED]`, `[PATIENT_DOB_REDACTED]`).
-- **Red-Team Contradiction Evaluator**:
-  - `RedTeamNLIService` (`backend/app/services/redteam.py`) implements a 19-rule registry (`REDTEAM_RULES` A–S) covering dosing, safety, efficacy, and regulatory contradictions with priority gating (`HIGH`/`CRITICAL` only), candidate capping, and in-memory result caching.
+## Autonomous Background Scheduler (`backend/app/services/scheduler.py`)
 
-## Contract Synchronization & Pipeline
+- **Autonomous Persistent Workers**: Independent `asyncio` background tasks per connector (`ClinicalTrials`: 60m, `PubMed`: 60m, `EMA`: 30m, `FDA`: 30m, `NewsAPI`: 15m).
+- **Jitter & Backoff**: ±10% random jitter on intervals; exponential backoff on connector errors up to `SCHEDULER_MAX_BACKOFF_MINUTES` (240m).
+- **Concurrency Protection**: PostgreSQL 31-bit advisory locks (`try_advisory_lock` / `release_advisory_lock` in `backend/app/db/session.py`) prevent overlapping runs across multiple server instances.
+- **Ingestion vs. Intelligence Separation**: LangGraph pipeline is triggered *only* when new/changed records are found (`records_new > 0`).
+- **Telemetry**: Exposed via `GET /api/v1/observability/scheduler` (`SchedulerStatusResponse`).
 
-```
-Pydantic Schemas (backend/app/schemas/__init__.py)
-  │
-  ▼
-FastAPI OpenAPI Schema (app.openapi())
-  │
-  ▼
-contracts/openapi.json & frontend/types/api.ts (scripts/export_openapi.py)
-  │
-  ▼
-Frontend Components (frontend/components/metaradar.tsx) & CI Drift Verification (.github/workflows/ci.yml)
-```
+## Deterministic Relevance Gate (`backend/app/services/relevance.py`)
+
+- First-stage filter classifying bronze records into `DIRECTLY_RELEVANT`, `POTENTIALLY_RELEVANT`, and `IRRELEVANT`.
+- Records explicit rationale (`relevance_reason`) and relevance scores.
+- Rejects irrelevant records before promoting them to expensive NLP and embedding pipeline nodes.
+
+## Databases & Cache
+
+- **PostgreSQL 16 + pgvector** — primary datastore (`DATABASE_URL`, asyncpg). Schema managed by Alembic (`backend/alembic/versions/001…006`). 20 tables in `backend/app/models/__init__.py`.
+- **Redis 7** — cache + rate limiting via `REDIS_URL` (db 0); endpoints in `backend/app/api/v1/endpoints/cache.py`.
+- **Postgres advisory locks** — distributed single-execution scheduler protection.
+
+## AI Providers
+
+- **Ollama sidecar** (`http://ollama:11434`, model `gemma3:4b`) — local reasoning LLM host (`backend/app/providers/gemma.py`).
+- **xAI Grok API** — optional hosted fallback (`XAI_API_KEY`, `ENABLE_GROK_FALLBACK`). Privacy gate in `backend/app/providers/grok.py` blocks non-public data.
+- **Degraded BART provider** — local summarization-only fallback when no reasoning provider is available.
+
+## Internal Contract (Backend ⇄ Frontend)
+
+- REST under `/api/v1` (routers in `backend/app/api/v1/endpoints/`): health, signals, intelligence, registry, observability, cache, pipeline, ingestion, search, feedback.
+- **Canonical contract sync**: OpenAPI 3.1 spec at `contracts/openapi.json`; `scripts/export_openapi.py` generates `frontend/types/api.ts`.
+- Frontend typed fetch layer: `frontend/lib/api.ts` wrapping endpoints with `ApiError` (`frontend/lib/errors.ts`) and DTO mappers (`frontend/lib/mappers.ts`). Base URL `NEXT_PUBLIC_API_BASE_URL`.

@@ -1,32 +1,35 @@
-# Concerns & Technical Debt Audit
-
-> Property of the developer. Strict status classification: PASS, PARTIAL, FAIL, BLOCKED, NOT EXECUTED, CONFIGURED.
-
-## Active & Pending Runtime Concerns
-
-### Blocked Runtime Execution
-- **B1. Database Migration Runtime Execution (BLOCKED)**
-  - Description: Async Alembic engine scaffolded (`alembic.ini`, `env.py`, `script.py.mako`), but runtime execution of `alembic upgrade head` and `alembic check` requires a running PostgreSQL daemon on port 5432.
-  - Evidence: `alembic check` returns `ConnectionRefusedError [WinError 1225]` when PostgreSQL service is not active.
-  - Recommended action: Launch local PostgreSQL 16 daemon on port 5432 to execute database runtime migration verification.
-
-### Unexecuted Container Runtime
-- **U1. Docker Stack Container Execution (NOT EXECUTED)**
-  - Description: Container images authored (`backend/Dockerfile`, `frontend/Dockerfile`) and `docker compose config` validated with zero warnings. Runtime container startup (`docker compose up -d`) and health checks require an active Docker Desktop daemon.
-  - Evidence: `docker ps` returns daemon connection failure on host machine.
-  - Recommended action: Launch Docker Desktop daemon on host machine to execute full container stack runtime verification.
-
+---
+doc_type: codebase-map
+focus: concerns
+analysis_date: 2026-08-22
 ---
 
-## Resolved Concerns Baseline (Stabilized & Verified)
+# Concerns & Technical Debt
 
-- **Backend Pytest Test Suite (M2, resolved 2026-08-13):**
-  - Authored an 18-point `pytest` backend test suite (`tests/`) covering configuration, FastAPI endpoints (`/health/*`, `/signals`, `/overview`, `/athena`), Cases A–F provider matrix, PII regex scrubbing & Grok gate bypass prevention, Red-Team 19-rule gating & caching, and contract drift. All 18 tests passed cleanly in 5.03s.
-- **Canonical API Contract Location (H9, resolved 2026-08-13):**
-  - Unified canonical contract export location at `frontend/types/api.ts` with legacy pointer at `frontend/src/types/api.ts`. Verified zero-diff deterministic generation.
-- **Frontend Build & Quality Gates (H-FE2, resolved 2026-08-13):**
-  - Enforced strict TypeScript build checking (`typescript: { ignoreBuildErrors: false }`). Verified 0 type errors via `npx tsc --noEmit`.
-  - Added native ESLint 10 flat config (`frontend/eslint.config.mjs`). Verified 0 lint errors via `npx eslint .`.
-  - Verified production build compilation via `npx next build`.
-- **Least-Privilege CI Security (CI-CD, resolved 2026-08-13):**
-  - Added `permissions: contents: read` to `.github/workflows/ci.yml` and added backend `pytest` suite execution step.
+**Analysis Date:** 2026-08-22
+
+## Resolved Technical Debt
+
+- **Autonomous Persistent Scheduler**: Replaced manual-only pipeline trigger with an autonomous background scheduler (`SourceScheduler` in `backend/app/services/scheduler.py`) using native asyncio loops and PostgreSQL advisory locks.
+- **Truthful Source Health Model**: Fixed the false-degradation issue where clean API runs with 0 new records were labeled `DEGRADED`. Implemented canonical `NO_NEW_DATA` state and automatic `last_success` updates.
+- **Legacy Artifact Cleanup**: Deleted obsolete `frontend/package-lock.json` in favor of canonical `pnpm-lock.yaml`. Deleted legacy `frontend/src/` directory to eliminate dual-types confusion.
+- **Multi-Feed Adapter Architecture**: Added FDA MedWatch RSS, FDA Drug Safety RSS, EMA EPARs, EMA Orphan Designations RSS, and ClinicalTrials.gov `dataTimestamp` tracking with change event detection.
+- **Deterministic Relevance Gate**: Implemented `RelevanceGate` (`backend/app/services/relevance.py`) to reject noise before expensive downstream AI processing.
+
+## Current Concerns & Production Hardening Items
+
+### 1. Authentication & Authorization (Medium — Production Readiness)
+- API endpoints currently do not require user authentication (designed for local hackathon demo).
+- Recommended: Implement JWT / OAuth2 bearer token authentication before deploying to multi-tenant or shared cloud infrastructure.
+
+### 2. Live Network Rate-Limiting & Quota Scaling (Low–Medium)
+- NewsAPI has a strict 100 req/day quota on developer keys (handled with graceful fallback).
+- PubMed and openFDA have elevated rate limits when using API keys (`NCBI_API_KEY`, `OPENFDA_API_KEY`). Ensure keys are configured in production environment secrets.
+
+### 3. Vector Database Scaling (Low)
+- FastEmbed 384-dimensional embeddings are indexed in PostgreSQL using pgvector HNSW indexes.
+- As the bronze corpus expands beyond tens of thousands of items, monitor query latency and tune `ef_search` / `m` parameters as needed.
+
+### 4. Continuous Deployment & Migrations
+- Alembic migrations (`001` through `006`) are verified and clean.
+- In production, execute `alembic upgrade head` via a pre-deployment step rather than relying on application bootstrap.

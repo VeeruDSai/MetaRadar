@@ -1,18 +1,15 @@
-import {
-  Shell,
-  DashboardPage,
-  SignalsPage,
-  ConfluencePage,
-  LifecyclePage,
-  RedTeamPage,
-  MissingSignalsPage,
-  DevelopmentsPage,
-  IntelligencePage,
-  FunctionsPage,
-  SourcesPage,
-  SettingsPage,
-  GenericPage,
-} from '@/components/metaradar'
+import { Shell, DashboardPage, LifecyclePage, GenericPage } from '@/components/metaradar'
+import { SignalList } from '@/components/signals/SignalList'
+import { ConfluenceWorkspace } from '@/components/confluence/ConfluenceWorkspace'
+import { ContradictionWorkspace } from '@/components/contradictions/ContradictionWorkspace'
+import { MissingSignalsWorkspace } from '@/components/missing-signals/MissingSignalsWorkspace'
+import { DevelopmentsWorkspace } from '@/components/developments/DevelopmentsWorkspace'
+import { AthenaWorkspace } from '@/components/intelligence/AthenaWorkspace'
+import { FunctionsWorkspace } from '@/components/functions/FunctionsWorkspace'
+import { CalibrationWorkspace } from '@/components/calibration/CalibrationWorkspace'
+import { SourcesOperationsWorkspace } from '@/components/sources/SourcesOperationsWorkspace'
+import { ActivityStreamWorkspace } from '@/components/observability/ActivityStreamWorkspace'
+import { SettingsWorkspace } from '@/components/settings/SettingsWorkspace'
 
 export default async function SectionPage({
   params,
@@ -28,35 +25,40 @@ export default async function SectionPage({
       page = <DashboardPage />
       break
     case 'signals':
-      page = <SignalsPage />
+      page = <SignalList />
       break
     case 'confluence':
-      page = <ConfluencePage />
+      page = <ConfluenceWorkspace />
       break
     case 'lifecycles':
       page = <LifecyclePage />
       break
     case 'red-team':
-      page = <RedTeamPage />
+      page = <ContradictionWorkspace />
       break
     case 'missing-signals':
-      page = <MissingSignalsPage />
+      page = <MissingSignalsWorkspace />
       break
     case 'developments':
-      page = <DevelopmentsPage />
+      page = <DevelopmentsWorkspace />
       break
     case 'intelligence':
-      page = <IntelligencePage />
+      page = <AthenaWorkspace />
       break
     case 'functions':
+      page = <FunctionsWorkspace />
+      break
     case 'calibrate':
-      page = <FunctionsPage />
+      page = <CalibrationWorkspace />
       break
     case 'sources':
-      page = <SourcesPage />
+      page = <SourcesOperationsWorkspace />
+      break
+    case 'observability':
+      page = <ActivityStreamWorkspace />
       break
     case 'settings':
-      page = <SettingsPage />
+      page = <SettingsWorkspace />
       break
     default:
       page = (

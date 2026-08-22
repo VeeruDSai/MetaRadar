@@ -1,7 +1,51 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+from enum import Enum
 from pydantic import BaseModel, Field
+
+
+class DataMode(str, Enum):
+    LIVE = "live"
+    RECORDED_DEMO = "recorded_demo"
+    TEST_FIXTURE = "test_fixture"
+    BENCHMARK = "benchmark"
+
+
+class ConfidenceType(str, Enum):
+    EXTRACTION = "extraction"
+    CLASSIFICATION = "classification"
+    EVIDENCE = "evidence"
+    CONTRADICTION = "nli_heuristic"
+    OVERDUE_HEURISTIC = "overdue_heuristic"
+    MODEL_REASONING = "model_reasoning"
+    HUMAN_VALIDATION = "human_validation"
+
+
+class ConfluenceEvidenceSourceItem(BaseModel):
+    source_name: str
+    source_type: str
+    external_id: str
+    source_url: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    verbatim_excerpt: str
+    points_contributed: float = 0.0
+
+
+class ConfluenceInspectResponse(BaseModel):
+    confluence_id: UUID
+    development_id: Optional[UUID] = None
+    development_title: Optional[str] = None
+    score: float
+    label: str
+    confluence_type: str
+    window_hours: int = 48
+    distinct_sources_count: int
+    score_breakdown: Dict[str, float] = Field(default_factory=dict)
+    reasoning: str
+    sources: List[ConfluenceEvidenceSourceItem] = Field(default_factory=list)
+    detected_at: datetime
 
 
 class ConfluenceAlertItem(BaseModel):
@@ -12,6 +56,12 @@ class ConfluenceAlertItem(BaseModel):
     confluence_type: str
     created_at: datetime
     signals: List[Dict[str, Any]] = Field(default_factory=list)
+    score: Optional[float] = None
+    calculation_version: Optional[str] = "confluence_v2.0"
+    independent_sources_count: Optional[int] = None
+    score_breakdown: Optional[Dict[str, float]] = None
+    reasoning: Optional[str] = None
+    evidence_sources: List[ConfluenceEvidenceSourceItem] = Field(default_factory=list)
 
 
 class LifecycleTimelineItem(BaseModel):
@@ -33,10 +83,15 @@ class ContradictionItem(BaseModel):
     rule_name: str
     severity: str
     confidence: float
+    confidence_type: str = "nli_heuristic"
     description: str
     detected_at: datetime
     claim_a_excerpt: Optional[str] = None
     claim_b_excerpt: Optional[str] = None
+    claim_a_evidence_id: Optional[UUID] = None
+    claim_b_evidence_id: Optional[UUID] = None
+    detection_rule: Optional[str] = None
+    resolution_status: Optional[str] = "unresolved"
 
 
 class MissingSignalWatchItem(BaseModel):
@@ -49,5 +104,7 @@ class MissingSignalWatchItem(BaseModel):
     responsible_function: str
     status: str
     confidence: float = 0.5
+    confidence_type: str = "overdue_heuristic"
+    overdue_heuristic_score: Optional[float] = None
     days_overdue: int = 0
     created_at: datetime

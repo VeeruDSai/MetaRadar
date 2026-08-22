@@ -1,39 +1,60 @@
-# Testing & Verification Strategy
+---
+doc_type: codebase-map
+focus: quality
+analysis_date: 2026-08-22
+---
 
-**Analysis Date:** 2026-08-13 (Refreshed Post-Stabilization Baseline)
+# Testing Strategy & Gates
 
-> **Current state:** Backend quality is enforced by an 18-point `pytest` test suite (`tests/`) covering configuration, FastAPI endpoints, provider matrix fallback (Cases A–F), PII scrubbing, privacy gate bypass prevention, Red-Team priority gating, candidate capping, caching, and OpenAPI contract drift. Frontend quality is enforced by `npx tsc --noEmit` (`typescript: { ignoreBuildErrors: false }`), ESLint 10 native flat config (`frontend/eslint.config.mjs`), and `npx next build`. All gates are automated in `.github/workflows/ci.yml`.
+**Analysis Date:** 2026-08-22
 
-## Automated Quality Gates Summary
+## Framework & Configuration
 
-| Verification Layer | Executable Command | Executed Status | Verification Scope |
-|---|---|---|---|
-| **Backend Pytest Suite** | `pytest -v` | **`PASS`** (18/18 passed) | Domain config, FastAPI routes (`/health`, `/signals`, `/overview`, `/athena`), Cases A–F provider matrix, PII regex scrubbing & Grok gate bypass prevention, Red-Team 19-rule gating & caching, contract drift. |
-| **Frontend Typecheck** | `pnpm exec tsc --noEmit` | **`PASS`** (0 errors) | Strict TypeScript compiler validation across `frontend/app/` and components. |
-| **Frontend Linting** | `pnpm lint` (`eslint .`) | **`PASS`** (0 errors) | ESLint 10 flat config (`eslint.config.mjs`) checking code syntax & Next.js conventions. |
-| **Frontend Production Build**| `pnpm build` (`next build`) | **`BUILD VERIFIED`** (0 errors) | Turbopack compilation & static route generation for `/dashboard`, `/signals`, `/intelligence`, etc. |
-| **Contract Sync Drift** | `python scripts/export_openapi.py` | **`PASS`** (0 diff) | Zero-diff verification of generated canonical TypeScript contract at `frontend/types/api.ts`. |
-| **Database Migration** | `alembic upgrade head` | **`BLOCKED`** | Async Alembic engine scaffolded; migration execution pending local PostgreSQL daemon on port 5432. |
-| **Docker Stack Runtime** | `docker compose up -d` | **`NOT EXECUTED`** | `docker compose config` zero warnings; container runtime execution pending local Docker Desktop daemon. |
+- **pytest 8** with `pytest-asyncio` (`asyncio_mode = auto`), `pytest-cov`, `pytest-httpx`.
+- Config: `pytest.ini` at repo root (`testpaths = tests`, `pythonpath = backend .`).
+- Custom marker `live` for live external service verification (e.g. `test_providers_live.py`).
+- Fast in-memory testing: all 114 automated unit and integration tests run offline without network dependencies in ~25-30s.
 
-## Pytest Test Suite Structure
+## Test Suite Distribution (23 test modules)
 
+| File | Focus Area |
+|---|---|
+| `test_observability.py` | Source health state machine, `NO_NEW_DATA` truthful rules, scheduler telemetry |
+| `test_ingestion.py` | Connector execution, PII scrubbing, deduplication, incremental cursor state |
+| `test_connector_health.py` | Health log logging, unprobed status handling, error detail mapping |
+| `test_provenance.py` | Provenance serialization, canonical URL preservation, verbatim bronze payloads |
+| `test_intelligence_nodes.py` | 11-node LangGraph execution, entity mapping, synthesis, feedback calibration |
+| `test_confluence_semantics.py` | Multi-source convergence and independent confirmation thresholds |
+| `test_redteam_behavior.py` | 19-rule contradiction registry and NLI heuristics |
+| `test_calibration_service.py` / `test_e2e_calibration_scenario.py` | Role weight recalibration and feedback gradient updates |
+| `test_signals_endpoints.py` / `test_api_endpoints.py` | FastAPI endpoint contracts, Athena Q&A, search filters |
+| `test_retrieval.py` | 384-dim FastEmbed embeddings, vector search, pgvector integration |
+| `test_contract_drift.py` | OpenAPI 3.1 ⇄ `frontend/types/api.ts` synchronization gate |
+| `test_parity_matrix.py` | Generated feature parity matrix verification |
+| `test_privacy_boundary.py` | Grok privacy gate: non-public data blocking |
+| `test_truthfulness_and_invariants.py` | Model metadata, synthetic labeling, correlation ID propagation |
+| `test_failure_injection.py` | Fault-tolerance and degraded provider fallbacks |
+| `test_config.py` / `test_config_errors.py` | Configuration loading, error surfacing with remediation advice |
+| `test_launchers.py` | `setup.py` and `start.py` process lifecycle |
+| `test_provider_matrix.py` | Capability matrix across Local Gemma, Grok, and BART |
+
+## Mandatory CI / DoD Verification Gates
+
+```bash
+# 1. Banned Tailwind class gate
+node scripts/check-banned-classes.mjs
+
+# 2. Frontend ESLint
+npm --prefix frontend run lint
+
+# 3. Next.js 16 Production Build & TypeScript Typecheck
+npm --prefix frontend run build
+
+# 4. Backend Pytest Suite
+pytest tests/ -v -k "not test_database_connection"
+
+# 5. Contract Synchronization
+python scripts/export_openapi.py
 ```
-tests/
-├── pytest.ini              # Pytest discovery & asyncio configuration
-├── test_config.py          # Domain config & settings validation
-├── test_api_endpoints.py   # FastAPI endpoints verification (/health/*, /signals, /overview, /athena)
-├── test_provider_matrix.py # Cases A–F provider matrix fallback & capability tests
-├── test_privacy_boundary.py# PIIPHIScrubber regex patterns & Grok privacy gate bypass prevention
-├── test_redteam_behavior.py# RedTeamNLIService priority gating, candidate capping, & caching
-└── test_contract_drift.py  # FastAPI OpenAPI to TypeScript contract drift validation
-```
 
-## Continuous Integration Workflow
-
-Workflow File: `.github/workflows/ci.yml`
-
-- **Least-Privilege Security**: Configured with `permissions: contents: read`.
-- **Python Step**: Sets up Python 3.11, installs `backend/requirements.txt` (including `pytest`, `pytest-asyncio`, `pytest-cov`), and executes `pytest -v`.
-- **Contract Drift Step**: Runs `python scripts/export_openapi.py` and checks `git diff --exit-code frontend/types/api.ts`.
-- **Frontend Step**: Sets up Node 20 + pnpm 11, installs dependencies, and runs `pnpm exec tsc --noEmit`, `pnpm lint`, and `pnpm build`.
+Current test execution status: **114 passed, 1 skipped (live Grok key)**.

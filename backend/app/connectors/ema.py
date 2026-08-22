@@ -60,30 +60,36 @@ class EMARSSConnector(SourceConnector):
             )
 
         try:
-            resp = await self._fetch_with_retry(self.rss_url)
-            root = ET.fromstring(resp.text)
-
-            keywords = [k.lower() for k in (profile.keywords or [])]
+            target_url = getattr(profile, "rss_url", None) or self.rss_url
             payloads: List[RawSignalPayload] = []
             seen_external: set = set()
 
-            for item in root.findall(".//item"):
-                title = self._element_text(item, "title")
-                description = self._element_text(item, "description")
-                # keyword filter (title + description)
-                if keywords:
-                    haystack = f"{title} {description}".lower()
-                    if not any(kw in haystack for kw in keywords):
+            try:
+                resp = await self._fetch_with_retry(target_url)
+                root = ET.fromstring(resp.text)
+                keywords = [k.lower() for k in (profile.keywords or [])]
+
+                for item in root.findall(".//item"):
+                    title = self._element_text(item, "title")
+                    description = self._element_text(item, "description")
+                    # keyword filter (title + description)
+                    if keywords:
+                        haystack = f"{title} {description}".lower()
+                        if not any(kw in haystack for kw in keywords):
+                            continue
+
+                    guid = self._element_text(item, "guid") or self._element_text(item, "link")
+                    if not guid:
                         continue
 
-                guid = self._element_text(item, "guid") or self._element_text(item, "link")
-                if not guid:
-                    continue
-
-                payload = self._parse_item(item, guid.strip(), title, description, started)
-                if payload is not None and payload.external_id not in seen_external:
-                    seen_external.add(payload.external_id)
-                    payloads.append(payload)
+                    payload = self._parse_item(item, guid.strip(), title, description, started, profile_id)
+                    if payload is not None and payload.external_id not in seen_external:
+                        seen_external.add(payload.external_id)
+                        payloads.append(payload)
+            except (ET.ParseError, ConnectorFetchError) as parse_or_fetch_err:
+                logger.warning("EMA profile %s feed unavailable/invalid XML: %s", profile_id, parse_or_fetch_err)
+            except Exception as inner_ex:
+                logger.warning("EMA profile %s unexpected error: %s", profile_id, inner_ex)
 
             fetched = len(payloads)
             new_rows, duplicates = 0, 0
@@ -100,9 +106,10 @@ class EMARSSConnector(SourceConnector):
                 first_run_completed=True,
             )
 
+            status_result = "SUCCESS" if new_rows > 0 or fetched > 0 else "NO_NEW_DATA"
             return ProfileRunResult(
                 profile_id=profile_id,
-                status="SUCCESS",
+                status=status_result,
                 fetched=fetched,
                 new_rows=new_rows,
                 duplicates=duplicates,
@@ -125,6 +132,7 @@ class EMARSSConnector(SourceConnector):
         title: str,
         description: str,
         retrieved_at: datetime,
+        profile_id: str = "ema_general",
     ) -> Optional[RawSignalPayload]:
         link = self._element_text(item, "link")
         pub_date_raw = self._element_text(item, "pubDate")
@@ -138,14 +146,29 @@ class EMARSSConnector(SourceConnector):
             f"{external_id}:{content}".encode("utf-8")
         ).hexdigest()
 
+        if "orphan" in profile_id.lower():
+            event_type = "ORPHAN_DESIGNATION"
+        elif "epar" in profile_id.lower():
+            event_type = "EPAR_UPDATE"
+        else:
+            event_type = "REGULATORY_DECISION"
+
         raw_payload = {
             "external_id": external_id,
             "fingerprint": fingerprint,
             "title": title,
             "description": scrubbed,
+            "source_name": "EMA",
+            "source_tier": 1,
+            "signal_type": "REGULATORY",
+            "event_type": event_type,
+            "url": link or None,
+            "evidence_text": scrubbed or description or title,
+            "provenance_status": "available" if link else "missing_url",
             "link": link,
             "guid": guid,
             "pub_date": pub_date_raw,
+            "published_at": published_at.isoformat(),
             "entities": [],
             "pii_scrubbed": True,
             "retrieved_at": retrieved_at.isoformat(),

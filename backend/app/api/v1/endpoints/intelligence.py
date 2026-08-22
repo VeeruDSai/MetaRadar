@@ -1,7 +1,8 @@
+import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from app.db.session import get_db
@@ -17,10 +18,13 @@ from app.models import (
 )
 from app.schemas.intelligence import (
     ConfluenceAlertItem,
+    ConfluenceInspectResponse,
+    ConfluenceEvidenceSourceItem,
     LifecycleTimelineItem,
     ContradictionItem,
     MissingSignalWatchItem,
 )
+from app.services.confluence import SIGNAL_TYPE_WEIGHTS, confluence_engine
 
 router = APIRouter()
 
@@ -29,13 +33,57 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
+def _derive_external_id(row) -> str:
+    """Derive a stable external identifier for evidence traceability.
+
+    Prefers real source identifiers (pmid / nct / regulatory), then a truncated
+    fingerprint, then the signal UUID. Shared by the confluence list and inspect
+    handlers so both views render identical external_id values.
+    """
+    pmid, nct_id, reg_id = row[9], row[10], row[11]
+    fingerprint, signal_id = row[4], row[0]
+    return pmid or nct_id or reg_id or (fingerprint[:12] if fingerprint else str(signal_id))
+
+
+async def _fetch_claim_excerpt(db: AsyncSession, claim_id: str) -> Optional[str]:
+    """Fetch verbatim evidence excerpt from Signal.content or Evidence table by ID."""
+    if not claim_id:
+        return None
+    try:
+        signal_uuid = UUID(claim_id)
+        # Try fetching from Signal
+        sig_stmt = select(Signal.content).where(Signal.signal_id == signal_uuid).limit(1)
+        sig_res = await db.execute(sig_stmt)
+        content = sig_res.scalar_one_or_none()
+        if content:
+            return content[:500]
+
+        # Try fetching from Evidence
+        ev_stmt = select(Evidence.evidence_excerpt).where(Evidence.evidence_id == signal_uuid).limit(1)
+        ev_res = await db.execute(ev_stmt)
+        ev_content = ev_res.scalar_one_or_none()
+        if ev_content:
+            return ev_content[:500]
+    except (ValueError, TypeError):
+        # claim_id is not a UUID (e.g. external NCT or PMID string)
+        sig_stmt = select(Signal.content).where(
+            or_(Signal.nct_id == claim_id, Signal.pmid == claim_id, Signal.regulatory_id == claim_id)
+        ).limit(1)
+        sig_res = await db.execute(sig_stmt)
+        content = sig_res.scalar_one_or_none()
+        if content:
+            return content[:500]
+
+    return None
+
+
 @router.get("/confluence", response_model=List[ConfluenceAlertItem])
 async def get_confluence_alerts(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve multi-source intelligence confluence alerts with development context."""
+    """Retrieve multi-source intelligence confluence alerts with real computed scoring and breakdown."""
     query = (
         select(
             Confluence,
@@ -51,37 +99,214 @@ async def get_confluence_alerts(
 
     alerts = []
     for conf, dev_title in rows:
-        # Fetch associated signals for evidence preview
+        # Fetch associated signals with full provenance & content excerpts
         sig_query = (
-            select(Signal.signal_id, Signal.title, Signal.signal_type, Signal.published_at)
+            select(
+                Signal.signal_id,
+                Signal.title,
+                Signal.signal_type,
+                Signal.source_id,
+                Signal.fingerprint,
+                Signal.canonical_url,
+                Signal.content,
+                Signal.published_at,
+                Signal.retrieved_at,
+                Signal.pmid,
+                Signal.nct_id,
+                Signal.regulatory_id,
+            )
             .where(Signal.development_id == conf.development_id)
             .order_by(Signal.published_at.desc())
-            .limit(5)
+            .limit(10)
         )
         sig_res = await db.execute(sig_query)
         sig_rows = sig_res.all()
-        signals_data = [
-            {
+
+        signals_data = []
+        evidence_sources = []
+        signal_types = []
+        distinct_source_ids = set()
+
+        for s in sig_rows:
+            ext_id = _derive_external_id(s)
+            signals_data.append({
                 "signal_id": str(s[0]),
                 "title": s[1],
                 "signal_type": s[2],
-                "published_at": s[3].isoformat() if s[3] else None,
-            }
-            for s in sig_rows
-        ]
+                "source_id": s[3],
+                "external_id": ext_id,
+                "canonical_url": s[5],
+                "published_at": s[7].isoformat() if s[7] else None,
+            })
+            if s[2]:
+                signal_types.append(s[2])
+            if s[3]:
+                distinct_source_ids.add(s[3])
+
+            # Canonical engine weights — keeps evidence points identical to score_breakdown.
+            pts = SIGNAL_TYPE_WEIGHTS.get((s[2] or "").upper(), 10.0)
+
+            source_name = s[3] or "External Biomedical API"
+            if s[3] == "pubmed":
+                source_name = "PubMed Central / E-Utilities"
+            elif s[3] == "clinical_trials":
+                source_name = "ClinicalTrials.gov API v2"
+            elif s[3] == "fda":
+                source_name = "OpenFDA Drug Data"
+            elif s[3] == "ema":
+                source_name = "EMA RSS Stream"
+
+            evidence_sources.append(
+                ConfluenceEvidenceSourceItem(
+                    source_name=source_name,
+                    source_type=s[2] or "CLINICAL_TRIAL",
+                    external_id=_derive_external_id(s),
+                    source_url=s[5],
+                    retrieved_at=s[8],
+                    published_at=s[7],
+                    verbatim_excerpt=(s[6] or s[1])[:400],
+                    points_contributed=pts,
+                )
+            )
+
+        score, breakdown = confluence_engine.calculate_confluence_score(signal_types)
+        independent_count = len(distinct_source_ids)
+        drivers_str = ", ".join(f"{k} (+{v}pts)" for k, v in breakdown.items())
+        reasoning = (
+            f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent source types "
+            f"within a 48h sliding window. Drivers: {drivers_str}."
+            if signal_types else "Baseline multi-source confluence score."
+        )
 
         alerts.append(
             ConfluenceAlertItem(
                 confluence_id=conf.confluence_id,
                 development_id=conf.development_id,
                 development_title=dev_title or "Unassigned Development",
-                signal_count=conf.signal_count,
+                signal_count=conf.signal_count or len(signals_data),
                 confluence_type=conf.confluence_type,
                 created_at=conf.created_at,
                 signals=signals_data,
+                score=score if signals_data else 0.0,
+                calculation_version=confluence_engine.VERSION,
+                independent_sources_count=independent_count if signals_data else 0,
+                score_breakdown=breakdown,
+                reasoning=reasoning,
+                evidence_sources=evidence_sources,
             )
         )
     return alerts
+
+
+@router.get("/confluence/{confluence_id}/inspect", response_model=ConfluenceInspectResponse)
+async def inspect_confluence(
+    confluence_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Backward Trace Inspectability: Answers 'Why this confluence score?' with full verbatim citations,
+    source URLs, retrieval timestamps, and exact mathematical breakdown.
+    """
+    conf_stmt = (
+        select(
+            Confluence,
+            Development.title.label("development_title"),
+        )
+        .outerjoin(Development, Confluence.development_id == Development.development_id)
+        .where(Confluence.confluence_id == confluence_id)
+        .limit(1)
+    )
+    res = await db.execute(conf_stmt)
+    row = res.first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Confluence alert '{confluence_id}' not found")
+
+    conf, dev_title = row
+
+    sig_query = (
+        select(
+            Signal.signal_id,
+            Signal.title,
+            Signal.signal_type,
+            Signal.source_id,
+            Signal.fingerprint,
+            Signal.canonical_url,
+            Signal.content,
+            Signal.published_at,
+            Signal.retrieved_at,
+            Signal.pmid,
+            Signal.nct_id,
+            Signal.regulatory_id,
+        )
+        .where(Signal.development_id == conf.development_id)
+        .order_by(Signal.published_at.desc())
+        .limit(20)
+    )
+    sig_res = await db.execute(sig_query)
+    sig_rows = sig_res.all()
+
+    evidence_sources = []
+    signal_types = []
+    distinct_source_ids = set()
+
+    for s in sig_rows:
+        if s[2]:
+            signal_types.append(s[2])
+        if s[3]:
+            distinct_source_ids.add(s[3])
+
+        # Canonical engine weights — keeps evidence points identical to score_breakdown.
+        pts = SIGNAL_TYPE_WEIGHTS.get((s[2] or "").upper(), 10.0)
+
+        ext_id = _derive_external_id(s)
+        source_name = (s[3] or "Source").replace("_", " ").title()
+        if s[3] == "pubmed":
+            source_name = "PubMed Central"
+        elif s[3] == "clinical_trials":
+            source_name = "ClinicalTrials.gov"
+        elif s[3] == "newsapi":
+            source_name = "News & Commercial"
+        elif s[3] == "fda":
+            source_name = "OpenFDA Direct"
+        elif s[3] == "ema":
+            source_name = "EMA RSS Stream"
+
+        evidence_sources.append(
+            ConfluenceEvidenceSourceItem(
+                source_name=source_name,
+                source_type=s[2] or "CLINICAL_TRIAL",
+                external_id=ext_id,
+                source_url=s[5],
+                retrieved_at=s[8],
+                published_at=s[7],
+                verbatim_excerpt=(s[6] or s[1])[:500],
+                points_contributed=pts,
+            )
+        )
+
+    score, breakdown = confluence_engine.calculate_confluence_score(signal_types)
+    independent_count = len(distinct_source_ids)
+    drivers_str = ", ".join(f"{k} (+{v}pts)" for k, v in breakdown.items())
+    reasoning = (
+        f"Multi-source convergence score of {score:.1f} calculated across {independent_count} independent sources "
+        f"within a 48h sliding window. Drivers: {drivers_str}."
+        if signal_types else "Confluence calculated from multi-source cross-referencing."
+    )
+
+    return ConfluenceInspectResponse(
+        confluence_id=conf.confluence_id,
+        development_id=conf.development_id,
+        development_title=dev_title or "Unassigned Development",
+        score=score if signal_types else 0.0,
+        label=f"{conf.confluence_type.capitalize()} Confluence ({independent_count} Independent Sources)",
+        confluence_type=conf.confluence_type,
+        window_hours=48,
+        distinct_sources_count=independent_count,
+        score_breakdown=breakdown,
+        reasoning=reasoning,
+        sources=evidence_sources,
+        detected_at=conf.created_at,
+    )
 
 
 @router.get("/lifecycles", response_model=List[LifecycleTimelineItem])
@@ -133,7 +358,7 @@ async def get_red_team_contradictions(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve pairwise Red-Team contradiction alerts."""
+    """Retrieve pairwise Red-Team contradiction alerts with verbatim evidence excerpts."""
     query = select(Contradiction)
     if severity:
         query = query.where(Contradiction.severity == severity.upper())
@@ -144,6 +369,10 @@ async def get_red_team_contradictions(
 
     items = []
     for c in contradictions:
+        # Fetch real evidence excerpts from database (zero placeholder claims)
+        claim_a_excerpt = c.claim_a_excerpt or await _fetch_claim_excerpt(db, c.claim_a_id)
+        claim_b_excerpt = c.claim_b_excerpt or await _fetch_claim_excerpt(db, c.claim_b_id)
+
         items.append(
             ContradictionItem(
                 contradiction_id=c.contradiction_id,
@@ -153,10 +382,15 @@ async def get_red_team_contradictions(
                 rule_name=c.rule_name,
                 severity=c.severity,
                 confidence=c.confidence,
+                confidence_type=getattr(c, "confidence_type", "nli_heuristic") or "nli_heuristic",
                 description=c.description,
                 detected_at=c.detected_at,
-                claim_a_excerpt=f"Primary evidence claim for {c.claim_a_id}",
-                claim_b_excerpt=f"Contradicting evidence claim for {c.claim_b_id}",
+                claim_a_excerpt=claim_a_excerpt,
+                claim_b_excerpt=claim_b_excerpt,
+                claim_a_evidence_id=getattr(c, "claim_a_evidence_id", None),
+                claim_b_evidence_id=getattr(c, "claim_b_evidence_id", None),
+                detection_rule=f"Rule {c.rule_id}: {c.rule_name}",
+                resolution_status="unresolved",
             )
         )
     return items
@@ -169,7 +403,7 @@ async def get_missing_signals(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve missing signal watch items and overdue expected events."""
+    """Retrieve missing signal watch items with explicit 6-state FSM and overdue heuristic scores."""
     query = (
         select(
             WatchItem,
@@ -178,7 +412,29 @@ async def get_missing_signals(
         .outerjoin(Development, WatchItem.development_id == Development.development_id)
     )
     if status:
-        query = query.where(WatchItem.status == status)
+        bucket = status.strip().upper()
+        if bucket in ("SATISFIED", "SUPPRESSED"):
+            # Stored lifecycle values are lowercase.
+            query = query.where(WatchItem.status == bucket.lower())
+        elif bucket in ("OVERDUE", "DUE", "WITHIN_WINDOW"):
+            # Computed buckets never exist as stored status values; translate them
+            # into date-window comparisons mirroring the per-row computation below:
+            #   overdue_days = max(0, age_days - window), window defaults to 90,
+            #   OVERDUE when overdue_days > 30, DUE when 0 < overdue_days <= 30.
+            age_days = func.extract("epoch", func.now() - WatchItem.created_at) / 86400.0
+            window_days = func.coalesce(WatchItem.monitoring_window_days, 90)
+            overdue_days = func.greatest(age_days - window_days, 0.0)
+            query = query.where(WatchItem.status.notin_(("satisfied", "suppressed")))
+            if bucket == "OVERDUE":
+                query = query.where(overdue_days > 30)
+            elif bucket == "DUE":
+                query = query.where(overdue_days > 0, overdue_days <= 30)
+            else:  # WITHIN_WINDOW
+                query = query.where(overdue_days <= 0)
+        else:
+            # Unknown value: fall back to exact stored-status match so garbage
+            # input still returns an empty result set instead of everything.
+            query = query.where(WatchItem.status == status)
 
     query = query.order_by(WatchItem.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(query)
@@ -188,9 +444,25 @@ async def get_missing_signals(
     items = []
     for watch, dev_title in rows:
         # Calculate days since creation vs monitoring window
-        age_days = (now - watch.created_at).days if watch.created_at else 0
-        overdue = max(0, age_days - watch.monitoring_window_days)
-        confidence = min(0.95, 0.5 + (0.05 * (overdue // 10))) if overdue > 0 else 0.5
+        created_dt = watch.created_at if watch.created_at.tzinfo else watch.created_at.replace(tzinfo=timezone.utc)
+        age_days = max(0, (now - created_dt).days)
+        window = watch.monitoring_window_days or 90
+        overdue_days = max(0, age_days - window)
+
+        # Explicit overdue heuristic (never mislabeled as AI confidence)
+        overdue_heuristic = min(0.95, 0.5 + (0.05 * (overdue_days // 10))) if overdue_days > 0 else 0.5
+
+        # Canonical Watch States: WITHIN_WINDOW | DUE | OVERDUE | SATISFIED | SUPPRESSED | INSUFFICIENT_DATA
+        if watch.status in ("satisfied", "suppressed"):
+            computed_status = watch.status.upper()
+        elif overdue_days > 30:
+            computed_status = "OVERDUE"
+        elif overdue_days > 0:
+            computed_status = "DUE"
+        elif age_days >= 0:
+            computed_status = "WITHIN_WINDOW"
+        else:
+            computed_status = "INSUFFICIENT_DATA"
 
         items.append(
             MissingSignalWatchItem(
@@ -199,11 +471,13 @@ async def get_missing_signals(
                 development_title=dev_title or "Portfolio Monitoring",
                 trigger_event=watch.trigger_event,
                 expected_event=watch.expected_event,
-                monitoring_window_days=watch.monitoring_window_days,
+                monitoring_window_days=window,
                 responsible_function=watch.responsible_function,
-                status=watch.status,
-                confidence=confidence,
-                days_overdue=overdue,
+                status=computed_status,
+                confidence=round(overdue_heuristic, 2),
+                confidence_type="overdue_heuristic",
+                overdue_heuristic_score=round(overdue_heuristic, 2),
+                days_overdue=overdue_days,
                 created_at=watch.created_at,
             )
         )
