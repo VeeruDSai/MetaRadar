@@ -66,6 +66,7 @@ import {
   recalibrateRole,
   searchSignals,
   submitFeedback,
+  triggerIngestAndPipelineSync,
 } from '@/lib/api'
 import { useLiveData } from '@/lib/hooks'
 import type {
@@ -182,6 +183,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  const [ingesting, setIngesting] = useState(false)
+  const [ingestNotice, setIngestNotice] = useState<string | null>(null)
+
+  const handleManualIngest = async () => {
+    setIngesting(true)
+    setIngestNotice(null)
+    try {
+      const res = await triggerIngestAndPipelineSync(undefined, 50)
+      const fetched = res.ingestion?.total_fetched ?? 0
+      const processed = res.pipeline?.signals_processed ?? 0
+      setIngestNotice(`Ingestion completed: ${fetched} fetched, ${processed} processed`)
+      setTimeout(() => setIngestNotice(null), 6000)
+    } catch (err) {
+      setIngestNotice('Ingestion encountered an error. Check sources telemetry.')
+      setTimeout(() => setIngestNotice(null), 6000)
+    } finally {
+      setIngesting(false)
+    }
+  }
+
   const links = [...nav, ...secondary]
   const isDegraded = healthReady?.status === 'degraded'
 
@@ -250,6 +271,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
         )}
+        {ingestNotice && (
+          <div className="px-4 py-2 bg-[var(--surface-hover)] border-b border-[var(--border)] text-xs text-[var(--foreground)] flex items-center justify-between animate-fadeIn">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
+              {ingestNotice}
+            </span>
+            <button onClick={() => setIngestNotice(null)} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-sm px-1">✕</button>
+          </div>
+        )}
 
         <header className="topbar">
           <button
@@ -269,6 +299,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </strong>
           </div>
           <div className="top-actions">
+            <button
+              onClick={handleManualIngest}
+              disabled={ingesting}
+              className="inline-flex items-center gap-1.5 px-3 h-8 rounded text-xs font-semibold text-white transition"
+              style={{ background: 'var(--primary)', opacity: ingesting ? 0.7 : 1 }}
+              title="Manually trigger live public data ingestion and pipeline run"
+              aria-label="Ingest data now"
+            >
+              {ingesting ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin" />
+                  <span className="hidden sm:inline">Ingesting...</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={13} />
+                  <span className="hidden sm:inline">Ingest Data</span>
+                </>
+              )}
+            </button>
             <button
               className="search-button"
               onClick={() => setSearchOpen(true)}

@@ -7,6 +7,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
+    Asset,
+    Company,
     Confluence,
     Contradiction,
     Development,
@@ -141,6 +143,12 @@ class PipelineRunner:
         now = datetime.now(timezone.utc)
 
         # 1. Persist Developments
+        # Query valid asset and company IDs to protect against FK violations
+        asset_res = await self._session.execute(select(Asset.asset_id))
+        valid_asset_ids = set(asset_res.scalars().all())
+        comp_res = await self._session.execute(select(Company.company_id))
+        valid_company_ids = set(comp_res.scalars().all())
+
         dev_id_map: Dict[str, uuid.UUID] = {}
         for dev_dict in final_state.get("developments", []):
             try:
@@ -150,12 +158,19 @@ class PipelineRunner:
 
                 existing_dev = await self._session.get(Development, dev_uuid)
                 if not existing_dev:
+                    asset_id = dev_dict.get("asset_id")
+                    if asset_id and asset_id not in valid_asset_ids:
+                        asset_id = None
+                    company_id = dev_dict.get("company_id")
+                    if company_id and company_id not in valid_company_ids:
+                        company_id = None
+
                     dev_row = Development(
                         development_id=dev_uuid,
                         title=dev_dict.get("title", "Haemophilia Development"),
                         disease=dev_dict.get("disease", "haemophilia_a"),
-                        asset_id=dev_dict.get("asset_id"),
-                        company_id=dev_dict.get("company_id"),
+                        asset_id=asset_id,
+                        company_id=company_id,
                         current_stage=dev_dict.get("current_stage", "announced"),
                         created_at=now,
                         updated_at=now,

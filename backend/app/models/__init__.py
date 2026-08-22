@@ -234,7 +234,7 @@ class Signal(Base):
     pmid = Column(String(50), nullable=True)
     nct_id = Column(String(50), nullable=True)
     regulatory_id = Column(String(100), nullable=True)
-    fingerprint = Column(String(64), nullable=False)
+    fingerprint = Column(String(255), nullable=False)
     canonical_url = Column(Text, nullable=True)
 
     signal_type = Column(String(50), nullable=False)
@@ -272,11 +272,11 @@ class Signal(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     __table_args__ = (
-        Index("uix_signals_pmid", "pmid", unique=True, postgresql_where=(pmid.isnot(None))),
-        Index("uix_signals_nct_id", "nct_id", unique=True, postgresql_where=(nct_id.isnot(None))),
-        Index("uix_signals_regulatory_id", "regulatory_id", unique=True, postgresql_where=(regulatory_id.isnot(None))),
+        Index("ix_signals_pmid", "pmid", postgresql_where=(pmid.isnot(None))),
+        Index("ix_signals_nct_id", "nct_id", postgresql_where=(nct_id.isnot(None))),
+        Index("ix_signals_regulatory_id", "regulatory_id", postgresql_where=(regulatory_id.isnot(None))),
         Index("uix_signals_fingerprint", "fingerprint", unique=True),
-        Index("uix_signals_canonical_url", "canonical_url", unique=True, postgresql_where=(canonical_url.isnot(None))),
+        Index("ix_signals_canonical_url", "canonical_url", postgresql_where=(canonical_url.isnot(None))),
         Index("ix_signals_source_name", "source_name"),
         Index("ix_signals_external_id", "external_id"),
         Index("ix_signals_provenance_status", "provenance_status"),

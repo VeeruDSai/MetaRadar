@@ -61,30 +61,35 @@ class EMARSSConnector(SourceConnector):
 
         try:
             target_url = getattr(profile, "rss_url", None) or self.rss_url
-            resp = await self._fetch_with_retry(target_url)
-            root = ET.fromstring(resp.text)
-
-            keywords = [k.lower() for k in (profile.keywords or [])]
             payloads: List[RawSignalPayload] = []
             seen_external: set = set()
 
-            for item in root.findall(".//item"):
-                title = self._element_text(item, "title")
-                description = self._element_text(item, "description")
-                # keyword filter (title + description)
-                if keywords:
-                    haystack = f"{title} {description}".lower()
-                    if not any(kw in haystack for kw in keywords):
+            try:
+                resp = await self._fetch_with_retry(target_url)
+                root = ET.fromstring(resp.text)
+                keywords = [k.lower() for k in (profile.keywords or [])]
+
+                for item in root.findall(".//item"):
+                    title = self._element_text(item, "title")
+                    description = self._element_text(item, "description")
+                    # keyword filter (title + description)
+                    if keywords:
+                        haystack = f"{title} {description}".lower()
+                        if not any(kw in haystack for kw in keywords):
+                            continue
+
+                    guid = self._element_text(item, "guid") or self._element_text(item, "link")
+                    if not guid:
                         continue
 
-                guid = self._element_text(item, "guid") or self._element_text(item, "link")
-                if not guid:
-                    continue
-
-                payload = self._parse_item(item, guid.strip(), title, description, started, profile_id)
-                if payload is not None and payload.external_id not in seen_external:
-                    seen_external.add(payload.external_id)
-                    payloads.append(payload)
+                    payload = self._parse_item(item, guid.strip(), title, description, started, profile_id)
+                    if payload is not None and payload.external_id not in seen_external:
+                        seen_external.add(payload.external_id)
+                        payloads.append(payload)
+            except (ET.ParseError, ConnectorFetchError) as parse_or_fetch_err:
+                logger.warning("EMA profile %s feed unavailable/invalid XML: %s", profile_id, parse_or_fetch_err)
+            except Exception as inner_ex:
+                logger.warning("EMA profile %s unexpected error: %s", profile_id, inner_ex)
 
             fetched = len(payloads)
             new_rows, duplicates = 0, 0

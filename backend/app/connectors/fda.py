@@ -67,29 +67,34 @@ class OpenFDAConnector(SourceConnector):
             # Handle RSS Profile (MedWatch / Drug Safety Communications)
             rss_url = profile.rss_url
             if rss_url:
-                resp = await self._fetch_with_retry(rss_url)
-                root = ET.fromstring(resp.text)
-                keywords = [k.lower() for k in (profile.keywords or [])]
+                try:
+                    resp = await self._fetch_with_retry(rss_url)
+                    root = ET.fromstring(resp.text)
+                    keywords = [k.lower() for k in (profile.keywords or [])]
 
-                for item in root.findall(".//item"):
-                    title = (item.findtext("title") or "").strip()
-                    description = (item.findtext("description") or "").strip()
-                    link = (item.findtext("link") or "").strip()
-                    guid = (item.findtext("guid") or link).strip()
-                    pub_date = (item.findtext("pubDate") or "").strip()
+                    for item in root.findall(".//item"):
+                        title = (item.findtext("title") or "").strip()
+                        description = (item.findtext("description") or "").strip()
+                        link = (item.findtext("link") or "").strip()
+                        guid = (item.findtext("guid") or link).strip()
+                        pub_date = (item.findtext("pubDate") or "").strip()
 
-                    if keywords:
-                        haystack = f"{title} {description}".lower()
-                        if not any(kw in haystack for kw in keywords):
+                        if keywords:
+                            haystack = f"{title} {description}".lower()
+                            if not any(kw in haystack for kw in keywords):
+                                continue
+
+                        if not guid:
                             continue
 
-                    if not guid:
-                        continue
-
-                    payload = self._parse_rss_item(item, guid, title, description, link, pub_date, started)
-                    if payload is not None and payload.external_id not in seen_external:
-                        seen_external.add(payload.external_id)
-                        payloads.append(payload)
+                        payload = self._parse_rss_item(item, guid, title, description, link, pub_date, started)
+                        if payload is not None and payload.external_id not in seen_external:
+                            seen_external.add(payload.external_id)
+                            payloads.append(payload)
+                except ET.ParseError as pe:
+                    logger.warning("FDA RSS profile %s XML parse error (endpoint returned non-XML): %s", profile_id, pe)
+                except Exception as ex:
+                    logger.warning("FDA RSS profile %s fetch/parse error: %s", profile_id, ex)
 
             # Handle search_terms Profile (OpenFDA API)
             elif profile.search_terms:
