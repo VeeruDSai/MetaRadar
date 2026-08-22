@@ -6,7 +6,7 @@ from app.core.config import settings
 
 
 @pytest.mark.asyncio
-async def test_ingestion_minimum_records_degraded_rule(monkeypatch):
+async def test_ingestion_zero_records_no_new_data_rule(monkeypatch):
     monkeypatch.setattr(settings, "NEWSAPI_KEY", "dummy_key")
 
     # Mock session
@@ -16,7 +16,7 @@ async def test_ingestion_minimum_records_degraded_rule(monkeypatch):
     mock_src_res.scalar_one_or_none.return_value = None
     mock_session.execute.return_value = mock_src_res
 
-    # Create mock connector that returns 0 fetched records with SUCCESS status
+    # Create mock connector that returns 0 fetched records with SUCCESS/NO_NEW_DATA status
     mock_conn = MagicMock()
     mock_conn.source_id = "pubmed"
     mock_conn.run_all_profiles = AsyncMock(return_value=[
@@ -38,13 +38,14 @@ async def test_ingestion_minimum_records_degraded_rule(monkeypatch):
     results = await svc.run_connectors(["pubmed"])
 
     pubmed_res = results["results"]["pubmed"]
-    # Minimum-records rule: 0 records fetched must result in DEGRADED status
-    assert pubmed_res["status"] == "DEGRADED"
-    assert "0 records fetched" in (pubmed_res["error_detail"] or "")
+    # Truthfulness Rule (Prompt §0): 0 records fetched on successful check must result in NO_NEW_DATA, NEVER DEGRADED
+    assert pubmed_res["status"] == "NO_NEW_DATA"
+    assert pubmed_res["fetched"] == 0
+    assert pubmed_res["new_rows"] == 0
 
 
 @pytest.mark.asyncio
-async def test_ingestion_all_duplicates_degraded_rule(monkeypatch):
+async def test_ingestion_all_duplicates_no_new_data_rule(monkeypatch):
     monkeypatch.setattr(settings, "NEWSAPI_KEY", "dummy_key")
 
     mock_session = AsyncMock()
@@ -74,9 +75,10 @@ async def test_ingestion_all_duplicates_degraded_rule(monkeypatch):
     results = await svc.run_connectors(["clinical_trials"])
 
     ct_res = results["results"]["clinical_trials"]
-    # 0 new accepted records must result in DEGRADED status
-    assert ct_res["status"] == "DEGRADED"
-    assert "0 new records accepted" in (ct_res["error_detail"] or "")
+    # Truthfulness Rule (Prompt §0): 0 new accepted records on successful check must result in NO_NEW_DATA
+    assert ct_res["status"] == "NO_NEW_DATA"
+    assert ct_res["fetched"] == 5
+    assert ct_res["new_rows"] == 0
 
 
 @pytest.mark.asyncio

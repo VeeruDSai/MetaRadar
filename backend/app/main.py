@@ -40,10 +40,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("domain_config_load_failed", error=str(e))
 
+    # Initialize & Start Autonomous Ingestion Scheduler
+    from app.services.scheduler import SourceScheduler
+    scheduler = SourceScheduler.get_instance()
+    scheduler.start()
+
     yield
 
     # Shutdown
     logger.info("service_shutdown", message="Shutting down MetaRadar v5.1 Backend Service...")
+    await scheduler.stop()
 
 
 app = FastAPI(

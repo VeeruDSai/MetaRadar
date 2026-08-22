@@ -46,7 +46,18 @@ class ConnectorStatus(BaseModel):
     last_error: Optional[str] = None
 
 
-RunStatus = Literal["SUCCESS", "PARTIAL", "DEGRADED", "FAILED"]
+RunStatus = Literal[
+    "SUCCESS",
+    "NO_NEW_DATA",
+    "CONNECTED",
+    "PARTIAL",
+    "DEGRADED",
+    "FAILED",
+    "CONFIGURATION_ERROR",
+    "RATE_LIMITED",
+    "TIMEOUT",
+    "STALE",
+]
 
 
 @dataclass
@@ -56,9 +67,14 @@ class ProfileRunResult:
     fetched: int = 0
     new_rows: int = 0
     duplicates: int = 0
+    records_updated: int = 0
     errors: int = 0
     duration_s: float = 0.0
     error_detail: Optional[str] = None
+    upstream_data_timestamp: Optional[str] = None
+    request_url: Optional[str] = None
+    http_status: Optional[int] = None
+    error_code: Optional[str] = None
 
 
 class SourceConnector:
@@ -171,16 +187,24 @@ class SourceConnector:
         return results
 
     def _resolve_run_status(self, results: List[ProfileRunResult]) -> RunStatus:
-        """Four-state run status from per-profile outcomes (D-21)."""
+        """Determines aggregated connector run status from profile outcomes (D-21)."""
         if not results:
             return "FAILED"
         statuses = [r.status for r in results]
+        if any(s == "CONFIGURATION_ERROR" for s in statuses):
+            return "CONFIGURATION_ERROR"
         if all(s == "SUCCESS" for s in statuses):
             return "SUCCESS"
-        if all(s == "FAILED" for s in statuses):
+        if all(s == "NO_NEW_DATA" for s in statuses):
+            return "NO_NEW_DATA"
+        if all(s in ("SUCCESS", "NO_NEW_DATA") for s in statuses):
+            return "SUCCESS"
+        if all(s in ("FAILED", "UNHEALTHY") for s in statuses):
             return "FAILED"
-        if all(s == "DEGRADED" for s in statuses):
+        if all(s in ("DEGRADED", "RATE_LIMITED", "TIMEOUT") for s in statuses):
             return "DEGRADED"
+        if any(s in ("FAILED", "DEGRADED", "PARTIAL", "RATE_LIMITED", "TIMEOUT") for s in statuses):
+            return "PARTIAL"
         return "PARTIAL"
 
     # ------------------------------------------------------------------ #
@@ -314,10 +338,18 @@ class SourceConnector:
         """Maps run outcome to canonical health enum."""
         mapping = {
             "SUCCESS": "HEALTHY",
+            "HEALTHY": "HEALTHY",
+            "NO_NEW_DATA": "NO_NEW_DATA",
+            "CONNECTED": "CONNECTED",
+            "STALE": "STALE",
             "PARTIAL": "DEGRADED",
             "DEGRADED": "DEGRADED",
+            "RATE_LIMITED": "DEGRADED",
+            "TIMEOUT": "DEGRADED",
             "FAILED": "UNHEALTHY",
+            "UNHEALTHY": "UNHEALTHY",
             "CONFIGURATION_ERROR": "CONFIGURATION_ERROR",
+            "NEVER_CONNECTED": "NEVER_CONNECTED",
         }
         return mapping.get(run_status, "UNHEALTHY")
 
@@ -342,35 +374,48 @@ class SourceConnector:
             health_state = self._run_status_to_health_state(result.status)
             checked_at = datetime.now(timezone.utc)
             latency_ms = int(result.duration_s * 1000)
+            http_code = http_status or result.http_status
 
             log_entry = SourceHealthLog(
                 source_id=self.source_id,
+                profile_id=result.profile_id,
                 pipeline_run_id=pipeline_run_id,
                 checked_at=checked_at,
                 connector_status=health_state,
-                http_status=http_status,
+                http_status=http_code,
                 latency_ms=latency_ms,
+                duration_ms=round(result.duration_s * 1000, 2),
                 records_fetched=result.fetched,
                 records_accepted=result.new_rows,
                 records_rejected=result.duplicates,
+                records_new=result.new_rows,
+                records_updated=getattr(result, "records_updated", 0),
+                records_duplicate=result.duplicates,
+                upstream_data_timestamp=result.upstream_data_timestamp,
                 last_error=result.error_detail,
-                error_code="RATE_LIMITED" if http_status == 429 else None,
+                error_code=result.error_code or ("RATE_LIMITED" if http_code == 429 else None),
             )
             session.add(log_entry)
 
             # Update live Source record
+            is_successful_sync = health_state in ("HEALTHY", "NO_NEW_DATA", "CONNECTED")
             await session.execute(
                 update(Source)
                 .where(Source.source_id == self.source_id)
                 .values(
                     connector_status=health_state,
                     last_attempted=checked_at,
-                    last_success=checked_at if result.status in ("SUCCESS", "PARTIAL") else Source.last_success,
+                    last_success=checked_at if is_successful_sync else Source.last_success,
                     latency_ms=latency_ms,
                     records_fetched=result.fetched,
                     records_accepted=result.new_rows,
                     records_rejected=result.duplicates,
-                    http_status=http_status,
+                    records_new=result.new_rows,
+                    records_updated=getattr(result, "records_updated", 0),
+                    records_duplicate=result.duplicates,
+                    upstream_data_timestamp=result.upstream_data_timestamp,
+                    http_status=http_code,
+                    last_error=result.error_detail,
                 )
             )
             await session.commit()

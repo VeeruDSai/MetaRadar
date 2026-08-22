@@ -22,6 +22,7 @@ class SourceRegistryItem(BaseModel):
     freshness_class: str
     syndication_group: Optional[str] = None
     status: str
+    tier: int = 1
     quota_remaining: Optional[int] = None
     last_success: Optional[datetime] = None
     connector_status: str = "NEVER_CONNECTED"
@@ -30,6 +31,14 @@ class SourceRegistryItem(BaseModel):
     records_fetched: int = 0
     records_accepted: int = 0
     records_rejected: int = 0
+    records_new: int = 0
+    records_updated: int = 0
+    records_duplicate: int = 0
+    upstream_data_timestamp: Optional[str] = None
+    last_data_update: Optional[datetime] = None
+    next_scheduled_run: Optional[datetime] = None
+    consecutive_failures: int = 0
+    backoff_minutes: Optional[int] = None
     http_status: Optional[int] = None
     configuration_error_message: Optional[str] = None
 
@@ -37,13 +46,19 @@ class SourceRegistryItem(BaseModel):
 class SourceHealthLogItem(BaseModel):
     id: UUID
     source_id: str
+    profile_id: Optional[str] = None
     pipeline_run_id: Optional[UUID] = None
     checked_at: datetime
     connector_status: str
     http_status: Optional[int] = None
     latency_ms: Optional[int] = None
+    duration_ms: Optional[float] = None
     records_fetched: int = 0
     records_accepted: int = 0
     records_rejected: int = 0
+    records_new: int = 0
+    records_updated: int = 0
+    records_duplicate: int = 0
+    upstream_data_timestamp: Optional[str] = None
     last_error: Optional[str] = None
     error_code: Optional[str] = None

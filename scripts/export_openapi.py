@@ -220,19 +220,28 @@ export interface SearchResponse {
 export interface ConnectorHealthStatus {
   source_id: string;
   name: string;
+  tier?: number;
   status: string;
   freshness_class: string;
-  quota_remaining?: number;
-  last_success?: string;
-  last_attempted?: string;
-  last_error?: string;
-  connector_status?: string;
-  latency_ms?: number;
+  quota_remaining?: number | null;
+  last_success?: string | null;
+  last_attempted?: string | null;
+  last_error?: string | null;
+  connector_status: string;
+  latency_ms?: number | null;
+  duration_ms?: number | null;
   records_fetched?: number;
   records_accepted?: number;
   records_rejected?: number;
-  http_status?: number;
-  configuration_error_message?: string;
+  records_new?: number;
+  records_updated?: number;
+  records_duplicate?: number;
+  upstream_data_timestamp?: string | null;
+  next_scheduled_run?: string | null;
+  consecutive_failures?: number;
+  backoff_minutes?: number;
+  http_status?: number | null;
+  configuration_error_message?: string | null;
 }
 
 export interface HealthConnectorsResponse {
@@ -546,34 +555,70 @@ export interface DevelopmentSummary {
 export interface SourceRegistryItem {
   source_id: string;
   name: string;
+  tier?: number;
   freshness_class: string;
   syndication_group?: string;
   status: string;
   quota_remaining?: number;
-  last_success?: string;
+  last_success?: string | null;
   connector_status: string;
-  last_attempted?: string;
-  latency_ms?: number;
+  last_attempted?: string | null;
+  latency_ms?: number | null;
+  duration_ms?: number | null;
   records_fetched: number;
   records_accepted: number;
   records_rejected: number;
-  http_status?: number;
+  records_new?: number;
+  records_updated?: number;
+  records_duplicate?: number;
+  upstream_data_timestamp?: string | null;
+  next_scheduled_run?: string | null;
+  consecutive_failures?: number;
+  backoff_minutes?: number;
+  http_status?: number | null;
   configuration_error_message?: string | null;
 }
 
 export interface SourceHealthLogItem {
   id: string;
   source_id: string;
-  pipeline_run_id?: string;
+  pipeline_run_id?: string | null;
   checked_at: string;
   connector_status: string;
-  http_status?: number;
-  latency_ms?: number;
+  http_status?: number | null;
+  latency_ms?: number | null;
+  duration_ms?: number | null;
   records_fetched: number;
   records_accepted: number;
   records_rejected: number;
-  last_error?: string;
-  error_code?: string;
+  records_new?: number;
+  records_updated?: number;
+  records_duplicate?: number;
+  upstream_data_timestamp?: string | null;
+  last_error?: string | null;
+  error_code?: string | null;
+}
+
+export interface SchedulerJobStatus {
+  connector_id: string;
+  interval_minutes: number;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  last_status: string;
+  consecutive_failures: number;
+  current_backoff_minutes: number;
+  records_fetched_last_run: number;
+  records_new_last_run: number;
+  last_error?: string | null;
+}
+
+export interface SchedulerStatusResponse {
+  scheduler_enabled: boolean;
+  scheduler_running: boolean;
+  scheduler_started_at?: string | null;
+  total_jobs: number;
+  active_jobs: SchedulerJobStatus[];
+  timestamp: string;
 }
 
 export interface ActivityLogItem {
@@ -613,14 +658,6 @@ export interface SignalFilterParams {
     with open(active_ts_path, "w", encoding="utf-8") as f:
         f.write(ts_content)
     print(f"Re-emitted hand-maintained TypeScript contract to: {active_ts_path}")
-
-    # 3. Write re-export stub to legacy location frontend/src/types/api.ts
-    legacy_types_dir = base_dir / "frontend" / "src" / "types"
-    legacy_types_dir.mkdir(parents=True, exist_ok=True)
-    legacy_ts_path = legacy_types_dir / "api.ts"
-    with open(legacy_ts_path, "w", encoding="utf-8") as f:
-        f.write("// Re-export canonical contract definition\nexport * from '../../types/api';\n")
-    print(f"Updated legacy contract pointer: {legacy_ts_path}")
 
 
 if __name__ == "__main__":

@@ -153,6 +153,7 @@ async def get_health_connectors(session: AsyncSession = Depends(get_db)):
                 ConnectorHealthStatus(
                     source_id=connector.source_id,
                     name=_CONNECTOR_NAMES.get(connector.source_id, source_row.name or connector.source_id),
+                    tier=source_row.tier or (1 if connector.source_id in ("fda", "ema", "pubmed", "clinical_trials") else 3),
                     status=source_row.connector_status or "NEVER_CONNECTED",
                     freshness_class=source_row.freshness_class or connector.freshness_class,
                     quota_remaining=source_row.quota_remaining,
@@ -161,9 +162,17 @@ async def get_health_connectors(session: AsyncSession = Depends(get_db)):
                     last_error=source_row.last_error,
                     connector_status=source_row.connector_status or "NEVER_CONNECTED",
                     latency_ms=source_row.latency_ms,
+                    duration_ms=float(source_row.latency_ms) if source_row.latency_ms else None,
                     records_fetched=source_row.records_fetched or 0,
                     records_accepted=source_row.records_accepted or 0,
                     records_rejected=source_row.records_rejected or 0,
+                    records_new=source_row.records_new or source_row.records_accepted or 0,
+                    records_updated=source_row.records_updated or 0,
+                    records_duplicate=source_row.records_duplicate or source_row.records_rejected or 0,
+                    upstream_data_timestamp=source_row.upstream_data_timestamp,
+                    next_scheduled_run=source_row.next_scheduled_run,
+                    consecutive_failures=source_row.consecutive_failures or 0,
+                    backoff_minutes=source_row.backoff_minutes or 0,
                     http_status=source_row.http_status,
                     configuration_error_message=source_row.configuration_error_message,
                 )
@@ -179,6 +188,7 @@ async def get_health_connectors(session: AsyncSession = Depends(get_db)):
             ConnectorHealthStatus(
                 source_id=conn_status.source_id,
                 name=_CONNECTOR_NAMES.get(conn_status.source_id, conn_status.source_id),
+                tier=1 if conn_status.source_id in ("fda", "ema", "pubmed", "clinical_trials") else 3,
                 status=conn_status.status,
                 freshness_class=connector.freshness_class,
                 quota_remaining=conn_status.quota_remaining,

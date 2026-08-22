@@ -135,10 +135,10 @@ class NewsAPIConnector(SourceConnector):
                 cursor=cursor,
                 first_run_completed=True,
             )
-
+            status_result = "SUCCESS" if new_rows > 0 or fetched > 0 else "NO_NEW_DATA"
             return ProfileRunResult(
                 profile_id=profile_id,
-                status="SUCCESS",
+                status=status_result,
                 fetched=fetched,
                 new_rows=new_rows,
                 duplicates=duplicates,
@@ -170,32 +170,34 @@ class NewsAPIConnector(SourceConnector):
 
     async def _window_start(self, session: Any, profile_id: str, force_backfill: bool, today: str) -> str:
         cfg = self.config
+        today_date = date.fromisoformat(today)
         if cfg is None:
-            return (date.today() - timedelta(days=7)).isoformat()
+            return (today_date - timedelta(days=7)).isoformat()
         if force_backfill:
-            return (date.today() - timedelta(days=cfg.backfill_days)).isoformat()
+            return (today_date - timedelta(days=cfg.backfill_days)).isoformat()
         state = await self._read_connector_state(session, profile_id)
         if state is None or not state.first_run_completed:
-            return (date.today() - timedelta(days=cfg.backfill_days)).isoformat()
-        rolling_start = date.today() - timedelta(days=cfg.rolling_window_days)
+            return (today_date - timedelta(days=cfg.backfill_days)).isoformat()
+        rolling_start = today_date - timedelta(days=cfg.rolling_window_days)
         if state.last_success is not None and state.last_success.date() > rolling_start:
             return state.last_success.date().isoformat()
         return rolling_start.isoformat()
 
     def _parse_article(self, article: Dict[str, Any], retrieved_at: datetime) -> Optional[RawSignalPayload]:
-        url = (article.get("url") or "").strip()
         title = (article.get("title") or "").strip()
-        if not title and not url:
-            return None
-        published_raw = article.get("publishedAt") or ""
-        published_at = self._parse_date(published_raw, retrieved_at)
-        publisher = (article.get("source") or {}).get("name") or ""
-
         description = (article.get("description") or "").strip()
-        body = (article.get("content") or "").strip()
-        # PII scrub before bronze persistence (REQ-P1-14)
-        scrubbed, _, _ = PIIPHIScrubber.scrub(f"{title}\n{description}\n{body}")
+        content_raw = (article.get("content") or "").strip()
+        url = (article.get("url") or "").strip()
+        source_dict = article.get("source") or {}
+        publisher = (source_dict.get("name") or "").strip()
+        pub_date_raw = article.get("publishedAt")
+
+        if not title:
+            return None
+
+        scrubbed, _, _ = PIIPHIScrubber.scrub(f"{description} {content_raw}".strip())
         content = scrubbed or title
+        published_at = self._parse_date(pub_date_raw, retrieved_at)
 
         fingerprint = generate_fingerprint(
             title=title,
@@ -212,9 +214,12 @@ class NewsAPIConnector(SourceConnector):
             "title": title,
             "description": scrubbed,
             "source_name": publisher or "NewsAPI",
+            "source_tier": 3,
             "signal_type": "NEWS",
+            "event_type": "INDUSTRY_NEWS",
             "url": url or None,
             "evidence_text": scrubbed or description or title,
+            "provenance_status": "available" if url else "missing_url",
             "entity_terms": entities,
             "pii_scrubbed": True,
             "published_at": published_at.isoformat(),

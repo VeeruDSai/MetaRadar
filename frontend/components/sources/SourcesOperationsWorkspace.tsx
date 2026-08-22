@@ -48,16 +48,20 @@ export function SourcesOperationsWorkspace() {
   }
 
   const getBadgeTone = (status: string): 'critical' | 'high' | 'medium' | 'low' | 'neutral' => {
-    switch (status.toUpperCase()) {
+    switch (status?.toUpperCase()) {
       case 'HEALTHY':
         return 'low'
-      case 'DEGRADED':
+      case 'NO_NEW_DATA':
+        return 'neutral'
       case 'STALE':
+        return 'medium'
+      case 'DEGRADED':
       case 'RATE_LIMITED':
         return 'high'
       case 'CONFIGURATION_ERROR':
       case 'AUTH_FAILED':
       case 'ERROR':
+      case 'FAILED':
       case 'UNHEALTHY':
         return 'critical'
       case 'DISABLED':
@@ -67,30 +71,31 @@ export function SourcesOperationsWorkspace() {
     }
   }
 
-  const healthyCount = sources.filter((s) => s.connector_status?.toUpperCase() === 'HEALTHY').length
+  const healthyCount = sources.filter((s) => ['HEALTHY', 'NO_NEW_DATA'].includes(s.connector_status?.toUpperCase())).length
   const totalRecords = sources.reduce((acc, s) => acc + (s.records_accepted || 0), 0)
+  const totalNew = sources.reduce((acc, s) => acc + (s.records_new || 0), 0)
 
   return (
     <>
       <SectionTitle
-        eyebrow="Connector Registry & Health"
+        eyebrow="Autonomous Ingestion & Telemetry"
         title="Sources & Connectors"
-        detail="Real-time connector status, latency metrics, HTTP return codes, and live public ingestion telemetry across configured providers."
+        detail="Truthful real-time connector health, autonomous background scheduler status, latency, and provenance telemetry across configured authoritative providers."
       />
 
       <div className="kpi-grid">
         <div className="panel kpi">
-          <p className="eyebrow">Configured sources</p>
+          <p className="eyebrow">Monitored sources</p>
           <div className="kpi-value">
             <strong>{sources.length}</strong>
             <span>Active providers</span>
           </div>
         </div>
         <div className="panel kpi">
-          <p className="eyebrow">Healthy connectors</p>
+          <p className="eyebrow">Operational connectors</p>
           <div className="kpi-value">
             <strong style={{ color: 'var(--success)' }}>{healthyCount}</strong>
-            <span>{sources.length > 0 ? `${Math.round((healthyCount / sources.length) * 100)}% online` : '0%'}</span>
+            <span>{sources.length > 0 ? `${Math.round((healthyCount / sources.length) * 100)}% synchronized` : '0%'}</span>
           </div>
         </div>
         <div className="panel kpi">
@@ -101,17 +106,17 @@ export function SourcesOperationsWorkspace() {
           </div>
         </div>
         <div className="panel kpi">
-          <p className="eyebrow">Ingestion engine</p>
+          <p className="eyebrow">Scheduler state</p>
           <div className="kpi-value">
-            <strong style={{ color: 'var(--signal)' }}>Live</strong>
-            <span>LangGraph pipeline</span>
+            <strong style={{ color: 'var(--signal)' }}>Autonomous</strong>
+            <span>Continuous background radar</span>
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="text-xs text-[var(--muted-foreground)]">
-          {sources.length} active connectors registered in pipeline
+          {sources.length} active connectors · Autonomous background scheduler active
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -119,7 +124,7 @@ export function SourcesOperationsWorkspace() {
             className="inline-flex items-center gap-1.5 px-3.5 h-8 rounded text-xs font-medium border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--signal)] transition"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            <span>Refresh Health</span>
+            <span>Refresh Telemetry</span>
           </button>
           <button
             onClick={handleLiveSync}
@@ -135,7 +140,7 @@ export function SourcesOperationsWorkspace() {
             ) : (
               <>
                 <Zap size={13} />
-                <span>Trigger Live Web Ingestion</span>
+                <span>Run Ingestion Now</span>
               </>
             )}
           </button>
@@ -146,7 +151,7 @@ export function SourcesOperationsWorkspace() {
         <Card className="mb-4" style={{ borderColor: 'var(--border-selected)', background: 'color-mix(in srgb, var(--signal) 8%, var(--surface))' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="font-semibold text-xs text-[var(--foreground)] flex items-center gap-1.5">
-              <CheckCircle2 size={15} style={{ color: 'var(--success)' }} /> Live Web Ingestion & Pipeline Sync Complete
+              <CheckCircle2 size={15} style={{ color: 'var(--success)' }} /> Ingestion Execution Complete
             </span>
             <span className="font-mono text-[11px] text-[var(--muted-foreground)]">Duration: {syncResult.ingestion?.duration_s}s</span>
           </div>
@@ -193,13 +198,18 @@ export function SourcesOperationsWorkspace() {
               <div>
                 <div className="card-heading">
                   <div>
-                    <h2 className="text-sm font-semibold truncate">{s.name}</h2>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--muted-foreground)]">
+                        Tier {s.tier || 1}
+                      </span>
+                      <h2 className="text-sm font-semibold truncate">{s.name}</h2>
+                    </div>
                     <p className="muted panel-subtitle font-mono text-[10px]">
                       {s.source_id} · {s.freshness_class}
                     </p>
                   </div>
                   <Badge tone={getBadgeTone(s.connector_status)}>
-                    {s.connector_status}
+                    {s.connector_status === 'NO_NEW_DATA' ? 'NO NEW DATA' : s.connector_status}
                   </Badge>
                 </div>
 
@@ -232,13 +242,13 @@ export function SourcesOperationsWorkspace() {
                   </div>
                 </div>
                 <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
-                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">HTTP Status</div>
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">New Records</div>
                   <div className="font-mono text-[var(--foreground)] mt-0.5 text-xs">
-                    {s.http_status ? `${s.http_status}` : '-'}
+                    {s.records_new || 0}
                   </div>
                 </div>
                 <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>
-                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Last Sync</div>
+                  <div className="text-[9px] text-[var(--muted-foreground)] uppercase font-semibold">Last Success</div>
                   <div className="font-mono text-[var(--foreground)] mt-0.5 text-[10px] truncate">
                     {s.last_success ? new Date(s.last_success).toLocaleTimeString() : 'Never'}
                   </div>

@@ -54,6 +54,26 @@ class Settings(BaseSettings):
     # NewsAPI Key
     NEWSAPI_KEY: Optional[str] = None
 
+    # NCBI PubMed API Key & Identifiers
+    NCBI_API_KEY: Optional[str] = None
+    NCBI_TOOL: str = "MetaRadar"
+    NCBI_EMAIL: str = "metaradar@example.com"
+
+    # OpenFDA API Key (optional for higher rate limits)
+    OPENFDA_API_KEY: Optional[str] = None
+
+    # Autonomous Background Scheduler Settings
+    ENABLE_BACKGROUND_SCHEDULER: bool = True
+    SCHEDULER_CT_INTERVAL_MINUTES: int = 60
+    SCHEDULER_PUBMED_INTERVAL_MINUTES: int = 60
+    SCHEDULER_EMA_INTERVAL_MINUTES: int = 30
+    SCHEDULER_FDA_INTERVAL_MINUTES: int = 30
+    SCHEDULER_NEWS_INTERVAL_MINUTES: int = 15
+    SCHEDULER_JITTER_PERCENT: int = 10
+    SCHEDULER_MAX_BACKOFF_MINUTES: int = 120
+    SCHEDULER_FAILURE_THRESHOLD: int = 3
+    SCHEDULER_STALE_MULTIPLIER: float = 2.5
+
 
 settings = Settings()
 

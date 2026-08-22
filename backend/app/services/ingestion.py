@@ -65,28 +65,29 @@ class IngestionService:
                 conn_fetched = sum(r.fetched for r in conn_results)
                 conn_new = sum(r.new_rows for r in conn_results)
                 conn_dups = sum(r.duplicates for r in conn_results)
+                conn_updated = sum(getattr(r, "records_updated", 0) for r in conn_results)
+                latest_data_timestamp = next((r.upstream_data_timestamp for r in conn_results if r.upstream_data_timestamp), None)
+                error_details = [r.error_detail for r in conn_results if r.error_detail]
 
-                # Precedence: CONFIGURATION_ERROR > UNHEALTHY > DEGRADED > HEALTHY
+                # Precedence: CONFIGURATION_ERROR > FAILED > DEGRADED > NO_NEW_DATA > HEALTHY
                 if config_err:
                     conn_status = "CONFIGURATION_ERROR"
                     error_msg = config_err
                 elif resolved_status == "CONFIGURATION_ERROR":
                     conn_status = "CONFIGURATION_ERROR"
-                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "Configuration error"
-                elif resolved_status == "FAILED":
-                    conn_status = "UNHEALTHY"
-                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "All profiles failed"
-                elif conn_fetched == 0:
+                    error_msg = "; ".join(error_details) or "Configuration error"
+                elif resolved_status in ("FAILED", "UNHEALTHY"):
+                    conn_status = "FAILED"
+                    error_msg = "; ".join(error_details) or "All profiles failed"
+                elif resolved_status in ("DEGRADED", "PARTIAL", "RATE_LIMITED", "TIMEOUT"):
                     conn_status = "DEGRADED"
-                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "0 records fetched"
-                elif conn_new == 0:
-                    conn_status = "DEGRADED"
-                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail) or "0 new records accepted (all duplicates or filtered)"
-                elif resolved_status in ("DEGRADED", "PARTIAL"):
-                    conn_status = "DEGRADED"
-                    error_msg = "; ".join(r.error_detail for r in conn_results if r.error_detail)
+                    error_msg = "; ".join(error_details) or "Connector experienced partial profile failures or elevated latency"
+                elif resolved_status == "NO_NEW_DATA" or (conn_fetched == 0 and not error_details) or (conn_new == 0 and not error_details):
+                    conn_status = "NO_NEW_DATA"
+                    error_msg = None
                 else:
                     conn_status = "HEALTHY"
+                    error_msg = None
 
                 total_fetched += conn_fetched
                 total_new += conn_new
@@ -101,15 +102,18 @@ class IngestionService:
                 )
 
                 # Record health log in database
-                # records_rejected = fetched but not accepted (dedup rejections) —
-                # same canonical definition as SourceConnector._persist_health_log.
                 health_log = SourceHealthLog(
                     source_id=conn.source_id,
                     connector_status=conn_status,
-                    latency_ms=round(latency_ms, 2),
+                    latency_ms=int(latency_ms),
+                    duration_ms=round(latency_ms, 2),
                     records_fetched=conn_fetched,
                     records_accepted=conn_new,
                     records_rejected=conn_dups,
+                    records_new=conn_new,
+                    records_updated=conn_updated,
+                    records_duplicate=conn_dups,
+                    upstream_data_timestamp=latest_data_timestamp,
                     last_error=error_msg,
                     checked_at=now_utc,
                 )
@@ -124,11 +128,19 @@ class IngestionService:
                     src_obj.records_fetched = conn_fetched
                     src_obj.records_accepted = conn_new
                     src_obj.records_rejected = conn_dups
+                    src_obj.records_new = conn_new
+                    src_obj.records_updated = conn_updated
+                    src_obj.records_duplicate = conn_dups
+                    src_obj.upstream_data_timestamp = latest_data_timestamp
                     src_obj.last_attempted = now_utc
                     src_obj.last_error = error_msg
                     src_obj.configuration_error_message = config_err
-                    if conn_status == "HEALTHY":
+                    if conn_status in ("HEALTHY", "NO_NEW_DATA", "CONNECTED"):
                         src_obj.last_success = now_utc
+                        src_obj.consecutive_failures = 0
+                        src_obj.backoff_minutes = 0
+                    elif conn_status in ("DEGRADED", "FAILED"):
+                        src_obj.consecutive_failures = (src_obj.consecutive_failures or 0) + 1
 
                 await self.session.commit()
 

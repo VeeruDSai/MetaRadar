@@ -54,13 +54,15 @@ class ConnectorQueryProfile(BaseModel):
     query: Optional[str] = None                  # NewsAPI: single query string
     language: Optional[str] = None               # NewsAPI: language code
     search_terms: Optional[List[str]] = None     # OpenFDA: substance/search terms
-    keywords: Optional[List[str]] = None         # EMA RSS: keyword filter
+    keywords: Optional[List[str]] = None         # EMA / FDA RSS: keyword filter
+    rss_url: Optional[str] = None                # Profile-specific RSS URL override
 
 
 class ConnectorConfig(BaseModel):
     """Per-source connector configuration (query blocks + window/quota policy)."""
 
     freshness_class: str
+    tier: int = 1
     backfill_days: int
     rolling_window_days: int
     max_results_per_profile: Optional[int] = None
@@ -96,6 +98,7 @@ class DomainConfig(BaseModel):
     confluence: ConfluenceConfig
     functions: List[FunctionConfig]
     baseline_routing_matrix: Dict[str, Dict[str, Any]]
+    source_tiers: Dict[str, List[str]] = Field(default_factory=dict)
     # Phase 1 ingestion extensions — optional & backward compatible:
     # existing configs without these keys load without error.
     connectors: Dict[str, ConnectorConfig] = Field(default_factory=dict)

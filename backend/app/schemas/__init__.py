@@ -189,6 +189,7 @@ class ConnectorHealthStatus(BaseModel):
     name: str
     status: str
     freshness_class: str
+    tier: int = 1
     quota_remaining: Optional[int] = None
     last_success: Optional[datetime] = None
     last_attempted: Optional[datetime] = None
@@ -198,12 +199,42 @@ class ConnectorHealthStatus(BaseModel):
     records_fetched: int = 0
     records_accepted: int = 0
     records_rejected: int = 0
+    records_new: int = 0
+    records_updated: int = 0
+    records_duplicate: int = 0
+    upstream_data_timestamp: Optional[str] = None
+    last_data_update: Optional[datetime] = None
+    next_scheduled_run: Optional[datetime] = None
+    consecutive_failures: int = 0
+    backoff_minutes: Optional[int] = None
     http_status: Optional[int] = None
     configuration_error_message: Optional[str] = None
 
 
 class HealthConnectorsResponse(BaseModel):
     connectors: List[ConnectorHealthStatus]
+    timestamp: datetime = Field(default_factory=utc_now)
+
+
+class SchedulerJobStatus(BaseModel):
+    connector_id: str
+    interval_minutes: int
+    next_run_at: Optional[datetime] = None
+    last_run_at: Optional[datetime] = None
+    last_status: str = "IDLE"
+    consecutive_failures: int = 0
+    current_backoff_minutes: int = 0
+    records_fetched_last_run: int = 0
+    records_new_last_run: int = 0
+    last_error: Optional[str] = None
+
+
+class SchedulerStatusResponse(BaseModel):
+    scheduler_enabled: bool
+    scheduler_running: bool
+    scheduler_started_at: Optional[datetime] = None
+    total_jobs: int = 0
+    active_jobs: List[SchedulerJobStatus] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=utc_now)
 
 

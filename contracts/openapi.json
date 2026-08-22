@@ -855,6 +855,28 @@
         }
       }
     },
+    "/api/v1/scheduler": {
+      "get": {
+        "tags": [
+          "Observability & System Health"
+        ],
+        "summary": "Get Scheduler Status",
+        "description": "Retrieve operational telemetry and health from the autonomous background ingestion scheduler.",
+        "operationId": "get_scheduler_status_api_v1_scheduler_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulerStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cache/clear": {
       "post": {
         "tags": [
@@ -2151,6 +2173,11 @@
             "type": "string",
             "title": "Freshness Class"
           },
+          "tier": {
+            "type": "integer",
+            "title": "Tier",
+            "default": 1
+          },
           "quota_remaining": {
             "anyOf": [
               {
@@ -2227,6 +2254,72 @@
             "type": "integer",
             "title": "Records Rejected",
             "default": 0
+          },
+          "records_new": {
+            "type": "integer",
+            "title": "Records New",
+            "default": 0
+          },
+          "records_updated": {
+            "type": "integer",
+            "title": "Records Updated",
+            "default": 0
+          },
+          "records_duplicate": {
+            "type": "integer",
+            "title": "Records Duplicate",
+            "default": 0
+          },
+          "upstream_data_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Data Timestamp"
+          },
+          "last_data_update": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Data Update"
+          },
+          "next_scheduled_run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Scheduled Run"
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "title": "Consecutive Failures",
+            "default": 0
+          },
+          "backoff_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backoff Minutes"
           },
           "http_status": {
             "anyOf": [
@@ -3381,6 +3474,131 @@
         ],
         "title": "RoleWeightSchema"
       },
+      "SchedulerJobStatus": {
+        "properties": {
+          "connector_id": {
+            "type": "string",
+            "title": "Connector Id"
+          },
+          "interval_minutes": {
+            "type": "integer",
+            "title": "Interval Minutes"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "last_status": {
+            "type": "string",
+            "title": "Last Status",
+            "default": "IDLE"
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "title": "Consecutive Failures",
+            "default": 0
+          },
+          "current_backoff_minutes": {
+            "type": "integer",
+            "title": "Current Backoff Minutes",
+            "default": 0
+          },
+          "records_fetched_last_run": {
+            "type": "integer",
+            "title": "Records Fetched Last Run",
+            "default": 0
+          },
+          "records_new_last_run": {
+            "type": "integer",
+            "title": "Records New Last Run",
+            "default": 0
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connector_id",
+          "interval_minutes"
+        ],
+        "title": "SchedulerJobStatus"
+      },
+      "SchedulerStatusResponse": {
+        "properties": {
+          "scheduler_enabled": {
+            "type": "boolean",
+            "title": "Scheduler Enabled"
+          },
+          "scheduler_running": {
+            "type": "boolean",
+            "title": "Scheduler Running"
+          },
+          "scheduler_started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduler Started At"
+          },
+          "total_jobs": {
+            "type": "integer",
+            "title": "Total Jobs",
+            "default": 0
+          },
+          "active_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/SchedulerJobStatus"
+            },
+            "type": "array",
+            "title": "Active Jobs"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scheduler_enabled",
+          "scheduler_running"
+        ],
+        "title": "SchedulerStatusResponse"
+      },
       "ScoreBreakdownSchema": {
         "properties": {
           "novelty": {
@@ -4034,6 +4252,11 @@
             "type": "string",
             "title": "Status"
           },
+          "tier": {
+            "type": "integer",
+            "title": "Tier",
+            "default": 1
+          },
           "quota_remaining": {
             "anyOf": [
               {
@@ -4099,6 +4322,72 @@
             "type": "integer",
             "title": "Records Rejected",
             "default": 0
+          },
+          "records_new": {
+            "type": "integer",
+            "title": "Records New",
+            "default": 0
+          },
+          "records_updated": {
+            "type": "integer",
+            "title": "Records Updated",
+            "default": 0
+          },
+          "records_duplicate": {
+            "type": "integer",
+            "title": "Records Duplicate",
+            "default": 0
+          },
+          "upstream_data_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Data Timestamp"
+          },
+          "last_data_update": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Data Update"
+          },
+          "next_scheduled_run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Scheduled Run"
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "title": "Consecutive Failures",
+            "default": 0
+          },
+          "backoff_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backoff Minutes"
           },
           "http_status": {
             "anyOf": [

@@ -11,6 +11,7 @@ from app.connectors.base import (
     RawSignalPayload,
     SourceConnector,
 )
+from app.core.config import settings
 from app.services.deduplication import generate_fingerprint
 from app.services.pii import PIIPHIScrubber
 
@@ -74,6 +75,13 @@ class PubMedConnector(SourceConnector):
                     "retmax": (self.config.max_results_per_profile if self.config else 200) or 200,
                     "retmode": "json",
                 }
+                if settings.NCBI_API_KEY:
+                    params["api_key"] = settings.NCBI_API_KEY
+                if settings.NCBI_TOOL:
+                    params["tool"] = settings.NCBI_TOOL
+                if settings.NCBI_EMAIL:
+                    params["email"] = settings.NCBI_EMAIL
+
                 resp = await self._fetch_with_retry(self.BASE_ESEARCH, params=params)
                 data = resp.json()
                 for pmid in (data.get("esearchresult", {}).get("idlist") or []):
@@ -93,6 +101,13 @@ class PubMedConnector(SourceConnector):
                     "retmode": "xml",
                     "rettype": "abstract",
                 }
+                if settings.NCBI_API_KEY:
+                    params["api_key"] = settings.NCBI_API_KEY
+                if settings.NCBI_TOOL:
+                    params["tool"] = settings.NCBI_TOOL
+                if settings.NCBI_EMAIL:
+                    params["email"] = settings.NCBI_EMAIL
+
                 resp = await self._fetch_with_retry(self.BASE_EFETCH, params=params)
                 root = ET.fromstring(resp.text)
                 for article in root.findall(".//PubmedArticle"):
@@ -116,9 +131,10 @@ class PubMedConnector(SourceConnector):
                 first_run_completed=True,
             )
 
+            status_result = "SUCCESS" if new_rows > 0 or fetched > 0 else "NO_NEW_DATA"
             return ProfileRunResult(
                 profile_id=profile_id,
-                status="SUCCESS",
+                status=status_result,
                 fetched=fetched,
                 new_rows=new_rows,
                 duplicates=duplicates,
@@ -191,7 +207,9 @@ class PubMedConnector(SourceConnector):
             "abstract_raw": abstract,
             "journal": journal,
             "source_name": journal or "PubMed",
+            "source_tier": 1,
             "signal_type": "PUBLICATIONS",
+            "event_type": "PUBLICATION",
             "url": url,
             "evidence_text": scrubbed,
             "pub_date": pub_year,
