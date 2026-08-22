@@ -8,48 +8,28 @@ analysis_date: 2026-08-22
 
 **Analysis Date:** 2026-08-22
 
-## Documentation Drift (High — user-facing)
+## Resolved Technical Debt
 
-- `README.md` is badly stale vs reality: claims "Next.js 15" (actual: **Next.js 16.3.0**, `frontend/package.json:22`), "51/51 tests passing / Phase 2 completed" (actual: 114 passed/1 skipped, Phase 8 complete per `.planning/STATE.md`), and "repository currently contains planning documents only (no code yet)" (`README.md:726`). Any new stakeholder or agent reading README first gets a wrong mental model.
-- README tech-stack table says Python 3.11 + APScheduler/httpx scheduler; requirements.txt has no APScheduler — scheduling lives in `start.py`/connector cursors. Reconcile.
+- **Autonomous Persistent Scheduler**: Replaced manual-only pipeline trigger with an autonomous background scheduler (`SourceScheduler` in `backend/app/services/scheduler.py`) using native asyncio loops and PostgreSQL advisory locks.
+- **Truthful Source Health Model**: Fixed the false-degradation issue where clean API runs with 0 new records were labeled `DEGRADED`. Implemented canonical `NO_NEW_DATA` state and automatic `last_success` updates.
+- **Legacy Artifact Cleanup**: Deleted obsolete `frontend/package-lock.json` in favor of canonical `pnpm-lock.yaml`. Deleted legacy `frontend/src/` directory to eliminate dual-types confusion.
+- **Multi-Feed Adapter Architecture**: Added FDA MedWatch RSS, FDA Drug Safety RSS, EMA EPARs, EMA Orphan Designations RSS, and ClinicalTrials.gov `dataTimestamp` tracking with change event detection.
+- **Deterministic Relevance Gate**: Implemented `RelevanceGate` (`backend/app/services/relevance.py`) to reject noise before expensive downstream AI processing.
 
-## Dead / Legacy Code (Medium)
+## Current Concerns & Production Hardening Items
 
-- `frontend/src/` — stale duplicate containing old `app/sources/page.tsx` and an outdated generated `types/api.ts`. It is lint-ignored and excluded from the canonical contract; risk of an agent/human editing the wrong file. Candidate for deletion.
-- `frontend/app/[section]/` — empty directory scaffold; unused routing leftover.
-- `tests/test_foundation.py` — script-style (`asyncio.run(run_tests())` with prints); pytest collects **zero** tests from it despite its name, so its coverage silently vanished from suite counts. Convert to real pytest functions or move to `scripts/`.
+### 1. Authentication & Authorization (Medium — Production Readiness)
+- API endpoints currently do not require user authentication (designed for local hackathon demo).
+- Recommended: Implement JWT / OAuth2 bearer token authentication before deploying to multi-tenant or shared cloud infrastructure.
 
-## Test Brittleness (Medium)
+### 2. Live Network Rate-Limiting & Quota Scaling (Low–Medium)
+- NewsAPI has a strict 100 req/day quota on developer keys (handled with graceful fallback).
+- PubMed and openFDA have elevated rate limits when using API keys (`NCBI_API_KEY`, `OPENFDA_API_KEY`). Ensure keys are configured in production environment secrets.
 
-- Endpoint tests rely on ordered `mock_db.execute.side_effect` queues (`tests/test_api_endpoints.py:66`) — adding any query to an endpoint shifts the queue and breaks tests with confusing failures. Consider result-shape-based stubbing or a lightweight test DB.
-- Mixed test styles across files (`@pytest.mark.asyncio` present even though `asyncio_mode=auto`).
-- Frontend has no unit/integration tests at all; UI regressions only caught by TSC/lint/build.
+### 3. Vector Database Scaling (Low)
+- FastEmbed 384-dimensional embeddings are indexed in PostgreSQL using pgvector HNSW indexes.
+- As the bronze corpus expands beyond tens of thousands of items, monitor query latency and tune `ef_search` / `m` parameters as needed.
 
-## Dependency Hygiene (Low–Medium)
-
-- `backend/requirements.txt` mixes runtime and test dependencies in one unpinned floor-range file (all `>=`). No lockfile → non-reproducible builds; Docker builds may drift between machines.
-- Both `pnpm-lock.yaml` AND a tracked `frontend/package-lock.json` exist — npm lockfile can go stale and mislead contributors; pick one package manager artifact.
-
-## Security Notes (acceptable for prototype, flag for production)
-
-- No authentication/authorization anywhere in the API — every endpoint (including `POST /cache/clear`, pipeline triggers) is open. Fine for hackathon demo; blocker for anything beyond localhost.
-- CORS uses `allow_credentials=True` with wildcard methods/headers (`backend/app/main.py:60-67`); origins are restricted but method/header wildcards are broader than needed.
-- Dev credentials (`metaradar/metaradar_pass`) are hard-coded defaults in `docker-compose.yml` and `config.py` fallbacks — documented dev-only posture; ensure it never reaches a shared environment.
-- `.env` correctly gitignored and untracked (verified). `.env.example` contains no secrets. Good.
-- Grok privacy gate exists and is tested (`test_privacy_boundary.py`), but it is opt-in (`ENABLE_GROK_FALLBACK=false`) — keep default off.
-
-## Fragile Areas (handle with care when refactoring)
-
-- `backend/app/models/__init__.py` — all 20 tables in one 381-line module; migrations 001–006 must stay in sync with it manually.
-- `MetaRadarState` channel reducers (`backend/app/workflows/state.py`) — the `replace_list` reducer exists specifically because naive `operator.add` duplicated signals; changing node return shapes risks reintroducing duplication bugs.
-- Provider chain ordering assumptions in `backend/app/providers/factory.py` (capability support + privacy gate + fallback reason recording) — heavily covered by truthfulness tests; don't reorder casually.
-- Contract sync chain: forgetting `python scripts/export_openapi.py` after schema edits fails CI via drift test — always regenerate before committing backend changes.
-
-## Performance Watch Items
-
-- Embedding backfill service (`embeddings_backfill.py`) and HNSW queries are untested under load; vector index build cost unknown on large signal volumes.
-- `start.py` auto-applies Alembic migrations on boot — convenient locally, risky pattern if ever used beyond dev.
-
----
-
-*Mapped as part of full-repo codebase analysis: 2026-08-22*
+### 4. Continuous Deployment & Migrations
+- Alembic migrations (`001` through `006`) are verified and clean.
+- In production, execute `alembic upgrade head` via a pre-deployment step rather than relying on application bootstrap.

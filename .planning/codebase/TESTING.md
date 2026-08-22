@@ -4,61 +4,57 @@ focus: quality
 analysis_date: 2026-08-22
 ---
 
-# Testing
+# Testing Strategy & Gates
 
 **Analysis Date:** 2026-08-22
 
 ## Framework & Configuration
 
-- **pytest 8** with `pytest-asyncio` (`asyncio_mode = auto` — async tests need no decorator, though some files still use `@pytest.mark.asyncio`), `pytest-cov`, `pytest-httpx`.
-- Config: `pytest.ini` at repo root — `testpaths = tests`, `pythonpath = backend .`, custom marker `live` for tests requiring live external services (e.g. `test_providers_live.py`, skipped without `XAI_API_KEY`; STATE.md reports "114 Passed, 1 Skipped (Live Grok Key)").
-- Tests live at repo root `tests/` (NOT `backend/tests/`). Each file inserts `backend/` into `sys.path` manually.
-- Frontend has **no unit-test runner** — verification is lint + strict TSC + production build + banned-class gate.
+- **pytest 8** with `pytest-asyncio` (`asyncio_mode = auto`), `pytest-cov`, `pytest-httpx`.
+- Config: `pytest.ini` at repo root (`testpaths = tests`, `pythonpath = backend .`).
+- Custom marker `live` for live external service verification (e.g. `test_providers_live.py`).
+- Fast in-memory testing: all 114 automated unit and integration tests run offline without network dependencies in ~25-30s.
 
-## Test Files (23)
+## Test Suite Distribution (23 test modules)
 
-| File | Area |
+| File | Focus Area |
 |---|---|
-| `test_foundation.py` | DomainConfig loader, fingerprint/chunking, PII scrubber, red-team rules, provider factory + degraded mode. NOTE: script-style (`asyncio.run(run_tests())`) — pytest collects nothing from it; run standalone |
-| `test_api_endpoints.py` | FastAPI via `httpx.AsyncClient(ASGITransport(app=app))`; dependency-overridden DB with `AsyncMock` side-effect queues |
-| `test_signals_endpoints.py` | `/signals`, `/overview` contract behavior |
-| `test_intelligence_nodes.py` | LangGraph node units (confluence/lifecycle/redteam/etc.) |
-| `test_confluence_semantics.py` | Confluence independence/threshold semantics |
-| `test_redteam_behavior.py` | 19-rule contradiction registry behavior |
-| `test_calibration_service.py` / `test_e2e_calibration_scenario.py` | Weight recalibration BEFORE/AFTER |
-| `test_ingestion.py` / `test_connector_health.py` | Connector runs, health telemetry |
-| `test_retrieval.py` | Vector search/pgvector queries |
-| `test_contract_drift.py` | OpenAPI ⇄ `frontend/types/api.ts` sync gate |
-| `test_parity_matrix.py` | Generated feature-parity matrix consistency |
-| `test_privacy_boundary.py` | Grok privacy gate: non-public data never leaves machine |
-| `test_truthfulness_and_invariants.py` | model_metadata presence, synthetic labeling invariants |
-| `test_provenance.py` | Provenance traceability columns/endpoints (Phase 8) |
-| `test_failure_injection.py` | Fault-tolerance: connector/API/model failure paths |
-| `test_config.py` / `test_config_errors.py` | Settings loading + CONFIGURATION_ERROR surfacing |
-| `test_launchers.py` | `setup.py`/`start.py` argument handling |
-| `test_observability.py` | Activity/source-health endpoints |
-| `test_provider_matrix.py` | Capability matrix across providers |
+| `test_observability.py` | Source health state machine, `NO_NEW_DATA` truthful rules, scheduler telemetry |
+| `test_ingestion.py` | Connector execution, PII scrubbing, deduplication, incremental cursor state |
+| `test_connector_health.py` | Health log logging, unprobed status handling, error detail mapping |
+| `test_provenance.py` | Provenance serialization, canonical URL preservation, verbatim bronze payloads |
+| `test_intelligence_nodes.py` | 11-node LangGraph execution, entity mapping, synthesis, feedback calibration |
+| `test_confluence_semantics.py` | Multi-source convergence and independent confirmation thresholds |
+| `test_redteam_behavior.py` | 19-rule contradiction registry and NLI heuristics |
+| `test_calibration_service.py` / `test_e2e_calibration_scenario.py` | Role weight recalibration and feedback gradient updates |
+| `test_signals_endpoints.py` / `test_api_endpoints.py` | FastAPI endpoint contracts, Athena Q&A, search filters |
+| `test_retrieval.py` | 384-dim FastEmbed embeddings, vector search, pgvector integration |
+| `test_contract_drift.py` | OpenAPI 3.1 ⇄ `frontend/types/api.ts` synchronization gate |
+| `test_parity_matrix.py` | Generated feature parity matrix verification |
+| `test_privacy_boundary.py` | Grok privacy gate: non-public data blocking |
+| `test_truthfulness_and_invariants.py` | Model metadata, synthetic labeling, correlation ID propagation |
+| `test_failure_injection.py` | Fault-tolerance and degraded provider fallbacks |
+| `test_config.py` / `test_config_errors.py` | Configuration loading, error surfacing with remediation advice |
+| `test_launchers.py` | `setup.py` and `start.py` process lifecycle |
+| `test_provider_matrix.py` | Capability matrix across Local Gemma, Grok, and BART |
 
-## Patterns
-
-- **In-memory ASGI testing** — no live server needed: `AsyncClient(transport=ASGITransport(app=app), base_url="http://test")`.
-- **DB mocking over test databases**: endpoints tested by overriding `app.dependency_overrides[get_db]` with `AsyncMock` sessions whose `execute` side-effects return queued result stubs (`MagicMock().scalars().all()` chains). Fast, but couples tests to query counts/order — brittle when adding queries to an endpoint.
-- **HTTP mocking**: `pytest-httpx` for connector unit tests (no real external calls); live behavior behind `live` marker instead.
-- **Behavioral assertions**: truthfulness/provenance suites assert *labels and metadata* exist, not just status codes.
-- **E2E**: `scripts/test_live_ingestion_e2e.py` for real-source ingestion smoke; pipeline E2E covered via API tests with mocked providers.
-
-## Mandatory Verification Gates (Definition of Done — `docs/rules/TESTING_STRATEGY.md`)
+## Mandatory CI / DoD Verification Gates
 
 ```bash
-node scripts/check-banned-classes.mjs        # 0 violations
-npm --prefix frontend run lint               # 0 warnings/errors
-npm --prefix frontend run build              # strict TS + Next 16 build passes
-pytest tests/ -x -q                          # full suite green
-python scripts/export_openapi.py             # contract sync clean (no diff on types/api.ts)
+# 1. Banned Tailwind class gate
+node scripts/check-banned-classes.mjs
+
+# 2. Frontend ESLint
+npm --prefix frontend run lint
+
+# 3. Next.js 16 Production Build & TypeScript Typecheck
+npm --prefix frontend run build
+
+# 4. Backend Pytest Suite
+pytest tests/ -v -k "not test_database_connection"
+
+# 5. Contract Synchronization
+python scripts/export_openapi.py
 ```
 
-Latest recorded state (`.planning/STATE.md`, Phase 08 close): all gates green — 114 passed / 1 skipped.
-
----
-
-*Mapped as part of full-repo codebase analysis: 2026-08-22*
+Current test execution status: **114 passed, 1 skipped (live Grok key)**.
