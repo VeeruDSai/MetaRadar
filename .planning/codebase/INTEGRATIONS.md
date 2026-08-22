@@ -1,134 +1,49 @@
+---
+doc_type: codebase-map
+focus: tech
+analysis_date: 2026-08-22
+---
+
 # External Integrations
 
-**Analysis Date:** 2026-08-20
+**Analysis Date:** 2026-08-22
 
-## APIs & External Services
+## Data Source Connectors
 
-**Data Source Connectors (Phase 1 ingestion):**
-All five connectors extend `SourceConnector` in `backend/app/connectors/base.py` (bounded retry with exponential backoff + jitter via `_fetch_with_retry`, per-profile incremental state in the `connector_state` table, dedupe + PII scrub before bronze persistence). They are registered in `backend/app/connectors/__init__.py` (`ALL_CONNECTORS`). Query profiles come from `config/haemophilia.yaml`.
+All connectors implement the shared `SourceConnector` contract (`backend/app/connectors/base.py`): isolated, idempotent, incremental (per-connector `ConnectorState` cursor, D-11), quota-aware, retrying (`max_retries=3`, base delay 1.5s, timeout 30s), and observable. Connectors persist immutable bronze rows only — never intelligence.
 
-- **NCBI PubMed E-utilities** - Scientific publications
-  - Endpoints: `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi` + `efetch.fcgi` (`backend/app/connectors/pubmed.py`)
-  - Auth: none (quota-free); polite 0.35s delay between efetch batches
-  - SDK/Client: httpx
-  - Config: `queries` per profile in `config/haemophilia.yaml` (e.g. `haemophilia_clinical`)
-- **ClinicalTrials.gov API v2** - Clinical trial updates
-  - Endpoint: `https://clinicaltrials.gov/api/v2/studies` (`backend/app/connectors/clinical_trials.py`)
-  - Auth: none; pagination via `nextPageToken`; NCT-fingerprinted
-  - Config: `conditions`, `interventions`, `sponsor_keywords` per profile
-- **NewsAPI** - Market news
-  - Endpoint: `https://newsapi.org/v2/everything` (`backend/app/connectors/newsapi.py`)
-  - Auth: API key via `X-Api-Key` header — env var `NEWSAPI_KEY`
-  - Quota: ~100 req/day dev cap tracked from `X-RateLimit-Remaining` header, persisted to `ConnectorState.cursor` as JSON `{"quota_remaining": N, "quota_window_date": "YYYY-MM-DD"}`; connector returns DEGRADED when quota exhausted (D-20)
-- **OpenFDA** - Regulatory approvals
-  - Endpoint: `https://api.fda.gov/drug/drugsfda.json` (`backend/app/connectors/fda.py`)
-  - Auth: none (public endpoint); application numbers carried as canonical `reg:` fingerprint
-  - Config: `search_terms` per profile (`openfda.substance_name:{term}` search)
-- **EMA RSS feed** - EU regulatory decisions
-  - Endpoint: `https://www.ema.europa.eu/en/medicines/rss` (override via `rss_url`) (`backend/app/connectors/ema.py`)
-  - Auth: none; stdlib `xml.etree` parsing; keyword-filtered items persisted with verbatim XML fragment
+| Connector | File | Status | Auth | Notes |
+|---|---|---|---|---|
+| NCBI PubMed (E-utilities) | `backend/app/connectors/pubmed.py` | LIVE | none (public E-utilities) | Literature/trial readouts |
+| ClinicalTrials.gov v2 | `backend/app/connectors/clinical_trials.py` | LIVE | keyless public API | Trial registrations/status |
+| NewsAPI | `backend/app/connectors/newsapi.py` | LIVE (quota-aware) | `NEWSAPI_KEY` env var | Degrades to cache/synthetic; config error surfaced via `configuration_error_for()` in `app/core/config.py:61` |
+| openFDA | `backend/app/connectors/fda.py` | ADAPTER-READY | none | Scaffold + rate limits |
+| EMA RSS | `backend/app/connectors/ema.py` | ADAPTER-READY | none | Regulatory feed |
 
-**LLM Providers (fallback chain: Local Gemma → Grok → BART degraded):**
-- **Ollama sidecar (local)** - primary reasoning provider, serves `gemma3:4b`
-  - Endpoints: `POST {OLLAMA_HOST}/api/generate`, `GET {OLLAMA_HOST}/api/tags` (`backend/app/providers/gemma.py`)
-  - Env: `OLLAMA_HOST` (default `http://localhost:11434`), `OLLAMA_MODEL` (default `gemma3:4b`), `MAX_CONTEXT_TOKENS` (2048), `MAX_OUTPUT_TOKENS` (512)
-  - Containerized in `docker-compose.yml` (`ollama` service, GPU-reserved); model pulled via `setup.py` (`ollama pull gemma3:4b`)
-  - Failure raises `OllamaUnavailableError` → factory falls through (`backend/app/providers/factory.py`)
-- **xAI Grok (hosted fallback)** - model `grok-beta`
-  - Endpoint: `POST https://api.x.ai/v1/chat/completions` (`backend/app/providers/grok.py`)
-  - Auth: `Authorization: Bearer {XAI_API_KEY}` — env var `XAI_API_KEY`
-  - Gate: only used when `ENABLE_GROK_FALLBACK=true`; strict privacy gate `validate_privacy_gate` blocks any payload not classified PUBLIC/SYNTHETIC (`backend/app/providers/grok.py` lines 56-70)
-  - Missing key raises `GrokUnavailableError` → falls to BART degraded (CI stays green without a key, D-16)
-- **BART degraded mode** - last-resort factual summarizer (`facebook/bart-large-cnn` label, no real model call) (`backend/app/providers/degraded.py`)
-  - Summarize-only capability; explicit `degraded_factual` mode metadata
+Synthetic fallback: `data/synthetic_signals.json` (500 curated signals, `is_synthetic=true`, never presented as live). Seeded via `backend/app/db/seed.py`.
 
-**Embedding Model:**
-- fastembed downloads `sentence-transformers/all-MiniLM-L6-v2` (384-dim) from HuggingFace, revision pinned `e4bb823e5956b6277b069d276b978c48a73507c7` (`backend/app/core/config.py`, `backend/app/services/embeddings.py`); CPU/ONNX, lazy-loaded singleton, offloaded to executor
+## Databases & Cache
 
-## Data Storage
+- **PostgreSQL 16 + pgvector** — primary datastore. URL from `DATABASE_URL` (asyncpg driver). Schema managed by Alembic (`backend/alembic/versions/001…006`). 20 tables in `backend/app/models/__init__.py`: `pipeline_runs`, `sources`, `source_health_logs`, `companies`, `assets`, `trials`, `developments`, `events`, `lifecycle_events`, `confluences`, `raw_signals_bronze`, `connector_state`, `evidence`, `signals` (with `Vector(384)` embedding + HNSW similarity), `contradictions`, `calibration_runs/history`, `scoring_weights`, `signal_routing`, `calibration_feedback`, `watch_items`, `audit_log`.
+- **Redis 7** — cache + rate limiting via `REDIS_URL` (db 0); endpoints in `backend/app/api/v1/endpoints/cache.py`.
+- **Postgres advisory locks** — single-execution scheduler protection (`try_advisory_lock` in `backend/app/db/session.py:43`).
 
-**Databases:**
-- PostgreSQL 16 with pgvector extension — primary store
-  - Image: `pgvector/pgvector:pg16` (`docker-compose.yml`); local default via Docker Compose
-  - Connection: `DATABASE_URL` env (e.g. `postgresql+asyncpg://...`); also hardcoded default in `backend/app/core/config.py` and `backend/alembic.ini`
-  - Client: SQLAlchemy 2.0 async + asyncpg (`backend/app/db/session.py`); pool size 10, max overflow 20
-  - Migrations: Alembic (`backend/alembic/versions/001_initial_v51_schema.py`, `002_phase1_connector_state_and_cross_source.py`, `003_contradictions_scoring.py`)
-  - Vector search: HNSW index `signals_embedding_hnsw`, adjustable `hnsw.ef_search` via `set_config` (`backend/app/services/vector_query.py`)
-  - Tables: `pipeline_runs`, `sources`, `companies`, `assets`, `trials`, `developments`, `events`, `lifecycle_events`, `confluences`, `raw_signals_bronze`, `connector_state`, `evidence`, `signals` (incl. pgvector `embedding` column), `contradictions`, `calibration_history`, `scoring_weights`, `signal_routing`, `calibration_feedback`, `watch_items`, `audit_log` (`backend/app/models/__init__.py`)
+## AI Providers
 
-**File Storage:**
-- Local filesystem only: `logs/` (runtime logs via `start.py`), Docker volumes `pgdata`, `redisdata`, `models_cache` (mounted at `/app/models` for embeddings), `ollama_models`
+- **Ollama sidecar** (`http://ollama:11434`, model `gemma3:4b`) — local reasoning LLM host. Client logic in `backend/app/providers/gemma.py`.
+- **xAI Grok API** — optional hosted fallback (`XAI_API_KEY`, `ENABLE_GROK_FALLBACK`). Privacy gate in `backend/app/providers/grok.py` (`validate_privacy_gate(classification)`) blocks any non-public data from leaving the machine.
+- **Degraded BART provider** — local summarization-only fallback when no reasoning provider is available.
 
-**Caching:**
-- Redis 7 (`redis:7-alpine` container, port 6379)
-  - Connection: `REDIS_URL` env
-  - Usage: `POST /api/v1/cache/clear` flushes keys (`backend/app/api/v1/endpoints/cache.py`); `GET /api/v1/health/ready` pings non-blocking (`backend/app/api/v1/endpoints/health.py`)
-  - No application-level cache orchestration beyond this; no Celery/background queue (pipeline runs in-process via LangGraph)
+## Internal Contract (Backend ⇄ Frontend)
 
-## Authentication & Identity
+- REST under `/api/v1` (routers registered in `backend/app/main.py`): health, signals, intelligence, registry, observability, cache, pipeline, ingestion, search, feedback (+ root `/`).
+- **Canonical contract sync**: OpenAPI 3.1 spec at `contracts/openapi.json`; `scripts/export_openapi.py` regenerates the typed client source of truth `frontend/types/api.ts` (518 lines). `tests/test_contract_drift.py` fails on drift.
+- Frontend typed fetch layer: `frontend/lib/api.ts` (wraps all endpoints, `ApiError` in `frontend/lib/errors.ts`, DTO mappers in `frontend/lib/mappers.ts`). Base URL `NEXT_PUBLIC_API_BASE_URL`.
 
-**Auth Provider:**
-- None. No OAuth, JWT, API-key middleware, or user identity system in `backend/app/api/` — only FastAPI `Depends(get_db)` for DB sessions
-- API is open; CORS restricted to `CORS_ORIGINS` (default `http://localhost:3000`) via `CORSMiddleware` (`backend/app/main.py`)
-- Data classification exists only as an internal privacy gate for the Grok fallback (`DataClassification` in `backend/app/providers/base.py`), not as access control
+## No Other External Services
 
-## Monitoring & Observability
-
-**Error Tracking & Structured Logging:**
-- `structlog` configured across FastAPI and background services with automated secret scrubbing (`_scrub_secrets`) and PII redaction (`backend/app/core/logging.py`)
-- Correlation ID propagation via `X-Request-ID` middleware (`backend/app/core/middleware.py`)
-- Source connector operational telemetry and error capture persisted to `source_health_logs` table
-
-**Health & Ingestion Operations Endpoints:**
-- `GET /api/v1/health` — liveness
-- `GET /api/v1/health/ready` — DB (mandatory) + Redis (non-blocking)
-- `GET /api/v1/health/models` — Ollama availability (real HTTP probe to `/api/tags`), Grok configured/fallback enabled, embedding model info
-- `GET /api/v1/health/connectors` — per-connector status incl. quota, last success/error from `connector_state`
-- `GET /api/v1/sources/health` — live source connector latency and HTTP status telemetry
-- `POST /api/v1/ingestion/run` — trigger live background connector ingestion
-- `POST /api/v1/ingestion/sync-live` — synchronized live connector fetch + LangGraph pipeline promotion
-- `GET /api/v1/confluence/{id}/inspect` — explainable confluence backward trace with verbatim quotes and points breakdown
-
-## CI/CD & Deployment
-
-**Hosting:**
-- Docker Compose stack (`docker-compose.yml`): `postgres`, `redis`, `backend` (:8000), `backend-gpu` (profile `gpu`, `LLM_DEVICE=cuda:0`), `frontend` (:3000), `ollama` (:11434, NVIDIA GPU reservation)
-- Host launcher alternative: `python start.py` (uvicorn + next dev, port cleanup, graceful shutdown)
-
-**CI Pipeline:**
-- GitHub Actions `.github/workflows/ci.yml` — triggers on push to `main`/`develop`/`feature/*` and PRs
-  - Backend: pip install + `pytest -v` (Python 3.11)
-  - Contract sync: `python scripts/export_openapi.py` then `git diff --exit-code frontend/types/api.ts` (OpenAPI → TypeScript contract drift fails CI)
-  - Frontend: pnpm 9 + Node 22, `tsc --noEmit`, `pnpm lint`, `pnpm build`
-
-## Environment Configuration
-
-**Required env vars** (see `.env.example`):
-- `DATABASE_URL` — PostgreSQL asyncpg connection
-- `REDIS_URL` — Redis connection
-- `LLM_PROVIDER` — `local` | `xai` | `auto`
-- `OLLAMA_HOST` — Ollama sidecar base URL (default `http://localhost:11434`)
-- `CORS_ORIGINS` — comma-separated allowed origins
-
-**Optional env vars:**
-- `NEWSAPI_KEY` — required only for NewsAPI connector (degrades to DEGRADED status when unset)
-- `XAI_API_KEY`, `ENABLE_GROK_FALLBACK` — required only for Grok hosted fallback
-- `EMBEDDING_MODEL`, `EMBEDDING_MODEL_REVISION`, `EMBEDDING_DIMENSION`, `EMBEDDING_MAX_SEQ_LENGTH` — embedding model identity
-- `LOCAL_LLM_MODEL`, `LLM_DEVICE`, `LLM_DTYPE`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS` — local LLM tuning
-- `RAW_SIGNAL_RETENTION_DAYS` — bronze retention window
-
-**Secrets location:**
-- `.env` at repo root (NOT committed; loaded by pydantic-settings from `backend/app/core/config.py`); template committed at `.env.example`
-- `docker-compose.yml` uses inline local dev credentials for Postgres (dev-only defaults)
-
-## Webhooks & Callbacks
-
-**Incoming:**
-- None detected
-
-**Outgoing:**
-- None (no webhook emissions; all external calls are synchronous HTTP fetches from connectors/providers)
+No auth provider (prototype), no email/webhook/S3 integrations. CORS restricted to `CORS_ORIGINS` (default `http://localhost:3000`).
 
 ---
 
-*Integration audit: 2026-08-20*
+*Mapped as part of full-repo codebase analysis: 2026-08-22*
