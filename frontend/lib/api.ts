@@ -148,14 +148,18 @@ async function apiFetch<T>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`
   try {
-    const res = await fetch(url, {
+    const fetchOptions: RequestInit = {
       ...options,
-      signal,
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
       },
-    })
+    }
+    // Only add signal when defined — some browsers reject undefined as AbortSignal
+    if (signal !== undefined) {
+      fetchOptions.signal = signal
+    }
+    const res = await fetch(url, fetchOptions)
 
     const requestId = res.headers.get('x-request-id') || undefined
 
