@@ -33,6 +33,28 @@ LOGS_DIR = BASE_DIR / "logs"
 active_processes: list[subprocess.Popen] = []
 
 
+def load_env_file(env_path: Path):
+    """Parses key-value pairs from .env and populates os.environ if not already set."""
+    if not env_path.exists():
+        return
+    try:
+        lines = env_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip()
+                if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                    val = val[1:-1]
+                if key and key not in os.environ:
+                    os.environ[key] = val
+    except Exception as e:
+        print(f"  [WARNING] Could not parse .env: {e}", file=sys.stderr)
+
+
 def signal_handler(sig, frame):
     print("\n\n[SHUTDOWN] Received termination signal. Stopping all child processes...")
     cleanup_processes()
@@ -285,6 +307,9 @@ def main():
     parser.add_argument("--daemon", action="store_true", help="Run processes in daemon mode without status loop")
 
     args = parser.parse_args()
+
+    # Load environment variables from root .env
+    load_env_file(BASE_DIR / ".env")
 
     # Register signal handlers
     signal.signal(signal.SIGINT, signal_handler)

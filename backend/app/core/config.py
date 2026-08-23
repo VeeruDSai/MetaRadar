@@ -1,11 +1,21 @@
 import os
+from pathlib import Path
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+_ROOT_DIR = _BACKEND_DIR.parent
+_ENV_FILES = [
+    str(_ROOT_DIR / ".env"),
+    str(_BACKEND_DIR / ".env"),
+    ".env",
+    "../.env",
+]
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore"
     )
@@ -54,8 +64,13 @@ class Settings(BaseSettings):
     # Retention
     RAW_SIGNAL_RETENTION_DAYS: int = 30
 
-    # NewsAPI Key
+    # NewsAPI Key (supports NEWSAPI_KEY or NEWS_API_KEY)
     NEWSAPI_KEY: Optional[str] = None
+    NEWS_API_KEY: Optional[str] = None
+
+    @property
+    def effective_newsapi_key(self) -> Optional[str]:
+        return self.NEWSAPI_KEY or self.NEWS_API_KEY
 
     # NCBI PubMed API Key & Identifiers
     NCBI_API_KEY: Optional[str] = None
@@ -85,7 +100,7 @@ def configuration_error_for(source_id: str) -> Optional[str]:
     """Pure, side-effect-free evaluator for connector and model configuration state."""
     src = source_id.lower().strip()
     if src == "newsapi":
-        key = (settings.NEWSAPI_KEY or "").strip()
+        key = (settings.NEWSAPI_KEY or settings.NEWS_API_KEY or "").strip()
         if not key or key.lower() in ("your_newsapi_key_here", "placeholder", "xxx", "none"):
             return "CONFIGURATION_ERROR: NEWSAPI_KEY missing (required) — get a key at https://newsapi.org/register (NewsAPI developer account) and set NEWSAPI_KEY in .env"
     if src in ("grok", "xai") and settings.ENABLE_GROK_FALLBACK:

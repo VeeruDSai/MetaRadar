@@ -96,7 +96,7 @@ class NewsAPIConnector(SourceConnector):
                 "sortBy": "publishedAt",
                 "pageSize": 100,
             }
-            headers = {"X-Api-Key": settings.NEWSAPI_KEY}
+            headers = {"X-Api-Key": settings.NEWSAPI_KEY or settings.NEWS_API_KEY or ""}
 
             resp = await self._fetch_with_retry(self.BASE_URL, params=params, headers=headers)
             data = resp.json()
