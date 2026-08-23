@@ -177,7 +177,8 @@ def _refused_transport():
     return AsyncClient(transport=MockTransport(handler), base_url="http://ollama-test")
 
 
-def test_gemma_raises_on_connection_refused():
+def test_gemma_raises_on_connection_refused(monkeypatch):
+    monkeypatch.setattr("app.providers.gemma.find_local_gguf_model", lambda: None)
     gemma = GemmaProvider()
     gemma._client = _refused_transport()
 
@@ -189,7 +190,8 @@ def test_gemma_raises_on_connection_refused():
         ))
 
 
-def test_gemma_is_available_false_on_error():
+def test_gemma_is_available_false_on_error(monkeypatch):
+    monkeypatch.setattr("app.providers.gemma.find_local_gguf_model", lambda: None)
     gemma = GemmaProvider()
     gemma._client = _refused_transport()
 

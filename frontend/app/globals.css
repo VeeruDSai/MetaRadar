@@ -58,8 +58,9 @@
   --panel-elevated: var(--surface-elevated);
   --radius: 0.72rem;
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(15, 23, 42, 0.2);
-  --scrollbar-thumb-hover: rgba(37, 99, 199, 0.65);
+  --scrollbar-thumb: rgba(71, 85, 105, 0.28);
+  --scrollbar-thumb-hover: #2563c7;
+  --scrollbar-thumb-border: rgba(255, 255, 255, 0.4);
 }
 
 .dark {
@@ -89,8 +90,9 @@
   --panel: var(--surface);
   --panel-elevated: var(--surface-elevated);
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.22);
-  --scrollbar-thumb-hover: rgba(79, 134, 232, 0.75);
+  --scrollbar-thumb: rgba(148, 163, 184, 0.28);
+  --scrollbar-thumb-hover: #6366f1;
+  --scrollbar-thumb-border: rgba(255, 255, 255, 0.12);
 }
 
 /* Custom Scrollbars — Universal cross-browser support (Light & Dark) */
@@ -105,10 +107,10 @@ html {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-/* WebKit / Blink Custom Scrollbars */
+/* WebKit / Blink Sleek Rectangular Scrollbars */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -117,22 +119,24 @@ html {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 9999px;
+  border-radius: 2px;
   border: 1.5px solid transparent;
   background-clip: padding-box;
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
-  border-radius: 9999px;
-  border: 1.5px solid transparent;
+  border-radius: 2px;
+  border: 1px solid var(--scrollbar-thumb-border);
   background-clip: padding-box;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--scrollbar-thumb-hover) 40%, transparent);
 }
 
 ::-webkit-scrollbar-thumb:active {
   background: var(--primary);
-  border-radius: 9999px;
-  border: 1px solid transparent;
+  border-radius: 2px;
+  border: 1px solid var(--scrollbar-thumb-border);
   background-clip: padding-box;
 }
 

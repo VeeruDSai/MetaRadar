@@ -85,7 +85,7 @@ class GemmaProvider(LLMProvider):
             self._client = None
 
     def _generate_with_local_gguf(self, gguf_path: Path, prompt: str) -> str:
-        """Executes inference using local GGUF model via llama-cpp-python."""
+        """Executes hardware-optimized inference using local GGUF model via llama-cpp-python."""
         try:
             from llama_cpp import Llama
         except ImportError:
@@ -96,19 +96,32 @@ class GemmaProvider(LLMProvider):
 
         if self._llama_instance is None:
             n_gpu = -1 if settings.LLM_DEVICE in ("cuda", "gpu", "auto") else 0
-            logger.info(f"Loading local GGUF reasoning model from {gguf_path} (n_gpu_layers={n_gpu})...")
+            n_threads = os.cpu_count() or 4
+            logger.info(
+                f"Loading local GGUF reasoning model from {gguf_path.name} "
+                f"(n_gpu_layers={n_gpu}, n_threads={n_threads}, n_ctx={self.max_context})..."
+            )
             self._llama_instance = Llama(
                 model_path=str(gguf_path),
                 n_ctx=self.max_context,
                 n_gpu_layers=n_gpu,
+                n_threads=n_threads,
+                n_batch=512,
+                f16_kv=True,
                 verbose=False,
             )
 
+        # Format prompt with Gemma instruction turn markers
+        formatted_prompt = (
+            f"<start_of_turn>user\n{prompt}<end_of_turn>\n<start_of_turn>model\n"
+        )
+
         output = self._llama_instance(
-            prompt,
+            formatted_prompt,
             max_tokens=self.max_output,
             temperature=0.2,
-            stop=["</s>", "<end_of_turn>", "HUMAN:", "SYSTEM:"],
+            top_p=0.95,
+            stop=["<end_of_turn>", "</s>", "<eos>", "HUMAN:", "SYSTEM:"],
         )
         choices = output.get("choices", [])
         if choices and "text" in choices[0]:
@@ -135,6 +148,8 @@ class GemmaProvider(LLMProvider):
                 "options": {
                     "num_predict": self.max_output,
                     "num_ctx": self.max_context,
+                    "temperature": 0.2,
+                    "top_p": 0.95,
                 },
             }
             response = await client.post("/api/generate", json=payload)
@@ -149,6 +164,41 @@ class GemmaProvider(LLMProvider):
         """Sends text as the prompt and returns the raw completion."""
         return await self._generate(text)
 
+    def _parse_intelligence_json(self, raw: str) -> Dict[str, Any]:
+        """Robustly extracts JSON from raw LLM output even with markdown blocks."""
+        import re
+        cleaned = raw.strip()
+        
+        # 1. Direct JSON parse
+        try:
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+
+        # 2. Extract markdown ```json ... ``` block
+        md_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
+        if md_match:
+            try:
+                parsed = json.loads(md_match.group(1))
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                pass
+
+        # 3. Extract outermost { ... }
+        brace_match = re.search(r"(\{.*\})", cleaned, re.DOTALL)
+        if brace_match:
+            try:
+                parsed = json.loads(brace_match.group(1))
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                pass
+
+        return {}
+
     async def generate_intelligence(
         self,
         evidence: List[str],
@@ -159,13 +209,13 @@ class GemmaProvider(LLMProvider):
 
         evidence_block = "\n".join(f"- {e}" for e in evidence)
         prompt = (
-            "SYSTEM: You are a competitive intelligence analyst for a haemophilia "
+            "You are a competitive intelligence analyst for a haemophilia "
             "market team. Produce a structured signal assessment based strictly on "
             "the provided evidence. Return ONLY a valid JSON object with exactly "
             "these keys: what_changed, why_it_matters, primary_function, suggested_action.\n\n"
-            f"HUMAN: Evidence:\n{evidence_block}\n\n"
+            f"Evidence:\n{evidence_block}\n\n"
             f"Task: {task}\n\n"
-            "Respond with the JSON object only."
+            "Return the JSON object only."
         )
 
         try:
@@ -187,11 +237,7 @@ class GemmaProvider(LLMProvider):
             latency_ms=latency
         )
 
-        parsed: Dict[str, Any] = {}
-        try:
-            parsed = json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
-            logger.warning("Gemma response was not valid JSON; falling back to raw text.")
+        parsed = self._parse_intelligence_json(raw)
 
         return {
             "what_changed": parsed.get("what_changed", raw)
