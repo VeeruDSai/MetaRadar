@@ -7,17 +7,17 @@ falls through to BART degraded mode — CI stays green without a key (D-16).
 """
 
 import json
-import logging
 import time
 from typing import Any, Dict, List, Optional
 
 import httpx
 
-from app.providers.base import LLMProvider, ProviderCapability, DataClassification
 from app.core.config import settings
+from app.core.logging import get_logger
+from app.providers.base import LLMProvider, ProviderCapability, DataClassification
 from app.schemas import ModelMetadataSchema
 
-logger = logging.getLogger(__name__)
+logger = get_logger("grok_provider")
 
 XAI_API_URL = "https://api.x.ai/v1/chat/completions"
 XAI_MODEL = "grok-beta"
@@ -40,8 +40,8 @@ class GrokProvider(LLMProvider):
         ProviderCapability.STRUCTURED_OUTPUT
     ]
 
-    def __init__(self, api_key: str = settings.XAI_API_KEY or ""):
-        self.api_key = api_key
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key if api_key is not None else (settings.XAI_API_KEY or "")
         self.model_name = XAI_MODEL
         self._client: Optional[httpx.AsyncClient] = None
 
@@ -114,18 +114,21 @@ class GrokProvider(LLMProvider):
             logger.warning(f"Grok API request failed: {e}")
             raise GrokUnavailableError(f"Grok API call failed: {e}") from e
 
-    async def generate_summary(self, text: str) -> str:
+    async def generate_summary(
+        self,
+        text: str,
+        classification: DataClassification = DataClassification.UNKNOWN,
+    ) -> str:
         """Summarizes text via the Grok chat completions API.
 
-        Summaries of unclassified text default to DataClassification.UNKNOWN,
-        which the privacy gate blocks — callers must classify payloads as
-        PUBLIC/SYNTHETIC to transmit to api.x.ai.
+        Unclassified text defaults to DataClassification.UNKNOWN, which the
+        privacy gate blocks. Callers must pass PUBLIC or SYNTHETIC to transmit.
         """
         messages = [
             {"role": "system", "content": "You are a precise medical intelligence summarizer."},
             {"role": "user", "content": f"Summarize the following evidence concisely:\n\n{text}"},
         ]
-        return await self._chat(messages, classification=DataClassification.UNKNOWN)
+        return await self._chat(messages, classification=classification)
 
     async def generate_intelligence(
         self,
