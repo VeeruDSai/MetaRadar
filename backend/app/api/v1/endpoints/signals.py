@@ -77,6 +77,9 @@ def _serialize_signal(s: Signal) -> SignalSchema:
         elif s.source_id == "ema":
             canonical_url = "https://www.ema.europa.eu/en/medicines"
 
+    if canonical_url and ("metaradar.internal" in canonical_url or canonical_url.endswith(".internal")):
+        canonical_url = None
+
     prov_status = getattr(s, "provenance_status", None)
     if not prov_status:
         if canonical_url:
@@ -85,6 +88,8 @@ def _serialize_signal(s: Signal) -> SignalSchema:
             prov_status = "fixture"
         else:
             prov_status = "missing_url"
+    elif is_synth and not canonical_url:
+        prov_status = "fixture"
     elif prov_status == "fixture" and canonical_url:
         prov_status = "available"
 
@@ -316,7 +321,7 @@ async def get_overview(db: AsyncSession = Depends(get_db)):
 
 @router.post("/athena", response_model=AthenaQueryResponse)
 async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(get_db)):
-    """Queries Athena intelligence synthesis layer with real pgvector retrieval, prompt sanitization, and honest citations."""
+    """Queries Athena intelligence synthesis layer with hybrid vector/lexical retrieval, prompt sanitization, and honest citations."""
     trimmed = payload.prompt.strip()
     if not trimmed:
         raise HTTPException(
@@ -328,15 +333,38 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
     scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
     classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
 
-    # 2. Real Vector Retrieval over indexed Signals / Evidence
+    # 2. Conversational greetings & assistant introduction handling
+    greetings = {"hey", "hello", "hi", "greetings", "good morning", "good evening", "who are you", "what is athena", "what can you do", "help"}
+    clean_lower = scrubbed_prompt.lower().strip("?!., ")
+    if clean_lower in greetings or len(clean_lower) < 4:
+        return AthenaQueryResponse(
+            answer=(
+                "Hello! I am Athena, MetaRadar's grounded clinical intelligence copilot. "
+                "I analyze competitive intelligence and clinical developments across Haemophilia A and B, "
+                "grounded strictly in indexed evidence from ClinicalTrials.gov, PubMed, FDA/EMA regulatory registries, and market news.\n\n"
+                "You can ask me questions such as:\n"
+                "• \"What are the latest clinical readout updates for Factor VIII gene therapies?\"\n"
+                "• \"Are there any contradiction alerts on concizumab safety?\"\n"
+                "• \"What regulatory target dates are expected in Q3 2026 for Haemophilia B?\"\n"
+                "• \"Summarize recent pipeline updates for mim8 and fitusiran.\""
+            ),
+            confidence=100.0,
+            confidence_type="model_reasoning",
+            evidence_count=0,
+            mode="assistant_intro",
+            model_metadata=None,
+            evidence=[],
+            response_type="assistant_intro",
+        )
+
+    # 3. Real Vector Retrieval over indexed Signals / Evidence
     citations: List[AthenaEvidenceCitation] = []
     evidence_texts: List[str] = []
+    ATHENA_DISTANCE_THRESHOLD = 0.65  # cosine distance threshold (similarity >= 0.35)
 
     try:
         query_vec = await embedding_service.embed_text(scrubbed_prompt)
 
-        # Query pgvector cosine distance: Signal.embedding <=> query_vec
-        # Candidates require distance < MAX_EVIDENCE_DISTANCE (similarity >= 0.65)
         stmt = (
             select(
                 Signal.signal_id,
@@ -348,7 +376,7 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
                 Signal.embedding.op("<=>")(query_vec).label("distance"),
             )
             .where(Signal.embedding.isnot(None))
-            .where(Signal.embedding.op("<=>")(query_vec) < MAX_EVIDENCE_DISTANCE)
+            .where(Signal.embedding.op("<=>")(query_vec) < ATHENA_DISTANCE_THRESHOLD)
             .order_by("distance")
             .limit(5)
         )
@@ -357,12 +385,15 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
 
         for r in matched_rows:
             excerpt = r.content[:500] if r.content else r.title
+            can_url = r.canonical_url
+            if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
+                can_url = None
             citations.append(
                 AthenaEvidenceCitation(
                     signal_id=str(r.signal_id),
                     title=r.title,
                     source_id=r.source_id,
-                    canonical_url=r.canonical_url,
+                    canonical_url=can_url,
                     published_at=r.published_at.isoformat() if r.published_at else None,
                     excerpt=excerpt,
                     distance=round(float(r.distance), 4),
@@ -370,29 +401,42 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
             )
             evidence_texts.append(f"[{r.source_id}] {r.title}: {excerpt}")
     except Exception:
-        # Fallback to lexical search if embeddings are unavailable
+        pass
+
+    # 4. Keyword / Lexical Fallback if vector search yielded 0 matches
+    if not citations:
+        words = [w for w in scrubbed_prompt.split() if len(w) > 3 and w.lower() not in {"what", "when", "where", "which", "about", "latest", "there", "updates", "alerts"}]
+        search_term = words[0] if words else scrubbed_prompt[:25]
+        
         lex_stmt = select(Signal).where(
-            or_(Signal.title.ilike(f"%{scrubbed_prompt[:40]}%"), Signal.content.ilike(f"%{scrubbed_prompt[:40]}%"))
-        ).limit(3)
+            or_(
+                Signal.title.ilike(f"%{search_term}%"),
+                Signal.content.ilike(f"%{search_term}%")
+            )
+        ).limit(4)
         lex_res = await db.execute(lex_stmt)
         for s in lex_res.scalars().all():
+            excerpt = s.content[:500] if s.content else s.title
+            can_url = s.canonical_url
+            if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
+                can_url = None
             citations.append(
                 AthenaEvidenceCitation(
                     signal_id=str(s.signal_id),
                     title=s.title,
                     source_id=s.source_id,
-                    canonical_url=s.canonical_url,
+                    canonical_url=can_url,
                     published_at=s.published_at.isoformat() if s.published_at else None,
-                    excerpt=s.content[:500],
-                    distance=0.5,
+                    excerpt=excerpt,
+                    distance=0.45,
                 )
             )
-            evidence_texts.append(f"[{s.source_id}] {s.title}: {s.content[:400]}")
+            evidence_texts.append(f"[{s.source_id}] {s.title}: {excerpt}")
 
     # Zero-fabrication gate: If no evidence is found, return honest failure notice
     if not evidence_texts:
         return AthenaQueryResponse(
-            answer="No sufficiently relevant evidence was found in the indexed sources to answer this question.",
+            answer="No sufficiently relevant evidence was found in the indexed sources to answer this question. Please try querying specific haemophilia therapies, trial phases, or regulatory events.",
             confidence=0.0,
             confidence_type="model_reasoning",
             evidence_count=0,
@@ -402,7 +446,7 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
             response_type="insufficient_evidence",
         )
 
-    # 3. Structured safe prompt execution via ProviderFactory
+    # 5. Structured safe prompt execution via ProviderFactory (Gemma -> Grok -> BART)
     safe_task = f"Analyze the following biomedical query against available evidence: {scrubbed_prompt}"
     provider_res = await provider_factory.execute_task(
         required_capability=ProviderCapability.REASON,
@@ -419,8 +463,19 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         answer = provider_res.get("factual_summary") or provider_res.get("what_changed") or "Reasoning unavailable in degraded factual mode."
         confidence = 45.0
     else:
-        answer = provider_res.get("what_changed", "Synthesized response ready.")
-        confidence = float(provider_res.get("confidence", 85.0))
+        what_changed = provider_res.get("what_changed") or ""
+        why_it_matters = provider_res.get("why_it_matters") or ""
+        suggested_action = provider_res.get("suggested_action") or ""
+        if why_it_matters or suggested_action:
+            answer_blocks = [what_changed]
+            if why_it_matters:
+                answer_blocks.append(f"\n\n**Clinical & Strategic Significance:**\n{why_it_matters}")
+            if suggested_action:
+                answer_blocks.append(f"\n\n**Recommended Next Action:**\n{suggested_action}")
+            answer = "".join(answer_blocks)
+        else:
+            answer = what_changed or provider_res.get("factual_summary") or "Synthesized response ready."
+        confidence = float(provider_res.get("confidence", 88.0))
 
     return AthenaQueryResponse(
         answer=answer,

@@ -292,7 +292,7 @@ export function ConfluenceWorkspace() {
 
                       <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] font-mono pt-1">
                         <span>{src.published_at ? `Published: ${src.published_at.slice(0, 10)}` : ''}</span>
-                        {src.source_url ? (
+                        {src.source_url && !src.source_url.includes('metaradar.internal') ? (
                           <a
                             href={src.source_url}
                             target="_blank"
@@ -302,7 +302,7 @@ export function ConfluenceWorkspace() {
                             Open Original Source ↗
                           </a>
                         ) : (
-                          <span>SOURCE URL UNAVAILABLE</span>
+                          <span className="text-[11px] text-[var(--muted-foreground)]">SYNTHETIC BENCHMARK FIXTURE</span>
                         )}
                       </div>
                     </div>

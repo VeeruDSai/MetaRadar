@@ -47,9 +47,14 @@ class Settings(BaseSettings):
     MAX_CONTEXT_TOKENS: int = 2048
     MAX_OUTPUT_TOKENS: int = 512
 
-    # Hosted Fallback Settings
+    # Hosted Fallback Settings (Grok / xAI)
     ENABLE_GROK_FALLBACK: bool = False
     XAI_API_KEY: Optional[str] = None
+    GROK_API_KEY: Optional[str] = None
+
+    @property
+    def effective_xai_api_key(self) -> Optional[str]:
+        return self.XAI_API_KEY or self.GROK_API_KEY
 
     # Ollama Sidecar
     OLLAMA_HOST: str = "http://localhost:11434"
@@ -104,7 +109,7 @@ def configuration_error_for(source_id: str) -> Optional[str]:
         if not key or key.lower() in ("your_newsapi_key_here", "placeholder", "xxx", "none"):
             return "CONFIGURATION_ERROR: NEWSAPI_KEY missing (required) — get a key at https://newsapi.org/register (NewsAPI developer account) and set NEWSAPI_KEY in .env"
     if src in ("grok", "xai") and settings.ENABLE_GROK_FALLBACK:
-        key = (settings.XAI_API_KEY or "").strip()
+        key = (settings.effective_xai_api_key or "").strip()
         if not key or key.lower() in ("your_xai_api_key_here", "placeholder", "xxx", "none"):
             return "CONFIGURATION_ERROR: XAI_API_KEY missing (required when ENABLE_GROK_FALLBACK=true) — get a key from https://console.x.ai and set XAI_API_KEY in .env"
     return None

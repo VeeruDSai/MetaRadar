@@ -78,17 +78,18 @@ def resolve_canonical_provenance(
         elif source == "ema":
             url = EMA_LANDING_PAGE
 
+    if url and ("metaradar.internal" in url or url.endswith(".internal")):
+        url = None
+
     if url and not _looks_like_http_url(url):
         return url, "invalid_url"
 
     if is_generic_landing_page(url):
         return url, "landing_page_only"
 
-    if existing_status == "fixture":
+    if existing_status == "fixture" or is_synthetic:
         return url, "fixture"
 
     if url:
         return url, "available"
-    if is_synthetic:
-        return None, "fixture"
     return None, existing_status or "missing_url"

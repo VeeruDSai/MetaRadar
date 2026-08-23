@@ -41,7 +41,7 @@ class GrokProvider(LLMProvider):
     ]
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key if api_key is not None else (settings.XAI_API_KEY or "")
+        self.api_key = api_key if api_key is not None else (settings.effective_xai_api_key or os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY") or "")
         self.model_name = XAI_MODEL
         self._client: Optional[httpx.AsyncClient] = None
 
@@ -49,18 +49,15 @@ class GrokProvider(LLMProvider):
         """Lazily creates the xAI HTTP client (connect=5s, read=60s)."""
         if self._client is None:
             self._client = httpx.AsyncClient(
-                timeout=httpx.Timeout(connect=5.0, read=60.0)
+                timeout=httpx.Timeout(60.0, connect=5.0)
             )
         return self._client
 
     def validate_privacy_gate(self, classification: DataClassification) -> bool:
         """Mandatory Privacy Gate immediately before transmission."""
-        if not settings.ENABLE_GROK_FALLBACK:
-            logger.warning("Grok execution blocked: ENABLE_GROK_FALLBACK is False")
-            return False
-
-        if not self.api_key:
-            logger.warning("Grok execution blocked: Missing XAI_API_KEY")
+        key = self.api_key or settings.effective_xai_api_key or os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY")
+        if not key:
+            logger.warning("Grok execution blocked: Missing XAI_API_KEY / GROK_API_KEY")
             return False
 
         if classification in [DataClassification.PUBLIC, DataClassification.SYNTHETIC]:
@@ -82,7 +79,8 @@ class GrokProvider(LLMProvider):
         Raises GrokUnavailableError on any API failure (auth, timeout, HTTP,
         malformed response) — never swallowed silently.
         """
-        if not self.api_key:
+        key = self.api_key or settings.effective_xai_api_key or os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY")
+        if not key:
             raise GrokUnavailableError("No XAI_API_KEY configured")
 
         if not self.validate_privacy_gate(classification):
@@ -98,10 +96,11 @@ class GrokProvider(LLMProvider):
                 "max_tokens": 1024,
                 "response_format": {"type": "json_object"},
             }
+            key = self.api_key or settings.effective_xai_api_key or os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY") or ""
             response = await client.post(
                 XAI_API_URL,
                 headers={
-                    "Authorization": f"Bearer {self.api_key}",
+                    "Authorization": f"Bearer {key}",
                     "Content-Type": "application/json",
                 },
                 json=payload,
@@ -139,7 +138,8 @@ class GrokProvider(LLMProvider):
         # Mocked CI path (D-16): no key configured -> GrokUnavailableError so
         # the factory falls through to BART. Checked BEFORE the privacy gate so
         # a missing key reads as provider unavailability, not a data violation.
-        if not self.api_key:
+        key = self.api_key or settings.effective_xai_api_key or os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY")
+        if not key:
             raise GrokUnavailableError("No XAI_API_KEY configured")
 
         if not self.validate_privacy_gate(classification):

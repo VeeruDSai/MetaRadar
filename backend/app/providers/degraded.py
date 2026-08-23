@@ -26,7 +26,18 @@ class DegradedProvider(LLMProvider):
     ) -> Dict[str, Any]:
         """Degraded factual summary response — REASONING and ACTIONS are explicitly disabled."""
         start_time = time.time()
-        summary_text = await self.generate_summary(" ".join(evidence))
+        
+        # Structure evidence items into clean factual bullet points
+        points = []
+        for idx, item in enumerate(evidence, 1):
+            cleaned = item.strip()
+            if len(cleaned) > 280:
+                cleaned = cleaned[:277] + "..."
+            points.append(f"• {cleaned}")
+        
+        summary_body = "\n\n".join(points) if points else "No evidence records available."
+        formatted_summary = f"**Source-Grounded Factual Summary** *(AI reasoning fallback active)*:\n\n{summary_body}"
+        
         latency = int((time.time() - start_time) * 1000)
 
         metadata = ModelMetadataSchema(
@@ -34,14 +45,14 @@ class DegradedProvider(LLMProvider):
             mode="degraded_factual",
             model=self.model_name,
             fallback_used=True,
-            fallback_reason="gemma_unavailable_or_unsupported_capability",
+            fallback_reason="gemma_offline_grok_fallback",
             reasoning_available=False,
             actions_available=False,
             latency_ms=latency
         )
 
         return {
-            "factual_summary": f"Factual Summary: {summary_text}",
+            "factual_summary": formatted_summary,
             "evidence_count": len(evidence),
             "mode": "degraded_factual",
             "model_metadata": metadata.model_dump()
