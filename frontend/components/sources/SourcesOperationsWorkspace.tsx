@@ -6,6 +6,7 @@ import { fetchSourcesHealth, triggerIngestAndPipelineSync } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
+import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
 import { Activity, AlertTriangle, BookOpen, CheckCircle2, RefreshCw, Zap } from 'lucide-react'
 
 export function SourcesOperationsWorkspace() {
@@ -126,24 +127,27 @@ export function SourcesOperationsWorkspace() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             <span>Refresh Telemetry</span>
           </button>
-          <button
+          <ShaderButtons
+            variant="star-portal"
             onClick={handleLiveSync}
             disabled={syncing}
-            className="inline-flex items-center gap-1.5 px-4 h-8 rounded text-xs font-semibold text-white transition border border-transparent"
-            style={{ background: 'var(--primary)', opacity: syncing ? 0.7 : 1 }}
+            loading={syncing}
+            title="Trigger live multi-source biomedical ingestion run"
+            aria-label="Run live ingestion now"
+            className="h-8 shadow-md"
           >
             {syncing ? (
               <>
-                <RefreshCw size={13} className="animate-spin" />
-                <span>Ingesting Live Data...</span>
+                <RefreshCw size={13} className="animate-spin text-cyan-300" />
+                <span className="font-semibold">Ingesting Live Data...</span>
               </>
             ) : (
               <>
-                <Zap size={13} />
-                <span>Run Ingestion Now</span>
+                <Zap size={13} className="text-amber-300" />
+                <span className="font-semibold">Run Ingestion Now</span>
               </>
             )}
-          </button>
+          </ShaderButtons>
         </div>
       </div>
 

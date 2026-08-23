@@ -43,6 +43,8 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+
+import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
@@ -299,26 +301,27 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </strong>
           </div>
           <div className="top-actions">
-            <button
+            <ShaderButtons
+              variant="star-portal"
               onClick={handleManualIngest}
               disabled={ingesting}
-              className="inline-flex items-center gap-1.5 px-3 h-8 rounded text-xs font-semibold text-white transition"
-              style={{ background: 'var(--primary)', opacity: ingesting ? 0.7 : 1 }}
+              loading={ingesting}
               title="Manually trigger live public data ingestion and pipeline run"
               aria-label="Ingest data now"
+              className="h-8 shadow-md"
             >
               {ingesting ? (
                 <>
-                  <RefreshCw size={13} className="animate-spin" />
-                  <span className="hidden sm:inline">Ingesting...</span>
+                  <RefreshCw size={13} className="animate-spin text-cyan-300" />
+                  <span className="hidden sm:inline font-semibold">Ingesting...</span>
                 </>
               ) : (
                 <>
-                  <Zap size={13} />
-                  <span className="hidden sm:inline">Ingest Data</span>
+                  <Zap size={13} className="text-amber-300" />
+                  <span className="hidden sm:inline font-semibold">Ingest Data</span>
                 </>
               )}
-            </button>
+            </ShaderButtons>
             <button
               className="search-button"
               onClick={() => setSearchOpen(true)}

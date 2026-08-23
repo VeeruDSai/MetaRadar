@@ -1,0 +1,114 @@
+/* ShaderButtons — Authored CSS styles and layout boundaries */
+
+.shader-button-host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #090d16;
+  color: #ffffff;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.18s ease;
+  outline: none;
+  vertical-align: middle;
+}
+
+.shader-button-host:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35), 0 0 12px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.shader-button-host:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.shader-button-host:focus-visible {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.45), 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.shader-button-host:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Canvas background plane */
+.shader-button-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+/* Shimmer and ambient gradient overlays */
+.shader-button-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.12), transparent 70%);
+  mix-blend-mode: overlay;
+}
+
+/* Foreground interactive content layer */
+.shader-button-content {
+  position: relative;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+/* Light mode grade */
+.shader-button-host[data-mode="light"] {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.shader-button-host[data-mode="light"]:hover:not(:disabled) {
+  border-color: rgba(99, 102, 241, 0.7);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+}
+
+/* Active running pulse */
+.shader-button-host[data-loading="true"] {
+  border-color: rgba(99, 102, 241, 0.8);
+  animation: shader-button-pulse 2s infinite ease-in-out;
+}
+
+@keyframes shader-button-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4), inset 0 0 15px rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.7), 0 0 10px rgba(6, 182, 212, 0.5), inset 0 0 20px rgba(99, 102, 241, 0.4);
+  }
+}
