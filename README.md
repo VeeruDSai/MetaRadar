@@ -1,5 +1,9 @@
 <div align="center">
-  <img src="frontend/public/icon.svg" alt="MetaRadar Logo" width="120" height="120" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/icon.svg">
+    <source media="(prefers-color-scheme: light)" srcset="frontend/public/icon-light.svg">
+    <img src="frontend/public/icon.svg" alt="MetaRadar Logo" width="120" height="120" />
+  </picture>
 
   # MetaRadar
 
