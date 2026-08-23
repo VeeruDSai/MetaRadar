@@ -6,7 +6,7 @@ import { fetchSourcesHealth, triggerIngestAndPipelineSync } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
+import { SpecularButton } from '@/components/ui/SpecularButton'
 import { Activity, AlertTriangle, BookOpen, CheckCircle2, RefreshCw, Zap } from 'lucide-react'
 
 export function SourcesOperationsWorkspace() {
@@ -127,27 +127,36 @@ export function SourcesOperationsWorkspace() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             <span>Refresh Telemetry</span>
           </button>
-          <ShaderButtons
-            variant="star-portal"
+          <SpecularButton
+            size="default"
+            radius={8}
+            intensity={1.2}
+            shineSize={14}
+            shineFade={45}
+            thickness={1}
+            speed={0.4}
+            followMouse
+            proximity={220}
+            loading={syncing}
+            autoAnimate={syncing}
             onClick={handleLiveSync}
             disabled={syncing}
-            loading={syncing}
             title="Trigger live multi-source biomedical ingestion run"
             aria-label="Run live ingestion now"
-            className="h-8 shadow-md"
+            className="h-8 shadow-sm cursor-pointer"
           >
             {syncing ? (
               <>
-                <RefreshCw size={13} className="animate-spin text-cyan-300" />
+                <RefreshCw size={13} className="animate-spin text-[var(--primary)]" />
                 <span className="font-semibold">Ingesting Live Data...</span>
               </>
             ) : (
               <>
-                <Zap size={13} className="text-amber-300" />
+                <Zap size={13} className="text-amber-400" />
                 <span className="font-semibold">Run Ingestion Now</span>
               </>
             )}
-          </ShaderButtons>
+          </SpecularButton>
         </div>
       </div>
 

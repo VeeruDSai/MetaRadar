@@ -44,7 +44,7 @@ import {
   Zap,
 } from 'lucide-react'
 
-import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
+import { SpecularButton } from '@/components/ui/SpecularButton'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
@@ -301,27 +301,36 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </strong>
           </div>
           <div className="top-actions">
-            <ShaderButtons
-              variant="star-portal"
+            <SpecularButton
+              size="default"
+              radius={8}
+              intensity={1.2}
+              shineSize={14}
+              shineFade={45}
+              thickness={1}
+              speed={0.4}
+              followMouse
+              proximity={220}
+              loading={ingesting}
+              autoAnimate={ingesting}
               onClick={handleManualIngest}
               disabled={ingesting}
-              loading={ingesting}
               title="Manually trigger live public data ingestion and pipeline run"
               aria-label="Ingest data now"
-              className="h-8 shadow-md"
+              className="h-8 shadow-sm cursor-pointer"
             >
               {ingesting ? (
                 <>
-                  <RefreshCw size={13} className="animate-spin text-cyan-300" />
+                  <RefreshCw size={13} className="animate-spin text-[var(--primary)]" />
                   <span className="hidden sm:inline font-semibold">Ingesting...</span>
                 </>
               ) : (
                 <>
-                  <Zap size={13} className="text-amber-300" />
+                  <Zap size={13} className="text-amber-400" />
                   <span className="hidden sm:inline font-semibold">Ingest Data</span>
                 </>
               )}
-            </ShaderButtons>
+            </SpecularButton>
             <button
               className="search-button"
               onClick={() => setSearchOpen(true)}
