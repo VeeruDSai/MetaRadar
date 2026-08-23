@@ -4,11 +4,7 @@ import sys
 import structlog
 from typing import Any, Dict
 
-SENSITIVE_KEYS = {
-    "password", "token", "api_key", "secret", "authorization",
-    "cookie", "access_token", "private_key", "bearer", "grok_key",
-    "apikey", "client_secret", "jwt"
-}
+from app.core.redact import SENSITIVE_KEYS, SecretScrubFilter, redact_text
 
 
 def _scrub_secrets(logger: Any, method_name: str, event_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -18,6 +14,8 @@ def _scrub_secrets(logger: Any, method_name: str, event_dict: Dict[str, Any]) ->
             event_dict[key] = "[REDACTED_SECRET]"
         elif "email" in key.lower():
             event_dict[key] = "[REDACTED_PII]"
+        elif isinstance(event_dict[key], str):
+            event_dict[key] = redact_text(event_dict[key])
     return event_dict
 
 
@@ -43,6 +41,9 @@ def configure_structlog(json_logs: bool = True) -> None:
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
     )
+    root = logging.getLogger()
+    if not any(isinstance(f, SecretScrubFilter) for f in root.filters):
+        root.addFilter(SecretScrubFilter())
 
 
 def get_logger(name: str = "metaradar") -> Any:

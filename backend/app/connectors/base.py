@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.redact import redact_mapping, redact_text
 from app.models import ConnectorState
 from app.services.deduplication import check_and_persist_bronze
 
@@ -100,6 +101,12 @@ class SourceConnector:
         self.last_success: Optional[datetime] = None
         self.last_error: Optional[str] = None
         self.config: Optional[Any] = None  # ConnectorConfig from domain config
+        self._http_client: Optional[httpx.AsyncClient] = None
+
+    def _get_http_client(self) -> httpx.AsyncClient:
+        if self._http_client is None or self._http_client.is_closed:
+            self._http_client = httpx.AsyncClient(timeout=self.timeout_s)
+        return self._http_client
 
     # ------------------------------------------------------------------ #
     # Config (per-source YAML query blocks — D-08/D-10)
@@ -131,13 +138,14 @@ class SourceConnector:
     ) -> httpx.Response:
         """GET with bounded exponential backoff + jitter (max_retries)."""
         last_exc: Optional[Exception] = None
+        safe_params = redact_mapping(params)
+        client = self._get_http_client()
         for attempt in range(self.max_retries):
             try:
-                async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-                    response = await client.get(url, params=params, headers=headers)
+                response = await client.get(url, params=params, headers=headers)
                 if response.status_code >= 400:
                     last_exc = ConnectorFetchError(
-                        f"HTTP {response.status_code} from {url} (params={params})"
+                        f"HTTP {response.status_code} from {url} (params={safe_params})"
                     )
                     if attempt < self.max_retries - 1:
                         await asyncio.sleep(self._backoff_delay(attempt))
@@ -152,7 +160,9 @@ class SourceConnector:
                 if attempt < self.max_retries - 1:
                     await asyncio.sleep(self._backoff_delay(attempt))
         raise ConnectorFetchError(
-            f"{self.source_id} fetch failed after {self.max_retries} attempts: {last_exc}"
+            redact_text(
+                f"{self.source_id} fetch failed after {self.max_retries} attempts: {last_exc}"
+            )
         )
 
     def _backoff_delay(self, attempt: int) -> float:
@@ -392,7 +402,7 @@ class SourceConnector:
                 records_updated=getattr(result, "records_updated", 0),
                 records_duplicate=result.duplicates,
                 upstream_data_timestamp=result.upstream_data_timestamp,
-                last_error=result.error_detail,
+                last_error=redact_text(result.error_detail) if result.error_detail else None,
                 error_code=result.error_code or ("RATE_LIMITED" if http_code == 429 else None),
             )
             session.add(log_entry)
@@ -415,7 +425,7 @@ class SourceConnector:
                     records_duplicate=result.duplicates,
                     upstream_data_timestamp=result.upstream_data_timestamp,
                     http_status=http_code,
-                    last_error=result.error_detail,
+                    last_error=redact_text(result.error_detail) if result.error_detail else None,
                 )
             )
             await session.commit()

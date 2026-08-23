@@ -16,11 +16,14 @@ class Settings(BaseSettings):
     VERSION: str = "5.1.0"
 
     # Database & Redis
+    # Local-dev defaults only. Override via .env for any shared or deployed environment.
     DATABASE_URL: str = "postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar"
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Security & CORS
     CORS_ORIGINS: str = "http://localhost:3000"
+    METARADAR_API_KEY: Optional[str] = None
+    MUTATION_RATE_LIMIT_PER_MINUTE: int = 60
 
     @property
     def cors_origins_list(self) -> List[str]:

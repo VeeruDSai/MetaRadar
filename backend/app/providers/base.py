@@ -28,7 +28,11 @@ class LLMProvider:
     def supports(self, capability: ProviderCapability) -> bool:
         return capability in self.capabilities
 
-    async def generate_summary(self, text: str) -> str:
+    async def generate_summary(
+        self,
+        text: str,
+        classification: DataClassification = DataClassification.UNKNOWN,
+    ) -> str:
         raise NotImplementedError
 
     async def generate_intelligence(
