@@ -45,6 +45,7 @@ import {
 } from 'lucide-react'
 
 import { SpecularButton } from '@/components/ui/SpecularButton'
+import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
@@ -212,8 +213,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
         <div className="brand">
-          <div className="brand-mark">
-            <Target size={18} />
+          <div className="brand-mark shadow-sm">
+            <MetaRadarLogo size={28} />
           </div>
           <div>
             <strong>MetaRadar</strong>

@@ -1,15 +1,19 @@
-# MetaRadar
+<div align="center">
+  <img src="frontend/public/icon.svg" alt="MetaRadar Logo" width="120" height="120" />
 
-### From Inbox Noise to Strategic Signal
+  # MetaRadar
 
-**AI-powered near-real-time competitive intelligence radar for Haemophilia within Rare Disease**
+  ### From Inbox Noise to Strategic Signal
 
-[![Hackathon](https://img.shields.io/badge/Novo%20Nordisk%20GBS%20Hackathon-2026-blue)](#)
-[![Pilot](https://img.shields.io/badge/Pilot-Haemophilia%20A%20%26%20B-red)](#)
-[![Status](https://img.shields.io/badge/Status-v5.1.0%20Production%20Ready%20(100%25)-success)](#)
-[![Tests](https://img.shields.io/badge/Tests-114%2F114%20Passing-brightgreen)](#)
-[![Contract](https://img.shields.io/badge/OpenAPI%203.1-Synchronized-blue)](#)
-[![Data](https://img.shields.io/badge/Data-Autonomous%20Live%20%7C%20Bronze%20Persistence-green)](#)
+  **AI-powered near-real-time competitive intelligence radar for Haemophilia within Rare Disease**
+
+  [![Hackathon](https://img.shields.io/badge/Novo%20Nordisk%20GBS%20Hackathon-2026-blue)](#)
+  [![Pilot](https://img.shields.io/badge/Pilot-Haemophilia%20A%20%26%20B-red)](#)
+  [![Status](https://img.shields.io/badge/Status-v5.1.0%20Production%20Ready%20(100%25)-success)](#)
+  [![Tests](https://img.shields.io/badge/Tests-119%2F119%20Passing-brightgreen)](#)
+  [![Contract](https://img.shields.io/badge/OpenAPI%203.1-Synchronized-blue)](#)
+  [![Data](https://img.shields.io/badge/Data-Autonomous%20Live%20%7C%20Bronze%20Persistence-green)](#)
+</div>
 
 > **A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development.**
 
@@ -24,7 +28,7 @@ The system is designed for the **Novo Nordisk GBS Hackathon 2026 — Problem Sta
 > **All development milestones through Phase 8 (Autonomous Ingestion, Source Health Telemetry, Provenance Traceability, and Canonical Design Alignment) are fully implemented, verified, and active.**
 
 - **Executable Verification Matrix:**
-  - `pytest tests/` → **114/114 Passed (100%)** clean suite across connectors, LangGraph nodes, truthfulness invariants, failure injection, provenance, and observability.
+  - `pytest tests/` → **119/119 Passed (100%)** clean suite across connectors, LangGraph nodes, truthfulness invariants, failure injection, provenance, and observability.
   - `npm run build` → **Compiled Cleanly (0 Errors)** in Next.js 16 (Turbopack) with strict TypeScript checking.
   - `python scripts/export_openapi.py` → **0 Contract Drift** (Synchronized at `frontend/types/api.ts`).
   - `Alembic Migrations` → **11/11 Applied (`001_initial` through `011_widen_fingerprint`)** across 22 PostgreSQL tables with zero schema drift.
