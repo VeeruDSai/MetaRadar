@@ -80,24 +80,24 @@
 
 ---
 
-## Phase 8: Provenance Traceability + Canonical Overview/Lifecycle Design System Hardening (PLANNED)
+## Phase 8: Provenance Traceability + Canonical Overview/Lifecycle Design System Hardening (COMPLETED)
 
-- [ ] **REQ-P8-01**: End-to-end source provenance for every displayed signal (provider → raw response → normalized record → DB → Signal → serializer → frontend mapper → SignalCard → EvidenceDrawer → source link).
-- [ ] **REQ-P8-02**: A single authoritative provenance object that survives backend → API → frontend; no frontend reconstruction from heuristics.
-- [ ] **REQ-P8-03**: Source-specific identifiers preserved end-to-end (PMID, NCT ID, FDA record ID, EMA item URL, NewsAPI article URL) independent of generated signal IDs.
-- [ ] **REQ-P8-04**: Evidence inspector with SOURCE PROVENANCE, VERBATIM EVIDENCE, and TRACE sections; "Open Original Source" leaves MetaRadar to the exact record.
-- [ ] **REQ-P8-05**: Synthetic/test-fixture records unmistakably labeled; no manufactured public URLs for fixtures; `SOURCE URL UNAVAILABLE` shown with reason instead of fabricated URLs.
-- [ ] **REQ-P8-06**: Sources & Connectors page reports honest ingestion telemetry (HTTP status, records fetched/accepted, last syncs, latency, error, auth state), distinguishing HTTP-reachable from successfully-ingesting.
-- [ ] **REQ-P8-07**: Missing API credentials reported explicitly (`CONFIGURATION_ERROR: <VAR> missing`, required/optional, official location, steps); no fabricated values or fake placeholder secrets.
-- [ ] **REQ-P8-08**: Overview/Lifecycles design tokens (typography, spacing, cards, borders, badges, density) extracted and applied as the canonical system to all other workspaces.
-- [ ] **REQ-P8-09**: Global font consistency — single primary font stack matching Overview/Lifecycles; monospace only for IDs/fingerprints/technical values.
-- [ ] **REQ-P8-10**: Standardized typography hierarchy (page eyebrow/title/description, section eyebrow/title, card title, body, muted metadata, numeric metric, badge, technical identifier).
-- [ ] **REQ-P8-11**: Light/dark theme is a single system stored once at the root provider; persists across navigation, refresh, drawers, tab/workspace changes, and direct URLs; no hardcoded colors in components.
-- [ ] **REQ-P8-12**: Light mode is a real semantic token theme (background, surface, elevated, border, primary/secondary/muted text, accent, success/warning/danger/info, input, hover, selected, overlay, drawer, code/log) — not a dark-invert.
-- [ ] **REQ-P8-13**: Drawers/modals (EvidenceDrawer, Confluence inspector) use the same typography, surface hierarchy, borders, spacing, buttons, badges, form controls, and theme tokens as Overview/Lifecycles.
-- [ ] **REQ-P8-14**: Priority score (0.25×Novelty + 0.30×Clinical + 0.25×Regulatory + 0.20×Recency) is one authoritative calculation flowing end-to-end; no silent zero fallback; reasons exposed.
-- [ ] **REQ-P8-15**: Confluence source-count semantics truthful — backend rule (≥3 distinct source categories) and UI wording agree; no 1-source "convergence".
-- [ ] **REQ-P8-16**: Confluence contributing evidence signals show title, provider, external ID, publication date, canonical URL, evidence excerpt; backward walk Confluence → signal → source record → original source.
-- [ ] **REQ-P8-17**: Ingestion observability — per-attempt logs of connector, request, status, latency, records fetched/accepted/rejected, rejection reasons, signals created/updated, errors; no secret logging.
-- [ ] **REQ-P8-18**: Validation — `pytest tests/`, `npm run lint`, `npm run build` pass; manual light/dark navigation flow across all workspaces, drawers, sources telemetry, settings credentials, direct URL navigation.
-- [ ] **REQ-P8-19**: No "build passes" acceptance — full provenance, URL, synthetic-labeling, identifier, evidence, scoring, confluence-semantics, health, credential, theme, typography, drawer, and test gates verified (audit A–I).
+- [x] **REQ-P8-01**: End-to-end source provenance for every displayed signal (provider → raw response → normalized record → DB → Signal → serializer → frontend mapper → SignalCard → EvidenceDrawer → source link).
+- [x] **REQ-P8-02**: A single authoritative provenance object that survives backend → API → frontend; no frontend reconstruction from heuristics.
+- [x] **REQ-P8-03**: Source-specific identifiers preserved end-to-end (PMID, NCT ID, FDA record ID, EMA item URL, NewsAPI article URL) independent of generated signal IDs.
+- [x] **REQ-P8-04**: Evidence inspector with SOURCE PROVENANCE, VERBATIM EVIDENCE, and TRACE sections; "Open Original Source" leaves MetaRadar to the exact record.
+- [x] **REQ-P8-05**: Synthetic/test-fixture records unmistakably labeled; no manufactured public URLs for fixtures; `SOURCE URL UNAVAILABLE` shown with reason instead of fabricated URLs.
+- [x] **REQ-P8-06**: Sources & Connectors page reports honest ingestion telemetry (HTTP status, records fetched/accepted, last syncs, latency, error, auth state), distinguishing HTTP-reachable from successfully-ingesting.
+- [x] **REQ-P8-07**: Missing API credentials reported explicitly (`CONFIGURATION_ERROR: <VAR> missing`, required/optional, official location, steps); no fabricated values or fake placeholder secrets.
+- [x] **REQ-P8-08**: Overview/Lifecycles design tokens (typography, spacing, cards, borders, badges, density) extracted and applied as the canonical system to all other workspaces.
+- [x] **REQ-P8-09**: Global font consistency — single primary font stack matching Overview/Lifecycles; monospace only for IDs/fingerprints/technical values.
+- [x] **REQ-P8-10**: Standardized typography hierarchy (page eyebrow/title/description, section eyebrow/title, card title, body, muted metadata, numeric metric, badge, technical identifier).
+- [x] **REQ-P8-11**: Light/dark theme is a single system stored once at the root provider; persists across navigation, refresh, drawers, tab/workspace changes, and direct URLs; no hardcoded colors in components.
+- [x] **REQ-P8-12**: Light mode is a real semantic token theme (background, surface, elevated, border, primary/secondary/muted text, accent, success/warning/danger/info, input, hover, selected, overlay, drawer, code/log) — not a dark-invert.
+- [x] **REQ-P8-13**: Drawers/modals (EvidenceDrawer, Confluence inspector) use the same typography, surface hierarchy, borders, spacing, buttons, badges, form controls, and theme tokens as Overview/Lifecycles.
+- [x] **REQ-P8-14**: Priority score (0.25×Novelty + 0.30×Clinical + 0.25×Regulatory + 0.20×Recency) is one authoritative calculation flowing end-to-end; no silent zero fallback; reasons exposed.
+- [x] **REQ-P8-15**: Confluence source-count semantics truthful — backend rule (≥3 distinct source categories) and UI wording agree; no 1-source "convergence".
+- [x] **REQ-P8-16**: Confluence contributing evidence signals show title, provider, external ID, publication date, canonical URL, evidence excerpt; backward walk Confluence → signal → source record → original source.
+- [x] **REQ-P8-17**: Ingestion observability — per-attempt logs of connector, request, status, latency, records fetched/accepted/rejected, rejection reasons, signals created/updated, errors; no secret logging.
+- [x] **REQ-P8-18**: Validation — `pytest tests/`, `npm run lint`, `npm run build` pass; manual light/dark navigation flow across all workspaces, drawers, sources telemetry, settings credentials, direct URL navigation.
+- [x] **REQ-P8-19**: No "build passes" acceptance — full provenance, URL, synthetic-labeling, identifier, evidence, scoring, confluence-semantics, health, credential, theme, typography, drawer, and test gates verified (audit A–I).

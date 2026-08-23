@@ -3,7 +3,7 @@
 > **Project Name:** MetaRadar  
 > **Subtitle:** Near-Real-Time Competitive Intelligence Radar  
 > **Version:** 5.1 (Canonical Master Architecture Specification & Hardened Operational Platform)  
-> **Active Milestone:** Milestone v5.1 Extension — Trustworthy Intelligence & Platform Hardening (Phase 07)  
+> **Active Milestone:** Milestone v5.1 Extension — Trustworthy Intelligence & Platform Hardening (Phases 07–08: Completed & Verified)  
 > **Reference Specification:** [`docs/11_TRUSTWORTHY_INTELLIGENCE_RECONCILIATION_AND_PLATFORM_HARDENING.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/11_TRUSTWORTHY_INTELLIGENCE_RECONCILIATION_AND_PLATFORM_HARDENING.md)  
 > **Target Pilot Domain:** Haemophilia within Rare Disease (Novo Nordisk GBS Hackathon Problem Statement #3)  
 > **Core Principle:** *"A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development."*
@@ -13,7 +13,7 @@
 ## Active Milestone & Current State
 
 - **Milestone v5.1 Shipped (2026-08-19)**: Delivered baseline architecture (Phases 0–6) with 80 passing pytest suites and full doc-to-UI feature synchronization.
-- **Milestone v5.1 Extension — Phase 07 (ACTIVE)**: Comprehensive codebase audit, data-truthfulness reconciliation, operational observability upgrade, modular frontend refactor, and invariant test hardening executed as a single, uninterrupted wave.
+- **Milestone v5.1 Extension Shipped (2026-08-21)**: Phases 07 & 08 completed & verified (114 passing pytest tests, 0 ESLint warnings, 0 type errors, Next.js 16 production build, end-to-end source provenance and truthful observability).
 
 ---
 
@@ -27,7 +27,7 @@ MetaRadar is a near-real-time competitive intelligence platform that converts fr
 
 ## Active & Shipped Requirements
 
-### Shipped Baseline
+### Shipped Baseline & Hardening (Phases 00–08)
 - [x] Phase 0: Baseline Stabilization & Quality Governance (Next.js 16 + FastAPI + Alembic + PII/PHI scrubber + Red-Team engine)
 - [x] Phase 1: Ingestion Connectors & Data Pipeline (PubMed, ClinicalTrials, NewsAPI, OpenFDA, EMA RSS + Bronze storage + Deduplication)
 - [x] Phase 2: LangGraph 10-Node Intelligence Engine (MetaRadarState + 10 workflow nodes + PipelineRunner + 51 tests)
@@ -35,18 +35,8 @@ MetaRadar is a near-real-time competitive intelligence platform that converts fr
 - [x] Phase 4: Frontend API Integration & Real-Time Workspace (Next.js App Router live REST client + portfolio momentum + confluence radar)
 - [x] Phase 5: Calibration & End-to-End Verification (Stakeholder feedback loop + haemophilia demo story + Definition of Done audit)
 - [x] Phase 6: Full Doc-to-UI Mapping, Parity & Launchers (100% feature parity matrix, 8 dedicated intelligence pages, zero-config `setup.py`, and `start.py`)
-
-### Active Phase 07 (Single-Wave Unified Execution)
-- [/] Phase 07: Trustworthy Intelligence Reconciliation & Platform Hardening
-  - Audit all 12 platform areas removing hardcoded scores, fake "LIVE" badges, and mock evidence strings.
-  - Enforce explicit `DataMode` tags (`live`, `recorded_demo`, `test_fixture`) and high-visibility UI badges.
-  - Implement real `PriorityScoringService` with exact score breakdown and dynamic confluence engine (48h window).
-  - Bind Athena to real pgvector cosine similarity retrieval and populate verbatim Red-Team claim excerpts.
-  - Implement structured JSON logging, correlation IDs (`X-Request-ID`), and real connector health telemetry.
-  - Refactor frontend components into modular bounded contexts under `frontend/components/`.
-  - Add reusable `EvidenceDrawer`, `ErrorState`, and `EmptyState` components.
-  - Implement automated invariant tests and failure-injection simulations.
-  - Synchronize all `.planning/codebase/*.md` documentation.
+- [x] Phase 7: Trustworthy Intelligence Reconciliation & Platform Hardening (Eliminated mock telemetry, synthetic data governance, priority scoring, structured logging, invariant testing)
+- [x] Phase 8: Provenance Traceability + Canonical Overview/Lifecycle Design System Hardening (Full end-to-end source provenance, truthful connector observability, unified design system & theme across all 9 workspaces)
 
 ---
 
