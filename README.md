@@ -291,8 +291,10 @@ metaradar/
 ├── config/                   # Canonical domain configuration (haemophilia.yaml)
 ├── data/                     # Seed datasets and synthetic fallback fixtures
 ├── docs/                     # Canonical rules, architecture, and specifications
-├── tests/                    # Backend test suite (114 test cases)
+├── models/                   # Local reasoning weights repository (*.gguf format)
+├── tests/                    # Backend test suite (119 test cases)
 ├── docker-compose.yml        # Multi-container orchestration
+├── setup.py                  # Zero-config environment & reasoning model setup
 ├── start.py                  # Unified zero-friction local launcher
 └── README.md
 ```
@@ -309,8 +311,28 @@ metaradar/
 
 ---
 
-# Configuration
+# Setup & Configuration
 
+### 1. Zero-Config Environment & Model Setup
+Run the automated environment setup wizard:
+
+```bash
+python setup.py
+```
+
+The setup script automatically checks prerequisites, installs dependencies, boots PostgreSQL and Redis, applies schema migrations, seeds reference assets, and provides a choice for reasoning inference:
+- **Option 1 (Default):** Download the local quantized reasoning model (`gemma-3-4b-it-Q4_K_M.gguf` ~2.4 GB) directly into `models/` for 100% offline, private inference. You can also place any reasoning `.gguf` file into `models/`.
+- **Option 2:** Provide a hosted API key (`xAI Grok` / OpenAI-compatible endpoint).
+- **Option 3:** Operate in source-grounded BART degraded factual fallback mode.
+
+You can also run setup non-interactively:
+```bash
+python setup.py --download-model    # Automatically download local GGUF model
+# or
+python setup.py --api-key <KEY>     # Configure xAI Grok API key
+```
+
+### 2. Environment Configuration
 Create a local environment file from `.env.example`:
 
 ```bash
@@ -320,16 +342,17 @@ cp .env.example .env
 Key environment variables:
 ```env
 APP_ENV=development
-DATABASE_URL=postgresql+asyncpg://metauser:metapass@localhost:5432/metaradar
+DATABASE_URL=postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar
 REDIS_URL=redis://localhost:6379/0
 
 # Source APIs
 NEWSAPI_KEY=your_newsapi_key_optional
 
-# Local LLM & Reasoning
+# Local LLM & Reasoning (direct GGUF or Ollama sidecar)
 LLM_PROVIDER=local
-LOCAL_LLM_MODEL=google/gemma-3-4b-it
-LLM_DEVICE=cuda:0
+MODELS_DIR=./models
+LOCAL_GGUF_MODEL=gemma-3-4b-it-Q4_K_M.gguf
+LLM_DEVICE=auto
 LLM_DTYPE=int4
 ```
 

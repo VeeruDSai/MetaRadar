@@ -174,17 +174,132 @@ def run_database_migrations_and_seed(skip_seed: bool):
         print("  Skipping database seeding (--skip-db-seed).")
 
 
-def setup_local_models(skip_models: bool, skip_docker: bool):
-    print_step(6, "Local LLM Model Setup")
+def download_file_with_progress(url: str, dest_path: Path):
+    """Downloads a file with clean command-line progress updates."""
+    import urllib.request
+
+    print(f"  Downloading model to {dest_path.name}...")
+    print(f"  Source URL: {url}")
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = dest_path.with_suffix(".tmp")
+
+    def progress_hook(count, block_size, total_size):
+        if total_size > 0:
+            percent = int(count * block_size * 100 / total_size)
+            mb_downloaded = (count * block_size) / (1024 * 1024)
+            total_mb = total_size / (1024 * 1024)
+            sys.stdout.write(f"\r  Progress: {percent}% [{mb_downloaded:.1f} MB / {total_mb:.1f} MB]")
+            sys.stdout.flush()
+
+    try:
+        urllib.request.urlretrieve(url, str(temp_path), reporthook=progress_hook)
+        print("\n  Download complete. Finalizing model file...")
+        if dest_path.exists():
+            dest_path.unlink()
+        temp_path.rename(dest_path)
+        print(f"  [SUCCESS] Local GGUF model saved to {dest_path}")
+    except Exception as e:
+        if temp_path.exists():
+            temp_path.unlink()
+        print(f"\n  [ERROR] Failed to download model: {e}", file=sys.stderr)
+
+
+def update_env_variable(key: str, value: str):
+    """Safely updates or adds a key-value pair in .env file."""
+    env_file = BASE_DIR / ".env"
+    lines = []
+    found = False
+    if env_file.exists():
+        lines = env_file.read_text(encoding="utf-8", errors="replace").splitlines()
+        for i, line in enumerate(lines):
+            if line.strip().startswith(f"{key}=") or line.strip().startswith(f"{key} ="):
+                lines[i] = f"{key}={value}"
+                found = True
+                break
+    if not found:
+        lines.append(f"{key}={value}")
+    env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"  Updated {key} in .env")
+
+
+def setup_local_models(
+    skip_models: bool,
+    download_model: bool,
+    api_key: str,
+    no_interactive: bool,
+    skip_docker: bool,
+):
+    print_step(6, "Reasoning Model Setup (Local GGUF in models/ or Hosted API Key)")
     if skip_models:
-        print("  Skipping Ollama model pull (--skip-models).")
+        print("  Skipping reasoning model setup (--skip-models).")
         return
 
+    models_dir = BASE_DIR / "models"
+    models_dir.mkdir(exist_ok=True)
+    existing_gguf = list(models_dir.glob("*.gguf"))
+
+    if existing_gguf:
+        print(f"  [INFO] Found local GGUF model in models/: {existing_gguf[0].name}")
+        return
+
+    # Handle explicit CLI args
+    if api_key:
+        update_env_variable("XAI_API_KEY", api_key)
+        update_env_variable("ENABLE_GROK_FALLBACK", "true")
+        update_env_variable("LLM_PROVIDER", "xai")
+        print("  [SUCCESS] Configured xAI Grok API key for hosted reasoning.")
+        return
+
+    default_model_url = "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf"
+    default_model_dest = models_dir / "gemma-3-4b-it-Q4_K_M.gguf"
+
+    if download_model:
+        download_file_with_progress(default_model_url, default_model_dest)
+        return
+
+    # Interactive choice if running in a terminal
+    is_interactive = sys.stdin.isatty() and not no_interactive
+
+    if is_interactive:
+        print("\n  " + "-" * 64)
+        print("  Reasoning Provider Selection:")
+        print("  MetaRadar requires a reasoning provider for Four-Question synthesis")
+        print("  and Ask Athena clinical intelligence.\n")
+        print("  [1] Download default local model (Gemma 3 4B Q4 GGUF into models/) [~2.4 GB]")
+        print("      100% offline, private, zero API fees.")
+        print("  [2] Enter Hosted LLM API Key (xAI Grok / OpenAI compatible)")
+        print("      Instant cloud execution without local disk footprint.")
+        print("  [3] Skip for now (Operates in source-grounded BART factual fallback mode)")
+        print("  " + "-" * 64)
+
+        try:
+            choice = input("  Select an option [1/2/3] (default: 1): ").strip()
+        except (KeyboardInterrupt, EOFError):
+            choice = "3"
+
+        if choice == "2":
+            key_input = input("  Enter your xAI / Grok API Key: ").strip()
+            if key_input:
+                update_env_variable("XAI_API_KEY", key_input)
+                update_env_variable("ENABLE_GROK_FALLBACK", "true")
+                update_env_variable("LLM_PROVIDER", "xai")
+                print("  [SUCCESS] Configured xAI Grok API key in .env.")
+            else:
+                print("  No key entered. Continuing with default configuration.")
+            return
+        elif choice in ("1", ""):
+            print(f"  Downloading Gemma 3 4B Instruct Q4 GGUF into models/...")
+            download_file_with_progress(default_model_url, default_model_dest)
+            return
+        else:
+            print("  Skipping reasoning model setup. System will use BART degraded factual mode.")
+            return
+
+    # Non-interactive fallback: Try Ollama container or host Ollama
     docker_cmd = shutil.which("docker")
     if not skip_docker and docker_cmd:
         print("  Attempting to pull gemma3:4b in Ollama container...")
         try:
-            # Start Ollama container if not already up
             subprocess.run(["docker", "compose", "up", "-d", "ollama"], check=False)
             time.sleep(3)
             res = subprocess.run(["docker", "exec", "metaradar-ollama", "ollama", "pull", "gemma3:4b"], check=False)
@@ -202,7 +317,7 @@ def setup_local_models(skip_models: bool, skip_docker: bool):
         except Exception:
             pass
     else:
-        print("  [INFO] Ollama not found locally. Local reasoning will operate in fallback mode until Ollama is configured.")
+        print("  [INFO] No local GGUF model or Ollama detected. Place any .gguf file into models/ for offline reasoning.")
 
 
 def main():
@@ -211,7 +326,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--skip-docker", action="store_true", help="Skip starting Docker Compose backing services")
-    parser.add_argument("--skip-models", action="store_true", help="Skip pulling Ollama LLM models")
+    parser.add_argument("--skip-models", action="store_true", help="Skip pulling or downloading LLM models")
+    parser.add_argument("--download-model", action="store_true", help="Automatically download default local GGUF model into models/")
+    parser.add_argument("--api-key", type=str, default="", help="Provide xAI Grok API key for hosted reasoning")
+    parser.add_argument("--no-interactive", action="store_true", help="Disable interactive prompts")
     parser.add_argument("--skip-frontend", action="store_true", help="Skip installing frontend NPM packages")
     parser.add_argument("--skip-db-seed", action="store_true", help="Skip populating synthetic database seed rows")
 
@@ -229,7 +347,13 @@ def main():
     setup_frontend(args.skip_frontend)
     bootstrap_docker_services(args.skip_docker)
     run_database_migrations_and_seed(args.skip_db_seed)
-    setup_local_models(args.skip_models, args.skip_docker)
+    setup_local_models(
+        args.skip_models,
+        args.download_model,
+        args.api_key,
+        args.no_interactive,
+        args.skip_docker,
+    )
 
     elapsed = round(time.time() - start_time, 1)
 

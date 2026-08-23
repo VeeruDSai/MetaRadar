@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     def effective_xai_api_key(self) -> Optional[str]:
         return self.XAI_API_KEY or self.GROK_API_KEY
 
+    # Local Models Directory & GGUF Configuration
+    MODELS_DIR: str = str(_ROOT_DIR / "models")
+    LOCAL_GGUF_MODEL: Optional[str] = None
+    LOCAL_GGUF_PATH: Optional[str] = None
+
     # Ollama Sidecar
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma3:4b"   # matches LOCAL_LLM_MODEL name in Ollama registry
