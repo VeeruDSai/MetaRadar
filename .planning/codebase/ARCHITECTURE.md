@@ -1,12 +1,12 @@
 ---
 doc_type: codebase-map
 focus: arch
-analysis_date: 2026-08-22
+analysis_date: 2026-08-23
 ---
 
 # Architecture
 
-**Analysis Date:** 2026-08-22
+**Analysis Date:** 2026-08-23
 
 ## Architectural Pattern
 

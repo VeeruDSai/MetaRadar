@@ -1,12 +1,12 @@
 ---
 doc_type: codebase-map
 focus: tech
-analysis_date: 2026-08-22
+analysis_date: 2026-08-23
 ---
 
 # External Integrations
 
-**Analysis Date:** 2026-08-22
+**Analysis Date:** 2026-08-23
 
 ## Data Source Connectors
 

@@ -1,12 +1,12 @@
 ---
 doc_type: codebase-map
 focus: quality
-analysis_date: 2026-08-22
+analysis_date: 2026-08-23
 ---
 
 # Code Conventions
 
-**Analysis Date:** 2026-08-22
+**Analysis Date:** 2026-08-23
 
 Governing standards live in `docs/rules/ENGINEERING_STANDARDS.md` and `AGENTS.md` (mandatory for all agents): no `@ts-ignore`, no `ignoreBuildErrors`, no fabricated telemetry, no silent exception swallowing, zero secrets.
 

@@ -1,12 +1,12 @@
 ---
 doc_type: codebase-map
 focus: tech
-analysis_date: 2026-08-22
+analysis_date: 2026-08-23
 ---
 
 # Technology Stack
 
-**Analysis Date:** 2026-08-22
+**Analysis Date:** 2026-08-23
 
 MetaRadar v5.1.0 — Continuously operating competitive intelligence radar for Haemophilia (Novo Nordisk GBS Hackathon 2026). Two-service application: FastAPI backend + Next.js frontend, backed by PostgreSQL 16 (pgvector), Redis 7, and an autonomous background scheduler.
 
