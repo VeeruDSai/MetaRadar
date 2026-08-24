@@ -8,7 +8,8 @@ import { Badge, Card, SectionTitle } from '@/components/metaradar'
 import { DataModeBadge } from '@/components/common/DataModeBadge'
 import Counter from '@/components/ui/Counter'
 import Stepper, { Step } from '@/components/ui/Stepper'
-import { ThinkingShaderButton } from '@/components/ui/ThinkingShaderButton'
+import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
+import { useTheme } from '@/components/theme/ThemeProvider'
 import { getSourceAuthority, getSignalFunction, getSuggestedAction } from './SignalCard'
 import { askAthena } from '@/lib/api'
 import {
@@ -55,6 +56,7 @@ export function SignalDetailWorkspace({
   contradictions = [],
 }: SignalDetailWorkspaceProps) {
   const router = useRouter()
+  const { isDark } = useTheme()
   const priorityStr = (signal.priority || signal.severity || 'MEDIUM').toUpperCase()
   const priorityKey = (priorityStr.toLowerCase() || 'medium') as
     | 'critical'
@@ -589,13 +591,17 @@ export function SignalDetailWorkspace({
             placeholder={`e.g. "What are the regulatory approval risks for ${signal.disease || 'this asset'}?"`}
             className="flex-1 px-3 py-2 text-xs rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--primary)]"
           />
-          <ThinkingShaderButton
-            onClick={() => {}}
-            disabled={!athenaQuery.trim()}
+          <ShaderButtons
+            type="submit"
+            variant="thinking-button"
+            mode={isDark ? 'dark' : 'light'}
             loading={athenaLoading}
-            label="Analyze"
-            loadingLabel="Thinking..."
-          />
+            disabled={!athenaQuery.trim() || athenaLoading}
+            style={{ minWidth: 110, height: 36 }}
+          >
+            <Sparkles size={13} className={athenaLoading ? 'animate-spin' : ''} />
+            <span>{athenaLoading ? 'Thinking...' : 'Analyze'}</span>
+          </ShaderButtons>
         </form>
 
         {athenaAnswer && (

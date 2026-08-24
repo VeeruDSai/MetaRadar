@@ -7,13 +7,15 @@ import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
 import { BrainCircuit, ChevronRight, Sparkles } from 'lucide-react'
-import { ThinkingShaderButton, Scene } from '@/components/ui/ThinkingShaderButton'
+import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
+import { useTheme } from '@/components/theme/ThemeProvider'
 
 export function AthenaWorkspace() {
   const [prompt, setPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<FormattedError | null>(null)
   const [response, setResponse] = useState<AthenaResponse | null>(null)
+  const { isDark } = useTheme()
 
   const handleQuery = async (queryText?: string) => {
     const q = (queryText ?? prompt).trim()
@@ -82,21 +84,27 @@ export function AthenaWorkspace() {
                 if (e.key === 'Enter') handleQuery()
               }}
             />
-            <ThinkingShaderButton
-              onClick={() => handleQuery()}
-              disabled={!prompt.trim()}
+            <ShaderButtons
+              variant="thinking-button"
+              mode={isDark ? 'dark' : 'light'}
               loading={loading}
-              label="Ask Athena"
-              loadingLabel="Thinking..."
-            />
+              disabled={!prompt.trim() || loading}
+              onClick={() => handleQuery()}
+              style={{ minWidth: 125, height: 38 }}
+            >
+              <Sparkles size={14} className={loading ? 'animate-spin' : ''} />
+              <span>{loading ? 'Thinking...' : 'Ask Athena'}</span>
+            </ShaderButtons>
           </div>
         </Card>
 
         <Card className="answer-card flex flex-col justify-between">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <Scene />
-              <span className="text-xs text-[var(--muted-foreground)] animate-pulse">
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="thinking">
+                <i /><i /><i />
+              </div>
+              <span className="text-xs text-[var(--muted-foreground)]">
                 Synthesizing grounded answer across indexed vector embeddings...
               </span>
             </div>
