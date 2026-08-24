@@ -8,6 +8,7 @@ import { Badge, Card, SectionTitle } from '@/components/metaradar'
 import { DataModeBadge } from '@/components/common/DataModeBadge'
 import Counter from '@/components/ui/Counter'
 import Stepper, { Step } from '@/components/ui/Stepper'
+import { ThinkingShaderButton } from '@/components/ui/ThinkingShaderButton'
 import { getSourceAuthority, getSignalFunction, getSuggestedAction } from './SignalCard'
 import { askAthena } from '@/lib/api'
 import {
@@ -216,9 +217,11 @@ export function SignalDetailWorkspace({
             <div className="flex items-baseline gap-1">
               <Counter
                 value={scoreValue}
+                places={[100, 10, 1]}
                 fontSize={36}
                 fontWeight={800}
                 textColor="var(--foreground)"
+                digitPlaceHolders
                 accessibleLabel={`Priority score ${scoreValue} out of 100`}
               />
               <span className="text-xs text-[var(--muted-foreground)] font-mono">/100</span>
@@ -578,7 +581,7 @@ export function SignalDetailWorkspace({
           Query Athena with the specific context and evidence of this signal already injected into reasoning.
         </p>
 
-        <form onSubmit={handleAskAthena} className="flex gap-2 mb-3">
+        <form onSubmit={handleAskAthena} className="flex gap-2 mb-3 items-center">
           <input
             type="text"
             value={athenaQuery}
@@ -586,18 +589,13 @@ export function SignalDetailWorkspace({
             placeholder={`e.g. "What are the regulatory approval risks for ${signal.disease || 'this asset'}?"`}
             className="flex-1 px-3 py-2 text-xs rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--primary)]"
           />
-          <button
-            type="submit"
-            disabled={athenaLoading || !athenaQuery.trim()}
-            className="px-4 py-2 text-xs font-semibold rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5"
-          >
-            {athenaLoading ? (
-              <RefreshCw size={13} className="animate-spin" />
-            ) : (
-              <Send size={13} />
-            )}
-            <span>Analyze</span>
-          </button>
+          <ThinkingShaderButton
+            onClick={() => {}}
+            disabled={!athenaQuery.trim()}
+            loading={athenaLoading}
+            label="Analyze"
+            loadingLabel="Thinking..."
+          />
         </form>
 
         {athenaAnswer && (

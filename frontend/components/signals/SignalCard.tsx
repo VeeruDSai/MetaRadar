@@ -205,9 +205,11 @@ export function SignalCard({
               <div className="flex items-baseline gap-0.5">
                 <Counter
                   value={scoreValue}
+                  places={[100, 10, 1]}
                   fontSize={20}
                   fontWeight={800}
                   textColor="var(--foreground)"
+                  digitPlaceHolders
                   accessibleLabel={`Priority score ${scoreValue} out of 100`}
                 />
                 <span className="text-[10px] text-[var(--muted-foreground)] font-mono">/100</span>

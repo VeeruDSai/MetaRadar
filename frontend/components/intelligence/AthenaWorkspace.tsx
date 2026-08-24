@@ -7,6 +7,7 @@ import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
 import { BrainCircuit, ChevronRight, Sparkles } from 'lucide-react'
+import { ThinkingShaderButton, Scene } from '@/components/ui/ThinkingShaderButton'
 
 export function AthenaWorkspace() {
   const [prompt, setPrompt] = useState('')
@@ -81,17 +82,23 @@ export function AthenaWorkspace() {
                 if (e.key === 'Enter') handleQuery()
               }}
             />
-            <button onClick={() => handleQuery()} disabled={loading || !prompt.trim()}>
-              <Sparkles size={14} />
-              <span>{loading ? 'Thinking...' : 'Ask'}</span>
-            </button>
+            <ThinkingShaderButton
+              onClick={() => handleQuery()}
+              disabled={!prompt.trim()}
+              loading={loading}
+              label="Ask Athena"
+              loadingLabel="Thinking..."
+            />
           </div>
         </Card>
 
         <Card className="answer-card flex flex-col justify-between">
           {loading ? (
-            <div className="thinking">
-              <i /><i /><i />
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <Scene />
+              <span className="text-xs text-[var(--muted-foreground)] animate-pulse">
+                Synthesizing grounded answer across indexed vector embeddings...
+              </span>
             </div>
           ) : error ? (
             <ErrorState

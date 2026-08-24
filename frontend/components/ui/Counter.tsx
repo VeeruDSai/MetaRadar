@@ -98,6 +98,7 @@ export interface CounterProps {
   bottomGradientStyle?: React.CSSProperties
   className?: string
   accessibleLabel?: string
+  digitPlaceHolders?: boolean
 }
 
 export default function Counter({
@@ -120,15 +121,19 @@ export default function Counter({
   bottomGradientStyle,
   className = '',
   accessibleLabel,
+  digitPlaceHolders = false,
 }: CounterProps) {
   const numValue = typeof value === 'number' && !isNaN(value) ? Math.max(0, value) : 0
   const height = fontSize + padding
 
   const computedPlaces = React.useMemo(() => {
     if (places && places.length > 0) return places
+    if (digitPlaceHolders) {
+      return [100, 10, 1]
+    }
     const str = Math.round(numValue).toString()
     return Array.from(str).map((_, i, a) => 10 ** (a.length - i - 1))
-  }, [places, numValue])
+  }, [places, numValue, digitPlaceHolders])
 
   const defaultCounterStyle: React.CSSProperties = {
     fontSize,

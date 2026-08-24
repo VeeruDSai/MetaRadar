@@ -48,6 +48,8 @@ import { SpecularButton } from '@/components/ui/SpecularButton'
 import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { SignalCard } from '@/components/signals/SignalCard'
+import Counter from '@/components/ui/Counter'
+import { ThinkingShaderButton, Scene } from '@/components/ui/ThinkingShaderButton'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
@@ -549,11 +551,23 @@ function KPI({
   change: string
   accent?: string
 }) {
+  const isNumeric = typeof value === 'number'
+
   return (
     <Card className="kpi">
       <p className="eyebrow">{label}</p>
       <div className="kpi-value">
-        <strong>{value}</strong>
+        {isNumeric ? (
+          <Counter
+            value={value}
+            fontSize={26}
+            fontWeight={800}
+            textColor="var(--foreground)"
+            accessibleLabel={`${label} ${value}`}
+          />
+        ) : (
+          <strong>{value}</strong>
+        )}
         <span className={accent ?? 'positive'}>{change}</span>
       </div>
       <div className="micro-bars">
@@ -1797,16 +1811,23 @@ export function IntelligencePage() {
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAsk(prompt); }}
             />
-            <button onClick={() => handleAsk(prompt)} disabled={loading}>
-              <Sparkles size={14} /> Ask
-            </button>
+            <ThinkingShaderButton
+              onClick={() => handleAsk(prompt)}
+              disabled={!prompt.trim()}
+              loading={loading}
+              label="Ask Athena"
+              loadingLabel="Thinking..."
+            />
           </div>
         </Card>
 
         <Card className="answer-card">
           {loading ? (
-            <div className="thinking">
-              <i /><i /><i />
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <Scene />
+              <span className="text-xs text-[var(--muted-foreground)] animate-pulse">
+                Synthesizing grounded answer across indexed vector embeddings...
+              </span>
             </div>
           ) : error ? (
             <div className="error-card">
