@@ -1,224 +1,235 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-08-23
+**Analysis Date:** 2026-08-24
 
 ## Directory Layout
 
 ```text
-novonordisk/ (MetaRadar)
-├── AGENTS.md / CLAUDE.md / GEMINI.md   # AI agent operating standards
-├── README.md                            # Project overview & validation results
-├── .env.example                         # Environment template (.env gitignored)
-├── docker-compose.yml                   # postgres(pgvector), redis, ollama, backend, frontend
-├── start.py                             # Unified zero-friction launcher (docker + migrations + servers)
-├── setup.py                             # Zero-config environment & reasoning model setup wizard
-├── pytest.ini                           # Root pytest configuration
-├── models/                              # Root local reasoning models directory (*.gguf format)
-│   ├── .gitkeep
-│   ├── README.md
-│   └── gemma-3-4b-it-Q4_K_M.gguf        # Downloaded local Q4 GGUF reasoning model (2.48 GB)
-├── backend/
-│   ├── alembic.ini                      # Alembic config (async engine)
-│   ├── alembic/
-│   │   └── versions/                    # 001_initial … 011_widen_fingerprint
+novonordisk/
+├── backend/                    # FastAPI backend (Python 3.11+)
+│   ├── alembic/                # DB migrations (001_initial → 011_widen_fingerprint)
+│   │   └── versions/           # 11 versioned migration scripts
 │   ├── app/
-│   │   ├── main.py                      # FastAPI entrypoint, lifespan, router registration
-│   │   ├── api/v1/endpoints/            # 10 router modules (signals, health, ingestion, …)
-│   │   ├── connectors/                  # 5 source adapters + SourceConnector base + registry
-│   │   ├── core/                        # config.py, domain_config.py, logging.py, middleware.py
-│   │   ├── data/                        # synthetic_signals.json (in-package fallback copy)
-│   │   ├── db/                          # session.py (engine/sessions/advisory locks), seed.py
-│   │   ├── models/__init__.py           # ALL ORM models — single module, 22 tables
-│   │   ├── providers/                   # LLM abstraction: base, factory, gemma, grok, degraded
-│   │   ├── schemas/                     # Pydantic v2 request/response schemas
-│   │   ├── services/                    # scheduler, ingestion, scoring, confluence, calibration…
-│   │   └── workflows/                   # graph.py, runner.py, state.py, nodes/ (11 nodes)
-│   ├── Dockerfile
-│   └── requirements.txt                 # Backend dependencies
-├── frontend/
-│   ├── app/                             # Next.js App Router
-│   │   ├── layout.tsx                   # Root layout, theme bootstrap script
-│   │   ├── page.tsx                     # Redirect → /dashboard
-│   │   ├── [section]/page.tsx           # Section switcher → workspace components
-│   │   └── globals.css                  # Design tokens + custom rectangular scrollbar styling
-│   ├── components/
-│   │   ├── metaradar.tsx                # Shell, nav, DashboardPage, shared widgets
-│   │   ├── <domain>/                    # One dir per workspace (calibration, confluence,
-│   │   │                                #   contradictions, developments, functions,
-│   │   │                                #   intelligence, missing-signals, observability,
-│   │   │                                #   settings, signals, sources)
-│   │   ├── common/                      # DataModeBadge, EmptyState, ErrorState, EvidenceDrawer, SpecularButton
-│   │   ├── theme/ThemeProvider.tsx      # Dark/light adaptive theming
-│   │   └── ui/button.tsx                # Primitive button
-│   ├── lib/                             # api.ts, hooks.ts, mappers.ts, errors.ts, utils.ts
-│   ├── types/api.ts                     # Synced TypeScript API contracts (from OpenAPI)
-│   ├── public/                          # Static assets (icon.svg - adaptive pharma radar logo)
-│   ├── package.json / tsconfig.json / components.json
-│   └── next-env.d.ts
+│   │   ├── api/v1/endpoints/   # FastAPI routers (10 endpoint modules)
+│   │   ├── connectors/         # 5 source adapters + abstract base
+│   │   ├── core/               # config, domain_config, logging, middleware, redact
+│   │   ├── data/               # Bundled synthetic_signals.json fallback fixture
+│   │   ├── db/                 # session.py (engine/sessions), seed.py
+│   │   ├── models/             # SQLAlchemy ORM — all 22 tables in __init__.py
+│   │   ├── providers/          # LLM providers: gemma, grok, degraded + factory
+│   │   ├── schemas/            # Pydantic request/response contracts
+│   │   ├── services/           # Domain services (14 modules)
+│   │   ├── workflows/          # LangGraph graph/state/runner
+│   │   │   └── nodes/          # 11 pipeline node functions
+│   │   └── main.py             # FastAPI entrypoint
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   └── Dockerfile
+├── frontend/                   # Next.js 16 App Router (React 19, TypeScript)
+│   ├── app/
+│   │   ├── layout.tsx          # Root layout + theme bootstrap script
+│   │   ├── page.tsx            # Redirects to /dashboard
+│   │   ├── globals.css         # Design tokens + global styles
+│   │   ├── [section]/page.tsx  # Section router → workspace components
+│   │   └── signals/[signalId]/ # Signal detail route
+│   ├── components/             # One dir per UI domain + metaradar.tsx shell
+│   │   ├── calibration/ contradictions/ confluence/ developments/
+│   │   ├── functions/ intelligence/ missing-signals/ observability/
+│   │   ├── settings/ signals/ sources/
+│   │   ├── common/             # EvidenceDrawer, EmptyState, ErrorState, badges
+│   │   ├── theme/              # ThemeProvider (context)
+│   │   ├── ui/                 # Primitives: Counter, Stepper, SpecularButton…
+│   │   ├── effects/star-portal/# Canvas/WebGL renderers (visual effects)
+│   │   └── metaradar.tsx       # App Shell + Dashboard/Lifecycle pages (2,249 lines)
+│   ├── lib/                    # api.ts, mappers.ts, hooks.ts, errors.ts, utils.ts
+│   ├── types/api.ts            # Generated OpenAPI contract mirror (do not hand-edit)
+│   ├── public/                 # Static assets (icon.svg etc.)
+│   ├── next.config.mjs · tsconfig.json · eslint.config.mjs · Dockerfile
 ├── config/
-│   └── haemophilia.yaml                 # Canonical domain config: diseases, assets, connector
-│                                        #   query profiles, routing matrix, lag thresholds
+│   └── haemophilia.yaml        # Canonical domain config: ontology, assets, connector profiles
 ├── contracts/
-│   └── openapi.json                     # Exported OpenAPI spec (contract sync source of truth)
+│   └── openapi.json            # Exported OpenAPI 3.1 snapshot
 ├── data/
-│   └── synthetic_signals.json           # Synthetic fallback dataset (flagged as fixtures)
-├── docs/                                # Canonical rules (ENGINEERING_STANDARDS.md, ARCHITECTURE_RULES.md,
-│                                        #   TESTING_STRATEGY.md, …), SRS/SDD/UI docs, audits, manifests
-├── logs/                                # Runtime log streams written by start.py (gitignored artifacts)
-├── scripts/                             # export_openapi.py, generate_parity_matrix.py,
-│                                        #   download_model.py, check-banned-classes.mjs
-├── tests/                               # Backend pytest suite (25 test files, 119 passing tests)
-├── scratch/                             # Scratch space (gitignored)
-├── .planning/                           # GSD planning artifacts (phases, milestones, codebase/)
-└── .github/workflows/                   # CI pipelines
+│   └── synthetic_signals.json  # Seed/demo fallback dataset
+├── docs/
+│   ├── rules/                  # ENGINEERING_STANDARDS, TESTING_STRATEGY, ARCHITECTURE_RULES…
+│   ├── audits/ concept/ manifests/ release/ templates/ team research/
+├── models/                     # Local GGUF reasoning weights (gitignored artifacts)
+├── scripts/                    # export_openapi.py, download_model.py, apply_phase7_migrations.py,
+│                               # generate_parity_matrix.py, test_live_ingestion_e2e.py, check-banned-classes.mjs
+├── tests/                      # pytest suite at repo root (23 test files)
+├── logs/                       # Runtime log output from start.py (uncommitted)
+├── scratch/                    # Throwaway experiments
+├── .github/workflows/ci.yml    # CI: pytest + contract-sync check + frontend build
+├── docker-compose.yml          # postgres (pgvector), redis, backend, frontend, ollama
+├── setup.py                    # Zero-config environment setup wizard
+├── start.py                    # Unified process launcher
+├── pytest.ini                  # Test config (root-level)
+├── AGENTS.md / CLAUDE.md / GEMINI.md / README.md
+└── .env.example                # Environment template (never commit .env)
 ```
 
 ## Directory Purposes
 
 **`backend/app/api/v1/endpoints/`:**
-- Purpose: HTTP surface of the platform
-- Contains: one module per resource group; each exposes `router = APIRouter()`
-- Key files: `signals.py` (overview/signals/Athena), `intelligence.py` (confluence, lifecycles, red-team, missing-signals), `ingestion.py` (manual sync triggers), `health.py`, `observability.py`, `feedback.py` (HITL calibration), `search.py` (pgvector search), `pipeline.py`, `registry.py`, `cache.py`
-
-**`backend/app/workflows/`:**
-- Purpose: the LangGraph intelligence engine
-- Key files: `graph.py` (build/wire 11 nodes), `state.py` (MetaRadarState contract), `runner.py` (PipelineRunner + DB persistence), `nodes/*.py` (one file per node)
+- Purpose: HTTP layer — one router per resource
+- Contains: `signals.py` (563 lines, incl. Athena Q&A), `intelligence.py`, `health.py`, `observability.py`, `feedback.py`, `ingestion.py`, `pipeline.py`, `registry.py`, `search.py`, `cache.py`
+- Key files: `signals.py` is the largest surface; `pipeline.py` triggers manual LangGraph runs
 
 **`backend/app/services/`:**
-- Purpose: stateless-ish business logic reused by endpoints and nodes
-- Key files: `scheduler.py`, `ingestion.py`, `scoring.py`, `confluence.py`, `embeddings.py`, `calibration.py`, `deduplication.py`, `pii.py`, `relevance.py`, `redteam.py`, `vector_query.py`, `source_independence.py`, `embeddings_backfill.py`
+- Purpose: Business logic shared by endpoints, scheduler, and workflow nodes
+- Key files: `scheduler.py` (autonomous polling loops), `ingestion.py` (`IngestionService`), `scoring.py` (`priority_scorer` singleton), `embeddings.py` (`embedding_service`), `confluence.py`, `calibration.py` (572 lines), `deduplication.py`, `pii.py`, `provenance_urls.py`, `vector_query.py`
+
+**`backend/app/workflows/`:**
+- Purpose: LangGraph intelligence engine
+- Key files: `graph.py` (`build_graph()`), `state.py` (`MetaRadarState` + reducers + `create_initial_state` factory), `runner.py` (`PipelineRunner` with DB persistence); `nodes/node_*.py` — 11 node modules named after their stage
 
 **`backend/app/connectors/`:**
-- Purpose: external-source adapters producing bronze records only
-- Key files: `base.py` (SourceConnector ABC, ProfileRunResult, RunStatus), `pubmed.py`, `clinical_trials.py`, `fda.py`, `ema.py`, `newsapi.py`, `__init__.py` (`ALL_CONNECTORS` registry)
+- Purpose: External source adapters under a strict bronze-only persistence contract
+- Key files: `base.py` (abstract `SourceConnector`, retry/backoff, health logging), `__init__.py` (`ALL_CONNECTORS` registry list), one module per source
 
 **`backend/app/models/`:**
-- Purpose: SQLAlchemy ORM schema — deliberately a single module
-- Key files: `__init__.py` defines PipelineRun, Source, SourceHealthLog, Company, Asset, ClinicalTrial, Development, Event, LifecycleEvent, Confluence, RawSignalBronze, ConnectorState, Evidence, Signal (with pgvector column), Contradiction, CalibrationRun, CalibrationHistory, ScoringWeights, SignalRouting, CalibrationFeedback, WatchItem, AuditLog
+- Purpose: SQLAlchemy ORM definitions
+- Key files: `__init__.py` holds ALL model classes (400 lines) — there are no per-model files; import models from `app.models`
 
-**`frontend/components/<domain>/:`:**
-- Purpose: self-contained workspace per UI section
-- Pattern: `<Name>Workspace.tsx` client component consuming `@/lib/api` via `useLiveData`
+**`backend/app/core/`:**
+- Purpose: Cross-cutting infrastructure
+- Key files: `config.py` (pydantic-settings `Settings` singleton + `configuration_error_for`), `domain_config.py` (YAML loader → Pydantic), `logging.py` (structlog setup), `middleware.py` (`CorrelationIdMiddleware`), `redact.py` (PII scrubbing for logs)
 
-**`config/`:**
-- Purpose: domain behavior without code changes — assets, diseases, lifecycle stages, confluence thresholds, baseline function-routing matrix, per-connector query profiles
+**`frontend/components/<domain>/`:**
+- Purpose: One self-contained workspace component per product domain
+- Naming pattern: `<Domain>Workspace.tsx` (e.g., `ConfluenceWorkspace.tsx`, `CalibrationWorkspace.tsx`)
 
-**`contracts/` + `scripts/export_openapi.py` + `tests/test_contract_drift.py`:**
-- Purpose: FE/BE contract synchronization loop
+**`frontend/lib/`:**
+- Purpose: All data fetching and normalization
+- Key files: `api.ts` (550 lines — single fetch layer, `apiFetch<T>` at line ~149), `mappers.ts` (API→view model transforms), `hooks.ts` (`useLiveData` polling hook), `errors.ts` (`ApiError`)
+
+**`tests/`:**
+- Purpose: Backend pytest suite (repo root level, not inside backend/)
+- Contains: 23 `test_*.py` files covering API, ingestion, intelligence nodes, provenance, truthfulness invariants, failure injection, calibration, privacy boundary, contract drift
 
 **`docs/rules/`:**
-- Purpose: mandatory process standards referenced by `AGENTS.md` (engineering, testing, security, CI/CD, workflow)
+- Purpose: Mandatory engineering standards governing all agents/contributors (see root `AGENTS.md`)
+- Key files: `ENGINEERING_STANDARDS.md`, `TESTING_STRATEGY.md`, `ARCHITECTURE_RULES.md`
 
 ## Key File Locations
 
 **Entry Points:**
-- `start.py`: unified launcher (Docker services → migrations → uvicorn → next dev)
-- `backend/app/main.py`: FastAPI app factory-equivalent (module-level `app`); lifespan starts/stops scheduler
-- `frontend/app/layout.tsx` + `frontend/app/[section]/page.tsx`: UI entry chain
-- `docker-compose.yml`: full-containerized alternative
+- `backend/app/main.py`: FastAPI app, middleware, routers, lifespan scheduler
+- `frontend/app/layout.tsx`: Root layout with theme bootstrapping
+- `start.py`: Unified launcher (Docker + migrations + both apps)
+- `setup.py`: Environment/model setup wizard
 
 **Configuration:**
-- `backend/app/core/config.py`: env-driven Settings singleton (DB/Redis URLs, LLM provider, scheduler intervals, embedding model pin)
-- `config/haemophilia.yaml`: canonical domain configuration loaded by `backend/app/core/domain_config.py`
-- `.env` / `.env.example`: secrets & environment (`.env` gitignored — existence only, never read contents)
-- `backend/alembic.ini`: migration config
-- `pytest.ini`: root test runner config
-- `frontend/tsconfig.json`: path alias `@/*` → frontend root
+- `config/haemophilia.yaml`: Canonical domain ontology and connector query profiles
+- `backend/app/core/config.py`: All runtime settings (env-driven via `.env`)
+- `backend/alembic.ini` + `backend/alembic/versions/`: Schema migrations
+- `docker-compose.yml`: Service topology (postgres/redis/backend/frontend/ollama)
+- `.github/workflows/ci.yml`: CI gates (pytest, contract sync, Next build)
+- `pytest.ini`: Pytest configuration
+- `.env.example`: Template of required environment variables (`.env` itself is forbidden reading material)
 
 **Core Logic:**
-- `backend/app/workflows/graph.py` + `nodes/`: intelligence pipeline
-- `backend/app/workflows/runner.py`: persistence bridge pipeline→DB
-- `backend/app/services/scheduler.py`: autonomous ingestion loops
-- `backend/app/connectors/base.py`: ingestion contract
-- `backend/app/models/__init__.py`: full relational schema
+- `backend/app/workflows/graph.py` + `runner.py` + `state.py`: Intelligence pipeline
+- `backend/app/services/scheduler.py`: Autonomous ingestion scheduling
+- `backend/app/connectors/base.py`: Connector framework
+- `backend/app/providers/factory.py`: LLM fallback chain
+
+**Contract Synchronization (critical trio):**
+- `scripts/export_openapi.py`: Canonical template + exporter
+- `contracts/openapi.json`: Exported snapshot
+- `frontend/types/api.ts`: Generated TS mirror consumed by `frontend/lib/api.ts`
 
 **Testing:**
-- `tests/test_*.py`: all backend tests (flat, root-configured by `pytest.ini`)
-- `scripts/test_live_ingestion_e2e.py`: live E2E ingestion script
-- No frontend unit tests detected; verification is strict `tsc`/`next build` + backend suite
+- `tests/test_*.py`: All backend tests (repo-root level; run from root with `PYTHONPATH=backend:.` per CI)
 
 ## Naming Conventions
 
-**Files:**
-- Python modules: `snake_case.py` (`domain_config.py`, `vector_query.py`)
-- Workflow nodes: named after the node — `node_ingest` lives in `nodes/ingest.py`
-- React components: `PascalCase.tsx` (`CalibrationWorkspace.tsx`, `SignalList.tsx`)
-- Frontend lib modules: `camelCase.ts` (`api.ts`, `mappers.ts`, `errors.ts`)
-- Migrations: `NNN_snake_description.py` (`004_phase7_truthfulness_and_provenance.py`)
-- Tests: `test_<area>.py` flat under `tests/`
+**Files (Python):**
+- `snake_case.py` throughout; services named after capability (`priority scoring` → `scoring.py`); workflow nodes prefixed `node_` (`node_ingest.py` defines `node_ingest()`)
+- Tests: `test_<area>.py` at repo-root `tests/`
+
+**Files (TypeScript/React):**
+- Components: `PascalCase.tsx` (`SignalCard.tsx`, `EvidenceDrawer.tsx`)
+- Lib modules: `camelCase.ts` (`api.ts`, `hooks.ts`)
+- Route segments: kebab-case dynamic dirs (`[section]`, `[signalId]`, `missing-signals/`)
+- Workspace components: `<Domain>Workspace.tsx`
 
 **Directories:**
-- Frontend component domains: `kebab-case` (`missing-signals/`, matching the `/missing-signals` route section)
-- Backend packages: singular nouns where possible (`connector` logic lives in `connectors/`, models in `models/`)
+- Backend packages: lowercase plural nouns by role (`models/`, `schemas/`, `services/`, `connectors/`, `providers/`, `workflows/`, `endpoints/`)
+- Frontend component dirs: kebab-case domain names (`missing-signals/`, `star-portal/`)
 
-**Code symbols:**
-- Python classes: PascalCase (`SourceScheduler`, `PipelineRunner`, `RawSignalBronze`)
-- Python functions/variables: `snake_case`; node entry points prefixed `node_`
-- Service singletons exported as lowercase instances (`priority_scorer`, `embedding_service`, `provider_factory`, `confluence_engine`)
-- React hooks: `useX` prefix (`useLiveData`)
-- API client functions: `fetchX` for raw fetchers, `getX` aliases for backward compatibility (`frontend/lib/api.ts:38-126`)
+**Database:**
+- Tables: `snake_case` plural (`raw_signals_bronze`, `source_health_logs`)
+- Alembic versions: `NNN_description.py` (`007_sources_operational_telemetry.py`)
+- Models: singular PascalCase class names matching table via explicit `__tablename__`
+
+**Identifiers:**
+- Source IDs: lowercase source names (`pubmed`, `clinical_trials`, `fda`, `ema`, `newsapi`)
+- Pipeline state keys: `snake_case` matching state channels (`validated_signals`, `node_statuses`)
 
 ## Where to Add New Code
 
-**New REST endpoint:**
-1. Add handler to the relevant router in `backend/app/api/v1/endpoints/` (create new module only for a genuinely new resource group; register it in `backend/app/main.py`)
-2. Define response models in `backend/app/schemas/intelligence.py` or `registry.py`
-3. Run `python scripts/export_openapi.py` and sync `frontend/types/api.ts` (CI enforces zero drift via `tests/test_contract_drift.py`)
-4. Add typed client function in `frontend/lib/api.ts`
+**New API Endpoint:**
+1. Handler: `backend/app/api/v1/endpoints/<resource>.py` (new file or existing router)
+2. Register router in `backend/app/main.py` via `app.include_router(...)` with prefix `settings.API_V1_STR`
+3. Request/response schemas: `backend/app/schemas/intelligence.py` or `registry.py`, re-export from `backend/app/schemas/__init__.py`
+4. **Contract sync:** update the canonical template in `scripts/export_openapi.py`, then run `python scripts/export_openapi.py` to regenerate `frontend/types/api.ts` — CI fails otherwise
+5. Frontend client wrapper: `frontend/lib/api.ts` using `apiFetch<T>`; add types to `frontend/types/api.ts` only via regeneration
+6. Tests: `tests/test_api_endpoints.py` or new `tests/test_<resource>.py`
 
-**New source connector:**
-1. Subclass `SourceConnector` in `backend/app/connectors/<source>.py`
-2. Register instance in `ALL_CONNECTORS` (`backend/app/connectors/__init__.py`)
-3. Add a `connectors.<source_id>` block with query profiles to `config/haemophilia.yaml`
-4. Optionally add `SCHEDULER_<SOURCE>_INTERVAL_MINUTES` to `Settings` (`backend/app/core/config.py`) and wire into `_init_job_states` (`backend/app/services/scheduler.py:63-73`)
-5. Add tests under `tests/test_connector_health.py` patterns
+**New LangGraph Node:**
+1. Implement async `node_xxx(state: MetaRadarState) -> Dict[str, Any]` returning only changed channels, in `backend/app/workflows/nodes/node_xxx.py`; re-export from `nodes/__init__.py`
+2. Wire edges in `backend/app/workflows/graph.py` (insert into the linear chain before `END`)
+3. If new state channels are needed, add them to `MetaRadarState` in `backend/app/workflows/state.py` choosing the correct reducer (`operator.add` to accumulate, `merge_dicts` for dict merge, `replace_list` when re-emitting whole lists)
+4. Persistence of new entities: extend `_persist_state_to_db` in `backend/app/workflows/runner.py` with FK-validity pre-checks
+5. Tests: `tests/test_intelligence_nodes.py`
 
-**New LangGraph node:**
-1. Create `backend/app/workflows/nodes/<name>.py` exporting `async def node_<name>(state: MetaRadarState, session: Optional[AsyncSession] = None)`
-2. Follow the error pattern: catch exceptions → append to `errors` channel → set `node_statuses`
-3. Register in `graph.py` (`add_node` + edges) and import from `nodes/__init__.py`
-4. Extend `MetaRadarState` channels in `state.py` if new data must flow (choose reducer carefully)
+**New Source Connector:**
+1. Subclass `SourceConnector` in `backend/app/connectors/<source>.py`, implementing `fetch_latest()` and `run_profile()`; reuse `_fetch_with_retry`, `_persist_bronze`, `_read_connector_state`/`_write_connector_state`, `_persist_health_log` from the base class
+2. Instantiate and register in `ALL_CONNECTORS` in `backend/app/connectors/__init__.py`
+3. Add a `connectors:` block (freshness class, tier, backfill days, profiles) to `config/haemophilia.yaml` — connectors execute configured profiles, never hardcode queries
+4. Scheduler picks it up automatically (workers built from `ALL_CONNECTORS`); add interval via `SCHEDULER_*` setting if needed in `backend/app/core/config.py`
 
-**New database table/column:**
-1. Add model class to `backend/app/models/__init__.py`
-2. Generate revision: `alembic revision -N NNN_description` in `backend/`; hand-write upgrade/downgrade against `Base.metadata` conventions used by existing versions
-3. Update seed data if needed (`backend/app/db/seed.py`)
+**New Service:**
+- Implementation: `backend/app/services/<capability>.py`; expose a module-level singleton only if it's stateless/config-like (pattern: `priority_scorer`, `embedding_service`); take an `AsyncSession` parameter when session-scoped (pattern: `IngestionService(session)`)
 
-**New frontend workspace/section:**
-1. Create `frontend/components/<domain>/<Name>Workspace.tsx` ('use client', consume `@/lib/api` through `useLiveData`)
-2. Add case to the switch in `frontend/app/[section]/page.tsx`
-3. Add nav entry to the `nav`/`secondary` arrays in `frontend/components/metaradar.tsx`
-4. Use `common/ErrorState.tsx`, `common/EmptyState.tsx`, `common/EvidenceDrawer.tsx` for consistency
+**New ORM Model:**
+- Add the class to `backend/app/models/__init__.py` (all models live in this single file) and create an Alembic migration in `backend/alembic/versions/` following the `NNN_description.py` naming
+
+**New UI Workspace/Page:**
+1. Component: `frontend/components/<domain>/<Domain>Workspace.tsx` ('use client', consume `useLiveData` + typed wrappers from `frontend/lib/api.ts`)
+2. Route wiring: add a `case` in the switch in `frontend/app/[section]/page.tsx`
+3. Navigation entry: `frontend/components/metaradar.tsx` (Shell nav)
+4. View-model mapping (if needed): `frontend/lib/mappers.ts`
 
 **Utilities:**
-- Shared backend helpers → `backend/app/services/` (if domain logic) or `backend/app/core/` (if infra)
-- Shared frontend helpers → `frontend/lib/utils.ts` or a focused module in `frontend/lib/`
+- Python helpers: colocate in the most specific package; cross-cutting infra goes in `backend/app/core/`
+- Shared frontend helpers: `frontend/lib/utils.ts`; React hooks: `frontend/lib/hooks.ts`
 
 ## Special Directories
 
-**`data/` and `backend/app/data/`:**
-- Purpose: synthetic fallback signal dataset (`synthetic_signals.json`) duplicated at both paths so the pipeline finds it from any working directory (`backend/app/workflows/nodes/ingest.py:15-36`)
-- Generated: No — curated fixture content
-- Committed: Yes
+**`models/`:**
+- Purpose: Local GGUF reasoning weights (e.g., `gemma-3-4b-it-Q4_K_M.gguf`)
+- Generated: Yes (downloaded by `setup.py` / `scripts/download_model.py`)
+- Committed: No (large binaries; mounted as Docker volume `models_cache`)
 
 **`logs/`:**
-- Purpose: runtime stdout/stderr streams captured by `start.py`
-- Generated: Yes (runtime)
-- Committed: No (gitignored via `*.log` rules)
+- Purpose: Runtime output streamed by `start.py`
+- Generated: Yes
+- Committed: No
 
 **`scratch/`:**
-- Purpose: throwaway experiments
-- Generated: ad hoc
-- Committed: No (explicitly gitignored)
+- Purpose: Disposable experiments
+- Committed: Avoid adding anything durable here
+
+**`frontend/.next/`, `__pycache__/`, `.pytest_cache/`:**
+- Build/test artifacts; never commit, never edit
 
 **`.planning/`:**
-- Purpose: GSD workflow artifacts (phases, milestones, codebase maps like this document)
-- Committed: Yes (planning history is tracked)
-
-**`docs/`:**
-- Purpose: canonical standards and design documents; `docs/rules/` is normative for all agents per `AGENTS.md`
-- Committed: Yes
+- Purpose: GSD planning documents (this analysis lives in `.planning/codebase/`)
+- Committed: Yes (per repo convention)
 
 ---
 
-*Structure analysis: 2026-08-23*
+*Structure analysis: 2026-08-24*

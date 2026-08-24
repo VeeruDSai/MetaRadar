@@ -1,189 +1,199 @@
-# Codebase Concerns & Audit State
+# Codebase Concerns
 
 **Analysis Date:** 2026-08-24
 
-## Resolved in Recent Iterations
-
-**1. NewsAPI Key Configuration & Multi-Path `.env` Resolution (RESOLVED):**
-- *Resolution:* `backend/app/core/config.py` now includes multi-path `.env` resolution (`.env`, `../.env`, root `.env`, `backend/.env`) and aliases `NEWS_API_KEY` to `NEWSAPI_KEY`. `start.py` propagates root `.env` variables to child worker processes.
-
-**2. Grok API Key Dynamic Resolution & Resilient Fallback (RESOLVED):**
-- *Resolution:* `backend/app/core/config.py` provides `effective_xai_api_key` checking both `XAI_API_KEY` and `GROK_API_KEY`. `GrokProvider` uses a dedicated 60s timeout and safely cascades to BART degraded factual summaries when xAI accounts return permissions or credit exhaustion errors.
-
-**3. Synthetic Provenance URL Sanitization (RESOLVED):**
-- *Resolution:* Replaced unresolvable `metaradar.internal` placeholder links with `[TEST FIXTURE (SYNTHETIC BENCHMARK)]` badges across backend serialization and frontend evidence drawers.
-
-**4. Ask Athena Conversational Handling & Threshold Balancing (RESOLVED):**
-- *Resolution:* Added conversational greeting handler (`hey`, `hello`, `hi`), balanced vector cosine distance threshold (`< 0.65`), and structured evidence citations.
-
-**5. Root `models/` GGUF Discovery & Inference Orchestration (RESOLVED):**
-- *Resolution:* Created root `models/` directory with automatic `.gguf` model discovery in `GemmaProvider`. Added hardware-optimized execution with `llama-cpp-python` (`n_gpu_layers=-1`, `n_threads=os.cpu_count()`, `n_ctx=2048`, `n_batch=512`), robust JSON extraction, and interactive download in `setup.py`. Downloaded `gemma-3-4b-it-Q4_K_M.gguf` (2.48 GB).
-
-**6. Sleek Rectangular Custom Scrollbars (RESOLVED):**
-- *Resolution:* Redesigned scrollbar thumbs in `frontend/app/globals.css` with sleek rectangular geometry (`border-radius: 2px`) and glowing indigo/sapphire hover states across dark and light themes.
-
----
-
-## Remaining Tech Debt & Maintenance Items
+## Tech Debt
 
 **Frontend monolith component:**
-- Issue: `frontend/components/metaradar.tsx` contains legacy app shell and navigation utilities.
-- Fix approach: Continue modularizing workspaces into `frontend/components/<domain>/`.
+- Issue: `frontend/components/metaradar.tsx` is a 2,249-line single client file containing ~15 distinct components (app shell/nav, command palette, dashboard KPIs, signal filters, cache controls, settings panel, Athena Q&A, calibration form). It is also the most-churned file in recent history (8 of last 8 commits are `fix(ui)` touching it).
+- Files: `frontend/components/metaradar.tsx`
+- Impact: Merge-conflict hotspot; untestable in isolation; any edit risks unrelated regressions across all 13 workspaces.
+- Fix approach: Extract each inner component into `frontend/components/<domain>/` alongside the existing workspace components (e.g., `AthenaWorkspace.tsx`, `CalibrationWorkspace.tsx`). Move shared filter state into a hook under `frontend/lib/hooks.ts`. Do this incrementally per workspace.
 
-**Schema churn around signal identity columns:**
-- Issue: Migrations 006, 010, 011 widened signal identity fields.
-- Fix approach: Lock identity contract behind `tests/test_contract_drift.py`.
+**Backward-compat API shim layer in frontend:**
+- Issue: `frontend/lib/api.ts` maintains dual naming (`getOverview = fetchOverview`, etc.) and five overloads that sniff `AbortSignal` in the first parameter position (`getSignals`, `getConfluences`, `getLifecycles`, `getRedTeamContradictions`, `getMissingSignals`, `getDevelopments` at lines 41–133). The positional sniffing breaks silently if a caller passes options objects.
+- Files: `frontend/lib/api.ts`
+- Impact: Confusing call surface; new code can pick either name; type errors surface late.
+- Fix approach: Migrate all callers to the canonical `(args, signal)` signatures, then delete aliases and AbortSignal-sniffing overloads.
 
-**Inconsistent logging frameworks (scrubbing bypassed):**
-- Issue: structlog configured with `_scrub_secrets`, but some modules use stdlib `logging.getLogger`.
-- Fix approach: Gradually standardize on `app.core.logging.get_logger`.
+**Pervasive `any` in the API client despite strict TS:**
+- Issue: `fetchOverview` parses `apiFetch<any>`, `mapSearchResult(r: any)`, `triggerIngestionRun(): Promise<any>`, `inspectConfluence(): Promise<any>` — response shapes are unchecked at these boundaries even though `frontend/types/api.ts` is CI-synced from OpenAPI.
+- Files: `frontend/lib/api.ts` (lines 135–147, 208–254, 515–550)
+- Impact: Contract drift gate protects `frontend/types/api.ts` but not these inline `any` mappings; backend renames reach production as `undefined` fields at runtime.
+- Fix approach: Type every `apiFetch<T>` call with the generated types from `frontend/types/api.ts`; keep mappers as the only `unknown → typed` boundary.
 
-**Dead optional spaCy path:**
-- Issue: `nlp_extract.py` has optional spaCy fallback.
-- Fix approach: Keep fast regex/rule extractor as standard path.
+**Silent exception swallowing in scheduler/runner:**
+- Issue: Most of the 88 broad `except Exception` blocks log correctly, but two swallow entirely: `scheduler.py:203-204` (`except Exception: pass` around DB next-run update) and `runner.py:138-139` (`except Exception: pass` around PipelineRun failure-status update).
+- Files: `backend/app/services/scheduler.py`, `backend/app/workflows/runner.py`
+- Impact: Observability blind spots exactly where failure telemetry matters most (violates the project's own ENGINEERING_STANDARDS "logged exceptions" rule fixed on 2026-08-23).
+- Fix approach: Replace both `pass` bodies with `logger.warning(..., exc_info=True)`.
 
-## Security & Architecture Invariants
+**Dual frontend lockfiles + loose CI install:**
+- Issue: Both `frontend/package-lock.json` and `frontend/pnpm-lock.yaml` exist while `package.json` declares `packageManager: pnpm@9.15.5`; CI runs `pnpm install --frozen-lockfile=false` (`.github/workflows/ci.yml`), so installs are non-deterministic and npm lockfile drifts.
+- Files: `frontend/package-lock.json`, `frontend/pnpm-lock.yaml`, `.github/workflows/ci.yml`
+- Impact: "Works locally, differs in CI" class of bugs; no reproducible dependency resolution.
+- Fix approach: Delete `package-lock.json`, switch CI to `--frozen-lockfile`.
 
-**Zero Secret Leakage:**
-- Multi-path `.env` loading ensures secrets remain strictly local and gitignored.
+**Misplaced runtime dependency:**
+- Issue: `shadcn` (a CLI tool) is listed under runtime `dependencies` in `frontend/package.json`.
+- Files: `frontend/package.json`
+- Impact: Bloated installs; risk of accidental imports of CLI internals.
+- Fix approach: Move to `devDependencies` or remove if unused.
 
-**Local-First Privacy Gate:**
-- Data classification gates external LLM transmissions (`validate_privacy_gate()` in `backend/app/providers/grok.py`), ensuring private data stays strictly on-premise with local GGUF / Gemma.
+## Known Bugs
+
+**Live connector endpoints returning errors (observed live):**
+- Symptoms: OpenFDA query syntax returns HTTP 404 for some queries; EMA RSS (`https://www.ema.europa.eu/en/medicines/rss`) returns 404/429. System records honest `UNHEALTHY`/`DEGRADED` telemetry rather than fabricating data.
+- Files: `backend/app/connectors/fda.py`, `backend/app/connectors/ema.py`
+- Trigger: Run `IngestionService.run_connectors(["fda", "ema"])` against live APIs (evidence in `.planning/debug/live-ingestion-provenance-and-end-to-end-validation.md`).
+- Workaround: None — 2 of 5 sources may persistently yield no live data until query syntax/endpoint is corrected. Backoff logic caps retries via `SCHEDULER_MAX_BACKOFF_MINUTES`.
+
+**Previously fixed (2026-08-23) — verify stays fixed:**
+- Grok provider missing stdlib/typing imports (`NameError`) — fixed in `backend/app/providers/grok.py`.
+- `tests/test_foundation.py` uncollectable by pytest — refactored to standard pytest functions.
+- `scripts/apply_phase7_migrations.py` stamped stale revision `004_phase7_truthfulness` instead of head `011_widen_fingerprint`.
+- Full history in `.planning/debug/concerns-md-audit-fixes.md`, `.planning/debug/docker-backend-connection-failure.md` (Docker daemon race, missing Alembic tables 003, seed FK flush order, Windows cp1252 emoji crash), and `.planning/debug/frontend-eaddrinuse-exit-code-1.md` (orphaned node.exe requiring `taskkill /F /T`).
+
+## Security Considerations
+
+**Mutation auth is opt-in (open by default):**
+- Risk: Every mutation endpoint (ingest, pipeline, recalibrate, feedback, cache clear, watch-item confirm) is unauthenticated when `METARADAR_API_KEY` is unset — the shipped default.
+- Files: `backend/app/api/deps.py` (lines 16–27), `backend/app/core/config.py` (line 35)
+- Current mitigation: Intentional local-dev posture, documented in docstring; rate limiting active.
+- Recommendations: Add a startup warning log when mutations are unauthenticated; consider failing closed (env-gated) for any non-localhost bind.
+
+**In-memory rate limiter — per-process and unbounded:**
+- Risk: `_rate_buckets` module-level dict grows one key per client IP forever (entries pruned only when that client requests again); limits don't apply across uvicorn workers/replicas.
+- Files: `backend/app/api/deps.py` (lines 13, 30–44)
+- Current mitigation: Adequate for single-process local dev.
+- Recommendations: Move counters to Redis (already a dependency); add periodic eviction of stale buckets.
+
+**Default database credentials in committed defaults:**
+- Risk: `DATABASE_URL` default embeds `metaradar:metaradar_pass` (`backend/app/core/config.py` line 30) — documented dev-only, but deploys that skip `.env` inherit known creds.
+- Files: `backend/app/core/config.py`, `.env.example`
+- Current mitigation: `.env` gitignored; `docker-compose.yml` provisions matching local creds only.
+- Recommendations: Log a hard warning when defaults are used with a non-localhost host.
+
+**Heuristic PII scrubbing:**
+- Risk: `PIIPHIScrubber` uses regex patterns only; unusual formats (custom MRN schemes, free-text names) pass through. Already flagged in `docs/audits/CONCERNS_VERIFICATION_MATRIX.md` (H1).
+- Files: `backend/app/services/pii.py`
+- Current mitigation: Privacy gate blocks anything not explicitly classified `PUBLIC`/`SYNTHETIC` from leaving the host (`backend/app/providers/grok.py`); secret scrubbing via `backend/app/core/redact.py` covers logs and query params.
+- Recommendations: Expand pattern coverage before enabling any hosted provider by default; keep `ENABLE_GROK_FALLBACK=false` default.
+
+**Secret hygiene status:** No hardcoded secrets found in tracked source; `.env` gitignored; GGUF weights (2.3 GB `models/gemma-3-4b-it-Q4_K_M.gguf`) gitignored via `/models/*` rule in `.gitignore`.
 
 ## Performance Bottlenecks
 
-**New HTTP client created per request attempt:**
-- Problem: `_fetch_with_retry` constructs a fresh `httpx.AsyncClient` inside the retry loop — no connection pooling/keep-alive reuse across profiles/runs.
-- Files: `backend/app/connectors/base.py` (lines 134–145)
-- Improvement path: One long-lived `AsyncClient` per connector instance (as `GrokProvider` already does, `grok.py:48-54`).
+**Event-loop-blocking GGUF inference:**
+- Problem: `_generate_with_local_gguf` runs synchronous llama-cpp inference directly inside `async def _generate` without executor offload — the entire FastAPI event loop stalls for the full generation (seconds+), freezing health checks and all concurrent requests.
+- Files: `backend/app/providers/gemma.py` (lines 87–148)
+- Cause: `self._llama_instance(...)` is CPU/GPU-bound synchronous code awaited nowhere. Contrast with correct pattern in `backend/app/services/embeddings.py` (`run_in_executor`).
+- Improvement path: Wrap in `asyncio.get_running_loop().run_in_executor(None, ...)` exactly like `EmbeddingService._embed_sync`.
 
-**Row-by-row bronze persistence:**
-- Problem: `_persist_bronze` awaits `check_and_persist_bronze` sequentially per payload — one round-trip per record.
-- Files: `backend/app/connectors/base.py` (lines 214–229), `backend/app/services/deduplication.py`
-- Improvement path: Batch insert with `ON CONFLICT DO NOTHING` + conflict count query.
+**Filesystem model scan on every LLM call:**
+- Problem: `find_local_gguf_model()` globs `models/` twice per generation (once to execute, once for the metadata tag at `gemma.py:145,238`).
+- Files: `backend/app/providers/gemma.py`
+- Improvement path: Resolve once at startup/init; invalidate only on config change.
 
-**Full-table ID loads every pipeline run:**
-- Problem: `_persist_state_to_db` loads ALL asset IDs and company IDs into Python sets each run just to validate FK references.
-- Files: `backend/app/workflows/runner.py` (lines 147–150)
-- Improvement path: Query only referenced IDs, or rely on FK constraints handled by existing per-row try/except.
+**Sequential per-signal embeddings during persistence:**
+- Problem: `_persist_state_to_db` awaits `embedding_service.embed_signal(sig)` one signal at a time inside the insert loop — N+1 pattern when `embed_batch` exists.
+- Files: `backend/app/workflows/runner.py` (line 207), `backend/app/services/embeddings.py` (line 87)
+- Improvement path: Pre-compute all embeddings with one `embed_batch(texts)` call before the insert loop.
 
-**Sequential connector execution in IngestionService:**
-- Problem: `run_connectors` iterates connectors serially; slow sources delay the rest of manual/bulk runs.
-- Files: `backend/app/services/ingestion.py` (line 53)
-- Mitigation present: background scheduler runs one task per source concurrently (`scheduler.py:90-95`).
-- Improvement path: `asyncio.gather` with per-connector isolation.
-
-**Embedding lazy-load race:**
-- Problem: `EmbeddingService._get_model` has no lock; concurrent first calls via `run_in_executor` (thread pool) can double-initialize fastembed.
-- Files: `backend/app/services/embeddings.py` (lines 50–59, executor offload 81–93)
-- Improvement path: `threading.Lock` around first init.
-
-**2,079-line client component re-render surface:**
-- Problem: All state lives in `metaradar.tsx`; polling updates re-render whole tree every 30s per workspace.
-- Files: `frontend/components/metaradar.tsx`, `frontend/lib/hooks.ts`
-- Improvement path: Split state ownership per section (see Tech Debt item 1).
+**Full-table ID loads for FK validation:**
+- Problem: Persistence loads every `Asset.asset_id` and `Company.company_id` into Python sets to guard FK violations.
+- Files: `backend/app/workflows/runner.py` (lines 148–151)
+- Cause: Unbounded `select` with no limit — fine now, degrades linearly with catalog growth.
+- Improvement path: Validate against seeded domain IDs from `config/haemophilia.yaml` or use FK-error-driven retry per row.
 
 ## Fragile Areas
 
-**Signal identity / dedup chain:**
-- Files: `backend/app/services/deduplication.py`, `backend/app/workflows/runner.py` (lines 190–197 — comment explicitly warns random-fallback UUIDs break upsert dedup), `backend/app/models/__init__.py` (`uix_signals_fingerprint` unique index)
-- Why fragile: Three widening migrations (006/010/011); runner falls back `external_id → fingerprint → random uuid4`; a random fallback inserts a NEW row per run instead of updating.
-- Safe modification: Never add new fallback identity branches; preserve `sig:{source}:{ext_id}` format; run `tests/test_contract_drift.py` + `tests/test_ingestion.py` after changes.
-- Test coverage: Partial — statement-compilation tests exist; no live-DB dedup test in CI.
+**OpenAPI contract sync chain:**
+- Files: `scripts/export_openapi.py`, `contracts/openapi.json`, `frontend/types/api.ts`, `.github/workflows/ci.yml`
+- Why fragile: `frontend/types/api.ts` is generated; editing it by hand fails CI (`git diff --exit-code`). Template lives in a Python script — easy to miss.
+- Safe modification: Always edit the TS template inside `scripts/export_openapi.py`, then run `python scripts/export_openapi.py`; verify with `pytest tests/test_contract_drift.py`.
+- Test coverage: Covered by `tests/test_contract_drift.py`.
 
-**Athena evidence-gate constant:**
-- Files: `backend/app/api/v1/endpoints/signals.py` (lines 34–37, `MAX_EVIDENCE_DISTANCE = 0.35`)
-- Why fragile: In-code comment says filter and docstring contract "must never drift apart again" — evidence of a past drift bug between documented similarity >= 0.65 and actual cosine-distance filter.
-- Safe modification: Change only together with `backend/app/services/vector_query.py` docs and `tests/test_retrieval.py`.
+**Alembic ↔ ORM lockstep:**
+- Files: `backend/alembic/versions/001_*.py` through `011_widen_signals_fingerprint.py`, `backend/app/models/__init__.py`
+- Why fragile: History shows models drifting from migrations (003 emergency migration added `contradictions`, `calibration_history`, `scoring_weights`; stale stamp bug in `scripts/apply_phase7_migrations.py`).
+- Safe modification: After any `backend/app/models/__init__.py` change, autogenerate a revision and run `alembic upgrade head` against a real Postgres before committing; never hand-stamp versions.
 
-**OpenAPI → TypeScript contract sync:**
-- Files: `scripts/export_openapi.py` (664-line generator containing canonical TS template), `frontend/types/api.ts` (generated)
-- Why fragile: CI fails if `frontend/types/api.ts` is edited directly (`.github/workflows/ci.yml` "Verify TypeScript Contract Canonical Copy"); template embedded in Python string.
-- Safe modification: Edit template in `scripts/export_openapi.py`, regenerate, commit both atomically.
+**Bronze promotion retry mechanics:**
+- Files: `backend/app/workflows/runner.py` (lines 157, 190, 330, 346–364)
+- Why fragile: Retry-on-failure depends on exact 36-char UUID string checks and on `failed_signal_ids` bookkeeping; malformed IDs fall back to fresh random UUIDs which break dedup upserts across runs.
+- Safe modification: Preserve the "only promote persisted rows" invariant (comment block at lines 346–350) when touching persistence; add tests for malformed-ID paths.
+- Test coverage: Partial — see `tests/test_ingestion.py`, `tests/test_provenance.py`; no direct test of failed-signal retry.
 
-**useLiveData dependency spreading:**
-- Files: `frontend/lib/hooks.ts` (lines 128–129: eslint-disable + `[executeFetch, intervalMs, ...deps]`)
-- Why fragile: Callers passing inline array literals restart the polling effect every render; disabled lint rule hides this.
-- Safe modification: Pass memoized deps or none; verify with profiler after changes.
+**Windows-specific launcher:**
+- Files: `start.py` (taskkill process-tree kill, TCP port polling), `backend/app/db/seed.py` (`sys.stdout.reconfigure(encoding='utf-8')`)
+- Why fragile: Two prior incidents traced here (Docker daemon race; orphaned node.exe EADDRINUSE). Cross-platform behavior (Linux/macOS cleanup path) less exercised.
+- Safe modification: Keep `wait_for_backing_service` polling before backend launch; preserve crash-log tail printing.
 
 ## Scaling Limits
 
-**raw_signals_bronze grows without bound:**
-- Current capacity: Retention setting exists (`RAW_SIGNAL_RETENTION_DAYS: int = 30` in `backend/app/core/config.py` line 52) but is referenced nowhere else — no cleanup job/endpoint deletes aged bronze rows.
-- Limit: Table grows forever with 5 connectors cycling at 15–60 min intervals.
-- Scaling path: Add retention sweeper honoring the config value.
+**Single-process assumptions:**
+- Current capacity: Scheduler singleton (`SourceScheduler.get_instance()`), advisory locks, and rate limiter all assume one backend process; pool is `pool_size=10, max_overflow=20` (`backend/app/db/session.py`).
+- Limit: Multiple uvicorn workers double-run connectors (advisory locks mitigate but waste cycles) and each worker keeps its own GGUF model (~2+ GB RAM) and rate buckets.
+- Scaling path: Redis-backed rate limiting; extract scheduler to a dedicated worker process; share model server (Ollama sidecar already supported).
 
-**Single-process in-memory scheduler/job state:**
-- Current capacity: `SourceScheduler` is a module-level singleton (`backend/app/services/scheduler.py:48-61`); backoff/jitter state in process memory only.
-- Limit: Multi-instance deployments use advisory locks for mutual exclusion (`try_advisory_lock` in `backend/app/db/session.py`) but status telemetry reflects only that process's view.
-- Scaling path: Derive `get_status()` from the persisted fields already written to `sources` (`next_scheduled_run`, `backoff_minutes`, `consecutive_failures`).
-
-**HNSW vector search tuning:**
-- Current capacity: HNSW index `signals_embedding_hnsw` from initial migration (`backend/alembic/versions/001_initial_v51_schema.py:196-198`); `hnsw.ef_search` settable at query time (`backend/app/services/vector_query.py:74`).
-- Limit: Default ef_search needs retuning past tens of thousands of signals; no maintenance guidance.
-- Scaling path: Benchmark recall vs latency; tune ef_search as corpus grows.
+**Vector search scale:**
+- Current capacity: pgvector with 384-dim MiniLM embeddings; bronze table prunable via `RAW_SIGNAL_RETENTION_DAYS`.
+- Limit: Exact scan fine at thousands of rows; needs IVFFlat/HNSW index if corpus reaches hundreds of thousands.
+- Scaling path: Add pgvector index migration when signal counts grow.
 
 ## Dependencies at Risk
 
+**`llama-cpp-python`:**
+- Risk: Primary GGUF execution path requires it (`backend/app/providers/gemma.py` line 90) but it is absent from `backend/requirements.txt` — an undeclared soft dependency with silent fall-through to Ollama.
+- Impact: Fresh installs get Ollama-only behavior with no error; GPU builds of llama-cpp are notoriously platform-sensitive.
+- Migration plan: Document as optional extra (`requirements-llama.txt`) or detect and surface in `/health/models` telemetry.
+
 **Unpinned Python dependencies:**
-- Risk: All `>=` constraints in `backend/requirements.txt` (fastapi, sqlalchemy, langgraph, fastembed, pydantic).
-- Impact: Fresh CI install or Docker build can break without repo change.
-- Migration plan: Pin exact versions; add Dependabot/pip-audit for controlled bumps.
+- Risk: `backend/requirements.txt` uses bare `>=` floors with no lockfile — builds are non-reproducible; `langgraph>=0.2.0` and `fastapi>=0.110.0` move fast.
+- Impact: CI and local environments drift apart over time.
+- Migration plan: Pin with hashes (`pip-compile`) or adopt `uv`/`poetry` lockfile.
 
-**Undeclared optional dependency (spaCy):**
-- Risk: Imported in try/except by `nlp_extract.py` but absent from requirements.
-- Impact: Better extraction path silently never activates; ad-hoc install adds GBs of model downloads at import time.
-- Migration plan: Declare extras with pinned models or remove branch.
-
-**Frontend heavyweights as direct deps:**
-- Risk: `shadcn@^4.8.0` (a CLI) listed as runtime dependency in `frontend/package.json`; framer-motion v13 and recharts v3 are major-new-version lines with zero frontend tests guarding upgrades.
-- Impact: Larger installs; breaking upgrades undetected.
-- Migration plan: Move `shadcn` to devDependencies; pin majors deliberately.
+**Bleeding-edge frontend stack:**
+- Risk: Next.js 16.3.0 + React 19 + Tailwind v4 + ESLint 10 — repo's own agent rules warn APIs may differ from training data (`frontend/AGENTS.md`).
+- Impact: Upgrades require reading bundled docs; some libs (`framer-motion@13`, `recharts@3`) release breaking changes frequently.
+- Migration plan: Pin exact versions (currently done for `next`/`typescript` only); test upgrades on branches.
 
 ## Missing Critical Features
 
-**Authentication/authorization:**
-- Problem: No auth on any route.
-- Blocks: Deployment beyond localhost; audit trails; role integrity of calibration (stakeholder functions spoofable via unauthenticated POSTs to `backend/app/api/v1/endpoints/feedback.py`).
+**Retention pruning never invoked:**
+- Problem: `prune_expired_bronze(retention_days)` exists (`backend/app/services/ingestion.py` line 229, added 2026-08-23) but nothing calls it — no scheduler hook, no endpoint, no script. `RAW_SIGNAL_RETENTION_DAYS=30` is dead configuration.
+- Blocks: Bronze table grows unbounded in long-running deployments; compliance intent of the retention setting unrealized.
 
-**Data retention enforcement:**
-- Problem: `RAW_SIGNAL_RETENTION_DAYS` unused.
-- Blocks: Compliance posture for medical-intelligence data; storage cost control.
-
-**API rate limiting:**
-- Problem: Unauthenticated mutation endpoints (ingestion trigger, pipeline run, cache clear) have no throttle.
-- Blocks: Safe exposure on shared networks.
-
-**Frontend test infrastructure:**
-- Problem: No test runner in `frontend/package.json` (no vitest/jest/playwright); zero component/hook/API tests.
-- Blocks: Safe refactoring of `metaradar.tsx`, `lib/hooks.ts`, `lib/mappers.ts`.
+**No frontend test infrastructure:**
+- Problem: No jest/vitest/playwright/cypress anywhere; zero unit, component, or E2E tests for 20+ components and the API client.
+- Blocks: All UI verification is manual browser walkthroughs (see debug docs); regressions like the recent KPI-animation churn cycle (8 consecutive `fix(ui)` commits) are caught only by eye.
 
 ## Test Coverage Gaps
 
-**Entire frontend:**
-- What's not tested: All components, `frontend/lib/api.ts` fetch/error handling, `frontend/lib/mappers.ts` transformations, `frontend/lib/hooks.ts` polling/abort logic.
-- Files: everything under `frontend/lib/`, `frontend/components/`, `frontend/app/`
-- Risk: Mapper bugs silently corrupt displayed medical intelligence; hook regressions cause duplicate polling.
-- Priority: High
+**Auth & rate-limit dependencies:**
+- What's not tested: `require_mutation_auth` and `mutation_rate_limit` have zero dedicated tests — grep finds no references in `tests/`.
+- Files: `backend/app/api/deps.py`
+- Risk: Security-critical gating could regress silently (e.g., header alias change, bucket math off-by-one).
+- Priority: High.
 
-**Live-database integration paths (CI):**
-- What's not tested: `.github/workflows/ci.yml` runs pytest WITHOUT postgres/redis service containers; DB-dependent tests mock sessions or compile statements (`tests/test_ingestion.py:111-113`). Real upsert behavior (`on_conflict_do_update` in `runner.py:300-321`), advisory locks, and HNSW queries never exercised in CI.
-- Files: `backend/app/workflows/runner.py`, `backend/app/db/session.py`, `backend/app/services/vector_query.py`, `.github/workflows/ci.yml`
-- Risk: Schema/index drift and SQL errors surface only at manual/live runtime.
-- Priority: High — add pgvector service container + marked integration suite.
+**Scheduler resilience paths:**
+- What's not tested: Advisory-lock contention (`SKIPPED_LOCKED`), exponential backoff transitions, post-ingestion pipeline trigger, and the silent DB-update failure at `scheduler.py:203`.
+- Files: `backend/app/services/scheduler.py`, `tests/test_connector_health.py`
+- Risk: Scheduling/starvation bugs appear only in multi-day runs.
+- Priority: Medium-High.
 
-**Scheduler resilience:**
-- What's not tested: Backoff escalation, jitter bounds, advisory-lock contention, silent DB-state-update failure path (`scheduler.py:195-204`).
-- Files: `backend/app/services/scheduler.py`, `tests/test_failure_injection.py` (2 tests total)
-- Risk: Stalled ingestion loops go unnoticed because failures vanish.
-- Priority: Medium
+**Frontend (entire):**
+- What's not tested: All workspaces, `useLiveData` polling/abort semantics, `lib/mappers.ts` mapping rules ("never invent relevance" invariant), error-state rendering.
+- Files: `frontend/lib/hooks.ts`, `frontend/lib/mappers.ts`, `frontend/lib/api.ts`, `frontend/components/**`
+- Risk: Contract mapping bugs ship to users; polling leaks/regressions undetectable.
+- Priority: High (introduce vitest + React Testing Library; playwright for smoke route).
 
-**Privacy boundary depth:**
-- What's not tested: Only pattern-positive PII cases asserted (`tests/test_foundation.py` script + `tests/test_privacy_boundary.py`); no tests covering names/narratives that SHOULD be caught but aren't by the regex set, nor end-to-end proof that CONFIDENTIAL payloads never reach external providers under failure injection.
-- Files: `backend/app/services/pii.py`, `backend/app/providers/grok.py`, `tests/test_privacy_boundary.py`
-- Risk: False confidence in the privacy gate as patterns evolve.
-- Priority: Medium
+**Coverage enforcement:**
+- What's not tested: `pytest-cov` installed but no `--cov` gate or threshold in `pytest.ini` or `.github/workflows/ci.yml`; CI green ≠ meaningful coverage.
+- Files: `pytest.ini`, `.github/workflows/ci.yml`
+- Priority: Medium (add `--cov=backend/app --cov-fail-under=` floor).
 
 ---
 
-*Concerns audit: 2026-08-23*
+*Concerns audit: 2026-08-24*
