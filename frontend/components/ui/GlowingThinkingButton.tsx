@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 
 export interface GlowingThinkingButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,7 +21,7 @@ export function GlowingThinkingButton({
   disabled = false,
   className = '',
   style,
-  width = 136,
+  width = 140,
   height = 38,
   onClick,
   ...props
@@ -46,9 +46,8 @@ export function GlowingThinkingButton({
     if (!gx || !cox) return
 
     /* Reference frame constants from verified authoring */
-    const REF = 2048
-    const CX = 1024 - 22
-    const CY = 1024 + 11.5
+    const CX = 1002
+    const CY = 1035.5
     const PW = 976
     const PH = 345
     const PR = 100
@@ -60,16 +59,12 @@ export function GlowingThinkingButton({
     const CORE_W = 14
     const GLOW_W = 12
 
-    const DUR = loading ? 1.8 : 2.7
+    const DUR = loading ? 1.6 : 2.7
     const TAIL = 0.389
     const SHIM_OFF = 0.898
-    const TXT_W = 778
-    const TXT_CAP = 120
-    const TXT_BASE = 1093
     const FONT =
-      '300 100px -apple-system, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Inter, system-ui, "Segoe UI", Roboto, sans-serif'
+      '600 100px -apple-system, "Plus Jakarta Sans", "SF Pro Display", "Helvetica Neue", Inter, system-ui, sans-serif'
 
-    let S = 0
     let k = 1
     let dpr = 1
     const canFilter = (() => {
@@ -130,7 +125,7 @@ export function GlowingThinkingButton({
       s -= SH
       if (s < ARC) {
         a = s / TR
-        return [R - TR + TR * Math.sin(a), B - TR + TR * Math.sin(a)]
+        return [R - TR + TR * Math.cos(a), B - TR + TR * Math.sin(a)]
       }
       s -= ARC
       if (s < SW) return [R - TR - s, B]
@@ -159,34 +154,6 @@ export function GlowingThinkingButton({
       return TAPER[i] + (TAPER[i + 1] - TAPER[i]) * (f - i)
     }
 
-    let glyphs: { ch: string; w: number }[] = []
-    let fontPx = 169
-    let tracking = 0
-    let textX = 0
-
-    function fitText() {
-      if (!ctx) return
-      const word = activeText
-      const n = word.length
-      const probe = 200
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.font = FONT.replace('100px', probe + 'px')
-      const cap = ctx.measureText('U').actualBoundingBoxAscent || probe * 0.7
-      fontPx = (probe * (TXT_CAP * k)) / cap
-      ctx.font = FONT.replace('100px', fontPx + 'px')
-      glyphs = []
-      let advSum = 0
-      for (let i = 0; i < n; i++) {
-        const m = ctx.measureText(word[i])
-        glyphs.push({ ch: word[i], w: m.width })
-        if (i < n - 1) advSum += m.width
-      }
-      const lead = ctx.measureText(word[0]).actualBoundingBoxLeft || 0
-      const trail = ctx.measureText(word[n - 1]).actualBoundingBoxRight || 0
-      tracking = (TXT_W * k - trail - lead - advSum) / Math.max(1, n - 1)
-      textX = (CX + 4) * k - (TXT_W * k) / 2 + lead
-    }
-
     function paintComet(
       c: CanvasRenderingContext2D,
       head: number,
@@ -196,6 +163,11 @@ export function GlowingThinkingButton({
     ) {
       c.setTransform(1, 0, 0, 1, 0, 0)
       c.clearRect(0, 0, c.canvas.width, c.canvas.height)
+
+      const tx = cv!.width / 2 - CX * k
+      const ty = cv!.height / 2 - CY * k
+      c.setTransform(1, 0, 0, 1, tx, ty)
+
       c.lineCap = 'round'
       c.lineWidth = width * k
       const step = 6
@@ -226,20 +198,20 @@ export function GlowingThinkingButton({
       const x = CX - PW / 2
       const y = CY - PH / 2
       const grd = c.createLinearGradient(0, y * k, 0, (y + PH) * k)
-      grd.addColorStop(0, '#2e3242')
-      grd.addColorStop(0.55, '#2b2f3c')
-      grd.addColorStop(1, '#272c36')
+      grd.addColorStop(0, '#1a2236')
+      grd.addColorStop(0.55, '#131b2e')
+      grd.addColorStop(1, '#0e1524')
       rrPath(c, CX * k, CY * k, PW * k, PH * k, PR * k)
       c.fillStyle = grd
       c.fill()
 
-      c.lineWidth = 5 * k
+      c.lineWidth = 4 * k
       const hg = c.createLinearGradient(0, y * k, 0, (y + PH) * k)
-      hg.addColorStop(0, 'rgba(226,233,255,0.125)')
-      hg.addColorStop(0.1, 'rgba(226,233,255,0)')
-      hg.addColorStop(0.9, 'rgba(80,100,255,0)')
-      hg.addColorStop(1, 'rgba(80,100,255,0.22)')
-      rrPath(c, CX * k, CY * k, (PW - 13) * k, (PH - 13) * k, (PR - 6.5) * k)
+      hg.addColorStop(0, 'rgba(226,233,255,0.25)')
+      hg.addColorStop(0.12, 'rgba(226,233,255,0.05)')
+      hg.addColorStop(0.88, 'rgba(80,100,255,0.05)')
+      hg.addColorStop(1, 'rgba(99,102,241,0.35)')
+      rrPath(c, CX * k, CY * k, (PW - 12) * k, (PH - 12) * k, (PR - 6) * k)
       c.strokeStyle = hg
       c.stroke()
     }
@@ -247,27 +219,24 @@ export function GlowingThinkingButton({
     function label(c: CanvasRenderingContext2D, ph: number) {
       const q = (ph - SHIM_OFF + 10) % 1
       const u = q < 0.5 ? q / 0.5 : (1 - q) / 0.5
-      const x0 = textX
-      const w = TXT_W * k
-      const bc = x0 + w * (-0.2375 + 1.475 * u)
-      const bw = w * 0.22
+      const fontPx = Math.round(135 * k)
+      c.font = FONT.replace('100px', `${fontPx}px`)
+
+      const textMetrics = c.measureText(activeText)
+      const txtW = textMetrics.width || 400 * k
+
+      const bc = CX * k - txtW / 2 + txtW * (-0.2 + 1.4 * u)
+      const bw = txtW * 0.35
       const g = c.createLinearGradient(bc - bw, 0, bc + bw, 0)
-      g.addColorStop(0, 'rgb(140,155,200)')
-      g.addColorStop(0.3, 'rgb(180,195,240)')
-      g.addColorStop(0.5, 'rgb(240,245,255)')
-      g.addColorStop(0.7, 'rgb(180,195,240)')
-      g.addColorStop(1, 'rgb(140,155,200)')
+      g.addColorStop(0, 'rgb(180,195,230)')
+      g.addColorStop(0.3, 'rgb(215,225,255)')
+      g.addColorStop(0.5, 'rgb(255,255,255)')
+      g.addColorStop(0.7, 'rgb(215,225,255)')
+      g.addColorStop(1, 'rgb(180,195,230)')
       c.fillStyle = g
-      c.strokeStyle = g
-      c.font = FONT.replace('100px', fontPx + 'px')
-      c.textBaseline = 'alphabetic'
-      let x = textX
-      for (let i = 0; i < glyphs.length; i++) {
-        c.fillText(glyphs[i].ch, x, TXT_BASE * k)
-        c.lineWidth = 1.9 * k
-        c.strokeText(glyphs[i].ch, x, TXT_BASE * k)
-        x += glyphs[i].w + tracking
-      }
+      c.textBaseline = 'middle'
+      c.textAlign = 'center'
+      c.fillText(activeText, CX * k, CY * k)
     }
 
     function render(t: number) {
@@ -282,33 +251,39 @@ export function GlowingThinkingButton({
       ctx.filter = 'none'
       ctx.clearRect(0, 0, cv.width, cv.height)
 
+      const tx = cv.width / 2 - CX * k
+      const ty = cv.height / 2 - CY * k
+
       /* Faint track */
+      ctx.setTransform(1, 0, 0, 1, tx, ty)
       rrPath(ctx, CX * k, CY * k, TW * k, TH * k, TR * k)
       ctx.lineWidth = TRACK_W * k
-      ctx.strokeStyle = 'rgba(120,140,255,0.08)'
+      ctx.strokeStyle = 'rgba(99,102,241,0.18)'
       ctx.stroke()
 
       /* Travelling comet glow & core */
-      paintComet(gx!, head, [95, 125, 242], [80, 140, 255], GLOW_W)
-      paintComet(cox!, head, [120, 150, 255], [200, 220, 255], CORE_W)
+      paintComet(gx!, head, [99, 102, 241], [130, 180, 255], GLOW_W)
+      paintComet(cox!, head, [140, 180, 255], [230, 245, 255], CORE_W)
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.globalCompositeOperation = 'lighter'
       if (canFilter) {
-        ctx.filter = `blur(${24 * k}px)`
-        ctx.globalAlpha = 0.75
+        ctx.filter = `blur(${Math.max(2, 20 * k)}px)`
+        ctx.globalAlpha = 0.8
         ctx.drawImage(gl, 0, 0)
-        ctx.filter = `blur(${8 * k}px)`
-        ctx.globalAlpha = 0.55
+        ctx.filter = `blur(${Math.max(1, 7 * k)}px)`
+        ctx.globalAlpha = 0.6
         ctx.drawImage(gl, 0, 0)
-        ctx.filter = `blur(${1.8 * k}px)`
+        ctx.filter = `blur(${Math.max(0.5, 1.5 * k)}px)`
         ctx.globalAlpha = 1
         ctx.drawImage(co, 0, 0)
         ctx.filter = 'none'
       } else {
-        ctx.shadowColor = 'rgba(88,122,255,0.9)'
-        ctx.shadowBlur = 24 * k
+        ctx.shadowColor = 'rgba(99,102,241,0.9)'
+        ctx.shadowBlur = 18 * k
         ctx.globalAlpha = 0.8
         ctx.drawImage(gl, 0, 0)
-        ctx.shadowBlur = 8 * k
+        ctx.shadowBlur = 6 * k
         ctx.globalAlpha = 0.9
         ctx.drawImage(gl, 0, 0)
         ctx.shadowBlur = 0
@@ -318,6 +293,7 @@ export function GlowingThinkingButton({
       ctx.globalAlpha = 1
       ctx.globalCompositeOperation = 'source-over'
 
+      ctx.setTransform(1, 0, 0, 1, tx, ty)
       plate(ctx)
       label(ctx, ph)
     }
@@ -325,12 +301,12 @@ export function GlowingThinkingButton({
     function resize() {
       if (!cv || !containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
-      S = Math.max(rect.width, rect.height * (PW / PH))
       dpr = Math.min(window.devicePixelRatio || 1, 2.5)
-      cv.width = gl.width = co.width = Math.round(rect.width * dpr)
-      cv.height = gl.height = co.height = Math.round(rect.height * dpr)
-      k = (rect.width * dpr) / PW
-      fitText()
+      const clientW = rect.width || 140
+      const clientH = rect.height || 38
+      cv.width = gl.width = co.width = Math.round(clientW * dpr)
+      cv.height = gl.height = co.height = Math.round(clientH * dpr)
+      k = Math.min((cv.width * 0.92) / TW, (cv.height * 0.88) / TH)
     }
 
     resize()
@@ -370,7 +346,7 @@ export function GlowingThinkingButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`relative inline-flex items-center justify-center overflow-hidden rounded-[10px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 ${className}`}
+      className={`relative inline-flex items-center justify-center shrink-0 overflow-hidden rounded-[8px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 ${className}`}
       style={{
         width: typeof width === 'number' ? `${width}px` : width,
         height: `${height}px`,

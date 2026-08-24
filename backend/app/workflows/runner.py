@@ -19,6 +19,7 @@ from app.models import (
 )
 from app.services.embeddings import embedding_service
 from app.services.scoring import priority_scorer
+from app.services.provenance_urls import resolve_canonical_provenance
 from app.workflows.graph import build_graph
 from app.workflows.state import MetaRadarState, create_initial_state
 
@@ -230,19 +231,15 @@ class PipelineRunner:
                 elif not isinstance(ret_at, datetime):
                     ret_at = now
 
-                # Construct appropriate external source URL if missing (only for sources with public web landing pages)
-                url = sig.get("url") or sig.get("canonical_url")
-                if not url:
-                    if source == "pubmed" and ext_id:
-                        clean_pmid = ext_id.replace("PMID:", "").replace("pmid:", "").strip()
-                        url = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}/"
-                    elif source == "clinical_trials" and ext_id:
-                        clean_nct = ext_id.strip()
-                        url = f"https://clinicaltrials.gov/study/{clean_nct}"
-                    elif source == "fda":
-                        url = "https://open.fda.gov/drug/event/"
-                    elif source == "ema":
-                        url = "https://www.ema.europa.eu/en/medicines"
+                # Construct appropriate external direct source URL and provenance status
+                url, prov_status = resolve_canonical_provenance(
+                    source_id=source,
+                    existing_url=sig.get("url") or sig.get("canonical_url"),
+                    external_id=ext_id,
+                    title_or_content=f"{sig.get('title', '')} {sig.get('content', '')}",
+                    is_synthetic=bool(sig.get("is_synthetic", False)),
+                    existing_status=sig.get("provenance_status"),
+                )
 
                 # Multi-Factor Deterministic Priority Scoring (Novelty 25% + Clinical 30% + Regulatory 25% + Recency 20%)
                 score_breakdown = sig.get("score_breakdown")

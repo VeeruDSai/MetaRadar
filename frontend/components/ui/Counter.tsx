@@ -103,12 +103,12 @@ export interface CounterProps {
 
 export default function Counter({
   value,
-  fontSize = 36,
+  fontSize = 32,
   padding = 0,
   places,
-  gap = 4,
+  gap = 0,
   borderRadius = 4,
-  horizontalPadding = 2,
+  horizontalPadding = 0,
   textColor = 'inherit',
   fontWeight = 'inherit',
   containerStyle,

@@ -23,6 +23,7 @@ from app.schemas import (
     OverviewHealthSchema,
 )
 from app.services.pii import PIIPHIScrubber
+from app.services.provenance_urls import resolve_canonical_provenance
 from app.services.scoring import priority_scorer
 from app.services.confluence import confluence_engine
 from app.services.embeddings import embedding_service
@@ -61,37 +62,18 @@ def _serialize_signal(s: Signal) -> SignalSchema:
     is_synth = getattr(s, "is_synthetic", False) or False
     data_mode = getattr(s, "data_mode", None) or ("test_fixture" if is_synth else "live")
     raw_url = getattr(s, "canonical_url", None)
-    canonical_url = raw_url.strip() if (raw_url and isinstance(raw_url, str) and raw_url.strip()) else None
-
-    # Construct canonical public URL if missing
-    if not canonical_url:
-        ext = getattr(s, "external_id", None) or getattr(s, "pmid", None) or getattr(s, "nct_id", None) or getattr(s, "regulatory_id", None)
-        if s.source_id == "pubmed" and ext:
-            clean_pmid = ext.replace("PMID:", "").replace("pmid:", "").strip()
-            canonical_url = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}/"
-        elif s.source_id == "clinical_trials" and ext:
-            clean_nct = ext.strip()
-            canonical_url = f"https://clinicaltrials.gov/study/{clean_nct}"
-        elif s.source_id == "fda":
-            canonical_url = "https://open.fda.gov/drug/event/"
-        elif s.source_id == "ema":
-            canonical_url = "https://www.ema.europa.eu/en/medicines"
-
-    if canonical_url and ("metaradar.internal" in canonical_url or canonical_url.endswith(".internal")):
-        canonical_url = None
-
-    prov_status = getattr(s, "provenance_status", None)
-    if not prov_status:
-        if canonical_url:
-            prov_status = "available"
-        elif is_synth:
-            prov_status = "fixture"
-        else:
-            prov_status = "missing_url"
-    elif is_synth and not canonical_url:
-        prov_status = "fixture"
-    elif prov_status == "fixture" and canonical_url:
-        prov_status = "available"
+    ext = getattr(s, "external_id", None) or getattr(s, "pmid", None) or getattr(s, "nct_id", None) or getattr(s, "regulatory_id", None)
+    
+    canonical_url, prov_status = resolve_canonical_provenance(
+        source_id=getattr(s, "source_id", None),
+        existing_url=raw_url,
+        external_id=ext,
+        pmid=getattr(s, "pmid", None),
+        nct_id=getattr(s, "nct_id", None),
+        title_or_content=f"{getattr(s, 'title', '')} {getattr(s, 'content', '')}",
+        is_synthetic=is_synth,
+        existing_status=getattr(s, "provenance_status", None),
+    )
 
     confidence_type = getattr(s, "confidence_type", None) or ("fixture" if is_synth else "extraction")
     confidence_rationale = getattr(s, "confidence_rationale", None)

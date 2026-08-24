@@ -556,12 +556,14 @@ function KPI({
   return (
     <Card className="kpi">
       <p className="eyebrow">{label}</p>
-      <div className="kpi-value">
+      <div className="kpi-value flex items-baseline gap-2">
         {isNumeric ? (
           <Counter
             value={value}
-            fontSize={26}
+            fontSize={30}
             fontWeight={800}
+            gap={0}
+            horizontalPadding={0}
             textColor="var(--foreground)"
             accessibleLabel={`${label} ${value}`}
           />
