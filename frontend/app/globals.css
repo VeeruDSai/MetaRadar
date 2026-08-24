@@ -215,8 +215,9 @@ a { color: inherit; text-decoration: none; }
 .kpi:nth-child(-n+2) { border-color: var(--border-selected); }
 .kpi .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; margin: 0 0 6px; }
 .kpi-value { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 6px; min-height: 40px; }
-.kpi-value strong { font-size: 38px !important; line-height: 1 !important; letter-spacing: -0.04em !important; font-weight: 800 !important; color: var(--foreground) !important; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; }
-.kpi-value span { font-size: 13px !important; color: var(--signal) !important; font-weight: 600 !important; }
+.kpi-value strong, .kpi-value .kpi-number { font-size: 38px !important; line-height: 1 !important; letter-spacing: -0.04em !important; font-weight: 800 !important; color: var(--foreground) !important; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+.kpi-value strong span, .kpi-value .kpi-number span { color: var(--foreground) !important; }
+.kpi-change, .kpi-value > span:not(.kpi-number) { font-size: 13px !important; color: var(--signal) !important; font-weight: 600 !important; }
 .micro-bars { display: flex; align-items: flex-end; gap: 3px; height: 16px; margin-top: 6px; }
 .micro-bars i { display: block; width: 22%; height: 40%; background: color-mix(in srgb, var(--signal) 22%, transparent); border-radius: 2px; }
 .micro-bars i:nth-child(2) { height: 56%; }

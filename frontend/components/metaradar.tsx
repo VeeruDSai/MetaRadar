@@ -49,6 +49,7 @@ import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { SignalCard } from '@/components/signals/SignalCard'
 import Counter from '@/components/ui/Counter'
+import AnimatedCounter from '@/components/ui/AnimatedCounter'
 import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
@@ -558,22 +559,10 @@ function KPI({
     <Card className="kpi">
       <p className="eyebrow">{label}</p>
       <div className="kpi-value">
-        <strong>
-          {isNumeric ? (
-            <Counter
-              value={value}
-              fontSize={38}
-              fontWeight={800}
-              gap={0}
-              horizontalPadding={0}
-              textColor="var(--foreground)"
-              accessibleLabel={`${label} ${value}`}
-            />
-          ) : (
-            value
-          )}
+        <strong className="kpi-number">
+          {isNumeric ? <AnimatedCounter value={value} duration={850} /> : value}
         </strong>
-        <span className={accent ?? 'positive'}>{change}</span>
+        <span className={`kpi-change ${accent ?? 'positive'}`}>{change}</span>
       </div>
       <div className="micro-bars">
         <i />
