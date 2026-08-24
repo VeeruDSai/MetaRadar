@@ -177,11 +177,7 @@ export function SignalCard({
 
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('a, button')) return
-    if (onSelect) {
-      onSelect(signal)
-    } else {
-      router.push(signalUrl)
-    }
+    router.push(signalUrl)
   }
 
   return (
@@ -227,13 +223,6 @@ export function SignalCard({
         <h3 className="text-[15px] font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors leading-snug m-0 mb-2.5">
           <Link
             href={signalUrl}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (onSelect) {
-                e.preventDefault()
-                onSelect(signal)
-              }
-            }}
             className="hover:underline text-inherit inline-flex items-baseline gap-1"
           >
             {signal.title}
@@ -325,12 +314,6 @@ export function SignalCard({
 
         <Link
           href={signalUrl}
-          onClick={(e) => {
-            if (onSelect) {
-              e.preventDefault()
-              onSelect(signal)
-            }
-          }}
           className="inline-flex items-center gap-1 font-semibold text-[var(--primary)] hover:underline text-xs shrink-0"
         >
           <span>View signal</span>

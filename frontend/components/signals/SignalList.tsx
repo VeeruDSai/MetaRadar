@@ -275,7 +275,6 @@ export function SignalList() {
             <SignalCard
               key={sig.id}
               signal={sig}
-              onSelect={(s) => setSelectedSignal(s)}
             />
           ))}
         </div>

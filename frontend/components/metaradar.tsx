@@ -1015,7 +1015,6 @@ export function DashboardPage() {
               <SignalCard
                 key={signal.id}
                 signal={signal}
-                onSelect={(sig) => setSelected(sig)}
               />
             ))}
           </div>
