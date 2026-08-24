@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 export interface GlowingThinkingButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -22,13 +22,14 @@ export function GlowingThinkingButton({
   className = '',
   style,
   width = 140,
-  height = 38,
+  height = 42,
   onClick,
   ...props
 }: GlowingThinkingButtonProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const containerRef = useRef<HTMLButtonElement | null>(null)
   const animRef = useRef<number | null>(null)
+  const [isHovered, setIsHovered] = useState(false)
 
   const activeText = loading ? loadingLabel : label
 
@@ -45,7 +46,7 @@ export function GlowingThinkingButton({
     const cox = co.getContext('2d')
     if (!gx || !cox) return
 
-    /* Reference frame constants from verified authoring */
+    /* Reference frame constants */
     const CX = 1002
     const CY = 1035.5
     const PW = 976
@@ -59,7 +60,7 @@ export function GlowingThinkingButton({
     const CORE_W = 14
     const GLOW_W = 12
 
-    const DUR = loading ? 1.6 : 2.7
+    const DUR = 1.6
     const TAIL = 0.389
     const SHIM_OFF = 0.898
     const FONT =
@@ -198,48 +199,96 @@ export function GlowingThinkingButton({
       const x = CX - PW / 2
       const y = CY - PH / 2
       const grd = c.createLinearGradient(0, y * k, 0, (y + PH) * k)
-      grd.addColorStop(0, '#1a2236')
-      grd.addColorStop(0.55, '#131b2e')
-      grd.addColorStop(1, '#0e1524')
+      if (loading) {
+        grd.addColorStop(0, '#1a2236')
+        grd.addColorStop(0.55, '#131b2e')
+        grd.addColorStop(1, '#0e1524')
+      } else if (isHovered) {
+        grd.addColorStop(0, '#1f2d48')
+        grd.addColorStop(0.55, '#162238')
+        grd.addColorStop(1, '#111b2c')
+      } else {
+        grd.addColorStop(0, '#141c2b')
+        grd.addColorStop(0.55, '#0f1624')
+        grd.addColorStop(1, '#0a0f1a')
+      }
       rrPath(c, CX * k, CY * k, PW * k, PH * k, PR * k)
       c.fillStyle = grd
       c.fill()
 
       c.lineWidth = 4 * k
       const hg = c.createLinearGradient(0, y * k, 0, (y + PH) * k)
-      hg.addColorStop(0, 'rgba(226,233,255,0.25)')
-      hg.addColorStop(0.12, 'rgba(226,233,255,0.05)')
-      hg.addColorStop(0.88, 'rgba(80,100,255,0.05)')
-      hg.addColorStop(1, 'rgba(99,102,241,0.35)')
+      if (loading) {
+        hg.addColorStop(0, 'rgba(226,233,255,0.3)')
+        hg.addColorStop(0.12, 'rgba(226,233,255,0.08)')
+        hg.addColorStop(0.88, 'rgba(80,100,255,0.08)')
+        hg.addColorStop(1, 'rgba(99,102,241,0.45)')
+      } else if (isHovered) {
+        hg.addColorStop(0, 'rgba(226,233,255,0.22)')
+        hg.addColorStop(0.12, 'rgba(226,233,255,0.06)')
+        hg.addColorStop(0.88, 'rgba(80,100,255,0.06)')
+        hg.addColorStop(1, 'rgba(99,102,241,0.35)')
+      } else {
+        hg.addColorStop(0, 'rgba(255,255,255,0.12)')
+        hg.addColorStop(0.5, 'rgba(255,255,255,0.04)')
+        hg.addColorStop(1, 'rgba(99,102,241,0.22)')
+      }
       rrPath(c, CX * k, CY * k, (PW - 12) * k, (PH - 12) * k, (PR - 6) * k)
       c.strokeStyle = hg
       c.stroke()
     }
 
-    function label(c: CanvasRenderingContext2D, ph: number) {
-      const q = (ph - SHIM_OFF + 10) % 1
-      const u = q < 0.5 ? q / 0.5 : (1 - q) / 0.5
+    function labelText(c: CanvasRenderingContext2D, ph: number = 0) {
       const fontPx = Math.round(135 * k)
       c.font = FONT.replace('100px', `${fontPx}px`)
 
-      const textMetrics = c.measureText(activeText)
-      const txtW = textMetrics.width || 400 * k
+      if (loading) {
+        const q = (ph - SHIM_OFF + 10) % 1
+        const u = q < 0.5 ? q / 0.5 : (1 - q) / 0.5
+        const textMetrics = c.measureText(activeText)
+        const txtW = textMetrics.width || 400 * k
 
-      const bc = CX * k - txtW / 2 + txtW * (-0.2 + 1.4 * u)
-      const bw = txtW * 0.35
-      const g = c.createLinearGradient(bc - bw, 0, bc + bw, 0)
-      g.addColorStop(0, 'rgb(180,195,230)')
-      g.addColorStop(0.3, 'rgb(215,225,255)')
-      g.addColorStop(0.5, 'rgb(255,255,255)')
-      g.addColorStop(0.7, 'rgb(215,225,255)')
-      g.addColorStop(1, 'rgb(180,195,230)')
-      c.fillStyle = g
+        const bc = CX * k - txtW / 2 + txtW * (-0.2 + 1.4 * u)
+        const bw = txtW * 0.35
+        const g = c.createLinearGradient(bc - bw, 0, bc + bw, 0)
+        g.addColorStop(0, 'rgb(180,195,230)')
+        g.addColorStop(0.3, 'rgb(215,225,255)')
+        g.addColorStop(0.5, 'rgb(255,255,255)')
+        g.addColorStop(0.7, 'rgb(215,225,255)')
+        g.addColorStop(1, 'rgb(180,195,230)')
+        c.fillStyle = g
+      } else {
+        c.fillStyle = isHovered ? '#ffffff' : '#d5deee'
+      }
+
       c.textBaseline = 'middle'
       c.textAlign = 'center'
       c.fillText(activeText, CX * k, CY * k)
     }
 
-    function render(t: number) {
+    function renderIdle() {
+      if (!ctx || !cv) return
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.globalAlpha = 1
+      ctx.filter = 'none'
+      ctx.clearRect(0, 0, cv.width, cv.height)
+
+      const tx = cv.width / 2 - CX * k
+      const ty = cv.height / 2 - CY * k
+
+      /* Static clean border track */
+      ctx.setTransform(1, 0, 0, 1, tx, ty)
+      rrPath(ctx, CX * k, CY * k, TW * k, TH * k, TR * k)
+      ctx.lineWidth = TRACK_W * k
+      ctx.strokeStyle = isHovered ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.08)'
+      ctx.stroke()
+
+      plate(ctx)
+      labelText(ctx)
+    }
+
+    function renderActive(t: number) {
       if (!ctx || !cv) return
       let ph = (t / DUR) % 1
       if (ph < 0) ph += 1
@@ -258,7 +307,7 @@ export function GlowingThinkingButton({
       ctx.setTransform(1, 0, 0, 1, tx, ty)
       rrPath(ctx, CX * k, CY * k, TW * k, TH * k, TR * k)
       ctx.lineWidth = TRACK_W * k
-      ctx.strokeStyle = 'rgba(99,102,241,0.18)'
+      ctx.strokeStyle = 'rgba(99,102,241,0.2)'
       ctx.stroke()
 
       /* Travelling comet glow & core */
@@ -295,7 +344,7 @@ export function GlowingThinkingButton({
 
       ctx.setTransform(1, 0, 0, 1, tx, ty)
       plate(ctx)
-      label(ctx, ph)
+      labelText(ctx, ph)
     }
 
     function resize() {
@@ -303,25 +352,34 @@ export function GlowingThinkingButton({
       const rect = containerRef.current.getBoundingClientRect()
       dpr = Math.min(window.devicePixelRatio || 1, 2.5)
       const clientW = rect.width || 140
-      const clientH = rect.height || 38
+      const clientH = rect.height || 42
       cv.width = gl.width = co.width = Math.round(clientW * dpr)
       cv.height = gl.height = co.height = Math.round(clientH * dpr)
       k = Math.min((cv.width * 0.92) / TW, (cv.height * 0.88) / TH)
+
+      if (!loading) {
+        renderIdle()
+      }
     }
 
     resize()
 
-    let now = 0
-    let last: number | null = null
+    if (!loading) {
+      renderIdle()
+      if (animRef.current) cancelAnimationFrame(animRef.current)
+    } else {
+      let now = 0
+      let last: number | null = null
 
-    function frame(ts: number) {
-      if (last != null) now = (now + (ts - last) / 1000) % DUR
-      last = ts
-      render(now)
+      function frame(ts: number) {
+        if (last != null) now = (now + (ts - last) / 1000) % DUR
+        last = ts
+        renderActive(now)
+        animRef.current = requestAnimationFrame(frame)
+      }
+
       animRef.current = requestAnimationFrame(frame)
     }
-
-    animRef.current = requestAnimationFrame(frame)
 
     const ro =
       typeof ResizeObserver !== 'undefined'
@@ -338,7 +396,7 @@ export function GlowingThinkingButton({
       if (animRef.current) cancelAnimationFrame(animRef.current)
       if (ro) ro.disconnect()
     }
-  }, [activeText, loading])
+  }, [activeText, loading, isHovered])
 
   return (
     <button
@@ -346,7 +404,9 @@ export function GlowingThinkingButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`relative inline-flex items-center justify-center shrink-0 overflow-hidden rounded-[8px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative inline-flex items-center justify-center shrink-0 overflow-hidden rounded-[8px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 active:scale-95 ${className}`}
       style={{
         width: typeof width === 'number' ? `${width}px` : width,
         height: `${height}px`,

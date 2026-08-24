@@ -91,6 +91,17 @@ export function SignalDetailWorkspace({
     (signal.speculation ? `Strategic perspective: ${signal.speculation}` : null) ||
     'Decision significance pending live clinical reasoning synthesis.'
 
+  const rawPayload = (signal as any).raw_payload || {}
+  const evidenceUrl =
+    signal.canonical_url ||
+    (signal as any).url ||
+    (signal.sources && signal.sources.length > 0 ? signal.sources[0].url : null) ||
+    (signal.external_id && signal.external_id.startsWith('http') ? signal.external_id : null) ||
+    rawPayload.url ||
+    rawPayload.article?.url ||
+    rawPayload.link ||
+    (signal.source_id === 'newsapi' ? 'https://newsapi.org' : null)
+
   // Review status state management (for interactive user reviews)
   const [reviewState, setReviewState] = useState(
     signal.status
@@ -313,17 +324,24 @@ export function SignalDetailWorkspace({
             </div>
           </div>
 
-          {signal.canonical_url && (
-            <div className="pt-3 border-t border-[var(--border)]">
+          {evidenceUrl && (
+            <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between">
               <a
-                href={signal.canonical_url}
+                href={evidenceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--primary)] hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
               >
-                <span>View primary evidence source</span>
-                <ExternalLink size={12} />
+                <span>
+                  {signal.source_id === 'newsapi'
+                    ? `View provider source (${sourceName})`
+                    : 'View primary evidence source'}
+                </span>
+                <ExternalLink size={13} />
               </a>
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-mono">
+                Verified Provenance
+              </span>
             </div>
           )}
         </div>

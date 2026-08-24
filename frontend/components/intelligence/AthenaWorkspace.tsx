@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import type { AthenaResponse } from '@/types/api'
-import { askAthena } from '@/lib/api'
+import { askAthena, getAthenaSuggestedQuestions } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { BrainCircuit, ChevronRight, Sparkles } from 'lucide-react'
+import { BrainCircuit, ChevronRight, Sparkles, RefreshCw } from 'lucide-react'
 import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { useTheme } from '@/components/theme/ThemeProvider'
 
@@ -15,7 +15,27 @@ export function AthenaWorkspace() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<FormattedError | null>(null)
   const [response, setResponse] = useState<AthenaResponse | null>(null)
+  const [suggestedQueries, setSuggestedQueries] = useState<string[]>([
+    'What are the 5-year durability outcomes and bleed reductions for AAV5 gene therapy in Haemophilia A?',
+    'How do the Phase 3 FRONTIER-2 Mim8 zero-bleed readouts compare with prophylactic factor infusions?',
+    'What regulatory action milestones and PDUFA timelines are expected for anti-TFPI prophylaxis?',
+    'What are the EMA CHMP 5-year safety conclusions regarding vector shedding and liver transaminitis?',
+  ])
+  const [signalsCount, setSignalsCount] = useState(4)
   const { isDark } = useTheme()
+
+  useEffect(() => {
+    let active = true
+    getAthenaSuggestedQuestions().then((res) => {
+      if (active && res.questions && res.questions.length > 0) {
+        setSuggestedQueries(res.questions)
+        if (res.signals_count) setSignalsCount(res.signals_count)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleQuery = async (queryText?: string) => {
     const q = (queryText ?? prompt).trim()
@@ -34,12 +54,6 @@ export function AthenaWorkspace() {
       setLoading(false)
     }
   }
-
-  const suggestedQueries = [
-    'What are the latest clinical readout updates for Factor VIII gene therapies?',
-    'Are there any contradiction alerts on concizumab safety?',
-    'What regulatory target dates are expected in Q3 2026 for Haemophilia B?',
-  ]
 
   return (
     <>
@@ -60,6 +74,10 @@ export function AthenaWorkspace() {
           </p>
 
           <div className="prompt-list">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--signal)] mb-1">
+              <Sparkles size={12} />
+              <span>Synthesized from {signalsCount} Active Signals (Gemma 3)</span>
+            </div>
             {suggestedQueries.map((q) => (
               <button
                 key={q}
@@ -68,8 +86,8 @@ export function AthenaWorkspace() {
                   handleQuery(q)
                 }}
               >
-                <span>{q}</span>
-                <ChevronRight size={14} />
+                <span className="line-clamp-2 text-left">{q}</span>
+                <ChevronRight size={14} className="shrink-0 ml-1" />
               </button>
             ))}
           </div>
@@ -91,83 +109,82 @@ export function AthenaWorkspace() {
               disabled={!prompt.trim() || loading}
               onClick={() => handleQuery()}
               width={140}
-              height={38}
+              height={42}
             />
           </div>
         </Card>
 
         <Card className="answer-card flex flex-col justify-between">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="thinking">
-                <i /><i /><i />
-              </div>
-              <span className="text-xs text-[var(--muted-foreground)]">
-                Synthesizing grounded answer across indexed vector embeddings...
-              </span>
+            <div className="flex flex-col items-center justify-center min-h-[380px] gap-4">
+              <GlowingThinkingButton
+                label="Synthesizing..."
+                loadingLabel="Gemma Reasoning..."
+                loading={true}
+                width={160}
+                height={46}
+              />
+              <p className="text-xs text-[var(--muted-foreground)] animate-pulse m-0">
+                Searching vector index and evaluating source grounded evidence...
+              </p>
             </div>
           ) : error ? (
-            <ErrorState
-              title={error.title}
-              message={error.message}
-              requestId={error.requestId}
-              endpoint={error.endpoint}
-              statusCode={error.statusCode}
-              onRetry={() => handleQuery()}
-            />
+            <ErrorState message={error.message} onRetry={() => handleQuery()} />
           ) : response ? (
-            <div>
-              <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[var(--border)]">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={16} style={{ color: 'var(--signal)' }} />
-                  <strong className="text-xs uppercase tracking-wider text-[var(--foreground)]">Athena Synthesis</strong>
+            <div className="flex flex-col h-full justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <BrainCircuit size={16} className="text-[var(--signal)]" />
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      Athena Grounded Synthesis
+                    </span>
+                  </div>
+                  <Badge tone={response.mode === 'reasoning' ? 'low' : 'neutral'}>
+                    {response.mode === 'reasoning' ? 'Gemma 3 Reasoning' : 'Degraded Factual'}
+                  </Badge>
                 </div>
-                <Badge tone={response.mode === 'insufficient_evidence' ? 'high' : 'low'}>
-                  {response.mode === 'insufficient_evidence' ? 'Insufficient Evidence' : 'Grounded Synthesis'}
-                </Badge>
+
+                <div className="prose text-xs text-[var(--foreground)] leading-relaxed whitespace-pre-wrap">
+                  {response.answer}
+                </div>
               </div>
 
-              <p className="text-sm leading-relaxed text-[var(--foreground)] whitespace-pre-line m-0 mb-4">
-                {response.answer}
-              </p>
-
               {response.evidence && response.evidence.length > 0 && (
-                <div className="pt-3 border-t border-[var(--border)] mt-3">
-                  <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)] mb-2">
-                    Retrieved Vector Evidence Citations ({response.evidence.length})
-                  </div>
-                  <div className="grid gap-2 max-h-60 overflow-y-auto pr-1">
-                    {response.evidence.map((cit, idx) => (
+                <div className="mt-6 pt-4 border-t border-[var(--border)]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] block mb-2">
+                    Grounded Evidence Citations ({response.evidence.length})
+                  </span>
+                  <div className="flex flex-col gap-2">
+                    {response.evidence.map((ev, idx) => (
                       <div
                         key={idx}
-                        className="p-2.5 rounded border border-[var(--border)] text-xs"
-                        style={{ background: 'var(--surface-secondary)' }}
+                        className="p-2.5 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs"
                       >
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--primary)] mb-1">
-                          <span className="truncate">{cit.title}</span>
-                          <span className="font-mono text-[var(--muted-foreground)] text-[10px] shrink-0 ml-2">
-                            Dist: {cit.distance}
+                        <div className="flex items-center justify-between mb-1">
+                          <strong className="text-[var(--foreground)] truncate max-w-[280px]">
+                            {ev.title}
+                          </strong>
+                          <span className="text-[10px] font-mono text-[var(--signal)] uppercase">
+                            {ev.source_id}
                           </span>
                         </div>
-                        <p className="text-xs text-[var(--muted-foreground)] m-0 leading-relaxed font-sans">
-                          {cit.excerpt}
+                        <p className="text-[11px] text-[var(--muted-foreground)] line-clamp-2 m-0">
+                          {ev.excerpt}
                         </p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              <div className="confidence">
-                <span>Evidence Grounding Confidence:</span>
-                <strong>{Math.round(response.confidence)}%</strong>
-              </div>
             </div>
           ) : (
             <div className="empty-state">
-              <BrainCircuit size={28} />
+              <BrainCircuit size={32} />
               <p>Athena is ready</p>
-              <span>Select a suggested prompt from the left or enter a custom clinical query to start synthesis.</span>
+              <span>
+                Select a suggested prompt from the left or enter a custom clinical query to start synthesis.
+              </span>
             </div>
           )}
         </Card>

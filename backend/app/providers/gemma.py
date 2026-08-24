@@ -95,8 +95,19 @@ class GemmaProvider(LLMProvider):
             )
 
         if self._llama_instance is None:
-            n_gpu = -1 if settings.LLM_DEVICE in ("cuda", "gpu", "auto") else 0
-            n_threads = os.cpu_count() or 4
+            if settings.LLM_DEVICE in ("cuda", "gpu", "auto"):
+                gpu_layers_env = os.environ.get("LLM_GPU_LAYERS")
+                if gpu_layers_env and gpu_layers_env.strip():
+                    try:
+                        n_gpu = int(gpu_layers_env.strip())
+                    except ValueError:
+                        n_gpu = -1
+                else:
+                    n_gpu = -1
+            else:
+                n_gpu = 0
+
+            n_threads = min(os.cpu_count() or 8, 12)
             logger.info(
                 f"Loading local GGUF reasoning model from {gguf_path.name} "
                 f"(n_gpu_layers={n_gpu}, n_threads={n_threads}, n_ctx={self.max_context})..."

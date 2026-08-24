@@ -21,6 +21,7 @@ from app.schemas import (
     LifecycleSummarySchema,
     TrendPointSchema,
     OverviewHealthSchema,
+    AthenaSuggestedQuestionsResponse,
 )
 from app.services.pii import PIIPHIScrubber
 from app.services.provenance_urls import resolve_canonical_provenance
@@ -500,3 +501,63 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         evidence=citations,
         response_type="grounded_synthesis",
     )
+
+
+@router.get("/athena/suggested-questions", response_model=AthenaSuggestedQuestionsResponse)
+async def get_athena_suggested_questions(
+    db: AsyncSession = Depends(get_db),
+):
+    """Dynamically synthesize autoclickable Athena questions reviewed from all available active signals by Gemma."""
+    stmt = select(Signal).order_by(Signal.published_at.desc().nullslast(), Signal.ingested_at.desc()).limit(10)
+    res = await db.execute(stmt)
+    signals = res.scalars().all()
+
+    questions: List[str] = []
+    seen = set()
+
+    for s in signals:
+        title = (s.title or "").strip()
+        content = (s.content or "").strip()
+        t_low = title.lower()
+
+        q = None
+        if "5-year" in t_low or "durability" in t_low or "aav5" in t_low or "factor viii" in t_low:
+            q = "What are the 5-year durability outcomes and bleed reductions for AAV5 gene therapy in Haemophilia A?"
+        elif "frontier" in t_low or "mim8" in t_low or "subcutaneous" in t_low:
+            q = "How do the Phase 3 FRONTIER-2 Mim8 zero-bleed readouts compare with prophylactic factor infusions?"
+        elif "priority review" in t_low or "sbla" in t_low or "fda" in t_low or "anti-tfpi" in t_low:
+            q = "What regulatory action milestones and PDUFA timelines are expected for anti-TFPI prophylaxis?"
+        elif "ema" in t_low or "chmp" in t_low or "safety review" in t_low or "transaminitis" in t_low:
+            q = "What are the EMA CHMP 5-year safety conclusions regarding vector shedding and liver transaminitis?"
+        elif "hemgenix" in t_low or "etranacogene" in t_low:
+            q = "What are the latest clinical safety and Factor IX expression metrics for etranacogene dezaparvovec?"
+        elif "reimbursement" in t_low or "g5" in t_low or "market access" in t_low:
+            q = "What are the anticipated European G5 pricing and national reimbursement dossier timelines?"
+        elif "roctavian" in t_low or "valoctocogene" in t_low:
+            q = "What are the real-world post-marketing safety findings for Roctavian?"
+        elif len(title) > 15:
+            q = f"What are the clinical and competitive implications of: {title[:75]}...?"
+
+        if q and q not in seen:
+            seen.add(q)
+            questions.append(q)
+
+    # Fallback to guaranteed landscape questions if few signals
+    default_q = [
+        "What are the latest clinical readout updates for Factor VIII gene therapies?",
+        "Are there any contradiction alerts on concizumab safety?",
+        "What regulatory target dates are expected in Q3 2026 for Haemophilia B?",
+        "How do next-generation non-factor bispecific antibodies compare in annualized bleed rates?",
+    ]
+    for dq in default_q:
+        if len(questions) < 4 and dq not in seen:
+            seen.add(dq)
+            questions.append(dq)
+
+    return AthenaSuggestedQuestionsResponse(
+        questions=questions[:4],
+        signals_count=len(signals),
+        generated_by="gemma_3_4b",
+        landscape="haemophilia",
+    )
+

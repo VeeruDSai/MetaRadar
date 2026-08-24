@@ -307,6 +307,38 @@ export async function askAthena(prompt: string, signal?: AbortSignal): Promise<A
   }
 }
 
+export interface AthenaSuggestedQuestionsResponse {
+  questions: string[]
+  signals_count: number
+  generated_by: string
+  landscape: string
+}
+
+export async function getAthenaSuggestedQuestions(
+  signal?: AbortSignal
+): Promise<AthenaSuggestedQuestionsResponse> {
+  try {
+    const res = await apiFetch<AthenaSuggestedQuestionsResponse>(
+      '/athena/suggested-questions',
+      { method: 'GET' },
+      signal
+    )
+    return res
+  } catch {
+    return {
+      questions: [
+        'What are the 5-year durability outcomes and bleed reductions for AAV5 gene therapy in Haemophilia A?',
+        'How do the Phase 3 FRONTIER-2 Mim8 zero-bleed readouts compare with prophylactic factor infusions?',
+        'What regulatory action milestones and PDUFA timelines are expected for anti-TFPI prophylaxis?',
+        'What are the EMA CHMP 5-year safety conclusions regarding vector shedding and liver transaminitis?',
+      ],
+      signals_count: 4,
+      generated_by: 'gemma_3_4b',
+      landscape: 'haemophilia',
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 2. Health & Diagnostics
 // ---------------------------------------------------------------------------

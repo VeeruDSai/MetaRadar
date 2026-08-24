@@ -48,6 +48,13 @@ class FactInterpretationSpeculationSchema(BaseModel):
     speculation: Optional[str] = None
 
 
+class AthenaSuggestedQuestionsResponse(BaseModel):
+    questions: List[str] = Field(default_factory=list)
+    signals_count: int = 0
+    generated_by: str = "gemma_3_4b"
+    landscape: str = "haemophilia"
+
+
 class ScoreBreakdownSchema(BaseModel):
     novelty: float = 0.0
     clinical: float = 0.0

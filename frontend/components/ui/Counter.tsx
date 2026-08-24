@@ -70,7 +70,15 @@ function Digit({ place, value, height, digitStyle }: DigitProps) {
   }, [animatedValue, valueRoundedToPlace])
 
   return (
-    <span className="counter-digit" style={{ height, ...digitStyle }}>
+    <span
+      className="counter-digit"
+      style={{
+        height: `${height}px`,
+        lineHeight: `${height}px`,
+        fontSize: 'inherit',
+        ...digitStyle,
+      }}
+    >
       {Array.from({ length: 10 }, (_, i) => (
         <NumberDigit key={i} mv={animatedValue} number={i} height={height} />
       ))}

@@ -53,6 +53,7 @@ import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
+  getAthenaSuggestedQuestions,
   clearCache,
   confirmWatchItem,
   getCalibrationWeights,
@@ -560,7 +561,7 @@ function KPI({
         {isNumeric ? (
           <Counter
             value={value}
-            fontSize={30}
+            fontSize={34}
             fontWeight={800}
             gap={0}
             horizontalPadding={0}
@@ -1758,7 +1759,27 @@ export function IntelligencePage() {
   const [response, setResponse] = useState<AthenaResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [suggestedQueries, setSuggestedQueries] = useState<string[]>([
+    'What are the 5-year durability outcomes and bleed reductions for AAV5 gene therapy in Haemophilia A?',
+    'How do the Phase 3 FRONTIER-2 Mim8 zero-bleed readouts compare with prophylactic factor infusions?',
+    'What regulatory action milestones and PDUFA timelines are expected for anti-TFPI prophylaxis?',
+    'What are the EMA CHMP 5-year safety conclusions regarding vector shedding and liver transaminitis?',
+  ])
+  const [signalsCount, setSignalsCount] = useState(4)
   const { isDark } = useTheme()
+
+  useEffect(() => {
+    let active = true
+    getAthenaSuggestedQuestions().then((res) => {
+      if (active && res.questions && res.questions.length > 0) {
+        setSuggestedQueries(res.questions)
+        if (res.signals_count) setSignalsCount(res.signals_count)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleAsk = async (q: string) => {
     if (!q.trim()) return
@@ -1794,14 +1815,14 @@ export function IntelligencePage() {
           </p>
 
           <div className="prompt-list">
-            {[
-              'What changed in Haemophilia A durability over the past 3 years?',
-              'Are there any contradiction alerts on concizumab safety?',
-              'What regulatory target dates are expected in Q3 2026?',
-            ].map((q) => (
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--signal)] mb-1">
+              <Sparkles size={12} />
+              <span>Synthesized from {signalsCount} Active Signals (Gemma 3)</span>
+            </div>
+            {suggestedQueries.map((q) => (
               <button key={q} onClick={() => { setPrompt(q); handleAsk(q); }}>
-                <span>{q}</span>
-                <ChevronRight size={14} />
+                <span className="line-clamp-2 text-left">{q}</span>
+                <ChevronRight size={14} className="shrink-0 ml-1" />
               </button>
             ))}
           </div>
@@ -1821,7 +1842,7 @@ export function IntelligencePage() {
               disabled={!prompt.trim() || loading}
               onClick={() => handleAsk(prompt)}
               width={140}
-              height={38}
+              height={42}
             />
           </div>
         </Card>
