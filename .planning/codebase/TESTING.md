@@ -5,119 +5,135 @@
 ## Test Framework
 
 **Runner:**
-- pytest 8+ with pytest-asyncio (`backend/requirements.txt`)
-- Config: `pytest.ini` (repo root) — `asyncio_mode = auto`, `testpaths = tests`, discovery pattern `test_*.py` / `Test*` / `test_*`
-- Custom markers: `live` — marks tests requiring live external services (`pytest.ini:8-9`)
-- Python 3.11 in CI; local dev may run 3.13
+- pytest >= 8.0.0 with pytest-asyncio >= 0.23.0 (asyncio_mode = auto), pytest-cov >= 4.1.0, pytest-httpx >= 0.30.0 (`backend/requirements.txt:14-19`)
+- Config: `pytest.ini` (repo root) - `testpaths = tests`, `python_files = test_*.py`, `pythonpath = backend .`, custom marker `live` for tests requiring live external services
 
 **Assertion Library:**
-- Plain `assert` statements (no assertion library)
+- Plain `assert` statements (pytest idiomatic)
 
 **Run Commands:**
 ```bash
-pytest -v                      # Run all backend tests (from repo root)
-pytest -v -m "not live"        # Exclude live-service tests
-python tests/test_foundation.py  # Standalone foundation verification (has __main__ runner)
-pnpm exec tsc --noEmit         # Frontend type gate (frontend/)
-pnpm lint                      # Frontend lint gate
-pnpm run check:banned-classes  # Banned Tailwind class gate
-pnpm build                     # Frontend production build gate
+pytest                 # Run full backend suite from repo root
+pytest -v              # Verbose (what CI runs, with PYTHONPATH=backend:.)
+pytest -m "not live"   # Skip live-service tests
+python tests/test_foundation.py   # Legacy standalone runner (has its own asyncio main)
 ```
 
-**Frontend unit-test framework:** None. There are no JS/TS test files and no jest/vitest config. Frontend quality is enforced by the four gates above plus CI contract sync (`.github/workflows/ci.yml`). Do not invent a frontend test setup without adding config deliberately.
+**Frontend has NO unit test framework.** No jest/vitest/playwright config exists under `frontend/`. Frontend quality gates are executable checks instead (`frontend/package.json:9-15`):
+```bash
+cd frontend
+pnpm exec tsc --noEmit           # Typecheck gate
+pnpm run check:banned-classes    # Tailwind class gate (scripts/check-banned-classes.mjs)
+pnpm lint                        # ESLint
+pnpm build                       # Production build gate
+```
+
+## CI Pipeline
+
+`.github/workflows/ci.yml` runs on push/PR to `main`, `develop`, `feature/*`:
+1. Install `backend/requirements.txt` on Python 3.11
+2. `pytest -v` with `PYTHONPATH=backend:.`
+3. Contract sync: `python scripts/export_openapi.py` then `git diff --exit-code frontend/types/api.ts` (fails if canonical TS contract was hand-edited)
+4. pnpm install + `tsc --noEmit` + `check:banned-classes` + `lint` + `build`
 
 ## Test File Organization
 
 **Location:**
-- All tests centralized in root-level `tests/` directory (flat, no subdirectories). NOT co-located with source.
+- Centralized in `tests/` at repo root (NOT co-located with backend modules). 24 files, ~129 test functions.
 
 **Naming:**
-- `tests/test_<domain>.py`: `test_api_endpoints.py`, `test_ingestion.py`, `test_calibration_service.py`, `test_contract_drift.py`, `test_failure_injection.py`
+- Files: `test_<domain>.py` (e.g., `tests/test_ingestion.py`, `tests/test_privacy_boundary.py`)
+- Functions: `test_<behavior>()`; async tests declared `async def test_...`
+- Classes (rare): `Test*` prefix per `pytest.ini`
 
-**Structure (23 files, ~3,800 lines):**
+**Structure:**
 ```
 tests/
-├── test_foundation.py               # Core capability verification (config, PII, providers)
+├── test_foundation.py               # Core capability verification (config, dedup, PII, providers)
 ├── test_api_endpoints.py            # HTTP contract via httpx ASGI transport
-├── test_signals_endpoints.py        # /signals filters & serialization
-├── test_contract_drift.py           # OpenAPI ↔ TS contract sync guard
-├── test_failure_injection.py        # Fault tolerance + validation errors
-├── test_truthfulness_and_invariants.py  # Determinism/threshold invariants
-├── test_provenance.py               # Provenance URL resolution
-├── test_privacy_boundary.py         # PII/PHI scrubbing boundaries
-├── test_providers_live.py           # @pytest.mark.live real API calls
-└── ... (ingestion, calibration, retrieval, observability, e2e scenarios)
+├── test_signals_endpoints.py        # /signals endpoint specifics
+├── test_contract_drift.py           # OpenAPI <-> frontend/types/api.ts sync guard
+├── test_failure_injection.py        # Fault tolerance + validation-error correlation IDs
+├── test_privacy_boundary.py         # PII scrubbing + external-provider privacy gate
+├── test_intelligence_nodes.py       # LangGraph workflow node coverage (17 tests)
+├── test_provider_matrix.py          # Provider capability matrix
+├── test_providers_live.py           # @pytest.mark.live real API call (skipped without key)
+├── test_e2e_calibration_scenario.py # Full-scenario E2E
+└── ... (calibration, confluence, retrieval, provenance, observability, launchers, parity matrix)
 ```
-
-**Mandatory boilerplate:** There is NO `conftest.py`. Every test file repeats this path bootstrap at top:
-```python
-import sys
-from pathlib import Path
-base_dir = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(base_dir / "backend"))
-from app.main import app   # then app imports AFTER sys.path insert
-```
-(`tests/test_api_endpoints.py:1-13`). Replicate this header in every new test file.
 
 ## Test Structure
 
-**Suite Organization:**
+**Suite organization (flat functions, numbered docstrings for ordered scenarios):**
 ```python
+# Standard file preamble (every test file)
+import pytest
+import sys
+from pathlib import Path
+
+base_dir = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(base_dir / "backend"))
+
+from app.main import app
+from app.core.config import settings
+
+
 @pytest.mark.asyncio
-async def test_business_endpoints():
-    mock_db = AsyncMock()
-    # ... arrange mocks ...
-    async def mock_get_db():
-        yield mock_db
-    app.dependency_overrides[get_db] = mock_get_db
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            res = await ac.get("/api/v1/overview")
-            assert res.status_code == 200
-    finally:
-        app.dependency_overrides.pop(get_db, None)
+async def test_health_endpoints():
+    """Docstring describing the scenario."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        res = await ac.get("/api/v1/health")
+        assert res.status_code == 200
+        assert res.json()["status"] == "ok"
 ```
-(`tests/test_api_endpoints.py:50-95`)
+(`tests/test_api_endpoints.py:15-31`)
 
 **Patterns:**
-- Tests are function-based (no test classes), numbered docstrings when part of a suite narrative: `"""1. Testing DomainConfig loader."""` (`tests/test_foundation.py:20-27`)
-- Dependency override of `get_db` with `try/finally` cleanup is THE pattern for DB-backed endpoints — never leave overrides registered
-- Invariant tests verify determinism by running the same computation twice and comparing exactly (`tests/test_truthfulness_and_invariants.py:45-52`)
-- Multi-scenario tests use inline comments to segment scenarios within one test (`tests/test_connector_health.py`)
-- No fixtures/factories; tests construct data inline as plain dicts
+- No fixtures/conftest.py: each file self-bootstraps `sys.path` and constructs clients inline
+- Async tests use `@pytest.mark.asyncio` explicitly (also safe due to `asyncio_mode = auto`)
+- Multi-step scenarios assert sequentially inside one test with inline comments per step (`tests/test_api_endpoints.py:26-47`)
+- Dependency overrides wrapped in `try/finally` to guarantee cleanup:
+```python
+app.dependency_overrides[get_db] = mock_get_db
+try:
+    ...
+finally:
+    app.dependency_overrides.pop(get_db, None)
+```
+(`tests/test_api_endpoints.py:75-95`)
 
 ## Mocking
 
-**Framework:** `unittest.mock` (`AsyncMock`, `MagicMock`, `patch`) + pytest `monkeypatch` + `httpx.MockTransport`
+**Framework:** `unittest.mock` (AsyncMock/MagicMock/patch) + `httpx.MockTransport` + pytest `monkeypatch`
 
-**Patterns:**
-
-1. *DB session mocking* — chain MagicMock results matching SQLAlchemy execute/scalars call order:
+**DB session mocking (FastAPI dependency override):**
 ```python
 mock_db = AsyncMock()
 mock_scalars = MagicMock()
 mock_scalars.all.return_value = []
-res_scalars = MagicMock(); res_scalars.scalars.return_value = mock_scalars
-res_count = MagicMock(); res_count.scalar.return_value = 0
-mock_db.execute.side_effect = [res_count, res_count, res_scalars]  # ordered per endpoint queries
-```
-(`tests/test_api_endpoints.py:51-70`) — `side_effect` ordering must match the exact sequence of `db.execute()` calls inside the endpoint.
+mock_res = MagicMock()
+mock_res.scalars.return_value = mock_scalars
+mock_db.execute.side_effect = [mock_res_count, mock_res_scalars, ...]  # one entry per query, in order
 
-2. *Settings mutation* — monkeypatch settings attributes directly:
+async def mock_get_db():
+    yield mock_db
+```
+(`tests/test_api_endpoints.py:51-70`) - `side_effect` lists must match the exact number/order of DB calls the endpoint makes.
+
+**HTTP provider mocking (inject transport into client):**
 ```python
-def test_configuration_error_for_newsapi_missing_key(monkeypatch):
-    monkeypatch.setattr(settings, "NEWSAPI_KEY", "")
-```
-(`tests/test_config_errors.py:7-16`)
+def ollama_handler(request):
+    return Response(200, json={...})
 
-3. *Module-level patch* — swap connector registries or HTTP clients:
-```python
-monkeypatch.setattr("app.services.ingestion.ALL_CONNECTORS", [mock_conn])          # tests/test_observability.py:35
-patch("httpx.AsyncClient.get", new_callable=AsyncMock, side_effect=side_effect)    # tests/test_ingestion.py:126
-provider_factory.gemma._client = AsyncClient(transport=MockTransport(ollama_handler), base_url="http://ollama-test")  # tests/test_foundation.py:82
+provider_factory.gemma._client = AsyncClient(
+    transport=MockTransport(ollama_handler), base_url="http://ollama-test"
+)
 ```
+(`tests/test_foundation.py:66-82`) - swap `_client` on the provider rather than patching network APIs.
 
-4. *Fake implementations* — subclass real base classes for behavior tests:
+**Settings mutation:** `monkeypatch.setattr(settings, "ENABLE_GROK_FALLBACK", True)` (`tests/test_privacy_boundary.py:44`)
+
+**Failure injection via test doubles subclassing production base classes:**
 ```python
 class FlakyTestConnector(SourceConnector):
     source_id: str = "flaky_test_source"
@@ -129,31 +145,47 @@ class FlakyTestConnector(SourceConnector):
 (`tests/test_failure_injection.py:15-27`)
 
 **What to Mock:**
-- Database sessions (always — no real Postgres/Redis in unit tests)
-- External HTTP APIs via `httpx.MockTransport` or patched `httpx.AsyncClient.get`
-- Settings values that gate behavior (API keys, feature flags like `ENABLE_GROK_FALLBACK`)
-- LLM provider internals (inject mock `_client` on provider instances)
+- Database sessions (always - no live Postgres in unit suite)
+- External LLM/provider HTTP endpoints (Ollama/Grok) via MockTransport
+- Settings flags via monkeypatch when testing conditional behavior
+- Time-sensitive logic uses injected datetimes or synthetic data
 
 **What NOT to Mock:**
-- The FastAPI app/routing layer itself — exercise real routes through `AsyncClient(ASGITransport(app=app))`
-- Pure domain logic (scoring, confluence engine, fingerprinting, PII scrubber) — test it directly for determinism/invariant guarantees (`tests/test_truthfulness_and_invariants.py:23-77`)
-- Correlation middleware — assert real `x-request-id` headers appear even on 422 responses (`tests/test_failure_injection.py:44-58`)
+- The FastAPI app itself and its middleware chain (correlation-ID behavior is asserted through the real stack - `tests/test_failure_injection.py:57-58`)
+- Pure domain services (scoring, PII scrubbing, routing, authority) are tested directly against real implementations (`tests/test_foundation.py:20-56`, `tests/test_privacy_boundary.py:17-41`)
+- Never fabricate pass/fail output; honest telemetry extends to tests (root `AGENTS.md` rule 4)
+
+## Live-Service Tests
+
+Marked `@pytest.mark.live` plus env-var-gated skip so CI stays green:
+```python
+@pytest.mark.live
+@pytest.mark.skipif(not os.getenv("LIVE_XAI_KEY"), reason="Requires LIVE_XAI_KEY env var")
+async def test_grok_live_structured_output():
+    """Real Grok API call -- only runs with LIVE_XAI_KEY set. CI stays green without it."""
+```
+(`tests/test_providers_live.py:5-8`). Follow this two-marker pattern for any test hitting real external services. A manual live ingestion E2E script also exists at `scripts/test_live_ingestion_e2e.py`.
 
 ## Fixtures and Factories
 
 **Test Data:**
-- Inline literal construction only. Domain-realistic haemophilia content strings double as keyword-test fixtures:
+- Inline dict literals constructed per-test; no factory libraries, no fixture files
 ```python
-title = "Phase 3 clinical trial of recombinant Factor VIII shows significant ABR reduction"
-claims = [{"claim_id": "c1", "asset": "Hemgenix", "signal_type": "CLINICAL_TRIAL", ...}]
+claims = [
+    {"claim_id": "c1", "asset": "Hemgenix", "signal_type": "CLINICAL_TRIAL",
+     "priority": "HIGH", "source": "PubMed"},
+]
 ```
-(`tests/test_truthfulness_and_invariants.py:26-27`, `tests/test_foundation.py:51-54`)
+(`tests/test_foundation.py:51-54`)
+- Shared synthetic dataset for pipeline tests: `data/synthetic_signals.json` (loaded by `backend/app/workflows/nodes/ingest.py:15-36`); records must carry `is_synthetic=True` / `data_mode="test_fixture"` tags
+- Domain constants asserted against `config/haemophilia.yaml` via `get_domain_config()` (`tests/test_foundation.py:20-26`)
 
-**Location:** No fixtures directory, no conftest.py, no factory libraries. Shared canonical payloads live in `data/synthetic_signals.json` / `backend/app/data/synthetic_signals.json`.
+**Location:**
+- All inline; shared JSON at repo-root `data/` and `backend/app/data/synthetic_signals.json`
 
 ## Coverage
 
-**Requirements:** None enforced (pytest-cov installed but no `--cov` flag in CI or pytest.ini).
+**Requirements:** None enforced. `pytest-cov` is installed but no `--cov` addopts are configured anywhere.
 
 **View Coverage:**
 ```bash
@@ -163,56 +195,55 @@ pytest --cov=backend/app --cov-report=term-missing
 ## Test Types
 
 **Unit Tests:**
-- Direct service/class invocation: scoring determinism, confluence thresholds, fingerprint generation, PII scrubbing (`tests/test_truthfulness_and_invariants.py`, `tests/test_foundation.py`)
+- Pure services and helpers tested by direct import and invocation: scoring math, fingerprinting, PII patterns, authority tiers (`tests/test_foundation.py`, `tests/test_calibration_service.py`, `tests/test_signal_decision_refinement.py`)
 
 **Integration Tests:**
-- Full ASGI request/response cycles against the real FastAPI app with mocked DB dependencies (`tests/test_api_endpoints.py`, `tests/test_signals_endpoints.py`)
-- End-to-end scenario flows chaining service + endpoint layers (`tests/test_e2e_calibration_scenario.py`)
-- Contract drift detection comparing generated OpenAPI paths AND hand-maintained TS interface names (`tests/test_contract_drift.py:11-41`)
+- Full FastAPI app exercised over `httpx.AsyncClient` + `ASGITransport` with mocked DB dependency (`tests/test_api_endpoints.py`, `tests/test_signals_endpoints.py`)
+- LangGraph workflow nodes tested with in-memory state dicts and optional mock sessions (`tests/test_intelligence_nodes.py`)
 
-**E2E/Live Tests:**
-- `@pytest.mark.live` marker + env-var skipif keeps real-provider tests out of CI runs:
-```python
-@pytest.mark.live
-@pytest.mark.skipif(not os.getenv("LIVE_XAI_KEY"), reason="Requires LIVE_XAI_KEY env var")
-async def test_grok_live_structured_output():
-```
-(`tests/test_providers_live.py:5-19`) — follow this dual-guard pattern for any new live-service test.
+**E2E Tests:**
+- Scenario-level suite `tests/test_e2e_calibration_scenario.py` (single multi-step flow)
+- Live external E2E kept out of default run via `live` marker / standalone scripts
+
+**Contract Tests:**
+- `tests/test_contract_drift.py`: asserts OpenAPI schema contains required paths AND that `frontend/types/api.ts` exports the matching interfaces - the executable half of the contract-sync gate
 
 ## Common Patterns
 
-**Async Testing:**
+**Async API testing:**
 ```python
-@pytest.mark.asyncio
-async def test_red_team_contradiction_service():
-    redteam = RedTeamNLIService()
-    flags = await redteam.evaluate_contradictions(claims)
+async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    res = await ac.post("/api/v1/athena", json={"prompt": "..."})
+    assert res.status_code == 200
 ```
-(`tests/test_foundation.py:47-57`) — note `asyncio_mode = auto` also permits unmarked bare async defs (`test_config_errors.py:53`), but existing code mostly uses explicit markers; prefer explicit `@pytest.mark.asyncio` for new tests.
+Note: project uses `ASGITransport` (not deprecated `AsyncClient(app=...)`).
 
-**Error Testing:**
+**Error-path testing:**
 ```python
-# Raised exceptions
 with pytest.raises(Exception) as exc_info:
     await failing_connector.fetch_signals()
-assert "Simulated connector timeout" in str(exc_info.value)     # tests/test_failure_injection.py:34-36
+assert "Simulated connector timeout" in str(exc_info.value)
 
-# HTTP validation errors + telemetry contract
+with pytest.raises(PermissionError):   # privacy gate blocks confidential payloads
+    await grok.generate_intelligence(...)
+```
+(`tests/test_failure_injection.py:34-36`, `tests/test_privacy_boundary.py:63-69`)
+
+**Validation-error assertions include headers:**
+```python
 res = await ac.post("/api/v1/feedback", json=bad_payload)
 assert res.status_code == 422
-assert "x-request-id" in res.headers                            # tests/test_failure_injection.py:55-58
-
-# Configuration error states
-assert configuration_error_for("newsapi") is not None           # pattern from tests/test_config_errors.py
+assert "x-request-id" in res.headers   # correlation ID survives failures
 ```
+(`tests/test_failure_injection.py:55-58`)
 
-**Honesty/Truthfulness Testing:**
-- A dedicated invariant suite asserts the system never fabricates data: scores must be deterministic, recency must decay monotonically, confluence requires >= 3 distinct sources, empty inputs produce honest empties (`tests/test_truthfulness_and_invariants.py`). Any new scoring/aggregation logic MUST add corresponding invariant tests here.
-
-**CI Gate Order** (`.github/workflows/ci.yml`):
-1. `pytest -v` (PYTHONPATH=backend:.)
-2. Contract sync: re-run `scripts/export_openapi.py`, fail on `git diff frontend/types/api.ts`
-3. Frontend: `tsc --noEmit` → `check:banned-classes` → `eslint .` → `next build`
+**Adding a new backend test (checklist):**
+1. Create `tests/test_<area>.py` with the standard sys.path preamble
+2. Mark async tests `@pytest.mark.asyncio`
+3. Override `get_db` with an `AsyncMock` session inside `try/finally` if hitting endpoints
+4. Mock external providers via `MockTransport` injection, never real network
+5. Tag anything needing real services with `@pytest.mark.live` + `skipif` env guard
+6. Ensure `pytest -v` passes locally before pushing (CI gate: `.github/workflows/ci.yml:29-33`)
 
 ---
 

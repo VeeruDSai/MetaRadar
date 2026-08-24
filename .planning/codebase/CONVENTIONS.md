@@ -2,146 +2,147 @@
 
 **Analysis Date:** 2026-08-24
 
-This is a dual-stack codebase: Python/FastAPI backend (`backend/`) and TypeScript/Next.js frontend (`frontend/`). Conventions differ per stack; both are documented here. Prescribed rules live in `docs/rules/ENGINEERING_STANDARDS.md` and `AGENTS.md`.
-
 ## Naming Patterns
 
-**Files (Python backend):**
-- `snake_case.py` module names: `scoring.py`, `pii.py`, `domain_config.py`
-- Domain folders by role: `backend/app/api/v1/endpoints/`, `backend/app/services/`, `backend/app/providers/`, `backend/app/connectors/`, `backend/app/core/`, `backend/app/db/`, `backend/app/models/`, `backend/app/schemas/`
+**Files:**
+- Backend Python: `snake_case.py` matching the primary symbol (`backend/app/services/scoring.py` -> `PriorityScoringService`)
+- Frontend components: `PascalCase.tsx` named after the exported component (`frontend/components/common/ErrorState.tsx` -> `ErrorState`)
+- Frontend lib/helpers: `camelCase.ts` (`frontend/lib/api.ts`, `frontend/lib/hooks.ts`, `frontend/lib/mappers.ts`)
+- Frontend CSS assets: `kebab-case.css` (`frontend/components/effects/star-portal/styles.css`) or `PascalCase.css` for component-scoped styles (`frontend/components/ui/Counter.css`)
+- Tests: `test_<area>.py` in central `tests/` directory (see TESTING.md)
 
-**Files (TypeScript frontend):**
-- Components: `PascalCase.tsx`: `SignalCard.tsx`, `EvidenceDrawer.tsx`, `ThemeProvider.tsx`
-- Lib modules: `camelCase.ts`: `api.ts`, `hooks.ts`, `mappers.ts`, `errors.ts`
-- Route files use Next.js App Router lowercase convention: `frontend/app/page.tsx`, `frontend/app/[section]/page.tsx`
-- Test files: `test_<module>.py` in root-level `tests/`
-
-**Classes:**
-- `PascalCase`: `PriorityScoringService`, `PubMedConnector`, `GemmaProvider`, `PIIPHIScrubber`, `ApiError` (`frontend/lib/errors.ts`)
-- Custom exceptions end in `Error`: `OllamaUnavailableError`, `ConnectorFetchError` (`backend/app/connectors/base.py`)
-- SQLAlchemy models are singular nouns: `Signal`, `Asset`, `Confluence`, `Development` (`backend/app/models/__init__.py`)
-- Pydantic response schemas end in `Schema` or `Response`: `SignalSchema`, `SignalListResponse`, `OverviewResponse` (`backend/app/schemas/__init__.py`)
-
-**Functions/Methods:**
-- `snake_case` verbs: `scrub()`, `score_text()`, `run_profile()`, `generate_fingerprint()`
-- Private/internal helpers prefixed `_`: `_serialize_signal()` (`backend/app/api/v1/endpoints/signals.py`), `_scrub_secrets()` (`backend/app/core/logging.py`), `_ensure_client()` (`backend/app/providers/gemma.py`)
-- Async endpoints/functions use bare `async def` — no `async_` name prefix
-- Frontend fetchers use verb prefixes: `fetchOverview()`, `fetchSignals()`, `submitSignalFeedback()`; legacy aliases exported as `getOverview = fetchOverview` for backward compatibility (`frontend/lib/api.ts:39`)
+**Functions:**
+- Python: `snake_case`; async functions also `snake_case` (`node_ingest()` in `backend/app/workflows/nodes/ingest.py:39`, `resolve_signal_routing()` in `backend/app/services/routing.py`)
+- Private/internal helpers prefixed with `_` (`_serialize_signal()` at `backend/app/api/v1/endpoints/signals.py:54`, `_load_synthetic_fallback()` at `backend/app/workflows/nodes/ingest.py:15`)
+- TypeScript: `camelCase`; `fetch*` prefix for raw API calls, `get*` for compatibility wrappers (`fetchOverview` / `getOverview` in `frontend/lib/api.ts:208` and `:39`)
+- React hooks: `useXxx` (`useLiveData` in `frontend/lib/hooks.ts:21`)
 
 **Variables:**
-- `snake_case` in Python, `camelCase` in TypeScript
-- Module-level constants in `UPPER_SNAKE_CASE`: `SCORING_VERSION`, `CLINICAL_KEYWORDS`, `MAX_EVIDENCE_DISTANCE` (`backend/app/services/scoring.py`, `backend/app/api/v1/endpoints/signals.py:39`), `API_BASE` (`frontend/lib/api.ts:149`)
+- Python module-level constants: `UPPER_SNAKE_CASE` (`SCORING_VERSION`, `CLINICAL_KEYWORDS` at `backend/app/services/scoring.py:7-9`; `MAX_EVIDENCE_DISTANCE` at `backend/app/api/v1/endpoints/signals.py:51`)
+- Settings fields: `UPPER_SNAKE_CASE` env-var names on the pydantic-settings class (`backend/app/core/config.py:16-104`)
+- TypeScript: `camelCase` locals; `UPPER_SNAKE_CASE` constants (`API_BASE` at `frontend/lib/api.ts:149`)
 
-**Types (frontend):**
-- Interfaces/types in `types/api.ts`, PascalCase: `Signal`, `DashboardOverview`, `ModelMetadata`
-- Props interfaces named `{Component}Props`: `SignalCardProps` (`frontend/components/signals/SignalCard.tsx:26`)
-- Generic hook state interfaces: `LiveDataState<T>` (`frontend/lib/hooks.ts:5`)
+**Types/Classes:**
+- Python classes `PascalCase`; enums use `class X(str, Enum)` with UPPERCASE members (`DataMode.LIVE` at `backend/app/schemas/intelligence.py:8-12`)
+- Pure value objects as dataclasses: `ScoreInput`, `ScoreBreakdown` (`backend/app/services/scoring.py:37-46`)
+- Pydantic response schemas end in `Schema` or describe payload (`SignalSchema`, `OverviewResponse` in `backend/app/schemas/intelligence.py`)
+- TypeScript interfaces `PascalCase`; props interfaces are `<Component>Props` (`ErrorStateProps` at `frontend/components/common/ErrorState.tsx:7`)
 
 ## Code Style
 
-**Python:**
-- No formatter config detected (no black/ruff/isort config files). Match existing style: 4-space indent, double quotes mostly, trailing commas omitted inconsistently — mirror surrounding code.
-- Type hints on all public functions using `typing.Optional`, `Dict`, `List`, `Any` (legacy typing style, not PEP 604 unions): see `backend/app/services/scoring.py:146-151`
-- Dataclasses for internal value objects: `@dataclass class ScoreInput` (`backend/app/services/scoring.py:37-43`)
+**Backend (Python):**
+- No enforced formatter/linter config (no ruff/black/flake8 config present). Match surrounding style: 4-space indent, double-quoted strings, trailing commas in multiline literals.
+- Full type hints on signatures using `typing` generics (`Optional[...]`, `List[...]`, `Dict[str, Any]`) - see `backend/app/services/scoring.py:81-101`
+- Docstrings on every public class and method, including business rationale ("Returns None if any mandatory input is missing (allows honest 'not_computed' display)" - `backend/app/services/scoring.py:68-75`)
+- Stateless domain services exposed as module-level singletons imported by endpoints: `priority_scorer`, `confluence_engine`, `embedding_service` (imported at `backend/app/api/v1/endpoints/signals.py:40-42`). Use this pattern for new services.
+- Classmethod-based utility methods when no instance state is needed (`PriorityScoringService.extract_keywords_count` - `backend/app/services/scoring.py:80-89`)
+- Workflow pipeline steps are pure-ish node functions taking typed state: `async def node_ingest(state: MetaRadarState, session) -> Dict[str, Any]` (`backend/app/workflows/nodes/ingest.py:39`); each returns a partial-state dict including `node_statuses`
 
-**TypeScript:**
-- `"strict": true` in `frontend/tsconfig.json` — never weaken it; never use `ignoreBuildErrors` or `@ts-ignore` (banned by `AGENTS.md`)
-- Single quotes, no semicolons, 2-space indent (match existing files; no Prettier config present)
-- Pragmatic `any` appears at API boundary parsing (e.g., `fetchOverview` uses `apiFetch<any>`) — prefer typing new code at the mapper boundary instead of spreading `any`
+**Frontend (TypeScript):**
+- `strict: true` (`frontend/tsconfig.json:7`); never disable with `@ts-ignore` or `ignoreBuildErrors` (explicitly forbidden by root `AGENTS.md` rule 5)
+- Single quotes, no semicolons, 2-space indent (no Prettier/Biome config exists - match existing files)
+- `'use client'` directive as first line of every client component/hook (`frontend/components/common/ErrorState.tsx:1`, `frontend/lib/hooks.ts:1`)
+- Named function declarations plus explicit Props interface per component (`export function ErrorState({...}: ErrorStateProps)`)
+- Inline JSDoc blocks above non-obvious helpers (`/** Helper to categorize source authority tier */` - `frontend/components/signals/SignalCard.tsx:33`)
 
 **Linting:**
-- Frontend: ESLint 10 flat config in `frontend/eslint.config.mjs` extending `@next/eslint-plugin-next` recommended + `core-web-vitals`. Run via `pnpm lint`.
-- Backend: no linter configured; correctness is enforced by pytest suite + type hints.
-- **Banned Tailwind classes gate:** `pnpm run check:banned-classes` executes `scripts/check-banned-classes.mjs`, which fails the build if any `.tsx` under `frontend/components/` uses `slate-*` palette classes or arbitrary hex values like `bg-[#fff]` (exception: `metaradar.tsx`). Use design-token classes instead.
+- ESLint flat config `frontend/eslint.config.mjs`: `@next/eslint-plugin-next` recommended + core-web-vitals rules only
+- Custom gate `scripts/check-banned-classes.mjs`: forbids Tailwind `slate-*` utilities and arbitrary hex classes (`bg-[#...]`) in `frontend/components/**/*.tsx`; run via `pnpm run check:banned-classes`. Use CSS variables (`var(--danger)`, `var(--surface)`) with `color-mix()` instead (example: `frontend/components/common/ErrorState.tsx:44-47`)
+- CI runs `pnpm exec tsc --noEmit`, `pnpm run check:banned-classes`, `pnpm lint`, `pnpm build` (`.github/workflows/ci.yml:52-59`)
 
 ## Import Organization
 
-**Python:**
-1. Stdlib (`import json`, `from datetime import ...`)
-2. Third-party (`fastapi`, `sqlalchemy`, `httpx`, `structlog`, `pydantic`)
-3. First-party app imports (`from app.core.config import settings`, `from app.services.scoring import priority_scorer`)
-- Example canonical ordering: `backend/app/api/v1/endpoints/signals.py:1-32`
-- Deferred/lazy imports inside functions are used deliberately to avoid startup cost or circulars: `from llama_cpp import Llama` inside `_generate_with_local_gguf` (`backend/app/providers/gemma.py:90`), scheduler import inside lifespan (`backend/app/main.py:44`)
+**Backend order (observed consistently):**
+1. Python stdlib (`import os`, `from datetime import datetime, timezone`)
+2. Third-party (`fastapi`, `sqlalchemy`, `structlog`, `pydantic`)
+3. App imports absolute from `app.` package root (`from app.services.scoring import priority_scorer`)
+- Reference example: `backend/app/api/v1/endpoints/signals.py:1-44`
 
-**TypeScript:**
-1. `'use client'` directive first line (required for client components)
-2. React/Next framework imports (`import { useState } from 'react'`, `import Link from 'next/link'`)
-3. Icon imports from `lucide-react` / animation from `framer-motion`
-4. Type-only imports using `import type {...}` form: `import type { Signal } from '@/types/api'` (`frontend/components/signals/SignalCard.tsx:6`)
-5. Local components via `@/` alias; sibling modules via relative paths (`import { DataModeBadge } from '../common/DataModeBadge'`)
+**Frontend order:**
+1. `'use client'` directive
+2. React / Next.js imports
+3. Type-only imports from `@/types/api`
+4. Internal components via `@/components/...` alias
+5. Relative sibling imports (`../common/DataModeBadge`)
+6. Icon library (`lucide-react`) last
+- Reference example: `frontend/components/signals/SignalCard.tsx:1-24`
 
 **Path Aliases:**
-- `@/*` → repo-relative to `frontend/` root (`frontend/tsconfig.json` paths). Use `@/components/...`, `@/lib/...`, `@/types/api`.
-- Backend uses absolute `app.*` imports; `pythonpath = backend .` in `pytest.ini` makes this resolvable.
+- `@/*` maps to the frontend root (`frontend/tsconfig.json:21-23`); shadcn aliases configured in `frontend/components.json`
 
 ## Error Handling
 
-**Backend patterns:**
-- HTTP errors via `HTTPException` with explicit status constants and descriptive detail: `raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Signal with ID '{signal_id}' not found.")` (`backend/app/api/v1/endpoints/signals.py:232-235`)
-- **Never-crash contract (D-12):** providers raise typed errors (`OllamaUnavailableError`) so `ProviderFactory` falls through Gemma → Grok → DegradedProvider (BART factual mode) instead of crashing (`backend/app/providers/gemma.py:7-8`). Follow this chain pattern for any new provider/capability.
-- Honest degradation over silent success: when scoring inputs are missing, return `None` and surface `scoring_status="not_computed"` rather than fabricating a score (`backend/app/services/scoring.py:102-107`, `backend/app/api/v1/endpoints/signals.py:44-54`). Never fabricate telemetry (AGENTS.md rule 4).
-- Broad `try/except Exception` is acceptable ONLY when it converts failure into labeled degraded state or honest empty results (e.g., vector retrieval fallback to lexical search in `query_athena`, `backend/app/api/v1/endpoints/signals.py:379-448`). Do not use it to hide bugs.
-- Config validation is pure-function based: `configuration_error_for(source_id)` returns human-readable `CONFIGURATION_ERROR:` strings checked by connectors (`backend/app/core/config.py:109-120`).
+**Honest telemetry is the governing rule** (`docs/rules/ENGINEERING_STANDARDS.md` section 1.2): never fabricate values; degrade visibly and label synthetic/mock data.
 
-**Frontend patterns:**
-- All network calls go through `apiFetch<T>()` which normalizes failures into a typed `ApiError` carrying `status`, `isRetryable` (status >= 500 or 429), `requestId` from `x-request-id` header, and `endpoint` (`frontend/lib/api.ts:151-202`)
-- Never throw raw strings; always `Error` subclasses. Non-API errors are wrapped: `throw new ApiError(0, 'NetworkError', ...)` 
-- UI display formatting centralized in `formatError()` mapping status codes → user titles (`frontend/lib/errors.ts:24-56`)
-- Abort-aware: respect `AbortError` re-throws so cancelled polls don't surface as errors (`frontend/lib/hooks.ts:64-67`)
-- Non-critical reads degrade with `.catch(() => fallback)` returning explicitly empty/labeled data — e.g., connector count returns `0` "never a hardcoded fabricated count" (`frontend/lib/api.ts:356-363`)
+**Backend patterns (use these):**
+- Return `None` plus a status string when inputs are missing instead of inventing defaults: scoring returns `None`, endpoint sets `scoring_status = "not_computed"` (`backend/app/services/scoring.py:102-107`, `backend/app/api/v1/endpoints/signals.py:56-66`)
+- Defensive dict-to-schema parsing in `try/except Exception` that downgrades to `None` + status flag rather than crashing (`_serialize_signal` at `backend/app/api/v1/endpoints/signals.py:59-73`)
+- Graceful provider degradation chain: local Gemma -> Grok fallback -> `DegradedProvider` "degraded_factual" mode; every response carries a `model_metadata` block exposing `mode`, `fallback_used`, `reasoning_available` (`backend/app/providers/degraded.py`, consumed in `tests/test_foundation.py:93-101`)
+- Synthetic data must be tagged at ingestion: `is_synthetic=True`, `data_mode="test_fixture"`, `provenance_status="fixture"` (`backend/app/workflows/nodes/ingest.py:27-32`)
+- Configuration problems are reported as human-readable `CONFIGURATION_ERROR:` strings via the pure evaluator `configuration_error_for()` (`backend/app/core/config.py:109-120`) - do not raise on missing optional keys
+- Endpoint-level failures raise FastAPI `HTTPException`; validation errors return 422 with correlation headers intact (asserted in `tests/test_failure_injection.py:45-58`)
+- Log-and-continue for non-fatal fallbacks with `logger.warning(...)` including context (`backend/app/workflows/nodes/ingest.py:35`)
+- Never swallow errors silently: root `AGENTS.md` rule 5 forbids silent `try...except` used to hide failures
+
+**Frontend patterns (use these):**
+- All API calls funnel through `apiFetch<T>()` which throws typed `ApiError` carrying `status`, `statusText`, `isRetryable`, `requestId`, `endpoint` (`frontend/lib/api.ts:151-202`)
+- `ApiError` class defined in `frontend/lib/errors.ts:1-13`; map any thrown value to display form with `formatError()` (`frontend/lib/errors.ts:24-56`)
+- Network/abort errors are re-thrown, not swallowed; AbortError propagates (`frontend/lib/api.ts:186-201`)
+- Components render dedicated state components on failure: `ErrorState` (`frontend/components/common/ErrorState.tsx`) and `EmptyState` (`frontend/components/common/EmptyState.tsx`) - never render fabricated data
+- Data fetching uses `useLiveData<T>` hook with AbortController + visibility-aware polling; error surfaced as `error: Error | null` in state (`frontend/lib/hooks.ts:21-77`)
 
 ## Logging
 
-**Framework:**
-- Backend primary: **structlog** JSON logging configured once in `backend/app/core/logging.py`; obtain via `get_logger(name)` or `structlog.get_logger("metaradar.<module>")` (`backend/app/main.py:26`)
-- Backend secondary: stdlib `logging.getLogger(__name__)` inside connectors/providers (`backend/app/connectors/pubmed.py:18`, `backend/app/providers/gemma.py:24`) — acceptable for module-scoped logs
+**Framework:** structlog with JSON renderer, configured once in `backend/app/core/logging.py:22-46`
 
 **Patterns:**
-- Log structured key-value events, not prose strings: `logger.info("service_startup", message="...")`, `logger.info("domain_config_loaded", disease_area=..., version=...)` (`backend/app/main.py:32-39`)
-- Every log event passes through `_scrub_secrets` processor which redacts sensitive keys to `[REDACTED_SECRET]`, emails to `[REDACTED_PII]`, and runs `redact_text` on string values (`backend/app/core/logging.py:10-19`). Never log raw PII/PHI/secrets — scrubbing happens before persistence or external provider calls via `PIIPHIScrubber.scrub()` (`backend/app/services/pii.py`)
-- Correlation: `CorrelationIdMiddleware` attaches request IDs surfaced as `x-request-id` (`backend/app/core/middleware.py`); tests assert its presence even on validation failures (`tests/test_failure_injection.py:58`)
-- Frontend has no logger library; errors propagate to `formatError`/UI states instead of console noise
+- One logger per module: `logger = structlog.get_logger("metaradar.<module>")` (`backend/app/main.py:26`, `backend/app/core/middleware.py:6`)
+- Event-name-first structured calls: `logger.info("http_request_completed", status_code=..., duration_ms=...)` - keyword context, not f-strings (`backend/app/core/middleware.py:60-64`)
+- Correlation IDs: `CorrelationIdMiddleware` reads/generates `X-Request-ID` / `X-Correlation-ID`, binds them to structlog contextvars, echoes them on responses; tests assert their presence (`backend/app/core/middleware.py:19-54`, asserted in `tests/test_failure_injection.py:57-58`)
+- Secret/PII scrubbing happens inside logging processors `_scrub_secrets` + `SecretScrubFilter` (`backend/app/core/logging.py:10-19`, filters added at `:44-46`); redaction primitives live in `backend/app/core/redact.py`
+- Some workflow nodes still use stdlib `logging.getLogger(__name__)` (`backend/app/workflows/nodes/ingest.py:12`) - prefer structlog for new code
 
 ## Comments
 
 **When to Comment:**
-- Explain *why* and encode invariants/contracts: "Zero-fabrication gate: If no evidence is found, return honest failure notice" (`backend/app/api/v1/endpoints/signals.py:450`), "Single source of truth — the query filter and the docstring contract must never drift apart again" (`signals.py:37-38`)
-- Number multi-step endpoint bodies as executable outlines: `# 1. PII / PHI scrubbing & content classification (CR-03)` … `# 5. Structured safe prompt execution via ProviderFactory` (`signals.py:346-463`)
-- Reference requirement IDs where applicable: `(REQ-P1-1)`, `(REQ-P1-14)` (`backend/app/connectors/pubmed.py:22-26`)
-- Section dividers with dashes organize large modules: `# --------------------------------------------------------------------------- #` (`pubmed.py:41`), `// 1. Dashboard Overview & Signals` (`frontend/lib/api.ts:204-206`)
+- Explain WHY and guard against regressions: single-source-of-trust warnings ("Single source of truth - the query filter and the docstring contract must never drift apart again." - `backend/app/api/v1/endpoints/signals.py:48-51`)
+- Contract-sync instructions belong in the generated file header (`frontend/types/api.ts:1-5`)
 
-**Docstrings:**
-- Triple-quoted docstrings on every public Python class and method, stating purpose + contract: `PriorityScoringService` docstring includes the formula and None-return semantics (`backend/app/services/scoring.py:68-75`)
-- Class docstrings cite requirement IDs and behavior contracts (`pubmed.py:22-27`)
-- JSDoc block comments on non-obvious frontend logic: `useLiveData` hook documents polling/visibility/abort semantics (`frontend/lib/hooks.ts:14-20`)
+**JSDoc/TSDoc:**
+- Python: triple-quoted docstrings on classes/methods; module docstrings for multi-concept modules (`backend/app/services/authority.py:1-8`)
+- TypeScript: `/** */` blocks above exported helpers/hooks; inline `//` for clarifying non-obvious behavior (`frontend/lib/api.ts:165`, `frontend/lib/hooks.ts:14-20`)
 
 ## Function Design
 
-**Size:** Endpoint handlers may be long but MUST decompose into numbered steps with helpers extracted for reuse (`_serialize_signal`). Prefer small pure helpers: `getSourceAuthority`, `getSignalFunction`, `getSuggestedAction` are exported pure functions above the component (`frontend/components/signals/SignalCard.tsx:34-119`)
+**Size:** No hard rule; endpoints may be long but delegate to service-layer helpers. Follow the endpoint -> service split seen in `backend/app/api/v1/endpoints/signals.py` + `backend/app/services/*`
 
 **Parameters:**
-- FastAPI endpoints declare filters via `Query(None, description=...)` with validation constraints: `limit: int = Query(20, ge=1, le=200)` (`backend/app/api/v1/endpoints/signals.py:140-147`)
-- Frontend fetchers accept optional trailing `signal?: AbortSignal` parameter — always thread it through to `apiFetch` (`frontend/lib/api.ts`)
+- Prefer typed input dataclasses over long positional lists (`ScoreInput` fed to `PriorityScoringService.score()` - `backend/app/services/scoring.py:102`)
+- Optional params default to `None` and are checked explicitly
+- Frontend hooks take a fetcher callback + interval + deps (`useLiveData(fetcher, intervalMs, deps)` - `frontend/lib/hooks.ts:21-25`); fetchers accept an optional `AbortSignal`
 
 **Return Values:**
-- Return typed Pydantic schemas via `response_model=` on every route
-- Return `Optional[...]`/`null` honestly when computation isn't possible — never sentinel fake numbers
-- Services return dataclasses/dicts with version stamps: `ScoreBreakdown.version` enables auditability (`backend/app/services/scoring.py:45-64`)
+- Services return typed objects/dataclasses or `Optional[...]` when computation is impossible
+- Workflow nodes return partial-state dicts merged by the runner (`backend/app/workflows/runner.py`)
+- Async functions return `Promise<T>` with explicit generic on fetch helpers (`apiFetch<T>` - `frontend/lib/api.ts:151`)
 
 ## Module Design
 
-**Exports (Python):**
-- Singleton service instances at module bottom consumed directly by importers: `priority_scorer = PriorityScoringService()` (`backend/app/services/scoring.py:163`), `provider_factory`, `embedding_service`, `confluence_engine`. New stateless services should follow this singleton-module pattern.
-- Utility classes expose `@staticmethod`/`@classmethod` APIs: `PIIPHIScrubber.scrub()`, `PriorityScoringService.extract_keywords_count()`
-- Barrel re-exports in package `__init__.py`: `backend/app/schemas/__init__.py`, `backend/app/models/__init__.py` — add new schemas/models there
+**Exports:**
+- Backend: one primary class/function per module plus module singleton; routers expose `router = APIRouter()` registered in `backend/app/main.py:76-85`
+- Frontend: named exports only for functions/components; one class per lib file where applicable (`ApiError` in `frontend/lib/errors.ts`)
 
-**Exports (TypeScript):**
-- Named exports only (no default exports except implicit Next.js page/layout defaults)
-- One concern per lib module: transport (`api.ts`), error types (`errors.ts`), shape mapping (`mappers.ts`), hooks (`hooks.ts`)
-- `metaradar.tsx` acts as shared component hub exporting `Badge` etc.; do NOT add banned classes there or in any component (gate enforces)
+**Barrel Files:**
+- Backend models/schemas use `__init__.py` re-export barrels (`backend/app/models/__init__.py`, `backend/app/schemas/__init__.py`); workflow nodes likewise (`backend/app/workflows/nodes/__init__.py`)
+- Frontend has no barrel files except shared UI kit `frontend/components/metaradar.tsx` (Card/Badge etc. imported from it - see `frontend/components/common/ErrorState.tsx:4`)
 
-**Contract sync workflow (critical):**
-- The frontend API contract is hand-maintained: edit the template inside `scripts/export_openapi.py`, run `python scripts/export_openapi.py`, commit `frontend/types/api.ts` + `contracts/openapi.json` together. CI (`​.github/workflows/ci.yml:35-40`) fails if `frontend/types/api.ts` is edited directly. Enforced again by `tests/test_contract_drift.py`.
+## Contract Synchronization (cross-cutting rule)
+
+The frontend type contract is hand-maintained but CI-enforced:
+1. Canonical template lives inside `scripts/export_openapi.py`
+2. Running it regenerates `frontend/types/api.ts` verbatim and dumps `contracts/openapi.json`
+3. `tests/test_contract_drift.py` asserts required paths/interfaces exist; CI runs the script then `git diff --exit-code frontend/types/api.ts` (`.github/workflows/ci.yml:35-40`)
+- To change the API contract: edit the template in `scripts/export_openapi.py`, run it, commit both outputs together. Never edit `frontend/types/api.ts` directly.
 
 ---
 

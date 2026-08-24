@@ -6,247 +6,271 @@
 ## System Overview
 
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│                     FRONTEND — Next.js 16 (App Router)                │
-│   `frontend/app/layout.tsx` · `frontend/app/[section]/page.tsx`      │
-├──────────────────┬───────────────────┬───────────────────────────────┤
-│  Shell + Pages   │ Workspace         │ Data Access                   │
-│  `frontend/      │ Components        │ `frontend/lib/api.ts`         │
-│  components/     │ `frontend/        │ `frontend/lib/mappers.ts`     │
-│  metaradar.tsx`  │ components/*`     │ `frontend/lib/hooks.ts`       │
-└────────┬─────────┴─────────┬─────────┴──────────────┬────────────────┘
-         │                   │                        │
-         └───────────────────┴──── REST (JSON) ───────┘
-                             ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                BACKEND API LAYER — FastAPI (`/api/v1`)                │
-│      `backend/app/main.py` → `backend/app/api/v1/endpoints/*`        │
-├──────────────────────────────────────────────────────────────────────┤
-│  SERVICE LAYER                                                       │
-│  `backend/app/services/` — ingestion, scheduler, scoring,            │
-│  confluence, embeddings, calibration, deduplication, redteam,        │
-│  relevance, pii, provenance_urls, vector_query                       │
-├───────────────────────────────┬──────────────────────────────────────┤
-│  WORKFLOW ENGINE (LangGraph)  │  PROVIDER LAYER (LLM fallback chain) │
-│  `backend/app/workflows/`     │  `backend/app/providers/`            │
-│  11-node linear StateGraph    │  Gemma → Grok → Degraded BART        │
-├───────────────────────────────┴──────────────────────────────────────┤
-│  CONNECTOR LAYER (source adapters)                                   │
-│  `backend/app/connectors/` — PubMed, ClinicalTrials.gov, FDA, EMA,   │
-│  NewsAPI (bronze-only persistence contract)                          │
-└───────────────────────────────┬──────────────────────────────────────┘
-                                ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  PERSISTENCE                                                          │
-│  `backend/app/models/__init__.py` (SQLAlchemy, 22 tables)            │
-│  `backend/app/db/session.py` (async engine + advisory locks)          │
-│  PostgreSQL 16 + pgvector (384-dim HNSW) · Redis 7                    │
-│  Bronze (`raw_signals_bronze`) → Silver (`signals`) → Gold            │
-│  (`developments`, `confluences`, ...)                                 │
-└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Next.js 16 Frontend (React 19)                   │
+│   App Router SPA-style shell: app/[section]/page.tsx switch router  │
+│   `frontend/components/*`  ·  `frontend/lib/api.ts` (fetch layer)   │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │ HTTP JSON (fetch, NEXT_PUBLIC_API_URL)
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                  FastAPI Backend  /api/v1  (:8000)                  │
+│                `backend/app/main.py`                                │
+├──────────────────┬──────────────────┬───────────────────────────────┤
+│  REST Endpoints  │  Source Scheduler│   LangGraph Pipeline          │
+│  `app/api/v1/    │  (asyncio,       │   `app/workflows/graph.py`    │
+│   endpoints/*`   │   singleton)     │   11 linear nodes             │
+│                  │ `app/services/   │   `app/workflows/nodes/*`     │
+│                  │  scheduler.py`   │   orchestrated by             │
+│                  │                  │   `app/workflows/runner.py`   │
+└────────┬─────────┴────────┬─────────┴──────────────┬────────────────┘
+         │                  │                        │
+         ▼                  ▼                        ▼
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────────────┐
+│ Service Layer    │ │ LLM Providers    │ │ Source Connectors        │
+│ `app/services/*` │ │ `app/providers/` │ │ `app/connectors/*`       │
+│ scoring, routing,│ │ Gemma (Ollama/   │ │ PubMed, ClinicalTrials,  │
+│ confluence,      │ │ GGUF) → Grok →   │ │ NewsAPI, OpenFDA, EMA    │
+│ embeddings, PII  │ │ BART degraded    │ │ (httpx + retry/backoff)  │
+└────────┬─────────┘ └──────────────────┘ └───────────┬──────────────┘
+         │                                            │
+         ▼                                            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│              PostgreSQL 16 + pgvector  (bronze→silver→gold)          │
+│   `backend/app/models/__init__.py` (SQLAlchemy 2.0 async)            │
+│   raw_signals_bronze → signals (+Vector(384)) → developments/        │
+│   confluences/contradictions/watch_items/calibration_*               │
+└─────────────────────────────────────────────────────────────────────┘
+         ▲                            ▲
+         │                            │
+┌────────┴───────────┐     ┌──────────┴─────────────┐
+│ Ollama sidecar     │     │ Redis 7                │
+│ gemma3:4b (GPU)    │     │ redis://localhost:6379 │
+│ :11434             │     │ (configured, light use)│
+└────────────────────┘     └────────────────────────┘
+
+Domain configuration (single YAML source of truth):
+`config/haemophilia.yaml` → loaded by `backend/app/core/domain_config.py`
 ```
 
 ## Component Responsibilities
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| FastAPI app | Router registration, CORS, correlation-ID middleware, lifespan scheduler start/stop | `backend/app/main.py` |
-| API endpoints | HTTP request handling, Pydantic serialization per resource | `backend/app/api/v1/endpoints/*.py` |
-| Schemas | Request/response contracts; source of OpenAPI export | `backend/app/schemas/__init__.py`, `backend/app/schemas/intelligence.py`, `backend/app/schemas/registry.py` |
-| Workflow engine | 11-node LangGraph pipeline assembly and execution | `backend/app/workflows/graph.py`, `backend/app/workflows/runner.py` |
-| Pipeline state | TypedDict state contract with channel reducers | `backend/app/workflows/state.py` |
-| Intelligence nodes | One file per pipeline stage (`node_ingest` … `node_calibrate`) | `backend/app/workflows/nodes/*.py` |
-| Ingestion service | Orchestrates connector profile runs, aggregates telemetry | `backend/app/services/ingestion.py` |
-| Scheduler | Autonomous asyncio worker loop per connector with backoff/jitter/advisory locking | `backend/app/services/scheduler.py` |
-| Connectors | Source-specific fetch adapters; bronze-only persistence | `backend/app/connectors/base.py` + one file per source |
-| Provider factory | LLM capability routing with fallback chain and privacy gate | `backend/app/providers/factory.py` |
-| Domain config | YAML-driven haemophilia ontology, connector query profiles, thresholds | `backend/app/core/domain_config.py`, `config/haemophilia.yaml` |
-| ORM models | 22-table relational schema incl. pgvector embedding column | `backend/app/models/__init__.py` |
-| DB session | Async engine, session factory, `get_db` dependency, advisory locks | `backend/app/db/session.py` |
-| Frontend shell | App chrome, nav, section routing switch | `frontend/components/metaradar.tsx`, `frontend/app/[section]/page.tsx` |
-| API client | Single typed fetch layer over `/api/v1` | `frontend/lib/api.ts` |
-| Live-data hook | Polling with AbortController, visibility pause, in-flight guard | `frontend/lib/hooks.ts` |
+| FastAPI app | Route registration, CORS, correlation-ID middleware, lifespan startup/shutdown of scheduler | `backend/app/main.py` |
+| REST endpoints | HTTP request/response handling, serialization via Pydantic schemas | `backend/app/api/v1/endpoints/*.py` |
+| Shared deps | Optional `X-API-Key` mutation auth + in-memory per-client rate limiting | `backend/app/api/deps.py` |
+| Settings | Typed env-driven configuration (pydantic-settings) | `backend/app/core/config.py` |
+| Domain config | Loads `config/haemophilia.yaml` into typed Pydantic models (assets, connectors, thresholds, routing matrix) | `backend/app/core/domain_config.py` |
+| Logging/redaction | structlog JSON logs, correlation IDs, PII redaction helpers | `backend/app/core/logging.py`, `backend/app/core/middleware.py`, `backend/app/core/redact.py` |
+| Connectors | Fetch from 5 public biomedical sources; idempotent bronze persistence; per-profile incremental state; health telemetry | `backend/app/connectors/base.py` + 5 concrete connectors |
+| IngestionService | Orchestrates connector runs, aggregates status precedence, writes health logs | `backend/app/services/ingestion.py` |
+| SourceScheduler | Singleton asyncio worker per connector; jitter, exponential backoff, PG advisory locks; triggers pipeline only on new data | `backend/app/services/scheduler.py` |
+| PipelineRunner | Builds/invokes the LangGraph graph; persists gold entities back to DB; manages `PipelineRun` lifecycle | `backend/app/workflows/runner.py` |
+| Workflow nodes | 11 pure-ish async transforms over `MetaRadarState` (ingest→validate→embed→nlp→ontology→confluence→lifecycle→redteam→missing→synthesize→calibrate) | `backend/app/workflows/nodes/*.py` |
+| ProviderFactory | Capability-routed LLM execution with privacy-gated fallback chain: Gemma → Grok (if permitted) → Degraded BART | `backend/app/providers/factory.py` |
+| Embeddings | fastembed/all-MiniLM-L6-v2, 384-dim vectors stored via pgvector | `backend/app/services/embeddings.py` |
+| SQLAlchemy models | All tables in one declarative module (bronze/silver/gold + calibration + audit) | `backend/app/models/__init__.py` |
+| Migrations | Alembic revisions 001–012 | `backend/alembic/versions/*.py` |
+| Frontend API layer | Typed fetch wrappers, ApiError normalization, response mapping | `frontend/lib/api.ts`, `frontend/lib/errors.ts`, `frontend/lib/mappers.ts` |
+| Polling hook | `useLiveData` — visibility-aware, abort-safe interval polling | `frontend/lib/hooks.ts` |
+| Workspace shell + pages | Nav shell, dashboard, lifecycle page, generic page (all in one client bundle) | `frontend/components/metaradar.tsx` |
+| Workspaces | Per-domain UI (signals, confluence, contradictions, missing-signals, developments, intelligence/Athena, functions, calibration, sources, observability, settings) | `frontend/components/<domain>/*.tsx` |
 
 ## Pattern Overview
 
-**Overall:** Layered monorepo with an embedded workflow engine. FastAPI layered architecture (API → services → models) plus a LangGraph state-machine pipeline for intelligence processing, and a config-driven connector framework for external data acquisition.
+**Overall:** Layered two-tier web app with an embedded event-driven ingestion subsystem and a linear stateful ML pipeline (LangGraph). Medallion data layering (bronze → silver/gold) inside a single PostgreSQL database.
 
 **Key Characteristics:**
-- **Bronze/Silver/Gold data layering**: raw payloads land immutable in `raw_signals_bronze`; promoted/deduplicated into `signals` (silver) with embeddings; aggregated into gold entities (`developments`, `confluences`, `lifecycle_events`)
-- **Config-driven connectors**: connectors execute queries defined in `config/haemophilia.yaml` — they never invent queries (decision refs D-08/D-10)
-- **Provider fallback chain**: local Gemma GGUF/Ollama → hosted Grok (privacy-gated by `DataClassification`) → deterministic degraded BART summarizer (`backend/app/providers/factory.py`)
-- **Truthful telemetry**: health statuses are explicit enums (`HEALTHY`, `NO_NEW_DATA`, `DEGRADED`, `CONFIGURATION_ERROR`, …); zero-record valid responses are never reported as failures (`backend/app/connectors/base.py` `_run_status_to_health_state`)
-- **Contract-synced frontend**: `scripts/export_openapi.py` generates `frontend/types/api.ts` from the canonical template; CI fails on drift
+- **Single-process backend**: FastAPI hosts REST API, background scheduler, and pipeline execution in one uvicorn process (`backend/app/main.py` lifespan starts `SourceScheduler.get_instance()`).
+- **Config-driven domain**: Almost all business parameters (assets, queries, thresholds, weights, routing matrix) come from `config/haemophilia.yaml`, not code. Connectors "execute config, never invent queries."
+- **Honest-telemetry invariant (D-22)**: Health/status endpoints must reflect real state; degraded paths return explicit statuses (`DEGRADED`, `CONFIGURATION_ERROR`, `NO_NEW_DATA`) instead of fabricated values.
+- **Privacy gate**: `DataClassification` enum on every LLM call; hosted Grok fallback is blocked for non-public classifications (`backend/app/providers/factory.py`, `backend/app/providers/grok.py`).
+- **Idempotent persistence**: Dedup via unique fingerprints/hashes; signals upsert `on_conflict_do_update` on `fingerprint`; bronze rows promoted only after successful silver persistence (`backend/app/workflows/runner.py:346-364`).
 
 ## Layers
 
-**API Layer:**
-- Purpose: HTTP surface; validation via Pydantic; no business logic beyond serialization helpers
+**Presentation (frontend):**
+- Purpose: Decision-intelligence workspace UI
+- Location: `frontend/app/` (routes), `frontend/components/` (UI)
+- Contains: Server-component route entry, client workspaces, design primitives
+- Depends on: `frontend/lib/api.ts` only for data access
+- Used by: Users via browser (:3000)
+
+**API layer (backend):**
+- Purpose: HTTP surface; validation/serialization only
 - Location: `backend/app/api/v1/endpoints/`
-- Contains: 10 routers (`health`, `signals`, `intelligence`, `registry`, `observability`, `cache`, `pipeline`, `ingestion`, `search`, `feedback`)
-- Depends on: services, models, schemas, `app.db.session.get_db`
-- Used by: frontend `lib/api.ts`, CI health checks
+- Contains: 10 routers (health, signals, intelligence, registry, observability, cache, pipeline, ingestion, search, feedback)
+- Depends on: services, models, db session
+- Used by: Frontend and scripts (`scripts/test_live_ingestion_e2e.py`)
 
-**Service Layer:**
-- Purpose: Domain capabilities — ingestion orchestration, scheduling, scoring, embeddings, confluence, calibration, deduplication, red-team rules, relevance gating, PII scrubbing, provenance URL resolution, vector search
+**Service layer:**
+- Purpose: Business logic (scoring, routing, confluence detection, dedup, embeddings, calibration, PII scrubbing, provenance resolution)
 - Location: `backend/app/services/`
-- Contains: module-level singleton engines (e.g., `priority_scorer`, `embedding_service`, `confluence_engine`) and session-scoped services (`IngestionService(session)`)
-- Depends on: models, core config, providers
-- Used by: API endpoints, workflow nodes, scheduler
+- Contains: Classes plus module-level singletons (`priority_scorer`, `confluence_engine`, `embedding_service`)
+- Depends on: models, core config/domain_config, providers
+- Used by: endpoints, workflow nodes, scheduler
 
-**Workflow Layer (LangGraph):**
-- Purpose: Stateful 11-node intelligence pipeline
-- Location: `backend/app/workflows/` (graph, state, runner) and `backend/app/workflows/nodes/`
-- Contains: `build_graph()` compiled `StateGraph(MetaRadarState)`; `PipelineRunner` managing `PipelineRun` DB lifecycle and post-run persistence
-- Depends on: services (embeddings, scoring), models
-- Used by: `PipelineRunner.run()` invoked from scheduler (after new records) and `api/v1/endpoints/pipeline.py`
+**Workflow/pipeline layer:**
+- Purpose: Multi-step intelligence generation with typed shared state
+- Location: `backend/app/workflows/` (`state.py`, `graph.py`, `nodes/`, `runner.py`)
+- Contains: `MetaRadarState` TypedDict with annotated reducers; 11 nodes; `PipelineRunner` persistence
+- Depends on: services, providers, models
+- Used by: `pipeline.py` endpoint and `scheduler.py`
 
-**Connector Layer:**
-- Purpose: Isolated, idempotent, quota-aware source adapters persisting bronze rows only
-- Location: `backend/app/connectors/`
-- Contains: abstract `SourceConnector` base (retry/backoff, bronze persistence, connector-state I/O, health logging) plus `PubMedConnector`, `ClinicalTrialsConnector`, `NewsAPIConnector`, `OpenFDAConnector`, `EMARSSConnector` registered in module-level `ALL_CONNECTORS` list (`backend/app/connectors/__init__.py`)
-- Depends on: domain config, deduplication service, redaction utilities
-- Used by: `IngestionService`
+**Integration layer:**
+- Purpose: External world adapters (sources, LLMs)
+- Location: `backend/app/connectors/`, `backend/app/providers/`
+- Contains: `SourceConnector` base contract + 5 connectors; `LLMProvider` base + Gemma/Grok/Degraded + factory
+- Depends on: httpx, core config, domain config, dedup service
+- Used by: scheduler, ingestion service, synthesize/search nodes, endpoints
 
-**Provider Layer:**
-- Purpose: LLM abstraction with capability checks and classification-based privacy gate
-- Location: `backend/app/providers/`
-- Contains: `LLMProvider` base (`base.py`), `GemmaProvider`, `GrokProvider`, `DegradedProvider`, `ProviderFactory`
-- Depends on: core settings
-- Used by: endpoints that need synthesis (e.g., Athena Q&A in `api/v1/endpoints/signals.py`)
-
-**Data Layer:**
-- Purpose: Persistence and schema management
-- Location: `backend/app/models/__init__.py`, `backend/app/db/session.py`, migrations in `backend/alembic/versions/`
-- Contains: 22 SQLAlchemy tables (`PipelineRun`, `Source`, `SourceHealthLog`, `Company`, `Asset`, `ClinicalTrial`, `Development`, `Event`, `LifecycleEvent`, `Confluence`, `RawSignalBronze`, `ConnectorState`, `Evidence`, `Signal`, `Contradiction`, `CalibrationRun`, `CalibrationHistory`, `ScoringWeights`, `SignalRouting`, `CalibrationFeedback`, `WatchItem`, `AuditLog`)
-- Depends on: settings (`DATABASE_URL`)
+**Persistence layer:**
+- Purpose: Relational storage + vector search + migrations
+- Location: `backend/app/db/session.py`, `backend/app/models/__init__.py`, `backend/alembic/`
+- Contains: async engine (pool_size=10, max_overflow=20), `get_db` dependency, advisory-lock helpers, 20+ ORM models
+- Depends on: PostgreSQL 16 + pgvector
 - Used by: everything above
 
 ## Data Flow
 
-### Primary Ingestion Path (autonomous)
+### Primary Request Path (read)
 
-1. FastAPI lifespan starts `SourceScheduler` singleton (`backend/app/main.py:44-46`)
-2. Per-connector asyncio worker acquires PostgreSQL advisory lock, then calls `IngestionService.run_connectors([source_id])` (`backend/app/services/scheduler.py:114-175`)
-3. Connector executes YAML-configured profiles via `_fetch_with_retry` (bounded exponential backoff + jitter), deduplicates, persists raw payloads to `raw_signals_bronze`, writes `SourceHealthLog` telemetry (`backend/app/connectors/base.py`)
-4. If new records discovered, scheduler triggers `PipelineRunner.run(batch_size=50)` in a fresh session (`backend/app/services/scheduler.py:166-175`)
+1. Client component calls typed wrapper (e.g. `fetchSignals`) in `frontend/lib/api.ts:256`
+2. `apiFetch` builds URL against `NEXT_PUBLIC_API_URL || http://localhost:8000/api/v1`, normalizes errors to `ApiError` (`frontend/lib/api.ts:151-202`)
+3. FastAPI endpoint executes queries via `Depends(get_db)` session (e.g. `backend/app/api/v1/endpoints/signals.py`)
+4. ORM result serialized through Pydantic schemas (`backend/app/schemas/intelligence.py`, `backend/app/schemas/registry.py`)
+5. Frontend maps raw payloads to view types via mappers (`frontend/lib/mappers.ts`), rendered by workspace components; polling refresh handled by `useLiveData` (`frontend/lib/hooks.ts:21`)
 
-### Intelligence Pipeline Path (LangGraph)
+### Ingestion Flow (write, scheduled or manual)
 
-1. `PipelineRunner.__init__` compiles graph once; `run()` creates a `PipelineRun` row and loads unpromoted bronze records (`backend/app/workflows/runner.py:35-97`)
-2. Linear node execution: `node_ingest → node_validate → node_embed → node_nlp_extract → node_ontology_enrich → node_confluence → node_lifecycle → node_redteam → node_missing_signal → node_synthesize → node_calibrate → END` (`backend/app/workflows/graph.py:46-59`)
-3. Nodes mutate shared `MetaRadarState` via reducers (`operator.add` for accumulating lists, `merge_dicts` for weights/statuses, `replace_list` for the validated-signals channel) (`backend/app/workflows/state.py:26-52`)
-4. `_persist_state_to_db` upserts silver `signals` on `fingerprint` conflict (pgvector embedding included), inserts gold `Development`/`Confluence` rows with FK-validity pre-checks, then marks only successfully persisted bronze rows as promoted (`backend/app/workflows/runner.py:142-366`)
+1. Trigger: `POST /api/v1/ingestion/run` (`backend/app/api/v1/endpoints/ingestion.py`) or autonomous `SourceScheduler` worker loop (`backend/app/services/scheduler.py`)
+2. Scheduler acquires per-source PG advisory lock (`try_advisory_lock`, `backend/app/db/session.py:43`) to guarantee single execution
+3. `IngestionService.run_connectors` iterates `ALL_CONNECTORS` (`backend/app/services/ingestion.py:29`); each connector runs its YAML-defined profiles (`backend/app/connectors/base.py:179-197`)
+4. `_fetch_with_retry` does bounded exponential backoff + jitter over httpx (`backend/app/connectors/base.py:133-166`)
+5. Payloads persisted idempotently to `raw_signals_bronze` via `check_and_persist_bronze` (`backend/app/services/deduplication.py`); run telemetry written to `source_health_logs` and live `sources` row (`backend/app/connectors/base.py:366-433`)
+6. If new records exist, scheduler triggers `PipelineRunner.run` (decoupled ingestion vs intelligence)
 
-### Read Path (frontend)
+### Intelligence Pipeline Flow
 
-1. User opens `/[section]` → server component maps section to workspace component (`frontend/app/[section]/page.tsx:14-74`)
-2. Client component calls typed wrapper from `frontend/lib/api.ts` → `apiFetch<T>` against `NEXT_PUBLIC_API_URL || http://localhost:8000/api/v1`
-3. `useLiveData` hook polls every 30s, pauses on hidden tab, aborts stale requests (`frontend/lib/hooks.ts`)
-4. Raw API payloads normalized through `mapSignal`/mappers (`frontend/lib/mappers.ts`) before render
+1. Entry: `POST /api/v1/pipeline/run` (`backend/app/api/v1/endpoints/pipeline.py:25`) creates `PipelineRunner(session)` and calls `run()` (`backend/app/workflows/runner.py:39`)
+2. Runner inserts `PipelineRun(status=running)`, loads unpromoted bronze rows where `pipeline_run_id IS NULL` (`backend/app/workflows/runner.py:71-89`), builds initial state via `create_initial_state` (`backend/app/workflows/state.py:68`)
+3. Compiled linear graph executes 11 nodes in order (`backend/app/workflows/graph.py:46-56`): ingest → validate → embed → nlp_extract → ontology_enrich → confluence → lifecycle → redteam → missing_signal → synthesize → calibrate → END
+4. `node_synthesize` enforces evidence-sufficiency gate and calls `provider_factory.execute_task` for Four-Question briefs (`backend/app/workflows/nodes/synthesize.py:48`)
+5. Runner persists results: Developments (FK-guarded), Signals upserted on fingerprint with fresh embedding + provenance + score breakdown, Confluences; finally promotes processed bronze rows by stamping `pipeline_run_id` — failed rows stay unpromoted for retry (`backend/app/workflows/runner.py:142-366`)
+6. `PipelineRun` marked completed/failed with counts and error summary JSONB
 
-### Calibration / HITL Path
+### Calibration Feedback Loop
 
-1. Stakeholder submits feedback via `POST /feedback` (`backend/app/api/v1/endpoints/feedback.py`)
-2. Weights recalibration updates role weighting matrices (`backend/app/services/calibration.py`); consumed by `node_calibrate` and priority scoring
+1. User rates a signal → `POST /feedback` stores `CalibrationFeedback` (`backend/app/api/v1/endpoints/feedback.py`)
+2. Recalibration recomputes per-function weights → `calibration_runs`/`scoring_weights`/`calibration_history` (`backend/app/services/calibration.py`)
+3. Next pipeline run seeds `calibration_weights` into initial state; `node_calibrate` applies them to routing scores (`backend/app/workflows/state.py:58-65`)
 
 **State Management:**
-- Backend pipeline state lives entirely in the LangGraph `MetaRadarState` dict during a run; durable state is PostgreSQL only
-- Frontend has no global store: local component state + `useLiveData` polling + React Context limited to theming (`frontend/components/theme/ThemeProvider.tsx`)
+- Backend: no server-side session state; all state in PostgreSQL. In-memory only: scheduler job states, provider HTTP clients, rate-limit buckets (`backend/app/api/deps.py:13`).
+- Frontend: local React state per workspace + `useLiveData` polling; no global store, no react-query/redux.
+- LangGraph: channel reducers defined in `backend/app/workflows/state.py` — `operator.add` for append-channels, `merge_dicts` for dicts, custom `replace_list` for `validated_signals` (prevents duplicate-append when validate and embed both emit the full list).
 
 ## Key Abstractions
 
-**MetaRadarState (TypedDict with Annotated reducers):**
-- Purpose: Canonical contract for data flowing between pipeline nodes
-- Examples: `backend/app/workflows/state.py`
-- Pattern: `Annotated[List[T], operator.add]` accumulation channels; custom `replace_list` reducer to prevent duplicate appends when nodes re-emit whole lists; `IntelligenceState` kept as backward-compat alias
+**`SourceConnector` (connector contract D-01/D-06):**
+- Purpose: Isolated, idempotent, quota-aware, observable source adapter
+- Examples: `backend/app/connectors/pubmed.py`, `clinical_trials.py`, `newsapi.py`, `fda.py`, `ema.py`
+- Pattern: Template method — base class owns retry, bronze persistence, connector-state I/O, health logging; subclasses implement `fetch_latest()` and `run_profile()` only. Registry list `ALL_CONNECTORS` in `backend/app/connectors/__init__.py`.
 
-**SourceConnector (abstract base class):**
-- Purpose: Uniform contract for external source adapters — isolated, idempotent, incrementally runnable, observable
-- Examples: `backend/app/connectors/base.py`, subclasses in `backend/app/connectors/pubmed.py` etc.
-- Pattern: Template method — base class owns retry/backoff, bronze persistence, connector-state upsert (`connector_state` table keyed on `source_id`+`profile_id`), health log writing; subclasses implement `fetch_latest()` and `run_profile()`
+**`MetaRadarState` (pipeline contract D-02):**
+- Purpose: TypedDict shared blackboard across pipeline nodes
+- Example: `backend/app/workflows/state.py:26-51`
+- Pattern: Annotated reducers; alias `IntelligenceState` kept for backward compatibility
 
-**LLMProvider + ProviderFactory (strategy + chain of responsibility):**
-- Purpose: Capability-routed inference with graceful degradation
-- Examples: `backend/app/providers/base.py`, `factory.py`
-- Pattern: `supports(capability)` gate per provider; `validate_privacy_gate(classification)` blocks hosted calls on non-public data before falling through to degraded mode
+**`LLMProvider` + `ProviderCapability`:**
+- Purpose: Capability-scoped LLM interface with data-classification-aware privacy
+- Examples: `backend/app/providers/gemma.py` (dual-engine: Ollama HTTP or llama-cpp GGUF), `grok.py` (hosted xAI), `degraded.py` (extractive/BART summarize-only)
+- Pattern: Strategy + Chain-of-responsibility in `ProviderFactory.execute_task` (`backend/app/providers/factory.py:18-47`)
 
-**Domain Config (Pydantic models over YAML):**
-- Purpose: Single source of truth for disease ontology, canonical assets, connector query profiles, thresholds
-- Examples: `backend/app/core/domain_config.py`, `config/haemophilia.yaml`
-- Pattern: `get_domain_config()` accessor; connectors read their `ConnectorConfig.profiles` at runtime
+**Pydantic schemas (API contracts):**
+- Purpose: Strict request/response DTOs decoupled from ORM models
+- Examples: `backend/app/schemas/intelligence.py`, `backend/app/schemas/registry.py`
+- Contract sync enforced by test `tests/test_contract_drift.py` against `contracts/openapi.json`
 
-**Deterministic Signal Identity:**
-- Purpose: Cross-run deduplication
-- Examples: fingerprint computed in `backend/app/services/deduplication.py`; silver upsert `on_conflict_do_update(index_elements=["fingerprint"])` in `backend/app/workflows/runner.py:297`
+**Domain config (YAML → Pydantic):**
+- Purpose: Single source of truth for disease area, assets, connector profiles, thresholds, routing matrix
+- Files: `config/haemophilia.yaml` → `backend/app/core/domain_config.py` (`get_domain_config()` cached accessor)
 
 ## Entry Points
 
-**Backend API server:**
+**FastAPI application:**
 - Location: `backend/app/main.py`
-- Triggers: `uvicorn` via `python start.py`, Docker Compose `backend` service, or manual run
-- Responsibilities: structlog init, middleware stack, router registration under `/api/v1`, lifespan-managed scheduler
+- Triggers: `uvicorn app.main:app` / Docker / `python start.py`
+- Responsibilities: structlog init, domain-config load log, scheduler start/stop in lifespan, middleware + 10 router registrations, root metadata endpoint
 
-**Frontend app:**
-- Location: `frontend/app/layout.tsx` → `frontend/app/page.tsx` (redirects to `/dashboard`) → `frontend/app/[section]/page.tsx`; detail route `frontend/app/signals/[signalId]/page.tsx`
-- Triggers: Next.js dev/build server (port 3000)
-- Responsibilities: theme bootstrapping, section-to-workspace routing
+**Next.js app:**
+- Locations: `frontend/app/layout.tsx` (root layout + theme bootstrap script), `frontend/app/page.tsx` (redirects to `/dashboard`), `frontend/app/[section]/page.tsx` (catch-all section switch → workspace component), `frontend/app/signals/[signalId]/` (signal detail route)
+- Triggers: `next dev` / `next start` / Docker
 
-**Unified launcher:**
-- Location: `start.py` (Docker backing services + migrations + backend + frontend + log streaming); `setup.py` (environment wizard, model download, non-interactive flags)
+**Process orchestrators (repo root):**
+- `setup.py`: zero-config environment bootstrap (deps, Docker backing services, models, migrations, seed)
+- `start.py`: unified launcher for Docker backing services + backend + frontend with log tailing and graceful shutdown (Windows-aware `taskkill /T`)
 
-**Manual pipeline trigger:**
-- Location: `backend/app/api/v1/endpoints/pipeline.py` (POST run), `backend/app/api/v1/endpoints/ingestion.py` ("Ingest Data" sync)
+**Infrastructure:**
+- `docker-compose.yml`: postgres (pgvector/pgvector:pg16), redis:7, backend (+ optional `gpu` profile variant), frontend, ollama sidecar (`gemma3:4b`, NVIDIA reservation)
 
 ## Architectural Constraints
 
-- **Threading:** Fully async single-process (asyncio event loop). Scheduler workers are asyncio tasks inside the FastAPI lifespan — not threads or separate processes. Horizontal multi-instance safety relies on PostgreSQL advisory locks (`pg_try_advisory_lock`, `backend/app/db/session.py:43`)
-- **Global state:** Module-level singletons exist throughout: `settings` (`backend/app/core/config.py`), `engine`/`AsyncSessionLocal` (`backend/app/db/session.py`), `provider_factory` (`backend/app/providers/factory.py`), `ALL_CONNECTORS` instances (`backend/app/connectors/__init__.py`), `SourceScheduler.get_instance()` (`backend/app/services/scheduler.py`). Treat these as process-wide singletons when testing
-- **Circular imports:** Avoided via deferred imports inside functions (e.g., scheduler imports `IngestionService` and `PipelineRunner` lazily; connector base imports dedup service at module top but domain config lazily). Preserve this pattern when adding cross-layer references
-- **Linear graph:** The LangGraph pipeline is strictly linear — no conditional edges or cycles. New logic must fit the sequential node order or extend `state.py` channels deliberately
-- **Contract sync gate:** `frontend/types/api.ts` must byte-match output of `scripts/export_openapi.py`; CI enforces this (`.github/workflows/ci.yml`). Never hand-edit `frontend/types/api.ts` — edit the template in the script and regenerate
-- **Bronze immutability:** Connectors persist verbatim raw payloads only (D-23/D-26); intelligence generation is exclusively the pipeline's job
+- **Threading:** Single asyncio event loop; concurrency via `asyncio.Task`s (one worker per connector) — no thread pools except implicit model loading. CPU-bound GGUF inference runs synchronously inside `GemmaProvider._generate_with_local_gguf` (`backend/app/providers/gemma.py:87`).
+- **Global state:** Module-level singletons exist intentionally: `settings` (`backend/app/core/config.py:106`), `provider_factory` (`backend/app/providers/factory.py:50`), `engine`/`AsyncSessionLocal`/`Base` (`backend/app/db/session.py`), `SourceScheduler._instance` (`backend/app/services/scheduler.py:48`), `ALL_CONNECTORS` instances (`backend/app/connectors/__init__.py:13`). Do not instantiate duplicates.
+- **Circular-import avoidance:** Lazy imports are used deliberately (e.g., `SourceScheduler` imported inside `main.py` lifespan; `app.models` imported inside functions in `backend/app/connectors/base.py:381`) — preserve this pattern when adding cross-layer references.
+- **Linear pipeline:** The LangGraph graph has no conditional edges; adding branching requires changing `build_graph()` (`backend/app/workflows/graph.py`).
+- **Bronze immutability:** Raw payloads persist verbatim (D-23); interpretation happens only downstream in silver `signals` columns (`facts`/`interpretation`/`speculation`).
+- **Contract sync:** OpenAPI exported to `contracts/openapi.json` (`scripts/export_openapi.py`); drift is tested (`tests/test_contract_drift.py`) — regenerate after any endpoint/schema change.
+- **Approved stack lock:** Next.js 16 + FastAPI + PostgreSQL 16 + local Gemma per `docs/rules/ARCHITECTURE_RULES.md`; do not substitute frameworks.
 
 ## Anti-Patterns
 
-### God component in frontend shell
+### Monolithic model module
 
-**What happens:** `frontend/components/metaradar.tsx` (2,249 lines) exports the app `Shell` plus multiple page-level components (`DashboardPage`, `LifecyclePage`, `GenericPage`) in one client bundle.
-**Why it's wrong:** Any change to any workspace forces re-evaluation of the whole module; hard to test and review.
-**Do this instead:** Follow the extracted-workspace pattern — one directory per domain under `frontend/components/<domain>/XWorkspace.tsx` (see `frontend/components/confluence/ConfluenceWorkspace.tsx`) — for new pages rather than appending to `metaradar.tsx`.
+**What happens:** Every ORM entity (20+ tables) lives in one file: `backend/app/models/__init__.py` (430 lines), while the `backend/app/models/` package has no other modules.
+**Why it's wrong here:** Any model change touches a hot file; merge conflicts likely; unrelated imports pull the full metadata.
+**Do this instead:** When touching models, keep edits surgical; a future refactor may split per-aggregate modules re-exported from `__init__.py`. Do not add new tables anywhere else — `Base` comes from `backend/app/db/session.py`.
 
-### Broad exception swallowing with warning logs
+### Switch-based routing instead of file-based routes
 
-**What happens:** Persistence loops catch all exceptions and continue (`logger.warning(f"Could not persist ...")`) — see `backend/app/workflows/runner.py:180,321,344`.
-**Why it's wrong here:** Intentional partial-failure resilience (failed signals stay unpromoted for retry, tracked via `failed_signal_ids`), but new code copying the pattern without tracking failures can silently drop data.
-**Do this instead:** When swallowing exceptions in batch persistence, record the failed entity ID (mirror `runner.py:186-324` failed-tracking pattern) so retries/promotions remain correct.
+**What happens:** One catch-all route `frontend/app/[section]/page.tsx` maps 13 section strings to components via a `switch`; navigation labels live separately in `frontend/components/metaradar.tsx`.
+**Why it's wrong here:** Adding a section requires editing two distant files; no per-section metadata/code-splitting boundaries.
+**Do this instead:** Follow the existing convention (register the new case + nav entry), unless migrating wholesale to real nested routes — do not mix both styles.
 
-### Union-typed legacy parameter shims in the API client
+### God component file
 
-**What happens:** `frontend/lib/api.ts` wrappers accept `number | AbortSignal` style unions to stay backward compatible with old call sites (e.g., `getConfluences`).
-**Why it's wrong:** Ambiguous signatures propagate to every caller.
-**Do this instead:** For new functions, use explicit `(args, signal?: AbortSignal)` signatures like `getHealthReady` (`frontend/lib/api.ts:41`).
+**What happens:** `frontend/components/metaradar.tsx` exports `Shell`, `DashboardPage`, `LifecyclePage`, `GenericPage` and much shared UI from a single 2,300-line client file.
+**Why it's wrong here:** Large client bundle, hard review diffs, tangled state.
+**Do this instead:** New workspaces go in their own `frontend/components/<domain>/` directory; reuse (don't extend inline) the shell exports.
+
+### Silent-broad excepts around persistence steps
+
+**What happens:** Pipeline persistence wraps each entity insert in `try/except Exception` logging warnings (`backend/app/workflows/runner.py:180,320,343`) so one bad record doesn't kill a run.
+**Why it's risky:** Failures degrade quietly; mitigated by `failed_signal_ids` retry logic and `PipelineRun.errors_count` accounting — keep that bookkeeping intact when modifying.
+**Do this instead:** Preserve the failure-collection pattern; surface failures through run telemetry rather than swallowing them.
 
 ## Error Handling
 
-**Strategy:** Fail-per-item with accumulated error reporting; truthful status surfaces; no silent fabrication.
+**Strategy:** Fail loudly at API boundary (HTTPException), fail soft inside pipeline/connectors with structured status reporting; never fabricate healthy state.
 
 **Patterns:**
-- Pipeline nodes append structured error dicts to the `errors` state channel; counts land in `PipelineRun.errors_count` / `error_summary` (`backend/app/workflows/runner.py:113-140`)
-- Connector HTTP failures retry with exponential backoff + jitter, then raise `ConnectorFetchError` with PII-redacted message (`redact_text`) (`backend/app/connectors/base.py:133-170`)
-- Scheduler tracks consecutive failures and applies capped adaptive backoff (`SCHEDULER_MAX_BACKOFF_MINUTES`) (`backend/app/services/scheduler.py:151-161`)
-- API endpoints raise `HTTPException` with explicit status codes; health endpoints degrade honestly instead of inventing status values (`backend/app/api/v1/endpoints/health.py`, `backend/app/connectors/base.py:298-345`)
-- Configuration problems are surfaced as `CONFIGURATION_ERROR` states via pure evaluator `configuration_error_for()` (`backend/app/core/config.py:109-120`)
+- Endpoint guards raise `HTTPException` with explicit status codes (`backend/app/api/v1/endpoints/pipeline.py:69`)
+- Connector retries bounded with exponential backoff + jitter, final failure raises `ConnectorFetchError` with redacted message (`backend/app/connectors/base.py:22,162-166`)
+- Provider chain catches per-provider exceptions and falls through Gemma → Grok → Degraded (`backend/app/providers/factory.py:30-47`); Gemma raises `OllamaUnavailableError` (never-crash contract D-12, `backend/app/providers/gemma.py:48`)
+- Pipeline errors accumulate into state `errors` channel + `PipelineRun.error_summary` JSONB
+- Frontend normalizes all failures into `ApiError` with retryability hint (`frontend/lib/errors.ts`, `frontend/lib/api.ts:173-201`)
 
 ## Cross-Cutting Concerns
 
-**Logging:** structlog JSON logging configured once at startup (`backend/app/core/logging.py`); named loggers per module (`metaradar.main`, `ingestion_service`). Log params pass through `redact_mapping`/`redact_text` (`backend/app/core/redact.py`) to scrub secrets/PII.
+**Logging:** structlog JSON configured once at startup (`backend/app/core/logging.py`); correlation ID middleware (`backend/app/core/middleware.py`, `asgi-correlation-id`) propagates `x-request-id` to clients.
 
-**Validation:** Pydantic v2 everywhere — request/response schemas (`backend/app/schemas/`), settings (`pydantic-settings` in `backend/app/core/config.py`), connector payloads (`RawSignalPayload`, `backend/app/connectors/base.py:26-39`). Domain YAML validated into Pydantic models.
+**Validation:** Pydantic v2 everywhere — settings (`BaseSettings`), domain YAML models, API DTOs; connectors validate payloads with `RawSignalPayload` (`backend/app/connectors/base.py:26`).
 
-**Authentication:** No user auth. Optional API-key setting `METARADAR_API_KEY` exists in settings but mutation endpoints are guarded by rate limiting config (`MUTATION_RATE_LIMIT_PER_MINUTE`); CORS restricted to configured origins (`backend/app/main.py:66-73`). Privacy is enforced at the provider boundary via `DataClassification` privacy gate rather than user identity.
+**Authentication:** Optional API-key gate for mutations via `require_mutation_auth` dependency + naive per-IP rate limiter (`backend/app/api/deps.py`); active only when `METARADAR_API_KEY` set. No user accounts/auth roles exist.
 
-**PII/PHI protection:** Scrubbing service (`backend/app/services/pii.py`) applied pre-persistence; log/error redaction (`backend/app/core/redact.py`); hosted-LLM privacy gate (`backend/app/providers/grok.py`).
+**PII/PHI protection:** Scrubbing service (`backend/app/services/pii.py`) and redaction utilities (`backend/app/core/redact.py`) applied to connector params/logs before persistence or emission.
 
 ---
 

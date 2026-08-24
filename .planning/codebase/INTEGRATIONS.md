@@ -4,126 +4,129 @@
 
 ## APIs & External Services
 
-**Data Source Connectors** (all async httpx-based, subclass `SourceConnector` from `backend/app/connectors/base.py`; verbatim payloads persisted to bronze per D-23; PII/PHI scrubbed via `backend/app/services/pii.py`):
+**Life-Science Data Connectors** (all under `backend/app/connectors/`, sharing the abstract contract in `backend/app/connectors/base.py` — bounded retry/backoff, bronze-only persistence, per-source state in `connector_states` table):
 
-- NCBI PubMed E-utilities - Publication surveillance
-  - Files: `backend/app/connectors/pubmed.py`
-  - Endpoints: `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi` + `efetch.fcgi` (XML)
-  - Auth: `NCBI_API_KEY` (optional, raises rate limit); `NCBI_TOOL=MetaRadar`, `NCBI_EMAIL` sent as UA etiquette
-  - Pattern: batched (200/batch, 0.35s delay), incremental per profile via ConnectorState cursor
+- **PubMed (NCBI E-utilities)** - Biomedical publication signals
+  - Files: `backend/app/connectors/pubmed.py` (esearch + efetch: `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`, `.../efetch.fcgi`)
+  - Client: raw `httpx.AsyncClient` via `SourceConnector._fetch_with_retry`
+  - Auth: `NCBI_API_KEY` (optional, higher rate limits) + `NCBI_TOOL` ("MetaRadar") + `NCBI_EMAIL` (`backend/app/core/config.py` lines 86-88)
 
-- ClinicalTrials.gov API v2 - Clinical trial signals
-  - File: `backend/app/connectors/clinical_trials.py`
-  - Endpoint: `https://clinicaltrials.gov/api/v2/studies` (JSON, nextPageToken pagination, PAGE_SIZE=100)
+- **ClinicalTrials.gov API v2** - Trial registry signals
+  - File: `backend/app/connectors/clinical_trials.py` (`https://clinicaltrials.gov/api/v2/studies`)
   - Auth: none
 
-- EMA Medicines RSS - Regulatory feed
-  - File: `backend/app/connectors/ema.py`
-  - Endpoint: `https://www.ema.europa.eu/en/medicines/rss` (XML parsed with stdlib `xml.etree`)
-  - Auth: none; keyword filtering by domain-config profiles
+- **OpenFDA (drugsfda endpoint)** - Drug approval/safety signals
+  - File: `backend/app/connectors/fda.py` (`https://api.fda.gov/drug/drugsfda.json`)
+  - Auth: `OPENFDA_API_KEY` (optional)
 
-- openFDA / FDA - Drug & safety regulatory data
-  - File: `backend/app/connectors/fda.py`
-  - Endpoints: `https://api.fda.gov/drug/drugsfda.json` (JSON) + FDA MedWatch/Drug Safety RSS feeds
-  - Auth: `OPENFDA_API_KEY` (optional, higher rate limits)
+- **EMA (European Medicines Agency)** - Regulatory news via RSS
+  - File: `backend/app/connectors/ema.py` (default RSS `https://www.ema.europa.eu/en/medicines/rss`; per-profile override via domain config `rss_url`)
+  - Auth: none
 
-- NewsAPI - News monitoring
-  - File: `backend/app/connectors/newsapi.py`
-  - Endpoint: `https://newsapi.org/v2/everything`
-  - Auth: `NEWSAPI_KEY` or `NEWS_API_KEY` (**required** — connector returns CONFIGURATION_ERROR without it; see `configuration_error_for()` in `backend/app/core/config.py`)
-  - Quota-aware: ~100 req/day dev cap (D-20), tracks `X-RateLimit-Remaining` header into ConnectorState cursor JSON
+- **NewsAPI** - News signals
+  - File: `backend/app/connectors/newsapi.py` (`https://newsapi.org/v2/everything`)
+  - Auth: `NEWSAPI_KEY` or `NEWS_API_KEY` (**required**; missing key surfaces as `CONFIGURATION_ERROR` run status via `configuration_error_for()` in `backend/app/core/config.py` lines 109-120)
 
-**LLM Providers** (fallback chain orchestrated by `ProviderFactory.execute_task` in `backend/app/providers/factory.py`: Local Gemma → Grok (privacy-gated) → BART Degraded):
+Connector queries are config-driven from `config/haemophilia.yaml` (parsed into `ConnectorQueryProfile` models in `backend/app/core/domain_config.py`) — connectors execute config, never invent queries.
 
-- Ollama (local Gemma 3 4B) - Primary reasoning engine
-  - File: `backend/app/providers/gemma.py`
-  - Client: raw `httpx.AsyncClient` against `OLLAMA_HOST` (default `http://localhost:11434`, compose: `http://ollama:11434`)
-  - Model: `OLLAMA_MODEL=gemma3:4b` (Q4 int4); alternative GGUF path via llama-cpp-python scanning `models/*.gguf` (`models/gemma-3-4b-it-Q4_K_M.gguf` present)
-  - Auth: none (local daemon); never-crash contract D-12 → raises `OllamaUnavailableError`
+**LLM Providers** (fallback chain orchestrated by `ProviderFactory` in `backend/app/providers/factory.py`: Local Gemma → xAI Grok → Degraded factual mode):
 
-- xAI Grok API - Hosted fallback
-  - File: `backend/app/providers/grok.py`
-  - Endpoint: `POST https://api.x.ai/v1/chat/completions` (model `grok-beta`)
-  - Auth: `XAI_API_KEY` or `GROK_API_KEY` (Bearer header); gated by `ENABLE_GROK_FALLBACK=true` AND `validate_privacy_gate()` — only PUBLIC/SYNTHETIC data classifications may leave the host (SECURITY_STANDARDS privacy gate)
+- **Ollama sidecar (primary local reasoning)** - Hosts Gemma 3 4B
+  - SDK/Client: plain `httpx.AsyncClient` with `base_url=settings.OLLAMA_HOST` (default `http://localhost:11434`), model `gemma3:4b`
+  - Implementation: `backend/app/providers/gemma.py` (`GemmaProvider`)
+  - Container: `ollama/ollama:latest` in `docker-compose.yml` with NVIDIA device reservation; first run needs `docker exec metaradar-ollama ollama pull gemma3:4b`
 
-- BART Degraded (offline fallback) - Summarize-only stub
-  - File: `backend/app/providers/degraded.py` — no network call; deterministic truncation/bullet summary labeled as AI-reasoning-fallback output
+- **Local GGUF engine (alternative local path)** - llama-cpp-python executing `.gguf` files discovered in root `models/` directory
+  - Implementation: `backend/app/providers/gemma.py` (`find_local_gguf_model()` + `_generate_with_local_gguf()`); default download is Gemma 3 4B Instruct Q4_K_M from Hugging Face (`setup.py` line 326)
+  - Hardware env: `LLM_DEVICE` (`auto|cpu|cuda`), `LLM_GPU_LAYERS` read directly from os.environ in `backend/app/providers/gemma.py`
+
+- **xAI Grok (hosted fallback)** - Optional cloud reasoning behind a privacy gate
+  - Endpoint: `https://api.x.ai/v1/chat/completions`, model `grok-beta` (`backend/app/providers/grok.py` lines 22-23)
+  - Auth: `XAI_API_KEY` (or legacy alias `GROK_API_KEY`); only activated when `ENABLE_GROK_FALLBACK=true` / `LLM_PROVIDER=xai|auto`
+  - Privacy gate: `validate_privacy_gate()` blocks all payloads except `PUBLIC`/`SYNTHETIC` classification before transmission (`backend/app/providers/grok.py` lines 56-67)
+
+- **Degraded provider (terminal fallback)** - No external calls
+  - Implementation: `backend/app/providers/degraded.py` — truncation-based factual bullet summary labeled `bart_degraded`/`facebook/bart-large-cnn` metadata but loads no actual model; guarantees "never-crash" behavior when both LLM paths fail
+
+**Embeddings:**
+- **fastembed (ONNX, CPU, fully local)** - Model `sentence-transformers/all-MiniLM-L6-v2` pinned to revision `e4bb823e5956b6277b069d276b978c48a73507c7`, 384-dim, max seq 256
+  - File: `backend/app/services/embeddings.py` (lazy in-process singleton; inference offloaded to executor); backfill tooling in `backend/app/services/embeddings_backfill.py`
 
 ## Data Storage
 
 **Databases:**
-- PostgreSQL 16 + pgvector extension
-  - Image: `pgvector/pgvector:pg16` (`docker-compose.yml`)
-  - Connection: `DATABASE_URL` (default `postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar`)
-  - Client: SQLAlchemy 2.0 async engine (`backend/app/db/session.py`, pool_pre_ping, pool_size=10/max_overflow=20) + `asyncpg` driver
-  - Migrations: Alembic (`backend/alembic/env.py`, versions `001`–`011` in `backend/alembic/versions/`)
-  - Vectors: `pgvector.sqlalchemy.Vector(384)` column on signals table (`backend/app/models/__init__.py`)
-  - Concurrency: PostgreSQL advisory locks for scheduler single-execution (`try_advisory_lock` in `backend/app/db/session.py`)
-  - Seed: `backend/app/db/seed.py`
+- **PostgreSQL 16 + pgvector** (image `pgvector/pgvector:pg16`, container `metaradar-postgres`)
+  - Connection: `DATABASE_URL` (asyncpg driver; default `postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar` in `backend/app/core/config.py` line 30)
+  - Client: SQLAlchemy 2.0 async engine/session factory in `backend/app/db/session.py` (pool_size=10, max_overflow=20, pool_pre_ping); PostgreSQL advisory locks for scheduler single-execution (`try_advisory_lock`/`release_advisory_lock`, same file)
+  - Migrations: Alembic, `backend/alembic/versions/001_*` … `012_*`; vector column on signals (`Vector(384)` in `backend/app/models/__init__.py` line 291), queried via `backend/app/services/vector_query.py`
+  - Raw payload retention policy: `RAW_SIGNAL_RETENTION_DAYS` (default 30)
 
 **File Storage:**
-- Local filesystem only — GGUF models under `models/`; verbatim bronze payloads stored in Postgres JSON columns, not object storage
+- Local filesystem only — GGUF model files in root `models/` dir (`MODELS_DIR` setting); no object storage service
 
 **Caching:**
-- Redis 7 (`REDIS_URL`, default `redis://localhost:6379/0`)
-  - Usage: server-side cache flush endpoint (`backend/app/api/v1/endpoints/cache.py`) and health diagnostics (`backend/app/api/v1/endpoints/health.py`)
-  - Client: `redis.asyncio` (`aioredis.from_url`)
+- **Redis 7** (`redis:7-alpine`, container `metaradar-redis`)
+  - Connection: `REDIS_URL` (default `redis://localhost:6379/0`)
+  - Client: `redis.asyncio` — cache-clear endpoint `backend/app/api/v1/endpoints/cache.py`, health probe `backend/app/api/v1/endpoints/health.py`
+  - Note: Redis usage is currently thin (cache management/health); primary state lives in PostgreSQL
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Custom / minimal — no OAuth/SSO/JWT detected
-- Optional shared API key: `METARADAR_API_KEY` (`backend/app/core/config.py`) enforced at middleware/deps layer (`backend/app/api/deps.py`)
-- Mutation throttling: `MUTATION_RATE_LIMIT_PER_MINUTE=60`
-- CORS allow-list: `CORS_ORIGINS` (default `http://localhost:3000`), configured in `backend/app/main.py`
-- Frontend calls backend directly with fetch — no auth token flow in `frontend/lib/api.ts`
+- None (no user identity system, no OAuth/JWT)
+- Optional service-level API key gate: mutations require `X-API-Key` header matching `METARADAR_API_KEY` **when set** — local dev stays open when unset (`require_mutation_auth` in `backend/app/api/deps.py` lines 16-27)
+- In-memory mutation rate limiting: `mutation_rate_limit` dependency, default 60/min (`MUTATION_RATE_LIMIT_PER_MINUTE`, same file)
+- CORS restricted to `CORS_ORIGINS` (default `http://localhost:3000`) in `backend/app/main.py` lines 66-73
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None (no Sentry/Datadog SDK)
+- None (no Sentry/equivalent)
 
 **Logs:**
-- structlog JSON logging (`configure_structlog(json_logs=True)` in `backend/app/main.py`, config in `backend/app/core/logging.py`)
-- Request correlation: `CorrelationIdMiddleware` from `asgi-correlation-id` (`backend/app/core/middleware.py`)
-- Health/diagnostics endpoints: `/api/v1/health/*` and `/api/v1` observability router (`backend/app/api/v1/endpoints/health.py`, `observability.py`); source health persisted to DB (`008_health_logs_telemetry` migration)
+- structlog JSON logging configured at import time (`backend/app/core/logging.py`, called from `backend/app/main.py` line 25); ISO UTC timestamps, INFO bound level
+- Custom ASGI correlation middleware binding `X-Request-ID`/`X-Correlation-ID` contextvars (`backend/app/core/middleware.py`)
+- Secret scrubbing log filter applied to stdlib records too (`SecretScrubFilter` in `backend/app/core/redact.py`); connector error strings passed through `redact_text()` before persistence/logging
+
+**Telemetry:**
+- Connector run telemetry persisted to `source_health_logs` table and live `sources` rows (`_persist_health_log` in `backend/app/connectors/base.py` lines 366-433): http_status, latency_ms, records fetched/accepted/rejected, upstream timestamps — honest-status contract (D-22), never fabricates values
+- Health endpoints: `/api/v1/health`, `/health/ready`, `/health/models`, `/health/connectors` (`backend/app/api/v1/endpoints/health.py`); scheduler status via `/api/v1/observability/*`
+
+## Background Scheduling
+
+- Autonomous asyncio scheduler singleton started in FastAPI lifespan (`backend/app/main.py` lines 43-52 → `SourceScheduler` in `backend/app/services/scheduler.py`)
+- Per-source worker tasks with intervals from settings (`SCHEDULER_CT_INTERVAL_MINUTES`=60, PUBMED=60, EMA=30, FDA=30, NEWS=15), jitter ±10%, exponential backoff capped at 120 min, failure threshold 3, PostgreSQL advisory locks prevent duplicate runs across processes
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Docker Compose single-host (services: postgres, redis, ollama, backend [+gpu profile], frontend) — `docker-compose.yml`
+- Local Docker Compose stack only (`docker-compose.yml`); no cloud deployment manifests detected. Process-mode alternative: `start.py` launches uvicorn + Next dev directly on host.
 
 **CI Pipeline:**
-- GitHub Actions: `.github/workflows/ci.yml` — pytest → OpenAPI contract drift check (`scripts/export_openapi.py` vs `frontend/types/api.ts`) → pnpm install → tsc --noEmit → banned-class gate → ESLint → next build
-
-**Contract Sync:**
-- Canonical OpenAPI: `contracts/openapi.json`; generated TS types: `frontend/types/api.ts`; regenerator: `scripts/export_openapi.py`
+- GitHub Actions: `.github/workflows/ci.yml` — pytest suite, OpenAPI→TypeScript contract-sync gate (`scripts/export_openapi.py` vs `frontend/types/api.ts` must be unchanged), then pnpm install, `tsc --noEmit`, banned-class gate, lint, build
+- Canonical API contract committed at `contracts/openapi.json`
 
 ## Environment Configuration
 
 **Required env vars:**
-- `DATABASE_URL`, `REDIS_URL` (have local-dev defaults in `backend/app/core/config.py`; always override for shared/deployed envs)
-- `NEWSAPI_KEY` (or `NEWS_API_KEY`) — required for the newsapi connector to leave CONFIGURATION_ERROR state
+- `DATABASE_URL`, `REDIS_URL` (have local-dev defaults; override for any shared environment)
+- `NEWSAPI_KEY` — required for the NewsAPI connector to leave CONFIGURATION_ERROR state
+- `LLM_PROVIDER` (`local|xai|auto`), `OLLAMA_HOST`, `OLLAMA_MODEL` for reasoning path
+- `ENABLE_GROK_FALLBACK` + `XAI_API_KEY`/`GROK_API_KEY` for hosted fallback
+- Frontend: `NEXT_PUBLIC_API_URL` (read in `frontend/lib/api.ts` line 149 and `frontend/components/metaradar.tsx` line 897). ⚠️ `docker-compose.yml` passes `NEXT_PUBLIC_API_BASE_URL` to the frontend container, which nothing reads — dead variable; Docker frontend silently falls back to `http://localhost:8000/api/v1`.
 
-**Optional env vars:**
-- `NCBI_API_KEY`, `OPENFDA_API_KEY` — rate-limit upgrades
-- `XAI_API_KEY` / `GROK_API_KEY` + `ENABLE_GROK_FALLBACK=true` — hosted LLM fallback
-- `METARADAR_API_KEY`, `CORS_ORIGINS`, `MUTATION_RATE_LIMIT_PER_MINUTE` — API security
-- `LLM_PROVIDER`, `LLM_DEVICE`, `LLM_DTYPE`, `LOCAL_GGUF_MODEL`, `LOCAL_GGUF_PATH`, `MODELS_DIR`, `OLLAMA_HOST`, `OLLAMA_MODEL` — inference tuning
-- `EMBEDDING_MODEL*` — pinned model identity (do not change revision casually; backfill script exists: `backend/app/services/embeddings_backfill.py`)
-- `SCHEDULER_*_INTERVAL_MINUTES`, `SCHEDULER_JITTER_PERCENT`, `SCHEDULER_MAX_BACKOFF_MINUTES`, `ENABLE_BACKGROUND_SCHEDULER` — autonomous ingestion cadence (`backend/app/services/scheduler.py`)
-- Frontend: `NEXT_PUBLIC_API_URL` (read in `frontend/lib/api.ts:149`; compose sets `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1` — note the code reads `NEXT_PUBLIC_API_URL`, defaulting to `http://localhost:8000/api/v1`)
+**Optional env vars:** `METARADAR_API_KEY`, `CORS_ORIGINS`, `OPENFDA_API_KEY`, `NCBI_API_KEY`, `NCBI_TOOL`, `NCBI_EMAIL`, `EMBEDDING_MODEL*`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS`, `LLM_DEVICE`, `LLM_DTYPE`, `LLM_GPU_LAYERS`, `LOCAL_GGUF_MODEL`, `LOCAL_GGUF_PATH`, `MODELS_DIR`, `RAW_SIGNAL_RETENTION_DAYS`, `SCHEDULER_*` family
 
 **Secrets location:**
-- Root `.env` (gitignored; present on disk — never read/commit). Template: `.env.example`. CI has no secrets; Grok tests skip without key (D-16).
+- Root `.env` (present, gitignored — contents not inspected) with `.env.example` template; loaded by pydantic-settings (`backend/app/core/config.py` `_ENV_FILES`) and by `start.py`'s own parser. Never commit real keys; CI runs green without any key (Grok fallback disabled by default).
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- None — all external data pulled on schedule (`SourceScheduler` in `backend/app/services/scheduler.py`, started in app lifespan `backend/app/main.py`)
+- None (all data enters via scheduled polling connectors)
 
 **Outgoing:**
-- None — no outbound webhooks/notification services detected; all outbound traffic is the connector/provider HTTP calls listed above
+- None (only request/response calls to the APIs listed above; Grok calls are gated by privacy classification)
 
 ---
 
