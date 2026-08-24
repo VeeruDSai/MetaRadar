@@ -326,7 +326,7 @@ async def seed_data():
             ),
         ])
 
-        # 10. Starter Signals with Real Provenance & Verified Multi-Factor Scoring
+        # 10. Starter Signals with Real Provenance, Authority Tiers & Verified Multi-Factor Scoring
         signal_rows = [
             {
                 "fingerprint": "fp_seed_01",
@@ -349,6 +349,25 @@ async def seed_data():
                 "is_synthetic": True,
                 "provenance_status": "available",
                 "evidence_text": "Sustained median Factor VIII expression was maintained at 5 years with a 92% reduction in annualized bleeding rates compared to baseline prophylactic therapy.",
+                "source_authority_tier": "AUTHORITATIVE",
+                "validation_status": "VALIDATED",
+                "what_changed": "5-year long-term follow-up demonstrates sustained median Factor VIII expression (15.2 IU/dL) and 92% reduction in annualized bleeding rate.",
+                "why_it_matters": "Validates durability profile of AAV5 viral vector platforms and establishes long-term benchmark against daily/weekly non-factor prophylaxis.",
+                "relevant_function": "MEDICAL_AFFAIRS",
+                "route_destination": "MEDICAL_AFFAIRS",
+                "route_role": "FUNCTION",
+                "is_escalated": False,
+                "routing_reason": "Routed to Medical Affairs based on scientific publication classification and clinical benchmark relevance.",
+                "routing_timestamp": now - timedelta(hours=12),
+                "suggested_action": "Incorporate 5-year FVIII expression durability curve into comparative clinical positioning dossiers and brief field MSLs.",
+                "action_rationale": "Direct comparative evidence against standard-of-care prophylaxis informs clinician counseling and competitive differentiation.",
+                "review_status": "UNREVIEWED",
+                "facts": [
+                    "Sustained median Factor VIII expression maintained at 5 years post-infusion.",
+                    "92% reduction in annualized bleeding rate compared to standard prophylaxis.",
+                ],
+                "interpretation": "AAV5 gene therapy demonstrates prolonged hemostatic protection without progressive late-onset expression decay.",
+                "speculation": "May accelerate commercial adoption in adult severe cohorts without neutralizing antibodies.",
                 "priority": "HIGH",
                 "score_breakdown": {
                     "novelty": 20.0,
@@ -364,7 +383,7 @@ async def seed_data():
                 "fingerprint": "fp_seed_02",
                 "source_id": "clinical_trials",
                 "source_name": "ClinicalTrials.gov",
-                "development_id": dev1_id,
+                "development_id": dev3_id,
                 "external_id": "NCT04869267",
                 "pmid": None,
                 "nct_id": "NCT04869267",
@@ -381,6 +400,30 @@ async def seed_data():
                 "is_synthetic": True,
                 "provenance_status": "available",
                 "evidence_text": "Primary outcome measures achieved zero-bleed status in a majority of treated cohorts without unexpected thromboembolic adverse events.",
+                "source_authority_tier": "AUTHORITATIVE",
+                "validation_status": "VALIDATED",
+                "what_changed": "Pivotal Phase 3 FRONTIER-2 topline readout met all primary and secondary endpoints with superior zero-bleed rates across weekly/monthly dosing.",
+                "why_it_matters": "Novo Nordisk core next-generation FVIIIa-mimetic bispecific antibody demonstrates best-in-class efficacy profile against emicizumab.",
+                "relevant_function": "LEADERSHIP",
+                "route_destination": "LEADERSHIP",
+                "route_role": "LEADERSHIP",
+                "is_escalated": True,
+                "routing_reason": "Escalated to Executive Leadership due to CRITICAL priority impact across global portfolio strategy and regulatory filing schedule.",
+                "routing_timestamp": now - timedelta(hours=8),
+                "suggested_action": "Convene Executive Steering Committee to finalize global BLA/MAA submission timetables and align commercial launch supply readiness.",
+                "action_rationale": "Pivotal Phase 3 milestone represents primary strategic growth pillar for rare disease franchise.",
+                "review_status": "REVIEWED",
+                "reviewed_by": "Global Medical Lead",
+                "reviewed_at": now - timedelta(hours=4),
+                "review_decision": "Approved for executive briefing and global regulatory submission preparation.",
+                "review_notes": "Topline data confirmed zero-bleed superiority in inhibitor and non-inhibitor cohorts.",
+                "resulting_action": "Executive steering briefing scheduled; BLA filing preparation initiated.",
+                "facts": [
+                    "Phase 3 FRONTIER-2 met primary and key secondary endpoints.",
+                    "Achieved statistically significant reduction in treated bleeds vs prior prophylaxis.",
+                ],
+                "interpretation": "Subcutaneous Mim8 delivers high-potency Factor VIIIa-mimetic activity with convenient dosing flexibility.",
+                "speculation": "Expected to capture substantial share in both inhibitor and non-inhibitor Haemophilia A populations upon approval.",
                 "priority": "CRITICAL",
                 "score_breakdown": {
                     "novelty": 23.5,
@@ -396,7 +439,7 @@ async def seed_data():
                 "fingerprint": "fp_seed_03",
                 "source_id": "fda",
                 "source_name": "openFDA Regulatory",
-                "development_id": dev1_id,
+                "development_id": dev2_id,
                 "external_id": "BLA761083",
                 "pmid": None,
                 "nct_id": None,
@@ -413,6 +456,25 @@ async def seed_data():
                 "is_synthetic": True,
                 "provenance_status": "available",
                 "evidence_text": "Supplemental Biologics License Application (sBLA) accepted under Priority Review with a PDUFA action date scheduled for late 2026.",
+                "source_authority_tier": "AUTHORITATIVE",
+                "validation_status": "VALIDATED",
+                "what_changed": "FDA accepted sBLA with Priority Review designation for expanding anti-TFPI subcutaneous prophylaxis indication to non-inhibitor cohorts.",
+                "why_it_matters": "Shortens regulatory review timeline to 6 months and expands addressable target patient population significantly.",
+                "relevant_function": "REGULATORY",
+                "route_destination": "REGULATORY",
+                "route_role": "FUNCTION",
+                "is_escalated": False,
+                "routing_reason": "Routed to Regulatory Affairs based on FDA agency action and PDUFA milestone tracking.",
+                "routing_timestamp": now - timedelta(days=2),
+                "suggested_action": "Prepare Advisory Committee briefing materials and align label negotiation strategy with Regulatory and Medical Affairs teams.",
+                "action_rationale": "Priority review accelerates inspection schedules and mid-cycle review deadlines.",
+                "review_status": "UNREVIEWED",
+                "facts": [
+                    "sBLA accepted under FDA Priority Review.",
+                    "PDUFA target action date established for Q4 2026.",
+                ],
+                "interpretation": "FDA recognition of unmet medical need provides accelerated pathway for label expansion.",
+                "speculation": "Potential for broader market adoption if label includes flexible self-administration device.",
                 "priority": "HIGH",
                 "score_breakdown": {
                     "novelty": 18.0,
@@ -445,6 +507,25 @@ async def seed_data():
                 "is_synthetic": True,
                 "provenance_status": "available",
                 "evidence_text": "European Medicines Agency CHMP committee confirms positive benefit-risk ratio with stable long-term transaminitis profile across adult cohorts.",
+                "source_authority_tier": "AUTHORITATIVE",
+                "validation_status": "VALIDATED",
+                "what_changed": "EMA CHMP concluded comprehensive 5-year post-authorization safety review, confirming positive benefit-risk ratio without new safety signals.",
+                "why_it_matters": "Provides regulatory affirmation of liver safety and long-term vector clearance in severe Haemophilia A patients.",
+                "relevant_function": "SAFETY",
+                "route_destination": "SAFETY",
+                "route_role": "FUNCTION",
+                "is_escalated": False,
+                "routing_reason": "Routed to Safety / Pharmacovigilance based on EMA CHMP safety assessment conclusions.",
+                "routing_timestamp": now - timedelta(hours=18),
+                "suggested_action": "Update global safety surveillance registry benchmarks and reconcile post-marketing liver enzyme monitoring protocols.",
+                "action_rationale": "Authoritative regulatory assessment reaffirms class-wide safety thresholds for gene therapy programs.",
+                "review_status": "UNREVIEWED",
+                "facts": [
+                    "EMA CHMP confirmed positive benefit-risk profile.",
+                    "No cases of delayed thrombotic microangiopathy or vector-related malignancy observed.",
+                ],
+                "interpretation": "Reassures clinicians regarding long-term hepatic tolerability of AAV gene transfer.",
+                "speculation": "May reduce corticosteroid prophylaxis duration requirements in future protocol designs.",
                 "priority": "HIGH",
                 "score_breakdown": {
                     "novelty": 19.0,
@@ -465,7 +546,7 @@ async def seed_data():
             if not sig_obj:
                 session.add(Signal(**s_data))
             else:
-                # Update with verified score breakdown and provenance URLs
+                # Update with verified score breakdown, decision fields, and provenance URLs
                 sig_obj.score_breakdown = s_data["score_breakdown"]
                 sig_obj.canonical_url = s_data["canonical_url"]
                 sig_obj.external_id = s_data["external_id"]
@@ -476,6 +557,22 @@ async def seed_data():
                 sig_obj.provenance_status = s_data["provenance_status"]
                 sig_obj.evidence_text = s_data["evidence_text"]
                 sig_obj.priority = s_data["priority"]
+                sig_obj.what_changed = s_data["what_changed"]
+                sig_obj.why_it_matters = s_data["why_it_matters"]
+                sig_obj.relevant_function = s_data["relevant_function"]
+                sig_obj.route_destination = s_data["route_destination"]
+                sig_obj.route_role = s_data["route_role"]
+                sig_obj.is_escalated = s_data["is_escalated"]
+                sig_obj.routing_reason = s_data["routing_reason"]
+                sig_obj.routing_timestamp = s_data["routing_timestamp"]
+                sig_obj.source_authority_tier = s_data["source_authority_tier"]
+                sig_obj.validation_status = s_data["validation_status"]
+                sig_obj.suggested_action = s_data["suggested_action"]
+                sig_obj.action_rationale = s_data["action_rationale"]
+                sig_obj.review_status = s_data["review_status"]
+                sig_obj.facts = s_data["facts"]
+                sig_obj.interpretation = s_data["interpretation"]
+                sig_obj.speculation = s_data["speculation"]
 
         # 11. Scoring Weights
         roles = ["MEDICAL_AFFAIRS", "REGULATORY", "SAFETY", "MARKET_ACCESS", "COMMUNICATIONS", "LEADERSHIP"]

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, distinct, or_
 
 from app.db.session import get_db
-from app.models import Signal, Asset, Confluence, Development, Contradiction, Evidence
+from app.models import Signal, Asset, Confluence, Development, Contradiction, Evidence, AuditLog
 from app.schemas import (
     OverviewResponse,
     SignalListResponse,
@@ -22,7 +22,19 @@ from app.schemas import (
     TrendPointSchema,
     OverviewHealthSchema,
     AthenaSuggestedQuestionsResponse,
+    OriginalEvidenceItemSchema,
+    AIInterpretationSchema,
+    SuggestedActionSchema,
+    ReviewStateSchema,
+    RoutingSchema,
+    FunctionSchema,
+    PrioritySchema,
+    SignalDecisionResponse,
+    SignalReviewRequest,
+    AuditLogItemSchema,
 )
+from app.services.authority import get_source_authority_tier, resolve_validation_status
+from app.services.routing import resolve_signal_routing, FUNCTION_LABELS, StakeholderFunction
 from app.services.pii import PIIPHIScrubber
 from app.services.provenance_urls import resolve_canonical_provenance
 from app.services.scoring import priority_scorer
@@ -93,6 +105,109 @@ def _serialize_signal(s: Signal) -> SignalSchema:
     raw_record_ref = getattr(s, "raw_record_reference", None)
     ingested_at = getattr(s, "ingested_at", None) or s.retrieved_at or s.created_at
 
+    # Authority & Validation resolution
+    authority_tier = (
+        getattr(s, "source_authority_tier", None)
+        or get_source_authority_tier(s.source_id, getattr(s, "source_tier", 1)).value
+    )
+    validation_status = (
+        getattr(s, "validation_status", None)
+        or resolve_validation_status(s.source_id, authority_tier).value
+    )
+
+    # Routing & Function resolution
+    routing_data = resolve_signal_routing(
+        signal_type=s.signal_type,
+        priority=s.priority,
+        priority_score=score_breakdown.total if score_breakdown else None,
+        title=s.title,
+        content=s.content,
+    )
+
+    what_changed = (
+        getattr(s, "what_changed", None)
+        or (s.facts[0] if (s.facts and len(s.facts) > 0) else s.title)
+    )
+    why_it_matters = (
+        getattr(s, "why_it_matters", None)
+        or s.interpretation
+        or s.speculation
+        or "Clinical decision significance under active landscape review."
+    )
+    relevant_function = getattr(s, "relevant_function", None) or routing_data["relevant_function"]
+    route_destination = getattr(s, "route_destination", None) or routing_data["route_destination"]
+    route_role = getattr(s, "route_role", None) or routing_data["route_role"]
+    is_escalated = (
+        getattr(s, "is_escalated", False)
+        if getattr(s, "is_escalated", None) is not None
+        else routing_data["is_escalated"]
+    )
+    routing_reason = getattr(s, "routing_reason", None) or routing_data["routing_reason"]
+    routing_timestamp = getattr(s, "routing_timestamp", None) or routing_data["routing_timestamp"]
+
+    suggested_action = getattr(s, "suggested_action", None) or routing_data["suggested_action"]
+    action_rationale = getattr(s, "action_rationale", None) or routing_data["action_rationale"]
+
+    review_status = getattr(s, "review_status", None) or "UNREVIEWED"
+    reviewed_by = getattr(s, "reviewed_by", None)
+    reviewed_at = getattr(s, "reviewed_at", None)
+    review_decision = getattr(s, "review_decision", None)
+    review_notes = getattr(s, "review_notes", None)
+    resulting_action = getattr(s, "resulting_action", None)
+
+    # Sub-objects maintaining the strict trust boundary
+    evidence_items = [
+        OriginalEvidenceItemSchema(
+            source_id=s.source_id,
+            source_name=source_name,
+            authority_tier=authority_tier,
+            validation_status=validation_status,
+            title=s.title,
+            published_at=s.published_at,
+            retrieved_at=s.retrieved_at,
+            url=canonical_url,
+            identifier=ext_id,
+            excerpt=evidence_text[:600] if evidence_text else None,
+        )
+    ]
+
+    interpretation_details = AIInterpretationSchema(
+        summary=s.interpretation or s.content[:300],
+        why_it_matters=why_it_matters,
+        facts=s.facts or [],
+        speculation=s.speculation,
+        confidence=confidence,
+        confidence_type=confidence_type,
+        generated_at=s.created_at,
+        model=model_metadata.model if model_metadata else "gemma-3-4b-it",
+        mode=model_metadata.mode if model_metadata else "reasoning",
+    )
+
+    action_details = SuggestedActionSchema(
+        text=suggested_action,
+        rationale=action_rationale,
+        target_function=relevant_function,
+        is_escalated=is_escalated,
+        generated_at=routing_timestamp or s.created_at,
+    )
+
+    routing_details = RoutingSchema(
+        destination=route_destination,
+        role=route_role,
+        is_escalated=is_escalated,
+        reason=routing_reason,
+        timestamp=routing_timestamp or s.created_at,
+    )
+
+    review_details = ReviewStateSchema(
+        status=review_status,
+        reviewed_by=reviewed_by,
+        reviewed_at=reviewed_at,
+        decision=review_decision,
+        notes=review_notes,
+        resulting_action=resulting_action,
+    )
+
     return SignalSchema(
         signal_id=s.signal_id,
         source_id=s.source_id,
@@ -121,6 +236,29 @@ def _serialize_signal(s: Signal) -> SignalSchema:
         evidence_text=evidence_text,
         raw_record_reference=raw_record_ref,
         scoring_status=scoring_status,
+        what_changed=what_changed,
+        why_it_matters=why_it_matters,
+        relevant_function=relevant_function,
+        route_destination=route_destination,
+        route_role=route_role,
+        is_escalated=is_escalated,
+        routing_reason=routing_reason,
+        routing_timestamp=routing_timestamp,
+        source_authority_tier=authority_tier,
+        validation_status=validation_status,
+        suggested_action=suggested_action,
+        action_rationale=action_rationale,
+        review_status=review_status,
+        reviewed_by=reviewed_by,
+        reviewed_at=reviewed_at,
+        review_decision=review_decision,
+        review_notes=review_notes,
+        resulting_action=resulting_action,
+        evidence=evidence_items,
+        interpretation_details=interpretation_details,
+        action_details=action_details,
+        routing_details=routing_details,
+        review_details=review_details,
         facts=s.facts or [],
         interpretation=s.interpretation,
         speculation=s.speculation,
@@ -234,6 +372,325 @@ async def get_signal_detail(signal_id: str, db: AsyncSession = Depends(get_db)):
             detail=f"Signal with ID '{signal_id}' not found."
         )
     return _serialize_signal(signal)
+
+
+@router.post("/signals/{signal_id}/review", response_model=SignalSchema)
+async def submit_signal_review(
+    signal_id: str,
+    payload: SignalReviewRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Submits a human review action for a signal, persisting review state and audit history.
+    Supported statuses: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED.
+    Opening a signal does not mark it reviewed — an explicit review action is required.
+    """
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+
+    valid_statuses = {"UNREVIEWED", "IN_REVIEW", "REVIEWED", "ACTION_REQUIRED", "ACTIONED", "DISMISSED"}
+    norm_status = payload.status.upper().strip()
+    if norm_status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid review status '{payload.status}'. Must be one of: {sorted(valid_statuses)}"
+        )
+
+    prev_status = getattr(signal, "review_status", "UNREVIEWED") or "UNREVIEWED"
+    now_utc = datetime.now(timezone.utc)
+
+    signal.review_status = norm_status
+    signal.reviewed_by = payload.reviewer or "Clinical Reviewer"
+    signal.reviewed_at = now_utc
+    if payload.decision:
+        signal.review_decision = payload.decision
+    if payload.notes:
+        signal.review_notes = payload.notes
+    if payload.resulting_action:
+        signal.resulting_action = payload.resulting_action
+
+    # Record immutable audit entry
+    audit_entry = AuditLog(
+        entity_name="Signal",
+        entity_id=str(signal.signal_id),
+        action="SIGNAL_REVIEWED",
+        performed_by=payload.reviewer or "Clinical Reviewer",
+        timestamp=now_utc,
+        details={
+            "previous_status": prev_status,
+            "new_status": norm_status,
+            "decision": payload.decision,
+            "notes": payload.notes,
+            "resulting_action": payload.resulting_action,
+        }
+    )
+    db.add(audit_entry)
+    await db.commit()
+    await db.refresh(signal)
+
+    return _serialize_signal(signal)
+
+
+@router.get("/signals/{signal_id}/audit-history", response_model=List[AuditLogItemSchema])
+async def get_signal_audit_history(signal_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Fetches chronological audit history and lifecycle milestones for a signal.
+    Traces: Detected -> Classified -> Prioritized -> Routed -> Reviewed -> Actioned.
+    """
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+
+    # Query persisted audit log records
+    audit_query = (
+        select(AuditLog)
+        .where(
+            AuditLog.entity_name == "Signal",
+            AuditLog.entity_id == str(signal.signal_id),
+        )
+        .order_by(AuditLog.timestamp.asc())
+    )
+    audit_res = await db.execute(audit_query)
+    audit_logs = audit_res.scalars().all()
+
+    items: List[AuditLogItemSchema] = []
+    for log in audit_logs:
+        items.append(
+            AuditLogItemSchema(
+                audit_id=log.audit_id,
+                entity_name=log.entity_name,
+                entity_id=log.entity_id,
+                action=log.action,
+                performed_by=log.performed_by,
+                timestamp=log.timestamp,
+                details=log.details or {},
+            )
+        )
+
+    # If no explicit review audit logs exist yet, provide the factual baseline provenance trail
+    if not items:
+        serialized = _serialize_signal(signal)
+        import uuid as py_uuid
+
+        # 1. Detected
+        items.append(
+            AuditLogItemSchema(
+                audit_id=py_uuid.uuid4(),
+                entity_name="Signal",
+                entity_id=str(signal.signal_id),
+                action="SIGNAL_DETECTED",
+                performed_by=f"connector:{signal.source_id}",
+                timestamp=signal.retrieved_at,
+                details={
+                    "source_id": signal.source_id,
+                    "source_authority_tier": serialized.source_authority_tier,
+                    "validation_status": serialized.validation_status,
+                },
+            )
+        )
+        # 2. Classified & Prioritized
+        items.append(
+            AuditLogItemSchema(
+                audit_id=py_uuid.uuid4(),
+                entity_name="Signal",
+                entity_id=str(signal.signal_id),
+                action="SIGNAL_PRIORITIZED",
+                performed_by="pipeline:scoring_engine",
+                timestamp=signal.created_at,
+                details={
+                    "priority": signal.priority,
+                    "score": serialized.score_breakdown.total if serialized.score_breakdown else None,
+                    "signal_type": signal.signal_type,
+                },
+            )
+        )
+        # 3. Routed
+        items.append(
+            AuditLogItemSchema(
+                audit_id=py_uuid.uuid4(),
+                entity_name="Signal",
+                entity_id=str(signal.signal_id),
+                action="SIGNAL_ROUTED",
+                performed_by="pipeline:routing_engine",
+                timestamp=serialized.routing_timestamp or signal.created_at,
+                details={
+                    "destination": serialized.route_destination,
+                    "is_escalated": serialized.is_escalated,
+                    "reason": serialized.routing_reason,
+                },
+            )
+        )
+
+    return items
+
+
+@router.get("/signals/{signal_id}/decision-object", response_model=SignalDecisionResponse)
+async def get_signal_decision_object(signal_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Returns the complete unified Signal Decision Object with strict evidence/interpretation/action separation
+    and drill-downs for Confluence, Contradictions, and Lifecycle.
+    """
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+
+    s = _serialize_signal(signal)
+
+    # Drill-down: Contradictions
+    contradictions_res = await db.execute(
+        select(Contradiction).where(
+            or_(
+                Contradiction.claim_a_id == str(signal.signal_id),
+                Contradiction.claim_b_id == str(signal.signal_id),
+                Contradiction.claim_a_id == signal.external_id,
+                Contradiction.claim_b_id == signal.external_id,
+            )
+        )
+    )
+    contradictions = [
+        {
+            "contradiction_id": str(c.contradiction_id),
+            "rule_name": c.rule_name,
+            "severity": c.severity,
+            "confidence": c.confidence,
+            "description": c.description,
+            "detected_at": c.detected_at.isoformat() if c.detected_at else None,
+        }
+        for c in contradictions_res.scalars().all()
+    ]
+
+    # Drill-down: Confluence
+    confluence_data = None
+    if signal.development_id:
+        confluence_res = await db.execute(
+            select(Confluence).where(Confluence.development_id == signal.development_id)
+        )
+        conf = confluence_res.scalars().first()
+        if conf:
+            confluence_data = {
+                "confluence_id": str(conf.confluence_id),
+                "signal_count": conf.signal_count,
+                "confluence_type": conf.confluence_type,
+                "created_at": conf.created_at.isoformat() if conf.created_at else None,
+            }
+
+    fn_label = FUNCTION_LABELS.get(StakeholderFunction(s.relevant_function), s.relevant_function) if s.relevant_function in StakeholderFunction.__members__ else (s.relevant_function or "Medical Affairs")
+
+    return SignalDecisionResponse(
+        id=str(s.signal_id),
+        title=s.title,
+        signal_type=s.signal_type,
+        disease=s.disease,
+        priority=PrioritySchema(
+            level=s.priority,
+            score=s.score_breakdown.total if s.score_breakdown else None,
+            score_breakdown=s.score_breakdown,
+        ),
+        what_changed=s.what_changed or s.title,
+        why_it_matters=s.why_it_matters or "Clinical significance under active evaluation.",
+        function=FunctionSchema(
+            name=s.relevant_function or "MEDICAL_AFFAIRS",
+            label=fn_label,
+        ),
+        routing=s.routing_details or RoutingSchema(
+            destination=s.route_destination or "MEDICAL_AFFAIRS",
+            role=s.route_role or "FUNCTION",
+            is_escalated=s.is_escalated,
+            reason=s.routing_reason,
+            timestamp=s.routing_timestamp or s.created_at,
+        ),
+        evidence=s.evidence,
+        interpretation=s.interpretation_details or AIInterpretationSchema(
+            summary=s.interpretation,
+            why_it_matters=s.why_it_matters,
+            facts=s.facts,
+        ),
+        suggested_action=s.action_details or SuggestedActionSchema(
+            text=s.suggested_action or "Review evidence against clinical benchmarks.",
+            rationale=s.action_rationale,
+            target_function=s.relevant_function or "MEDICAL_AFFAIRS",
+            is_escalated=s.is_escalated,
+        ),
+        review=s.review_details or ReviewStateSchema(
+            status=s.review_status,
+            reviewed_by=s.reviewed_by,
+            reviewed_at=s.reviewed_at,
+            decision=s.review_decision,
+            notes=s.review_notes,
+            resulting_action=s.resulting_action,
+        ),
+        lifecycle={"stage": "announced", "development_id": str(s.development_id)} if s.development_id else None,
+        confluence=confluence_data,
+        contradictions=contradictions,
+        created_at=s.created_at,
+    )
 
 
 @router.get("/overview", response_model=OverviewResponse)
