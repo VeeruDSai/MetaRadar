@@ -13,7 +13,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
 
@@ -140,17 +140,25 @@ class GemmaProvider(LLMProvider):
         return ""
 
     async def _generate(self, prompt: str) -> str:
-        """Executes prompt via local GGUF file or Ollama daemon."""
+        """Executes prompt via local GGUF file or Ollama daemon (buffered)."""
+        start_time = time.time()
         # 1. Try local GGUF file from models/ directory
         gguf_model = find_local_gguf_model()
         if gguf_model is not None:
             try:
-                return self._generate_with_local_gguf(gguf_model, prompt)
+                logger.info(f"[LLM] Gemma generation started via GGUF engine ({gguf_model.name})...")
+                text = self._generate_with_local_gguf(gguf_model, prompt)
+                logger.info(
+                    f"[LLM] Gemma generation succeeded via GGUF ({len(text)} chars, "
+                    f"{int((time.time() - start_time) * 1000)} ms)."
+                )
+                return text
             except Exception as e:
-                logger.warning(f"Local GGUF execution failed: {e}. Trying Ollama sidecar...")
+                logger.warning(f"[LLM] Gemma generation FAILED via GGUF engine: {e}. Trying Ollama sidecar...")
 
         # 2. Try Ollama daemon
         try:
+            logger.info(f"[LLM] Gemma generation started via Ollama (model={settings.OLLAMA_MODEL})...")
             client = self._ensure_client()
             payload = {
                 "model": settings.OLLAMA_MODEL,
@@ -166,10 +174,82 @@ class GemmaProvider(LLMProvider):
             response = await client.post("/api/generate", json=payload)
             response.raise_for_status()
             data = response.json()
-            return str(data.get("response", ""))
+            text = str(data.get("response", ""))
+            eval_metrics = data.get("eval_count")
+            latency_ms = int((time.time() - start_time) * 1000)
+            logger.info(
+                f"[LLM] Gemma generation succeeded via Ollama ({len(text)} chars"
+                + (f", {eval_metrics} tokens" if isinstance(eval_metrics, int) and eval_metrics > 0 else "")
+                + f", {latency_ms} ms)."
+            )
+            return text
         except Exception as e:
-            logger.warning(f"Gemma/Ollama request failed: {e}")
+            logger.warning(f"[LLM] Gemma generation FAILED via Ollama: {e}")
             raise OllamaUnavailableError(f"Ollama generate failed: {e}") from e
+
+    async def generate_stream(self, prompt: str) -> AsyncGenerator[str, None]:
+        """Streams completion deltas token-by-token from Ollama (/api/generate, stream=true).
+
+        Falls back to a single-delta yield when only a local GGUF engine exists
+        (llama-cpp-python is synchronous and cannot stream through this async path).
+        Raises OllamaUnavailableError so callers can fall back to degraded mode.
+        """
+        start_time = time.time()
+        gguf_model = find_local_gguf_model()
+        if gguf_model is not None:
+            logger.info(f"[LLM] Gemma streaming generation started via GGUF engine ({gguf_model.name})...")
+            try:
+                text = self._generate_with_local_gguf(gguf_model, prompt)
+            except Exception as e:
+                logger.warning(f"[LLM] Gemma streaming generation FAILED via GGUF engine: {e}")
+                raise OllamaUnavailableError(f"GGUF generate failed: {e}") from e
+            logger.info(
+                f"[LLM] Gemma generation succeeded via GGUF ({len(text)} chars, "
+                f"{int((time.time() - start_time) * 1000)} ms)."
+            )
+            if text:
+                yield text
+            return
+
+        logger.info(f"[LLM] Gemma streaming generation started via Ollama (model={settings.OLLAMA_MODEL})...")
+        client = self._ensure_client()
+        payload = {
+            "model": settings.OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": True,
+            "options": {
+                "num_predict": self.max_output,
+                "num_ctx": self.max_context,
+                "temperature": 0.2,
+                "top_p": 0.95,
+            },
+        }
+        produced_chars = 0
+        try:
+            async with client.stream("POST", "/api/generate", json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        chunk = json.loads(stripped)
+                    except json.JSONDecodeError:
+                        continue
+                    delta = chunk.get("response", "")
+                    if delta:
+                        produced_chars += len(delta)
+                        yield delta
+                    if chunk.get("done"):
+                        break
+        except Exception as e:
+            logger.warning(f"[LLM] Gemma streaming generation FAILED via Ollama: {e}")
+            raise OllamaUnavailableError(f"Ollama stream generate failed: {e}") from e
+
+        latency_ms = int((time.time() - start_time) * 1000)
+        logger.info(
+            f"[LLM] Gemma streaming generation succeeded via Ollama ({produced_chars} chars, {latency_ms} ms)."
+        )
 
     async def generate_summary(self, text: str) -> str:
         """Sends text as the prompt and returns the raw completion."""

@@ -395,11 +395,11 @@ def main():
                                 line = raw_line.strip()
                                 if not line:
                                     continue
-                                # Surface operational events (ingestion, pipeline, errors, warnings)
-                                if any(marker in line for marker in ["[INGESTION]", "[PIPELINE]", "ERROR", "WARNING"]):
-                                    print(f"  {line}")
-                                elif any(k in line.lower() for k in ["/api/v1/ingestion", "ingest", "confluence", "contradiction", "recalibration"]):
-                                    print(f"  [OP-LOG] {line}")
+                                # Surface operational events (ingestion, pipeline, LLM lifecycle, errors, warnings)
+                                if any(marker in line for marker in ["[INGESTION]", "[PIPELINE]", "[LLM]", "[ATHENA]", "ERROR", "WARNING"]):
+                                    print(f"  {line}", flush=True)
+                                elif any(k in line.lower() for k in ["/api/v1/ingestion", "ingest", "confluence", "contradiction", "recalibration", "/api/v1/athena", "ollama", "gemma"]):
+                                    print(f"  [OP-LOG] {line}", flush=True)
                 except Exception:
                     pass
 

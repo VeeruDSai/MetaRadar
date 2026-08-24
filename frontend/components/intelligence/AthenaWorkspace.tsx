@@ -1,20 +1,38 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import type { AthenaResponse } from '@/types/api'
-import { askAthena, getAthenaSuggestedQuestions } from '@/lib/api'
+import React, { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import type { AthenaStreamMeta } from '@/lib/api'
+import { getAthenaSuggestedQuestions, streamAthena } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { BrainCircuit, ChevronRight, Sparkles, RefreshCw } from 'lucide-react'
+import { BrainCircuit, ChevronRight, Sparkles, ExternalLink } from 'lucide-react'
 import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { useTheme } from '@/components/theme/ThemeProvider'
 
+type AthenaPhase = 'idle' | 'thinking' | 'streaming' | 'done'
+
+function modeLabel(meta: AthenaStreamMeta | null, degraded: boolean): string {
+  if (!meta) return 'Gemma 3 Reasoning'
+  switch (meta.response_type) {
+    case 'assistant_intro':
+      return 'Assistant Intro'
+    case 'insufficient_evidence':
+      return 'No Grounding Evidence'
+    default:
+      return degraded ? 'Degraded Factual' : 'Gemma 3 Reasoning'
+  }
+}
+
 export function AthenaWorkspace() {
   const [prompt, setPrompt] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [phase, setPhase] = useState<AthenaPhase>('idle')
+  const [answer, setAnswer] = useState('')
+  const [meta, setMeta] = useState<AthenaStreamMeta | null>(null)
+  const [degraded, setDegraded] = useState(false)
+  const [streamNotice, setStreamNotice] = useState<string | null>(null)
   const [error, setError] = useState<FormattedError | null>(null)
-  const [response, setResponse] = useState<AthenaResponse | null>(null)
   const [suggestedQueries, setSuggestedQueries] = useState<string[]>([
     'What are the 5-year durability outcomes and bleed reductions for AAV5 gene therapy in Haemophilia A?',
     'How do the Phase 3 FRONTIER-2 Mim8 zero-bleed readouts compare with prophylactic factor infusions?',
@@ -22,6 +40,7 @@ export function AthenaWorkspace() {
     'What are the EMA CHMP 5-year safety conclusions regarding vector shedding and liver transaminitis?',
   ])
   const [signalsCount, setSignalsCount] = useState(4)
+  const abortRef = useRef<AbortController | null>(null)
   const { isDark } = useTheme()
 
   useEffect(() => {
@@ -37,21 +56,50 @@ export function AthenaWorkspace() {
     }
   }, [])
 
+  // Abort any in-flight stream on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
+
+  const busy = phase === 'thinking' || phase === 'streaming'
+
   const handleQuery = async (queryText?: string) => {
     const q = (queryText ?? prompt).trim()
-    if (!q || loading) return
+    if (!q || busy) return
 
-    setLoading(true)
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    setPhase('thinking')
     setError(null)
-    setResponse(null)
+    setAnswer('')
+    setMeta(null)
+    setDegraded(false)
+    setStreamNotice(null)
 
     try {
-      const res = await askAthena(q)
-      setResponse(res)
+      await streamAthena(
+        q,
+        {
+          onMeta: (m) => setMeta(m),
+          onToken: (delta) =>
+            setAnswer((prev) => {
+              if (prev.length === 0) setPhase('streaming')
+              return prev + delta
+            }),
+          onDegraded: () => setDegraded(true),
+          onError: (message) => setStreamNotice(message),
+        },
+        controller.signal
+      )
+      if (!controller.signal.aborted) setPhase('done')
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
       setError(formatError(err, 'Athena synthesis query failed.'))
-    } finally {
-      setLoading(false)
+      setPhase('done')
     }
   }
 
@@ -85,6 +133,7 @@ export function AthenaWorkspace() {
                   setPrompt(q)
                   handleQuery(q)
                 }}
+                disabled={busy}
               >
                 <span className="line-clamp-2 text-left">{q}</span>
                 <ChevronRight size={14} className="shrink-0 ml-1" />
@@ -104,9 +153,9 @@ export function AthenaWorkspace() {
             />
             <GlowingThinkingButton
               label="Ask Athena"
-              loadingLabel="Thinking..."
-              loading={loading}
-              disabled={!prompt.trim() || loading}
+              loadingLabel={phase === 'streaming' ? 'Streaming...' : 'Thinking...'}
+              loading={busy}
+              disabled={!prompt.trim() || busy}
               onClick={() => handleQuery()}
               width={140}
               height={42}
@@ -115,7 +164,7 @@ export function AthenaWorkspace() {
         </Card>
 
         <Card className="answer-card flex flex-col justify-between">
-          {loading ? (
+          {phase === 'thinking' ? (
             <div className="flex flex-col items-center justify-center min-h-[380px] gap-3 text-center">
               <div className="flex items-center gap-2 text-[15px] font-semibold text-[var(--foreground)]">
                 <BrainCircuit size={18} className="text-[var(--signal)] animate-pulse" />
@@ -132,7 +181,7 @@ export function AthenaWorkspace() {
             </div>
           ) : error ? (
             <ErrorState message={error.message} onRetry={() => handleQuery()} />
-          ) : response ? (
+          ) : answer ? (
             <div className="flex flex-col h-full justify-between">
               <div>
                 <div className="flex justify-between items-center mb-4">
@@ -142,40 +191,77 @@ export function AthenaWorkspace() {
                       Athena Grounded Synthesis
                     </span>
                   </div>
-                  <Badge tone={response.mode === 'reasoning' ? 'low' : 'neutral'}>
-                    {response.mode === 'reasoning' ? 'Gemma 3 Reasoning' : 'Degraded Factual'}
-                  </Badge>
+                  <Badge tone={degraded ? 'neutral' : 'low'}>{modeLabel(meta, degraded)}</Badge>
                 </div>
 
                 <div className="prose text-xs text-[var(--foreground)] leading-relaxed whitespace-pre-wrap">
-                  {response.answer}
+                  {answer}
+                  {phase === 'streaming' && (
+                    <span className="inline-block w-1.5 h-3.5 ml-0.5 align-middle bg-[var(--signal)] animate-pulse" aria-hidden />
+                  )}
                 </div>
+
+                {streamNotice && (
+                  <p className="mt-3 text-[11px] text-[var(--warning, #b45309)] m-0">{streamNotice}</p>
+                )}
               </div>
 
-              {response.evidence && response.evidence.length > 0 && (
+              {meta && meta.evidence.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-[var(--border)]">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] block mb-2">
-                    Grounded Evidence Citations ({response.evidence.length})
+                    Grounded Evidence Citations ({meta.evidence_count})
                   </span>
+                  <p className="text-[10px] text-[var(--muted-foreground)] m-0 mb-2">
+                    Click any citation to open its source signal page and verify the evidence.
+                  </p>
                   <div className="flex flex-col gap-2">
-                    {response.evidence.map((ev, idx) => (
-                      <div
-                        key={idx}
-                        className="p-2.5 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <strong className="text-[var(--foreground)] truncate max-w-[280px]">
-                            {ev.title}
-                          </strong>
-                          <span className="text-[10px] font-mono text-[var(--signal)] uppercase">
-                            {ev.source_id}
-                          </span>
+                    {meta.evidence.map((ev, idx) => {
+                      const detailHref = `/signals/${encodeURIComponent(ev.signal_id)}`
+                      return (
+                        <div
+                          key={`${ev.signal_id}-${idx}`}
+                          className="p-2.5 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs hover:border-[var(--signal)] transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-1 gap-2">
+                            <Link
+                              href={detailHref}
+                              className="min-w-0 flex-1 group"
+                              title="Open source signal page"
+                            >
+                              <strong className="text-[var(--foreground)] truncate max-w-[280px] block group-hover:text-[var(--signal)] transition-colors">
+                                {ev.title}
+                              </strong>
+                            </Link>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              <Link
+                                href={detailHref}
+                                className="flex items-center gap-0.5 text-[10px] font-mono text-[var(--signal)] uppercase hover:underline"
+                                title="Open source signal page"
+                              >
+                                {ev.source_id}
+                                <ExternalLink size={10} />
+                              </Link>
+                              {ev.canonical_url && (
+                                <a
+                                  href={ev.canonical_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[var(--muted-foreground)] hover:text-[var(--signal)] transition-colors"
+                                  title="Open original external source"
+                                >
+                                  <ExternalLink size={11} />
+                                </a>
+                              )}
+                            </span>
+                          </div>
+                          <Link href={detailHref} title="Open source signal page">
+                            <p className="text-[11px] text-[var(--muted-foreground)] line-clamp-2 m-0 hover:text-[var(--foreground)] transition-colors">
+                              {ev.excerpt}
+                            </p>
+                          </Link>
                         </div>
-                        <p className="text-[11px] text-[var(--muted-foreground)] line-clamp-2 m-0">
-                          {ev.excerpt}
-                        </p>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

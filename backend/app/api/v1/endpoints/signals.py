@@ -1,8 +1,11 @@
+import asyncio
+import json
 import time
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional, Tuple
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, distinct, or_
 
@@ -42,6 +45,7 @@ from app.services.confluence import confluence_engine
 from app.services.embeddings import embedding_service
 from app.providers.factory import provider_factory
 from app.providers.base import ProviderCapability, DataClassification
+from app.providers.gemma import GemmaProvider, OllamaUnavailableError
 
 router = APIRouter()
 
@@ -361,6 +365,7 @@ async def get_signal_detail(signal_id: str, db: AsyncSession = Depends(get_db)):
                 Signal.fingerprint == signal_id,
                 Signal.pmid == signal_id,
                 Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
             )
         )
 
@@ -400,6 +405,7 @@ async def submit_signal_review(
                 Signal.fingerprint == signal_id,
                 Signal.pmid == signal_id,
                 Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
             )
         )
 
@@ -475,6 +481,7 @@ async def get_signal_audit_history(signal_id: str, db: AsyncSession = Depends(ge
                 Signal.fingerprint == signal_id,
                 Signal.pmid == signal_id,
                 Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
             )
         )
 
@@ -590,6 +597,7 @@ async def get_signal_decision_object(signal_id: str, db: AsyncSession = Depends(
                 Signal.fingerprint == signal_id,
                 Signal.pmid == signal_id,
                 Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
             )
         )
 
@@ -790,45 +798,41 @@ async def get_overview(db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.post("/athena", response_model=AthenaQueryResponse)
-async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(get_db)):
-    """Queries Athena intelligence synthesis layer with hybrid vector/lexical retrieval, prompt sanitization, and honest citations."""
-    trimmed = payload.prompt.strip()
-    if not trimmed:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Prompt cannot be empty."
-        )
+ATHENA_GREETINGS = {
+    "hey", "hello", "hi", "greetings", "good morning", "good evening",
+    "who are you", "what is athena", "what can you do", "help",
+}
 
-    # 1. PII / PHI scrubbing & content classification (CR-03)
-    scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
-    classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
+_ATHENA_INTRO = (
+    "Hello! I am Athena, MetaRadar's grounded clinical intelligence copilot. "
+    "I analyze competitive intelligence and clinical developments across Haemophilia A and B, "
+    "grounded strictly in indexed evidence from ClinicalTrials.gov, PubMed, FDA/EMA regulatory registries, and market news.\n\n"
+    "You can ask me questions such as:\n"
+    "• \"What are the latest clinical readout updates for Factor VIII gene therapies?\"\n"
+    "• \"Are there any contradiction alerts on concizumab safety?\"\n"
+    "• \"What regulatory target dates are expected in Q3 2026 for Haemophilia B?\"\n"
+    "• \"Summarize recent pipeline updates for mim8 and fitusiran.\""
+)
 
-    # 2. Conversational greetings & assistant introduction handling
-    greetings = {"hey", "hello", "hi", "greetings", "good morning", "good evening", "who are you", "what is athena", "what can you do", "help"}
-    clean_lower = scrubbed_prompt.lower().strip("?!., ")
-    if clean_lower in greetings or len(clean_lower) < 4:
-        return AthenaQueryResponse(
-            answer=(
-                "Hello! I am Athena, MetaRadar's grounded clinical intelligence copilot. "
-                "I analyze competitive intelligence and clinical developments across Haemophilia A and B, "
-                "grounded strictly in indexed evidence from ClinicalTrials.gov, PubMed, FDA/EMA regulatory registries, and market news.\n\n"
-                "You can ask me questions such as:\n"
-                "• \"What are the latest clinical readout updates for Factor VIII gene therapies?\"\n"
-                "• \"Are there any contradiction alerts on concizumab safety?\"\n"
-                "• \"What regulatory target dates are expected in Q3 2026 for Haemophilia B?\"\n"
-                "• \"Summarize recent pipeline updates for mim8 and fitusiran.\""
-            ),
-            confidence=100.0,
-            confidence_type="model_reasoning",
-            evidence_count=0,
-            mode="assistant_intro",
-            model_metadata=None,
-            evidence=[],
-            response_type="assistant_intro",
-        )
+_ATHENA_NO_EVIDENCE = (
+    "No sufficiently relevant evidence was found in the indexed sources to answer this question. "
+    "Please try querying specific haemophilia therapies, trial phases, or regulatory events."
+)
 
-    # 3. Real Vector Retrieval over indexed Signals / Evidence
+
+def _sse_event(event: str, data: dict) -> str:
+    """Formats a single Server-Sent Events frame."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+async def _retrieve_athena_evidence(
+    db: AsyncSession, scrubbed_prompt: str
+) -> Tuple[List[AthenaEvidenceCitation], List[str]]:
+    """Hybrid retrieval: pgvector cosine similarity first, lexical ILIKE fallback second.
+
+    Returns (citations, evidence_texts). All DB work completes before any response
+    streaming begins so the request-scoped session is never used mid-stream.
+    """
     citations: List[AthenaEvidenceCitation] = []
     evidence_texts: List[str] = []
     ATHENA_DISTANCE_THRESHOLD = 0.65  # cosine distance threshold (similarity >= 0.35)
@@ -874,11 +878,11 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
     except Exception:
         pass
 
-    # 4. Keyword / Lexical Fallback if vector search yielded 0 matches
+    # Keyword / Lexical Fallback if vector search yielded 0 matches
     if not citations:
         words = [w for w in scrubbed_prompt.split() if len(w) > 3 and w.lower() not in {"what", "when", "where", "which", "about", "latest", "there", "updates", "alerts"}]
         search_term = words[0] if words else scrubbed_prompt[:25]
-        
+
         lex_stmt = select(Signal).where(
             or_(
                 Signal.title.ilike(f"%{search_term}%"),
@@ -904,10 +908,44 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
             )
             evidence_texts.append(f"[{s.source_id}] {s.title}: {excerpt}")
 
+    return citations, evidence_texts
+
+
+@router.post("/athena", response_model=AthenaQueryResponse)
+async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(get_db)):
+    """Queries Athena intelligence synthesis layer with hybrid vector/lexical retrieval, prompt sanitization, and honest citations."""
+    trimmed = payload.prompt.strip()
+    if not trimmed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Prompt cannot be empty."
+        )
+
+    # 1. PII / PHI scrubbing & content classification (CR-03)
+    scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
+    classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
+
+    # 2. Conversational greetings & assistant introduction handling
+    clean_lower = scrubbed_prompt.lower().strip("?!., ")
+    if clean_lower in ATHENA_GREETINGS or len(clean_lower) < 4:
+        return AthenaQueryResponse(
+            answer=_ATHENA_INTRO,
+            confidence=100.0,
+            confidence_type="model_reasoning",
+            evidence_count=0,
+            mode="assistant_intro",
+            model_metadata=None,
+            evidence=[],
+            response_type="assistant_intro",
+        )
+
+    # 3+4. Real Vector Retrieval with Lexical Fallback over indexed Signals / Evidence
+    citations, evidence_texts = await _retrieve_athena_evidence(db, scrubbed_prompt)
+
     # Zero-fabrication gate: If no evidence is found, return honest failure notice
     if not evidence_texts:
         return AthenaQueryResponse(
-            answer="No sufficiently relevant evidence was found in the indexed sources to answer this question. Please try querying specific haemophilia therapies, trial phases, or regulatory events.",
+            answer=_ATHENA_NO_EVIDENCE,
             confidence=0.0,
             confidence_type="model_reasoning",
             evidence_count=0,
@@ -957,6 +995,126 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         model_metadata=model_metadata,
         evidence=citations,
         response_type="grounded_synthesis",
+    )
+
+
+@router.post("/athena/stream")
+async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = Depends(get_db)):
+    """Server-Sent Events variant of /athena.
+
+    Event contract:
+      meta   — {evidence: AthenaEvidenceCitation[], evidence_count, response_type} sent
+               before generation so citations render while text streams.
+      token  — {t: "<delta>"} progressive answer deltas.
+      degraded — {mode: "degraded_factual"} emitted when local Gemma is unavailable
+               and the provider chain (Grok -> BART) answered instead.
+      error  — {message} emitted on mid-stream failure (honest failure, no fabrication).
+      done   — {response_type, mode?} terminates the stream.
+
+    All DB work completes before token streaming begins.
+    """
+    trimmed = payload.prompt.strip()
+    if not trimmed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Prompt cannot be empty."
+        )
+
+    # 1. PII / PHI scrubbing & content classification (CR-03)
+    scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
+    classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
+
+    clean_lower = scrubbed_prompt.lower().strip("?!., ")
+    is_greeting = clean_lower in ATHENA_GREETINGS or len(clean_lower) < 4
+
+    # 2. Retrieval completes BEFORE streaming starts (request-scoped DB session safety)
+    if is_greeting:
+        citations: List[AthenaEvidenceCitation] = []
+        evidence_texts: List[str] = []
+        response_type = "assistant_intro"
+    else:
+        citations, evidence_texts = await _retrieve_athena_evidence(db, scrubbed_prompt)
+        response_type = "grounded_synthesis" if evidence_texts else "insufficient_evidence"
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        # Greeting short-circuit: intro in a single delta, zero citations
+        if is_greeting:
+            yield _sse_event("meta", {"evidence": [], "evidence_count": 0, "response_type": "assistant_intro"})
+            yield _sse_event("token", {"t": _ATHENA_INTRO})
+            yield _sse_event("done", {"response_type": "assistant_intro"})
+            return
+
+        # Zero-fabrication gate
+        if not evidence_texts:
+            yield _sse_event("meta", {"evidence": [], "evidence_count": 0, "response_type": "insufficient_evidence"})
+            yield _sse_event("token", {"t": _ATHENA_NO_EVIDENCE})
+            yield _sse_event("done", {"response_type": "insufficient_evidence"})
+            return
+
+        # Citations first — user sees the grounding evidence while tokens arrive
+        yield _sse_event(
+            "meta",
+            {
+                "evidence": [c.model_dump() for c in citations],
+                "evidence_count": len(citations),
+                "response_type": response_type,
+            },
+        )
+
+        chat_prompt = (
+            "You are Athena, a competitive intelligence analyst for a haemophilia market team. "
+            "Answer the question using ONLY the provided evidence. Cite sources inline using "
+            "their bracketed source ids exactly as provided (e.g. [PUBMED-12345]). Write concise, "
+            "factual prose (max ~200 words). Do NOT invent facts, trials, or dates. If the "
+            "evidence is insufficient to answer, say so plainly.\n\n"
+            f"Evidence:\n" + "\n".join(evidence_texts) + "\n\n"
+            f"Question: {scrubbed_prompt}\n\n"
+            "Answer:"
+        )
+
+        gemma = GemmaProvider()
+        streamed_any = False
+        try:
+            async for delta in gemma.generate_stream(chat_prompt):
+                streamed_any = True
+                yield _sse_event("token", {"t": delta})
+        except OllamaUnavailableError:
+            if streamed_any:
+                yield _sse_event(
+                    "error",
+                    {"message": "Local reasoning engine became unavailable mid-generation. The partial answer above may be incomplete."},
+                )
+                yield _sse_event("done", {"response_type": response_type})
+                return
+
+            # Honest degraded path: reuse the existing provider chain (Grok -> BART).
+            provider_res = await provider_factory.execute_task(
+                required_capability=ProviderCapability.REASON,
+                evidence=evidence_texts,
+                task=f"Analyze the following biomedical query against available evidence: {scrubbed_prompt}",
+                classification=classification,
+            )
+            answer = (
+                provider_res.get("what_changed")
+                or provider_res.get("factual_summary")
+                or "Reasoning unavailable in degraded factual mode."
+            )
+            yield _sse_event("degraded", {"mode": "degraded_factual"})
+            # Emit composed answer in small chunks so the UI still renders progressively.
+            for i in range(0, len(answer), 24):
+                yield _sse_event("token", {"t": answer[i:i + 24]})
+                await asyncio.sleep(0.01)
+
+        yield _sse_event("done", {"response_type": response_type})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
     )
 
 
