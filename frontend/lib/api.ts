@@ -52,6 +52,13 @@ export async function getSignals(
   return res.signals
 }
 
+export async function getSignal(
+  signalId: string,
+  signal?: AbortSignal
+): Promise<Signal> {
+  return fetchSignal(signalId, signal)
+}
+
 export async function getConfluences(
   limitOrSignal?: number | AbortSignal,
   signal?: AbortSignal
@@ -268,6 +275,14 @@ export async function fetchSignals(
     signals: (data.signals || []).map(mapSignal),
     total: data.total || 0,
   }
+}
+
+export async function fetchSignal(
+  signalId: string,
+  signal?: AbortSignal
+): Promise<Signal> {
+  const data = await apiFetch<any>(`/signals/${encodeURIComponent(signalId)}`, undefined, signal)
+  return mapSignal(data)
 }
 
 export async function askAthena(prompt: string, signal?: AbortSignal): Promise<AthenaResponse> {

@@ -222,6 +222,37 @@ async def list_signals(
     )
 
 
+@router.get("/signals/{signal_id}", response_model=SignalSchema)
+async def get_signal_detail(signal_id: str, db: AsyncSession = Depends(get_db)):
+    """Fetch single signal detail by signal_id (UUID), external_id, or fingerprint."""
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+    return _serialize_signal(signal)
+
+
 @router.get("/overview", response_model=OverviewResponse)
 async def get_overview(db: AsyncSession = Depends(get_db)):
     """Aggregated dashboard telemetry with real computed confluence scores and truthful health metrics."""

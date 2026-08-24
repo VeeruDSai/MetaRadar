@@ -47,6 +47,7 @@ import {
 import { SpecularButton } from '@/components/ui/SpecularButton'
 import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { useTheme } from '@/components/theme/ThemeProvider'
+import { SignalCard } from '@/components/signals/SignalCard'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
@@ -93,23 +94,30 @@ import type {
   WatchRuleSuggestion,
 } from '@/types/api'
 
-const nav = [
+const primaryNav = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/signals', label: 'Signals', icon: Activity },
+  { href: '/intelligence', label: 'Search & Athena', icon: BrainCircuit },
+]
+
+const deepNav = [
   { href: '/confluence', label: 'Confluence', icon: Zap },
   { href: '/lifecycles', label: 'Lifecycles', icon: Clock },
   { href: '/red-team', label: 'Red Team', icon: ShieldAlert },
   { href: '/missing-signals', label: 'Missing Signals', icon: Eye },
   { href: '/developments', label: 'Developments', icon: FlaskConical },
-  { href: '/intelligence', label: 'Intelligence', icon: BrainCircuit },
   { href: '/functions', label: 'Functions', icon: Network },
-  { href: '/calibrate', label: 'Calibrate', icon: Gauge },
 ]
-const secondary = [
+
+const adminNav = [
+  { href: '/calibrate', label: 'Calibrate', icon: Gauge },
   { href: '/sources', label: 'Sources & Connectors', icon: BookOpen },
   { href: '/observability', label: 'Observability & Logs', icon: Database },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
+
+const nav = [...primaryNav, ...deepNav, ...adminNav]
+const secondary = adminNav
 
 export function Badge({
   children,
@@ -232,7 +240,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span className="status-dot" /> Haemophilia / Global <ChevronRight size={14} />
         </div>
         <nav className="nav-list" aria-label="Primary navigation">
-          {links.map(({ href, label, icon: Icon }) => (
+          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 py-1 opacity-80">
+            Decision Workspace
+          </div>
+          {primaryNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
@@ -241,6 +252,36 @@ export function Shell({ children }: { children: React.ReactNode }) {
             >
               <Icon size={17} />
               <span>{label}</span>
+            </Link>
+          ))}
+
+          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
+            Deep Investigation
+          </div>
+          {deepNav.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setOpen(false)}
+              className={`nav-item ${pathname === href ? 'active' : ''}`}
+            >
+              <Icon size={15} />
+              <span className="text-xs">{label}</span>
+            </Link>
+          ))}
+
+          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
+            System & Admin
+          </div>
+          {adminNav.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setOpen(false)}
+              className={`nav-item ${pathname === href ? 'active' : ''}`}
+            >
+              <Icon size={15} />
+              <span className="text-xs">{label}</span>
             </Link>
           ))}
         </nav>
@@ -833,6 +874,7 @@ export function CacheClearModal({
 export function DashboardPage() {
   const { data, loading, error, isRefreshing, refetch } = useLiveData<DashboardOverview>(getOverview)
   const [selected, setSelected] = useState<Signal | null>(null)
+  const [overviewTab, setOverviewTab] = useState<'all' | 'critical' | 'review'>('all')
 
   if (loading && !data) return <Loading />
 
@@ -861,79 +903,140 @@ export function DashboardPage() {
     health: { api: 'healthy', lastSync: 'Live', latencyMs: 12, sourceCount: 5 },
   }
 
-  const hasSignals = overviewData.signals.length > 0
+  const prioritySignals = overviewData.signals.filter((s) => {
+    if (overviewTab === 'critical') {
+      const p = (s.priority || s.severity || '').toUpperCase()
+      return p === 'CRITICAL' || p === 'HIGH' || (s.score && s.score >= 70)
+    }
+    if (overviewTab === 'review') {
+      const st = (s.status || '').toLowerCase()
+      return st.includes('pending') || st.includes('review')
+    }
+    return true
+  })
 
   return (
     <>
       <SectionTitle
-        eyebrow="Portfolio intelligence radar"
-        title="Overview"
-        detail={isRefreshing ? 'Syncing live telemetry...' : 'A continuous decision engine across clinical trials, regulatory filings, and payer evidence.'}
+        eyebrow="Decision Intelligence Briefing"
+        title="Executive Overview"
+        detail={isRefreshing ? 'Syncing live telemetry...' : 'Evidence-grounded critical signals and decision alerts across the haemophilia landscape.'}
       />
 
-      <div className="kpi-grid">
+      {/* 1. Decision Context KPIs */}
+      <div className="kpi-grid mb-6">
         <KPI
-          label="Active signals"
+          label="Active Signals"
           value={overviewData.active_signals ?? 0}
           change={overviewData.weekly_change || '0%'}
           accent={(overviewData.active_signals ?? 0) > 0 ? 'text-emerald' : 'muted'}
         />
         <KPI
-          label="Monitored assets"
+          label="Monitored Assets"
           value={overviewData.monitored_assets ?? 0}
-          change={(overviewData.monitored_assets ?? 0) > 0 ? 'active' : 'idle'}
+          change={(overviewData.monitored_assets ?? 0) > 0 ? 'Active' : 'Idle'}
           accent="text-emerald"
         />
         <KPI
-          label="Confluences detected"
+          label="Confluences Detected"
           value={overviewData.confluences_detected ?? 0}
-          change={(overviewData.confluences_detected ?? 0) > 0 ? 'high confidence' : 'none'}
+          change={(overviewData.confluences_detected ?? 0) > 0 ? 'High Confidence' : 'None'}
         />
         <KPI
-          label="Live sources"
+          label="Live Sources"
           value={overviewData.health.sourceCount}
-          change={overviewData.health.sourceCount > 0 ? 'online' : '—'}
+          change={overviewData.health.sourceCount > 0 ? 'Online' : '—'}
         />
       </div>
 
-      <div className="bento-grid">
-        <Card className="signals-panel priority-intelligence">
-          <div className="card-heading">
-            <div>
-              <p className="eyebrow">Priority intelligence</p>
-              <h2>Signals requiring attention</h2>
-              <p className="muted panel-subtitle">
-                Independent evidence converging on the next decision.
-              </p>
+      {/* 2. Priority Signals: What Deserves Attention Right Now */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-base font-bold text-[var(--foreground)] m-0 flex items-center gap-2">
+              <Activity size={18} className="text-[var(--primary)]" />
+              <span>What Deserves Attention Right Now</span>
+            </h2>
+            <p className="text-xs text-[var(--muted-foreground)] m-0">
+              Ranked decision cards prioritizing critical therapeutic inflections and pending stakeholder reviews.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] text-xs">
+              <button
+                type="button"
+                onClick={() => setOverviewTab('all')}
+                className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                  overviewTab === 'all'
+                    ? 'bg-[var(--surface)] text-[var(--foreground)] shadow-xs'
+                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                Top Priority
+              </button>
+              <button
+                type="button"
+                onClick={() => setOverviewTab('critical')}
+                className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                  overviewTab === 'critical'
+                    ? 'bg-[var(--surface)] text-[var(--priority-critical)] shadow-xs'
+                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                Critical & High
+              </button>
+              <button
+                type="button"
+                onClick={() => setOverviewTab('review')}
+                className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                  overviewTab === 'review'
+                    ? 'bg-[var(--surface)] text-[var(--foreground)] shadow-xs'
+                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                Pending Review
+              </button>
             </div>
-            <Link href="/signals" className="text-link">
-              View all <ChevronRight size={15} />
+
+            <Link
+              href="/signals"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--primary)] hover:underline ml-2"
+            >
+              <span>View all signals</span>
+              <ChevronRight size={14} />
             </Link>
           </div>
-          {hasSignals ? (
-            <div className="signal-list">
-              {overviewData.signals.slice(0, 3).map((signal) => (
-                <SignalRow
-                  key={signal.id}
-                  signal={signal}
-                  onSelect={setSelected}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <Activity size={24} />
-              <p>No signals detected yet</p>
-              <span>Ingest signals via backend connectors or trigger the LangGraph pipeline.</span>
-            </div>
-          )}
-        </Card>
+        </div>
 
+        {prioritySignals.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {prioritySignals.slice(0, 4).map((signal) => (
+              <SignalCard
+                key={signal.id}
+                signal={signal}
+                onSelect={(sig) => setSelected(sig)}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card className="empty-state">
+            <Activity size={28} />
+            <p className="font-semibold text-sm">No signals requiring immediate attention</p>
+            <span className="text-xs text-[var(--muted-foreground)]">
+              All signals have been reviewed. Ingest new public data or check the full Signals workspace.
+            </span>
+          </Card>
+        )}
+      </div>
+
+      {/* 3. Supporting Analytical Intelligence Bento Grid */}
+      <div className="bento-grid">
         <Card className="radar-panel">
           <div className="card-heading">
             <div>
               <p className="eyebrow">Cross-source alignment</p>
-              <h2>Confluence index</h2>
+              <h2>Confluence Index</h2>
               <p className="muted confluence-explainer">
                 Independent signals pointing to the same development.
               </p>
@@ -970,8 +1073,8 @@ export function DashboardPage() {
         <Card className="trend-panel">
           <div className="card-heading">
             <div>
-              <p className="eyebrow">Signal velocity</p>
-              <h2>Portfolio momentum</h2>
+              <p className="eyebrow">Signal Velocity</p>
+              <h2>Portfolio Momentum</h2>
             </div>
             <Badge tone="high">Live</Badge>
           </div>
@@ -981,22 +1084,25 @@ export function DashboardPage() {
         <Card className="questions-panel">
           <div className="card-heading">
             <div>
-              <p className="eyebrow">Decision frame</p>
-              <h2>Four questions</h2>
+              <p className="eyebrow">Decision Framework</p>
+              <h2>Four Strategic Inquiries</h2>
             </div>
             <Link href="/intelligence" className="icon-link">
               <ChevronRight size={17} />
             </Link>
           </div>
           {[
-            'What changed?',
-            'Why does it matter?',
-            'Who is affected?',
-            'What should we do?',
-          ].map((q, i) => (
-            <Link href="/intelligence" className="question-row" key={q}>
+            { q: 'What changed?', sub: 'Evidence-grounded factual developments' },
+            { q: 'Why does it matter?', sub: 'Clinical & strategic significance' },
+            { q: 'Who is affected?', sub: 'Functional routing & leadership escalation' },
+            { q: 'What should we do?', sub: 'Actionable operational recommendations' },
+          ].map((item, i) => (
+            <Link href="/intelligence" className="question-row" key={item.q}>
               <span>Q{i + 1}</span>
-              <strong>{q}</strong>
+              <div>
+                <strong>{item.q}</strong>
+                <small className="block text-[10px] text-[var(--muted-foreground)]">{item.sub}</small>
+              </div>
               <ChevronRight size={15} />
             </Link>
           ))}

@@ -260,6 +260,49 @@
         }
       }
     },
+    "/api/v1/signals/{signal_id}": {
+      "get": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Get Signal Detail",
+        "description": "Fetch single signal detail by signal_id (UUID), external_id, or fingerprint.",
+        "operationId": "get_signal_detail_api_v1_signals__signal_id__get",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/overview": {
       "get": {
         "tags": [
@@ -288,7 +331,7 @@
           "Signals & Intelligence"
         ],
         "summary": "Query Athena",
-        "description": "Queries Athena intelligence synthesis layer with real pgvector retrieval, prompt sanitization, and honest citations.",
+        "description": "Queries Athena intelligence synthesis layer with hybrid vector/lexical retrieval, prompt sanitization, and honest citations.",
         "operationId": "query_athena_api_v1_athena_post",
         "requestBody": {
           "content": {
