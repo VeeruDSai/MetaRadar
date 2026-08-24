@@ -1840,9 +1840,15 @@ export function IntelligencePage() {
 
         <Card className="answer-card">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="thinking">
-                <i /><i /><i />
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+              <div className="flex items-center gap-2 text-[15px] font-semibold text-[var(--foreground)]">
+                <BrainCircuit size={18} className="text-[var(--signal)] animate-pulse" />
+                <span>Athena thinking</span>
+                <span className="inline-flex gap-1 items-center ml-0.5">
+                  <i className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] animate-bounce [animation-delay:-0.3s]" />
+                  <i className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] animate-bounce [animation-delay:-0.15s]" />
+                  <i className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] animate-bounce" />
+                </span>
               </div>
               <span className="text-xs text-[var(--muted-foreground)]">
                 Synthesizing grounded answer across indexed vector embeddings...

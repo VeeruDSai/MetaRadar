@@ -116,15 +116,17 @@ export function AthenaWorkspace() {
 
         <Card className="answer-card flex flex-col justify-between">
           {loading ? (
-            <div className="flex flex-col items-center justify-center min-h-[380px] gap-4">
-              <GlowingThinkingButton
-                label="Synthesizing..."
-                loadingLabel="Gemma Reasoning..."
-                loading={true}
-                width={160}
-                height={46}
-              />
-              <p className="text-xs text-[var(--muted-foreground)] animate-pulse m-0">
+            <div className="flex flex-col items-center justify-center min-h-[380px] gap-3 text-center">
+              <div className="flex items-center gap-2 text-[15px] font-semibold text-[var(--foreground)]">
+                <BrainCircuit size={18} className="text-[var(--signal)] animate-pulse" />
+                <span>Athena thinking</span>
+                <span className="inline-flex gap-1 items-center ml-0.5">
+                  <i className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] animate-bounce [animation-delay:-0.3s]" />
+                  <i className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] animate-bounce [animation-delay:-0.15s]" />
+                  <i className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] animate-bounce" />
+                </span>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)] m-0">
                 Searching vector index and evaluating source grounded evidence...
               </p>
             </div>
