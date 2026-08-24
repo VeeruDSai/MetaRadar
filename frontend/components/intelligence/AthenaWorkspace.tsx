@@ -7,7 +7,7 @@ import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
 import { BrainCircuit, ChevronRight, Sparkles } from 'lucide-react'
-import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
+import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { useTheme } from '@/components/theme/ThemeProvider'
 
 export function AthenaWorkspace() {
@@ -84,17 +84,15 @@ export function AthenaWorkspace() {
                 if (e.key === 'Enter') handleQuery()
               }}
             />
-            <ShaderButtons
-              variant="thinking-button"
-              mode={isDark ? 'dark' : 'light'}
+            <GlowingThinkingButton
+              label="Ask Athena"
+              loadingLabel="Thinking..."
               loading={loading}
               disabled={!prompt.trim() || loading}
               onClick={() => handleQuery()}
-              style={{ minWidth: 125, height: 38 }}
-            >
-              <Sparkles size={14} className={loading ? 'animate-spin' : ''} />
-              <span>{loading ? 'Thinking...' : 'Ask Athena'}</span>
-            </ShaderButtons>
+              width={140}
+              height={38}
+            />
           </div>
         </Card>
 

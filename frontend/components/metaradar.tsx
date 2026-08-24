@@ -49,7 +49,7 @@ import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { SignalCard } from '@/components/signals/SignalCard'
 import Counter from '@/components/ui/Counter'
-import { ShaderButtons } from '@/components/effects/star-portal/ShaderButtons'
+import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
@@ -1812,17 +1812,15 @@ export function IntelligencePage() {
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAsk(prompt); }}
             />
-            <ShaderButtons
-              variant="thinking-button"
-              mode={isDark ? 'dark' : 'light'}
+            <GlowingThinkingButton
+              label="Ask Athena"
+              loadingLabel="Thinking..."
               loading={loading}
               disabled={!prompt.trim() || loading}
               onClick={() => handleAsk(prompt)}
-              style={{ minWidth: 125, height: 38 }}
-            >
-              <Sparkles size={14} className={loading ? 'animate-spin' : ''} />
-              <span>{loading ? 'Thinking...' : 'Ask Athena'}</span>
-            </ShaderButtons>
+              width={140}
+              height={38}
+            />
           </div>
         </Card>
 

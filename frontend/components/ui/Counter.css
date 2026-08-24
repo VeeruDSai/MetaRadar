@@ -1,26 +1,25 @@
 /* React Bits Counter Styling */
 .counter-container {
   position: relative;
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
   user-select: none;
+  vertical-align: middle;
 }
 
 .counter-counter {
-  display: inline-flex;
+  display: flex;
   overflow: hidden;
   line-height: 1;
-  font-feature-settings: 'tnum';
-  font-variant-numeric: tabular-nums;
+  align-items: center;
 }
 
 .counter-digit {
   position: relative;
-  width: 0.65ch;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
+  width: 1ch;
   font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .counter-number {
@@ -47,19 +46,11 @@
 .top-gradient {
   position: absolute;
   top: 0;
-  left: 0;
   width: 100%;
 }
 
 .bottom-gradient {
   position: absolute;
   bottom: 0;
-  left: 0;
   width: 100%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .counter-number {
-    transition: none !important;
-  }
 }

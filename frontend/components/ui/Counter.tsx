@@ -4,6 +4,8 @@ import React, { useEffect } from 'react'
 import { motion, useSpring, useTransform, type MotionValue } from 'framer-motion'
 import './Counter.css'
 
+export type PlaceValue = number | '.'
+
 interface NumberProps {
   mv: MotionValue<number>
   number: number
@@ -13,7 +15,7 @@ interface NumberProps {
 function NumberDigit({ mv, number, height }: NumberProps) {
   const y = useTransform(mv, (latest: number) => {
     const placeValue = latest % 10
-    let offset = (10 + number - placeValue) % 10
+    const offset = (10 + number - placeValue) % 10
     let memo = offset * height
     if (offset > 5) {
       memo -= 10 * height
@@ -40,34 +42,32 @@ function getValueRoundedToPlace(value: number, place: number): number {
 }
 
 interface DigitProps {
-  place: number | string
+  place: PlaceValue
   value: number
   height: number
   digitStyle?: React.CSSProperties
 }
 
 function Digit({ place, value, height, digitStyle }: DigitProps) {
-  const isDecimal = place === '.'
-  const valueRoundedToPlace = isDecimal ? 0 : getValueRoundedToPlace(value, Number(place))
-  const animatedValue = useSpring(valueRoundedToPlace, {
-    stiffness: 120,
-    damping: 20,
-    mass: 0.8,
-  })
-
-  useEffect(() => {
-    if (!isDecimal) {
-      animatedValue.set(valueRoundedToPlace)
-    }
-  }, [animatedValue, valueRoundedToPlace, isDecimal])
-
-  if (isDecimal) {
+  if (place === '.') {
     return (
       <span className="counter-digit" style={{ height, ...digitStyle, width: 'fit-content' }}>
         .
       </span>
     )
   }
+
+  const valueRoundedToPlace = getValueRoundedToPlace(value, Number(place))
+  // Initialize at 0 so it visibly springs/rolls to the target value on mount and updates
+  const animatedValue = useSpring(0, {
+    stiffness: 85,
+    damping: 14,
+    mass: 0.5,
+  })
+
+  useEffect(() => {
+    animatedValue.set(valueRoundedToPlace)
+  }, [animatedValue, valueRoundedToPlace])
 
   return (
     <span className="counter-digit" style={{ height, ...digitStyle }}>
@@ -82,7 +82,7 @@ export interface CounterProps {
   value: number
   fontSize?: number
   padding?: number
-  places?: (number | string)[]
+  places?: PlaceValue[]
   gap?: number
   borderRadius?: number
   horizontalPadding?: number
@@ -96,9 +96,9 @@ export interface CounterProps {
   gradientTo?: string
   topGradientStyle?: React.CSSProperties
   bottomGradientStyle?: React.CSSProperties
-  className?: string
-  accessibleLabel?: string
   digitPlaceHolders?: boolean
+  accessibleLabel?: string
+  className?: string
 }
 
 export default function Counter({
@@ -119,20 +119,26 @@ export default function Counter({
   gradientTo = 'transparent',
   topGradientStyle,
   bottomGradientStyle,
-  className = '',
-  accessibleLabel,
   digitPlaceHolders = false,
+  accessibleLabel,
+  className = '',
 }: CounterProps) {
   const numValue = typeof value === 'number' && !isNaN(value) ? Math.max(0, value) : 0
   const height = fontSize + padding
 
-  const computedPlaces = React.useMemo(() => {
+  const computedPlaces: PlaceValue[] = React.useMemo(() => {
     if (places && places.length > 0) return places
     if (digitPlaceHolders) {
       return [100, 10, 1]
     }
-    const str = Math.round(numValue).toString()
-    return Array.from(str).map((_, i, a) => 10 ** (a.length - i - 1))
+    const valStr = numValue.toString()
+    return Array.from(valStr).map((ch, i, a) => {
+      if (ch === '.') return '.'
+      const dotIndex = a.indexOf('.')
+      const isInteger = dotIndex === -1
+      const exponent = isInteger ? a.length - i - 1 : i < dotIndex ? dotIndex - i - 1 : -(i - dotIndex)
+      return 10 ** exponent
+    })
   }, [places, numValue, digitPlaceHolders])
 
   const defaultCounterStyle: React.CSSProperties = {
@@ -157,7 +163,7 @@ export default function Counter({
   }
 
   return (
-    <span className={`counter-container ${className}`} style={containerStyle} aria-hidden="true">
+    <span className={`counter-container ${className}`} style={containerStyle}>
       <span className="counter-counter" style={{ ...defaultCounterStyle, ...counterStyle }}>
         {computedPlaces.map((place, idx) => (
           <Digit
@@ -170,8 +176,8 @@ export default function Counter({
         ))}
       </span>
       <span className="gradient-container">
-        <span className="top-gradient" style={topGradientStyle || defaultTopGradientStyle} />
-        <span className="bottom-gradient" style={bottomGradientStyle || defaultBottomGradientStyle} />
+        <span className="top-gradient" style={topGradientStyle ?? defaultTopGradientStyle} />
+        <span className="bottom-gradient" style={bottomGradientStyle ?? defaultBottomGradientStyle} />
       </span>
       {accessibleLabel && <span className="sr-only">{accessibleLabel}</span>}
     </span>
