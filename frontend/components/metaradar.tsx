@@ -552,11 +552,27 @@ function KPI({
   change: string
   accent?: string
 }) {
+  const isNumeric = typeof value === 'number'
+
   return (
     <Card className="kpi">
       <p className="eyebrow">{label}</p>
       <div className="kpi-value">
-        <strong>{value}</strong>
+        <strong>
+          {isNumeric ? (
+            <Counter
+              value={value}
+              fontSize={38}
+              fontWeight={800}
+              gap={0}
+              horizontalPadding={0}
+              textColor="var(--foreground)"
+              accessibleLabel={`${label} ${value}`}
+            />
+          ) : (
+            value
+          )}
+        </strong>
         <span className={accent ?? 'positive'}>{change}</span>
       </div>
       <div className="micro-bars">

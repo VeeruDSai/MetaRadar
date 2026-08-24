@@ -1,4 +1,4 @@
-/* React Bits Counter Styling */
+/* React Bits Animated Counter Styling */
 .counter-container {
   position: relative;
   display: inline-flex;
@@ -19,8 +19,8 @@
 
 .counter-digit {
   position: relative;
-  width: 0.65em;
-  min-width: 0.65em;
+  width: 0.58em;
+  min-width: 0.58em;
   font-variant-numeric: tabular-nums;
   display: inline-flex;
   align-items: center;
