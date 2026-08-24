@@ -218,3 +218,47 @@ def test_grok_generate_summary_blocked_by_privacy_gate(monkeypatch):
 
     with pytest.raises(PermissionError):
         asyncio.run(grok.generate_summary("Patient record user@site.com"))
+
+
+# ---------------------------------------------------------------------------
+# Hybrid Keyword & Identifier Search
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_hybrid_search_exact_id_match(monkeypatch):
+    from app.services.vector_query import vector_query_service
+    from app.models import Signal
+    from unittest.mock import AsyncMock, MagicMock
+    import uuid
+
+    mock_signal = Signal(
+        signal_id=uuid.uuid4(),
+        external_id="EMA-CHMP-2026-04",
+        regulatory_id="EMA-CHMP-2026-04",
+        title="EMA CHMP 5-Year Safety Review",
+        content="Positive benefit-risk profile confirmed.",
+        signal_type="SAFETY",
+        disease="haemophilia_a",
+        priority="HIGH",
+    )
+
+    mock_db = AsyncMock()
+    mock_res_kw = MagicMock()
+    mock_res_kw.scalars.return_value.all.return_value = [mock_signal]
+
+    mock_res_vec = MagicMock()
+    mock_res_vec.all.return_value = []
+
+    mock_db.execute.side_effect = [mock_res_kw, MagicMock(), mock_res_vec]
+
+    monkeypatch.setattr("app.services.vector_query.embedding_service.embed_text", AsyncMock(return_value=[0.1]*384))
+
+    results = await vector_query_service.search(
+        db=mock_db,
+        query_text="EMA-CHMP-2026-04",
+        top_k=5,
+    )
+
+    assert len(results) >= 1
+    assert results[0].title == "EMA CHMP 5-Year Safety Review"
+    assert results[0].similarity_score == 1.0
