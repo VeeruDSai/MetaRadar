@@ -58,10 +58,10 @@
   --panel: var(--surface);
   --panel-elevated: var(--surface-elevated);
   --radius: 0.72rem;
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(71, 85, 105, 0.28);
+  --scrollbar-track: color-mix(in srgb, var(--background-secondary) 70%, transparent);
+  --scrollbar-thumb: #a8b8c8;
   --scrollbar-thumb-hover: #2563c7;
-  --scrollbar-thumb-border: rgba(255, 255, 255, 0.4);
+  --scrollbar-thumb-border: #f1f5f9;
 }
 
 .dark {
@@ -90,10 +90,10 @@
   --signal-soft: #123b3b;
   --panel: var(--surface);
   --panel-elevated: var(--surface-elevated);
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(148, 163, 184, 0.28);
+  --scrollbar-track: color-mix(in srgb, var(--background-secondary) 70%, transparent);
+  --scrollbar-thumb: #43546a;
   --scrollbar-thumb-hover: #6366f1;
-  --scrollbar-thumb-border: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-border: #0b1220;
 }
 
 /* Custom Scrollbars — Universal cross-browser support (Light & Dark) */
@@ -104,45 +104,77 @@ html {
 
 * {
   box-sizing: border-box;
-  scrollbar-width: thin;
+  scrollbar-width: auto;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* WebKit / Blink Sleek Rectangular Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
+  border-radius: 0 !important;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 2px;
-  border: 1.5px solid transparent;
-  background-clip: padding-box;
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  border: 2px solid var(--scrollbar-thumb-border);
+  background-clip: border-box;
   transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
-  border-radius: 2px;
-  border: 1px solid var(--scrollbar-thumb-border);
-  background-clip: padding-box;
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  border: 2px solid var(--scrollbar-thumb-border);
+  background-clip: border-box;
   box-shadow: 0 0 8px color-mix(in srgb, var(--scrollbar-thumb-hover) 40%, transparent);
 }
 
 ::-webkit-scrollbar-thumb:active {
   background: var(--primary);
-  border-radius: 2px;
-  border: 1px solid var(--scrollbar-thumb-border);
-  background-clip: padding-box;
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  border: 2px solid var(--scrollbar-thumb-border);
+  background-clip: border-box;
 }
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Scroll reveal: cards and content blocks ease in as they enter the viewport. */
+.scroll-reveal {
+  opacity: 0;
+  transform: scale(0.7);
+  transform-origin: center center;
+  transition: opacity 200ms ease, transform 200ms ease;
+  will-change: opacity, transform;
+}
+
+.scroll-reveal-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.scroll-reveal-no-animation {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal,
+  .scroll-reveal-visible,
+  .scroll-reveal-no-animation {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 body {
   margin: 0;
@@ -457,6 +489,10 @@ a { color: inherit; text-decoration: none; }
 /* Phase 6 Doc-to-UI Mapping & Feature Synchronization Styles */
 .confluence-tint { background: linear-gradient(135deg, color-mix(in srgb, #bd7b19 8%, var(--surface)), var(--surface) 60%); }
 .lifecycle-tint { background: linear-gradient(135deg, color-mix(in srgb, #2563c7 8%, var(--surface)), var(--surface) 60%); }
+.lifecycle-stepper-list { display: grid; gap: 14px; }
+.lifecycle-stepper-card { padding: 16px; border: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 88%, var(--signal)); border-radius: var(--radius-md); }
+.lifecycle-stepper-card .stepper-body { background: var(--surface-secondary); }
+.lifecycle-stepper-card .stepper-header { padding-bottom: 2px; }
 .redteam-tint { background: linear-gradient(135deg, color-mix(in srgb, #c84d59 8%, var(--surface)), var(--surface) 60%); }
 .missingsignal-tint { background: linear-gradient(135deg, color-mix(in srgb, #159a9c 8%, var(--surface)), var(--surface) 60%); }
 

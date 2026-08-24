@@ -46,7 +46,8 @@ export default function SignalDetailPage() {
                 s.external_id === signalId ||
                 s.fingerprint === signalId ||
                 s.pmid === signalId ||
-                s.nct_id === signalId
+                s.nct_id === signalId ||
+                s.regulatory_id === signalId
             ) || null
         }
 

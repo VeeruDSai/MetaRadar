@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react'
 import './Stepper.css'
 
@@ -44,11 +44,13 @@ export default function Stepper({
   ) as React.ReactElement<StepProps>[]
 
   const [internalStep, setInternalStep] = useState(initialStep)
+  const [direction, setDirection] = useState(0)
   const activeStep = controlledStep !== undefined ? controlledStep : internalStep
   const totalSteps = steps.length
 
   const handleStepClick = (stepIndex: number) => {
     const nextVal = stepIndex + 1
+    setDirection(nextVal >= activeStep ? 1 : -1)
     if (controlledStep === undefined) {
       setInternalStep(nextVal)
     }
@@ -61,6 +63,7 @@ export default function Stepper({
   const handlePrev = () => {
     if (activeStep > 1) {
       const nextVal = activeStep - 1
+      setDirection(-1)
       if (controlledStep === undefined) setInternalStep(nextVal)
       onStepChange?.(nextVal)
     }
@@ -69,6 +72,7 @@ export default function Stepper({
   const handleNext = () => {
     if (activeStep < totalSteps) {
       const nextVal = activeStep + 1
+      setDirection(1)
       if (controlledStep === undefined) setInternalStep(nextVal)
       onStepChange?.(nextVal)
       if (nextVal === totalSteps) {
@@ -131,13 +135,15 @@ export default function Stepper({
 
       {/* Active Step Content */}
       <div className="stepper-body">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync" custom={direction} initial={false}>
           <motion.div
             key={activeStep}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
+            custom={direction}
+            variants={stepContentVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
             className="stepper-content-panel"
             role="tabpanel"
           >
@@ -171,4 +177,16 @@ export default function Stepper({
       )}
     </div>
   )
+}
+
+const stepContentVariants: Variants = {
+  enter: (direction: number) => ({
+    x: direction >= 0 ? '-100%' : '100%',
+    opacity: 0,
+  }),
+  center: { x: '0%', opacity: 1 },
+  exit: (direction: number) => ({
+    x: direction >= 0 ? '50%' : '-50%',
+    opacity: 0,
+  }),
 }

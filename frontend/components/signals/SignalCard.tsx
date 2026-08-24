@@ -183,6 +183,7 @@ export function SignalCard({
   return (
     <article
       onClick={handleCardClick}
+      data-scroll-reveal="signal"
       className={`group relative flex flex-col justify-between p-4.5 rounded-[var(--radius-lg,12px)] bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-selected)] transition-all duration-200 hover:shadow-md cursor-pointer ${className}`}
     >
       {/* 1. Header: Priority, Score Counter, Timestamp, Truthfulness */}

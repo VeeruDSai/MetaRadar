@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import type { DevelopmentSummary } from '@/types/api'
 import { fetchDevelopments } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { FlaskConical, RefreshCw } from 'lucide-react'
+import { FlaskConical, RefreshCw, ChevronRight, Zap } from 'lucide-react'
 
 export function DevelopmentsWorkspace() {
   const [developments, setDevelopments] = useState<DevelopmentSummary[]>([])
@@ -114,7 +115,7 @@ export function DevelopmentsWorkspace() {
       {!loading && !error && developments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {developments.map((d) => (
-            <Card key={d.development_id} className="flex flex-col justify-between">
+            <Card key={d.development_id} className="flex flex-col justify-between hover:border-[var(--signal)] transition-colors group">
               <div>
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -125,14 +126,32 @@ export function DevelopmentsWorkspace() {
                   </div>
                   <Badge tone="neutral">{d.signal_count} signals</Badge>
                 </div>
-                <h3 className="text-base font-semibold text-[var(--foreground)] m-0 mb-1">
+                <h3 className="text-base font-semibold text-[var(--foreground)] m-0 mb-1 group-hover:text-[var(--signal)] transition-colors">
                   {d.title}
                 </h3>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)] mt-3">
-                <div>Asset: <strong className="text-[var(--foreground)]">{d.asset_name || 'Investigational'}</strong></div>
-                <div>Sponsor: <strong className="text-[var(--foreground)]">{d.company_name || 'Competitor'}</strong></div>
+              <div className="pt-3 border-t border-[var(--border)] mt-3">
+                <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mb-2">
+                  <div>Asset: <strong className="text-[var(--foreground)]">{d.asset_name || 'Investigational'}</strong></div>
+                  <div>Sponsor: <strong className="text-[var(--foreground)]">{d.company_name || 'Competitor'}</strong></div>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border)] border-dashed text-[11px]">
+                  <Link
+                    href={`/confluence`}
+                    className="inline-flex items-center gap-1 text-[var(--signal)] hover:underline font-medium"
+                  >
+                    <Zap size={12} />
+                    <span>Confluence Intelligence</span>
+                  </Link>
+                  <Link
+                    href={`/signals`}
+                    className="inline-flex items-center gap-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                  >
+                    <span>View Evidence Stream</span>
+                    <ChevronRight size={12} />
+                  </Link>
+                </div>
               </div>
             </Card>
           ))}

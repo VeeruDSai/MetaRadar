@@ -16,6 +16,7 @@ import {
   Clock,
   Compass,
   Database,
+  ExternalLink,
   Eye,
   FileText,
   Filter,
@@ -51,6 +52,7 @@ import { SignalCard } from '@/components/signals/SignalCard'
 import Counter from '@/components/ui/Counter'
 import AnimatedCounter from '@/components/ui/AnimatedCounter'
 import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
+import Stepper, { Step } from '@/components/ui/Stepper'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   askAthena,
@@ -485,7 +487,7 @@ export function SearchModal({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search signals by concept, drug, mechanism..."
+            placeholder="Search signals by ID, drug, mechanism, or concepts (e.g. EMA-CHMP-2026-04, NCT04869267, Mim8)..."
           />
           <kbd>ESC</kbd>
         </div>
@@ -493,7 +495,7 @@ export function SearchModal({
           {loading && (
             <div className="search-empty">
               <Activity size={18} className="animate-spin text-signal" />
-              <p>Searching 384-dim semantic index...</p>
+              <p>Searching 384-dim semantic index & identifiers...</p>
             </div>
           )}
           {searchError && (
@@ -507,17 +509,19 @@ export function SearchModal({
               return (
                 <button
                   key={r.signal_id}
-                  className="search-item"
+                  className="search-item text-left w-full"
                   onClick={() => onSelectSignal(mapSearchResult(r))}
                 >
-                  <div className="search-item-top">
-                    <strong>{r.title}</strong>
+                  <div className="search-item-top flex items-start justify-between gap-2">
+                    <strong className="text-sm text-[var(--foreground)]">{r.title}</strong>
                     <Badge tone={scorePct >= 80 ? 'high' : 'neutral'}>
-                      {scorePct}% match
+                      {scorePct >= 99 ? 'Exact Match' : `${scorePct}% match`}
                     </Badge>
                   </div>
-                  <p>{r.content}</p>
-                  <div className="search-item-meta">
+                  <p className="text-xs text-[var(--muted-foreground)] line-clamp-2 my-1">{r.content}</p>
+                  <div className="search-item-meta text-[11px] font-mono text-[var(--muted-foreground)] flex items-center gap-2">
+                    <span className="text-[var(--signal)] font-semibold">{r.signal_id.slice(0, 8)}...</span>
+                    <span>·</span>
                     <span>{r.disease}</span>
                     <span>·</span>
                     <span>{r.signal_type}</span>
@@ -533,7 +537,7 @@ export function SearchModal({
           )}
           {!query.trim() && (
             <div className="search-empty">
-              <p>Type keywords to perform semantic vector search across all ingested signals.</p>
+              <p>Type keywords or signal IDs (e.g. EMA-CHMP-2026-04, 38291023, NCT04869267, Mim8) to search.</p>
             </div>
           )}
         </div>
@@ -1284,6 +1288,17 @@ export function LifecyclePage() {
     30000
   )
   const items: LifecycleTimelineItem[] = lifecycles || []
+  const lifecycleGroups = useMemo(() => {
+    const groups = new Map<string, LifecycleTimelineItem[]>()
+    items.forEach((event) => {
+      const group = groups.get(event.development_id) || []
+      group.push(event)
+      groups.set(event.development_id, group)
+    })
+    return Array.from(groups.values()).map((events) =>
+      events.sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+    )
+  }, [items])
 
   return (
     <>
@@ -1307,6 +1322,33 @@ export function LifecyclePage() {
             <p>Loading lifecycle timelines...</p>
           </div>
         ) : items.length > 0 ? (
+          <>
+          <div className="lifecycle-stepper-list">
+            {lifecycleGroups.map((events) => {
+              const first = events[0]
+              return (
+                <div key={`stepper-${first.development_id}`} className="lifecycle-stepper-card">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <strong className="text-sm text-[var(--foreground)]">{first.development_title}</strong>
+                      <p className="text-xs text-[var(--muted-foreground)] mt-1">{first.asset_name || 'Investigational Asset'} · {first.disease}</p>
+                    </div>
+                    <Badge tone="high">{events.length} milestones</Badge>
+                  </div>
+                  <Stepper initialStep={events.length} showNavigationControls={false}>
+                    {events.map((event) => (
+                      <Step key={event.lifecycle_id} title={event.stage} subtitle={new Date(event.event_date).toLocaleDateString()}>
+                        <div className="text-xs">
+                          <p className="font-semibold text-[var(--foreground)] mb-1">{event.stage}</p>
+                          <p className="text-[var(--muted-foreground)] m-0">{event.notes || 'Lifecycle milestone recorded by the transition engine.'}</p>
+                        </div>
+                      </Step>
+                    ))}
+                  </Stepper>
+                </div>
+              )
+            })}
+          </div>
           <div className="timeline-track">
             {items.map((event) => (
               <div key={event.lifecycle_id} className="timeline-node">
@@ -1328,6 +1370,7 @@ export function LifecyclePage() {
               </div>
             ))}
           </div>
+          </>
         ) : (
           <div className="empty-state">
             <Clock size={24} />
@@ -1977,7 +2020,17 @@ export function SignalDrawer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="drawer-top">
-          <Badge tone={signal.severity}>{signal.severity}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge tone={signal.severity}>{signal.severity}</Badge>
+            <Link
+              href={`/signals/${encodeURIComponent(signal.signal_id || signal.id || '')}`}
+              className="text-xs text-[var(--signal)] hover:underline inline-flex items-center gap-1 font-medium ml-2"
+              onClick={onClose}
+            >
+              <span>Full Decision Workspace</span>
+              <ExternalLink size={12} />
+            </Link>
+          </div>
           <button className="icon-button" onClick={onClose} aria-label="Close drawer">
             <X size={18} />
           </button>

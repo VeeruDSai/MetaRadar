@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import { ScrollReveal } from '@/components/common/ScrollReveal'
 
 export const metadata: Metadata = {
   title: 'MetaRadar — Decision intelligence',
@@ -48,6 +49,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-background text-foreground min-h-screen">
         <ThemeProvider>
+          <ScrollReveal />
           {children}
         </ThemeProvider>
       </body>

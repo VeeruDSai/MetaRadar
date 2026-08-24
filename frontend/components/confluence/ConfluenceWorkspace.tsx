@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import type { ConfluenceAlertItem, ConfluenceInspectResponse } from '@/types/api'
 import { fetchConfluenceAlerts, inspectConfluence } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
@@ -292,18 +293,24 @@ export function ConfluenceWorkspace() {
 
                       <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] font-mono pt-1">
                         <span>{src.published_at ? `Published: ${src.published_at.slice(0, 10)}` : ''}</span>
-                        {src.source_url && !src.source_url.includes('metaradar.internal') ? (
-                          <a
-                            href={src.source_url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="text-link"
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/signals/${encodeURIComponent(src.external_id)}`}
+                            className="text-[var(--signal)] hover:underline font-semibold"
                           >
-                            Open Original Source ↗
-                          </a>
-                        ) : (
-                          <span className="text-[11px] text-[var(--muted-foreground)]">SYNTHETIC BENCHMARK FIXTURE</span>
-                        )}
+                            Inspect Signal Detail →
+                          </Link>
+                          {src.source_url && !src.source_url.includes('metaradar.internal') && (
+                            <a
+                              href={src.source_url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="text-link"
+                            >
+                              Source ↗
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
