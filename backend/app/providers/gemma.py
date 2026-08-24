@@ -8,9 +8,12 @@ Never-crash contract (D-12): Any failure raises OllamaUnavailableError so Provid
 safely falls through to Grok -> BART degraded mode without crashing.
 """
 
+import asyncio
 import json
 import logging
 import os
+import queue
+import threading
 import time
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
@@ -84,8 +87,11 @@ class GemmaProvider(LLMProvider):
             await self._client.aclose()
             self._client = None
 
-    def _generate_with_local_gguf(self, gguf_path: Path, prompt: str) -> str:
-        """Executes hardware-optimized inference using local GGUF model via llama-cpp-python."""
+    _GGUF_STOP_SEQUENCES = ["<end_of_turn>", "</s>", "<eos>", "HUMAN:", "SYSTEM:"]
+    _STREAM_QUEUE_MAXSIZE = 1024
+
+    def _load_llama_instance(self, gguf_path: Path):
+        """Lazily loads the GGUF model via llama-cpp-python with hardware-aware defaults."""
         try:
             from llama_cpp import Llama
         except ImportError:
@@ -95,8 +101,8 @@ class GemmaProvider(LLMProvider):
             )
 
         if self._llama_instance is None:
+            gpu_layers_env = os.environ.get("LLM_GPU_LAYERS")
             if settings.LLM_DEVICE in ("cuda", "gpu", "auto"):
-                gpu_layers_env = os.environ.get("LLM_GPU_LAYERS")
                 if gpu_layers_env and gpu_layers_env.strip():
                     try:
                         n_gpu = int(gpu_layers_env.strip())
@@ -121,23 +127,105 @@ class GemmaProvider(LLMProvider):
                 f16_kv=True,
                 verbose=False,
             )
+        return self._llama_instance
 
-        # Format prompt with Gemma instruction turn markers
-        formatted_prompt = (
-            f"<start_of_turn>user\n{prompt}<end_of_turn>\n<start_of_turn>model\n"
-        )
+    @staticmethod
+    def _format_gemma_prompt(prompt: str) -> str:
+        """Formats the prompt with Gemma instruction turn markers."""
+        return f"<start_of_turn>user\n{prompt}<end_of_turn>\n<start_of_turn>model\n"
 
-        output = self._llama_instance(
-            formatted_prompt,
+    @staticmethod
+    def _best_effort_put(delta_queue: "queue.Queue", item: object) -> None:
+        """Enqueues a terminal item without ever blocking or raising (the consumer may be gone)."""
+        try:
+            delta_queue.put_nowait(item)
+        except queue.Full:
+            pass
+
+    def _generate_with_local_gguf(self, gguf_path: Path, prompt: str) -> str:
+        """Executes hardware-optimized buffered inference using local GGUF model via llama-cpp-python."""
+        llama = self._load_llama_instance(gguf_path)
+        output = llama(
+            self._format_gemma_prompt(prompt),
             max_tokens=self.max_output,
             temperature=0.2,
             top_p=0.95,
-            stop=["<end_of_turn>", "</s>", "<eos>", "HUMAN:", "SYSTEM:"],
+            stop=self._GGUF_STOP_SEQUENCES,
         )
         choices = output.get("choices", [])
         if choices and "text" in choices[0]:
             return str(choices[0]["text"]).strip()
         return ""
+
+    def _iter_local_gguf_stream(self, gguf_path: Path, prompt: str, cancel: threading.Event):
+        """Synchronous token-stream generator over llama-cpp-python create_completion(stream=True).
+
+        Designed to run inside a worker thread; checks `cancel` between chunks so the
+        async consumer can abort generation early (e.g. client disconnect).
+        """
+        llama = self._load_llama_instance(gguf_path)
+        stream = llama.create_completion(
+            self._format_gemma_prompt(prompt),
+            max_tokens=self.max_output,
+            temperature=0.2,
+            top_p=0.95,
+            stop=self._GGUF_STOP_SEQUENCES,
+            stream=True,
+        )
+        for chunk in stream:
+            if cancel.is_set():
+                break
+            choices = chunk.get("choices") or []
+            delta = str(choices[0].get("text", "")) if choices else ""
+            if delta:
+                yield delta
+
+    async def _stream_local_gguf_deltas(self, gguf_path: Path, prompt: str) -> AsyncGenerator[str, None]:
+        """Bridges the synchronous GGUF token stream onto the asyncio loop via a worker thread.
+
+        The producer thread blocks on native llama-cpp-python generation while the event
+        loop stays free; deltas cross a bounded queue so a slow consumer applies natural
+        backpressure instead of unbounded memory growth.
+        """
+        loop = asyncio.get_running_loop()
+        delta_queue: "queue.Queue" = queue.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
+        cancel = threading.Event()
+        sentinel = object()
+
+        def _produce() -> None:
+            try:
+                for delta in self._iter_local_gguf_stream(gguf_path, prompt, cancel):
+                    while not cancel.is_set():
+                        try:
+                            delta_queue.put(delta, timeout=0.1)
+                            break
+                        except queue.Full:
+                            continue
+                    if cancel.is_set():
+                        break
+            except BaseException as exc:
+                self._best_effort_put(delta_queue, exc)
+            finally:
+                cancel.set()
+                self._best_effort_put(delta_queue, sentinel)
+
+        producer = threading.Thread(target=_produce, name="gguf-stream-producer", daemon=True)
+        producer.start()
+        try:
+            while True:
+                item = await loop.run_in_executor(None, delta_queue.get)
+                if item is sentinel:
+                    break
+                if isinstance(item, BaseException):
+                    raise item
+                yield item
+        finally:
+            cancel.set()
+            while True:
+                try:
+                    delta_queue.get_nowait()
+                except queue.Empty:
+                    break
 
     async def _generate(self, prompt: str) -> str:
         """Executes prompt via local GGUF file or Ollama daemon (buffered)."""
@@ -188,27 +276,29 @@ class GemmaProvider(LLMProvider):
             raise OllamaUnavailableError(f"Ollama generate failed: {e}") from e
 
     async def generate_stream(self, prompt: str) -> AsyncGenerator[str, None]:
-        """Streams completion deltas token-by-token from Ollama (/api/generate, stream=true).
+        """Streams completion deltas token-by-token from either local engine.
 
-        Falls back to a single-delta yield when only a local GGUF engine exists
-        (llama-cpp-python is synchronous and cannot stream through this async path).
-        Raises OllamaUnavailableError so callers can fall back to degraded mode.
+        GGUF engine: native llama-cpp-python create_completion(stream=True) bridged onto
+        the asyncio loop via a worker thread. Ollama engine: NDJSON token stream from
+        /api/generate with stream=true. Raises OllamaUnavailableError so callers can
+        fall back to degraded mode.
         """
         start_time = time.time()
         gguf_model = find_local_gguf_model()
         if gguf_model is not None:
             logger.info(f"[LLM] Gemma streaming generation started via GGUF engine ({gguf_model.name})...")
+            produced_chars = 0
             try:
-                text = self._generate_with_local_gguf(gguf_model, prompt)
+                async for delta in self._stream_local_gguf_deltas(gguf_model, prompt):
+                    produced_chars += len(delta)
+                    yield delta
             except Exception as e:
                 logger.warning(f"[LLM] Gemma streaming generation FAILED via GGUF engine: {e}")
-                raise OllamaUnavailableError(f"GGUF generate failed: {e}") from e
+                raise OllamaUnavailableError(f"GGUF stream generate failed: {e}") from e
             logger.info(
-                f"[LLM] Gemma generation succeeded via GGUF ({len(text)} chars, "
+                f"[LLM] Gemma streaming generation succeeded via GGUF ({produced_chars} chars, "
                 f"{int((time.time() - start_time) * 1000)} ms)."
             )
-            if text:
-                yield text
             return
 
         logger.info(f"[LLM] Gemma streaming generation started via Ollama (model={settings.OLLAMA_MODEL})...")
