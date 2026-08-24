@@ -1017,103 +1017,109 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {prioritySignals.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {prioritySignals.slice(0, 4).map((signal) => (
-              <SignalCard
-                key={signal.id}
-                signal={signal}
-              />
-            ))}
-          </div>
-        ) : (
-          <Card className="empty-state">
-            <Activity size={28} />
-            <p className="font-semibold text-sm">No signals requiring immediate attention</p>
-            <span className="text-xs text-[var(--muted-foreground)]">
-              All signals have been reviewed. Ingest new public data or check the full Signals workspace.
-            </span>
-          </Card>
-        )}
-      </div>
-
-      {/* 3. Supporting Analytical Intelligence Bento Grid */}
-      <div className="bento-grid">
-        <Card className="radar-panel">
-          <div className="card-heading">
-            <div>
-              <p className="eyebrow">Cross-source alignment</p>
-              <h2>Confluence Index</h2>
-              <p className="muted confluence-explainer">
-                Independent signals pointing to the same development.
-              </p>
-            </div>
-            <CircleHelp size={16} className="muted" />
-          </div>
-          <Radar score={overviewData.confluence.score} />
-          <div className="driver-list">
-            {overviewData.confluence.drivers.length > 0 ? (
-              overviewData.confluence.drivers.map((driver, index) => {
-                const categoryMap: Record<string, string> = {
-                  'Clinical trial readouts': 'TRIAL READOUT',
-                  'Payer & regulatory filings': 'REGULATORY SIGNAL',
-                  'Trial readout velocity': 'TRIAL READOUT',
-                  'Payer language': 'PAYER / ACCESS',
-                  'Regulatory pathway': 'REGULATORY SIGNAL',
-                }
-                const category = categoryMap[driver] || 'INTELLIGENCE'
-                return (
-                  <div key={driver}>
-                    <span className="driver-number">0{index + 1}</span>
-                    <span>{category}</span>
-                    <span className="driver-line" />
-                    <small>{driver}</small>
-                  </div>
-                )
-              })
+        {/* Two-column layout: signals left, analytics right */}
+        <div className="dashboard-content-grid">
+          {/* Left: Signal cards stacked vertically */}
+          <div className="signals-col">
+            {prioritySignals.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {prioritySignals.slice(0, 4).map((signal) => (
+                  <SignalCard
+                    key={signal.id}
+                    signal={signal}
+                  />
+                ))}
+              </div>
             ) : (
-              <p className="muted text-center text-xs py-4">No active confluence drivers detected.</p>
+              <Card className="empty-state">
+                <Activity size={28} />
+                <p className="font-semibold text-sm">No signals requiring immediate attention</p>
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  All signals have been reviewed. Ingest new public data or check the full Signals workspace.
+                </span>
+              </Card>
             )}
           </div>
-        </Card>
 
-        <Card className="trend-panel">
-          <div className="card-heading">
-            <div>
-              <p className="eyebrow">Signal Velocity</p>
-              <h2>Portfolio Momentum</h2>
-            </div>
-            <Badge tone="high">Live</Badge>
-          </div>
-          <TrendChart data={overviewData.trends} />
-        </Card>
-
-        <Card className="questions-panel">
-          <div className="card-heading">
-            <div>
-              <p className="eyebrow">Decision Framework</p>
-              <h2>Four Strategic Inquiries</h2>
-            </div>
-            <Link href="/intelligence" className="icon-link">
-              <ChevronRight size={17} />
-            </Link>
-          </div>
-          {[
-            { q: 'What changed?', sub: 'Evidence-grounded factual developments' },
-            { q: 'Why does it matter?', sub: 'Clinical & strategic significance' },
-            { q: 'Who is affected?', sub: 'Functional routing & leadership escalation' },
-            { q: 'What should we do?', sub: 'Actionable operational recommendations' },
-          ].map((item, i) => (
-            <Link href="/intelligence" className="question-row" key={item.q}>
-              <span>Q{i + 1}</span>
-              <div>
-                <strong>{item.q}</strong>
-                <small className="block text-[10px] text-[var(--muted-foreground)]">{item.sub}</small>
+          {/* Right: Analytics panels stacked vertically */}
+          <div className="analytics-col">
+            <Card className="radar-panel">
+              <div className="card-heading">
+                <div>
+                  <p className="eyebrow">Cross-source alignment</p>
+                  <h2>Confluence Index</h2>
+                  <p className="muted confluence-explainer">
+                    Independent signals pointing to the same development.
+                  </p>
+                </div>
+                <CircleHelp size={16} className="muted" />
               </div>
-              <ChevronRight size={15} />
-            </Link>
-          ))}
-        </Card>
+              <Radar score={overviewData.confluence.score} />
+              <div className="driver-list">
+                {overviewData.confluence.drivers.length > 0 ? (
+                  overviewData.confluence.drivers.map((driver, index) => {
+                    const categoryMap: Record<string, string> = {
+                      'Clinical trial readouts': 'TRIAL READOUT',
+                      'Payer & regulatory filings': 'REGULATORY SIGNAL',
+                      'Trial readout velocity': 'TRIAL READOUT',
+                      'Payer language': 'PAYER / ACCESS',
+                      'Regulatory pathway': 'REGULATORY SIGNAL',
+                    }
+                    const category = categoryMap[driver] || 'INTELLIGENCE'
+                    return (
+                      <div key={driver}>
+                        <span className="driver-number">0{index + 1}</span>
+                        <span>{category}</span>
+                        <span className="driver-line" />
+                        <small>{driver}</small>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="muted text-center text-xs py-4">No active confluence drivers detected.</p>
+                )}
+              </div>
+            </Card>
+
+            <Card className="trend-panel">
+              <div className="card-heading">
+                <div>
+                  <p className="eyebrow">Signal Velocity</p>
+                  <h2>Portfolio Momentum</h2>
+                </div>
+                <Badge tone="high">Live</Badge>
+              </div>
+              <TrendChart data={overviewData.trends} />
+            </Card>
+
+            <Card className="questions-panel">
+              <div className="card-heading">
+                <div>
+                  <p className="eyebrow">Decision Framework</p>
+                  <h2>Four Strategic Inquiries</h2>
+                </div>
+                <Link href="/intelligence" className="icon-link">
+                  <ChevronRight size={17} />
+                </Link>
+              </div>
+              {[
+                { q: 'What changed?', sub: 'Evidence-grounded factual developments' },
+                { q: 'Why does it matter?', sub: 'Clinical & strategic significance' },
+                { q: 'Who is affected?', sub: 'Functional routing & leadership escalation' },
+                { q: 'What should we do?', sub: 'Actionable operational recommendations' },
+              ].map((item, i) => (
+                <Link href="/intelligence" className="question-row" key={item.q}>
+                  <span>Q{i + 1}</span>
+                  <div>
+                    <strong>{item.q}</strong>
+                    <small className="block text-[10px] text-[var(--muted-foreground)]">{item.sub}</small>
+                  </div>
+                  <ChevronRight size={15} />
+                </Link>
+              ))}
+            </Card>
+          </div>
+        </div>
       </div>
 
       {selected && (

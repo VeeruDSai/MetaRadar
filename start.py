@@ -320,8 +320,18 @@ def main():
 
     print("=" * 70)
     print(" MetaRadar Decision Intelligence Platform — Process Launcher")
-    print(" Version 5.1.0 | Fast In-Memory Pipelines (No Celery) | Local Gemma")
+    print(" Version 5.1.0 | Fast In-Memory Pipelines (No Celery) | Local Gemma + CUDA")
     print("=" * 70)
+
+    # Detect Reasoning Engine
+    models_dir = BASE_DIR / "models"
+    gguf_files = list(models_dir.glob("*.gguf")) if models_dir.exists() else []
+    if gguf_files:
+        print(f"  [REASONING] Local GGUF Engine: {gguf_files[0].name}")
+    elif os.environ.get("XAI_API_KEY"):
+        print("  [REASONING] Hosted Engine: xAI Grok (API key detected)")
+    else:
+        print("  [REASONING] Factual Mode: BART summarizer fallback")
 
     # 1. Backing Services & Database Migrations
     start_docker_services(args.no_docker)
