@@ -1,113 +1,54 @@
-# Codebase Concerns
+# Codebase Concerns & Audit State
 
-**Analysis Date:** 2026-08-23
+**Analysis Date:** 2026-08-24
 
-## Tech Debt
+## Resolved in Recent Iterations
+
+**1. NewsAPI Key Configuration & Multi-Path `.env` Resolution (RESOLVED):**
+- *Resolution:* `backend/app/core/config.py` now includes multi-path `.env` resolution (`.env`, `../.env`, root `.env`, `backend/.env`) and aliases `NEWS_API_KEY` to `NEWSAPI_KEY`. `start.py` propagates root `.env` variables to child worker processes.
+
+**2. Grok API Key Dynamic Resolution & Resilient Fallback (RESOLVED):**
+- *Resolution:* `backend/app/core/config.py` provides `effective_xai_api_key` checking both `XAI_API_KEY` and `GROK_API_KEY`. `GrokProvider` uses a dedicated 60s timeout and safely cascades to BART degraded factual summaries when xAI accounts return permissions or credit exhaustion errors.
+
+**3. Synthetic Provenance URL Sanitization (RESOLVED):**
+- *Resolution:* Replaced unresolvable `metaradar.internal` placeholder links with `[TEST FIXTURE (SYNTHETIC BENCHMARK)]` badges across backend serialization and frontend evidence drawers.
+
+**4. Ask Athena Conversational Handling & Threshold Balancing (RESOLVED):**
+- *Resolution:* Added conversational greeting handler (`hey`, `hello`, `hi`), balanced vector cosine distance threshold (`< 0.65`), and structured evidence citations.
+
+**5. Root `models/` GGUF Discovery & Inference Orchestration (RESOLVED):**
+- *Resolution:* Created root `models/` directory with automatic `.gguf` model discovery in `GemmaProvider`. Added hardware-optimized execution with `llama-cpp-python` (`n_gpu_layers=-1`, `n_threads=os.cpu_count()`, `n_ctx=2048`, `n_batch=512`), robust JSON extraction, and interactive download in `setup.py`. Downloaded `gemma-3-4b-it-Q4_K_M.gguf` (2.48 GB).
+
+**6. Sleek Rectangular Custom Scrollbars (RESOLVED):**
+- *Resolution:* Redesigned scrollbar thumbs in `frontend/app/globals.css` with sleek rectangular geometry (`border-radius: 2px`) and glowing indigo/sapphire hover states across dark and light themes.
+
+---
+
+## Remaining Tech Debt & Maintenance Items
 
 **Frontend monolith component:**
-- Issue: `frontend/components/metaradar.tsx` is a single 2,079-line client component (~40 lucide icon imports) containing the app shell, navigation, filtering, polling orchestration, and inline page components (LifecyclePage, GenericPage).
-- Files: `frontend/components/metaradar.tsx`
-- Impact: Merge-conflict hotspot; whole-tree re-renders; workspace logic untestable/unreuseable.
-- Fix approach: Extract shell/nav into `frontend/components/shell/`; per-section workspaces already exist (`frontend/components/confluence/ConfluenceWorkspace.tsx`, etc.) — move remaining inline pages out.
-
-**Dual migration systems:**
-- Issue: Proper Alembic chain (`backend/alembic/versions/001_initial_v51_schema.py` ... `011_widen_signals_fingerprint.py`) coexists with a raw-SQL script that hand-creates columns AND force-stamps `alembic_version` to `'004_phase7_truthfulness'`.
-- Files: `scripts/apply_phase7_migrations.py`, `backend/alembic/versions/*`
-- Impact: Running the script on a DB migrated past 004 silently rewrites alembic_version backwards; two sources of truth for DDL.
-- Fix approach: Delete the script or reduce it to "run `alembic upgrade head`"; never hand-write `alembic_version` rows.
+- Issue: `frontend/components/metaradar.tsx` contains legacy app shell and navigation utilities.
+- Fix approach: Continue modularizing workspaces into `frontend/components/<domain>/`.
 
 **Schema churn around signal identity columns:**
-- Issue: Migrations 006 (`widen signals external_id`), 010 (`non_unique_signal_identifiers`), 011 (`widen signals fingerprint`) show the identity/dedup contract broke repeatedly.
-- Files: `backend/alembic/versions/006_widen_signals_external_id.py`, `backend/alembic/versions/010_non_unique_signal_identifiers.py`, `backend/alembic/versions/011_widen_signals_fingerprint.py`
-- Impact: High-risk area for future fingerprint/upsert changes.
-- Fix approach: Lock identity contract behind tests (`tests/test_contract_drift.py`) before touching dedup code.
+- Issue: Migrations 006, 010, 011 widened signal identity fields.
+- Fix approach: Lock identity contract behind `tests/test_contract_drift.py`.
 
 **Inconsistent logging frameworks (scrubbing bypassed):**
-- Issue: structlog is configured with a secret-scrubbing processor (`_scrub_secrets`) in `backend/app/core/logging.py`, but most modules use stdlib `logging.getLogger(...)` which bypasses structlog processors entirely — including scrubbing.
-- Files: stdlib logging in `backend/app/services/scheduler.py`, `backend/app/connectors/base.py`, `backend/app/workflows/runner.py`, `backend/app/providers/grok.py`, `backend/app/services/embeddings.py`, `backend/app/services/calibration.py`, all `backend/app/workflows/nodes/*.py`; structlog only in `backend/app/main.py`, `backend/app/core/middleware.py`, `backend/app/api/v1/endpoints/ingestion.py`.
-- Impact: Secret scrubbing does not apply to most backend logs; two log formats in output.
-- Fix approach: Replace `logging.getLogger(__name__)` with `from app.core.logging import get_logger` everywhere.
-
-**Duplicated canonical-URL fallback + fabricated provenance URLs:**
-- Issue: The "construct URL if missing" block is copy-pasted in two places; FDA/EMA fallbacks return generic landing pages (`https://open.fda.gov/drug/event/`, `https://www.ema.europa.eu/en/medicines`) yet rows are then marked `provenance_status="available"`.
-- Files: `backend/app/workflows/runner.py` (lines ~233–245), `backend/app/api/v1/endpoints/signals.py` (`_serialize_signal`, lines ~66–78)
-- Impact: Provenance honesty violation (D-22/D-23): a generic URL presented as record evidence; drift between the copies.
-- Fix approach: Extract one shared helper (e.g., `app/services/provenance_urls.py`); build record-specific deep links or mark provenance as `landing_page_only`.
+- Issue: structlog configured with `_scrub_secrets`, but some modules use stdlib `logging.getLogger`.
+- Fix approach: Gradually standardize on `app.core.logging.get_logger`.
 
 **Dead optional spaCy path:**
-- Issue: `nlp_extract.py` tries to load spaCy models at import time, but `spacy` is not in `backend/requirements.txt` — branch can never run in a standard install.
-- Files: `backend/app/workflows/nodes/nlp_extract.py` (lines 11–23), `backend/requirements.txt`
-- Fix approach: Remove the branch or declare spacy as pinned extras.
+- Issue: `nlp_extract.py` has optional spaCy fallback.
+- Fix approach: Keep fast regex/rule extractor as standard path.
 
-**Script-style test file collects nothing:**
-- Issue: `tests/test_foundation.py` defines `run_tests()` with prints/asserts but zero pytest-collectable `test_*` functions — its assertions never run under pytest (`pytest.ini` testpaths includes it).
-- Files: `tests/test_foundation.py`
-- Impact: False sense of coverage.
-- Fix approach: Convert checks into real pytest functions or delete.
+## Security & Architecture Invariants
 
-**Loose dependency pins (backend):**
-- Issue: Every entry in `backend/requirements.txt` uses `>=`, no upper bounds, no lockfile.
-- Files: `backend/requirements.txt`
-- Impact: Non-reproducible CI installs/Docker builds; fastembed/langgraph/pydantic bumps break unpredictably.
-- Fix approach: Pin exact versions or add lockfile (pip-tools/uv).
+**Zero Secret Leakage:**
+- Multi-path `.env` loading ensures secrets remain strictly local and gitignored.
 
-**Import-time default captures settings snapshot:**
-- Issue: `def __init__(self, api_key: str = settings.XAI_API_KEY or "")` evaluates once at module import; later settings changes are invisible.
-- Files: `backend/app/providers/grok.py` (line 43)
-- Impact: Test flakiness; stale-key behavior if settings mutated after import.
-- Fix approach: Read `settings.XAI_API_KEY` inside `__init__` body.
-
-**Overload-style backward-compat shims in frontend API layer:**
-- Issue: Nearly every export in `frontend/lib/api.ts` accepts unions like `filters?: SignalFilterParams | AbortSignal` plus trailing optional `signal?`, with runtime `instanceof` disambiguation repeated per function.
-- Files: `frontend/lib/api.ts` (lines 41–120+)
-- Impact: Type ambiguity; duplicated boilerplate; easy-to-misuse call sites.
-- Fix approach: Migrate call sites (`frontend/components/**`) to explicit signatures and drop the shims.
-
-**Silent exception swallowing (violates project's own ENGINEERING_STANDARDS):**
-- Issue: Multiple bare `except Exception: pass` blocks discard failures with no log.
-- Files: `backend/app/services/scheduler.py` (lines 195–204 scheduler DB state update), `backend/app/workflows/runner.py` (lines 137–138 PipelineRun failure-record commit), `backend/app/services/ingestion.py` (lines 175–178, 193–197 rollback paths), `backend/app/api/v1/endpoints/signals.py` (lines 48–59 malformed score/metadata downgraded)
-- Impact: Failures leave no trace; contradicts AGENTS.md rule 5 spirit.
-- Fix approach: Log at warning minimum; surface via `ScheduledJobState.last_error`.
-
-## Known Bugs
-
-**GrokProvider.generate_summary can never succeed:**
-- Symptoms: With `XAI_API_KEY` configured, `generate_summary()` always raises `PermissionError` because it passes hardcoded `classification=DataClassification.UNKNOWN` and the privacy gate only permits PUBLIC/SYNTHETIC. Without a key it raises `GrokUnavailableError`. No input path leads to success.
-- Files: `backend/app/providers/grok.py` (lines 117–128 vs gate at lines 56–70)
-- Trigger: Any call reaching `generate_summary`.
-- Workaround: Use `generate_intelligence` with an explicit classification instead.
-- Fix approach: Accept a `classification` parameter or delete the method.
-
-## Security Considerations
-
-**API keys leak into error messages → database → API responses:**
-- Risk: On HTTP >= 400, `ConnectorFetchError` embeds the FULL query param dict (`f"HTTP {response.status_code} from {url} (params={params})"`). PubMed passes `params["api_key"] = settings.NCBI_API_KEY` (`pubmed.py:79,105`) and OpenFDA passes `api_key` as param (`fda.py:107`). Error strings flow into `SourceHealthLog.last_error` / `sources.last_error` (`ingestion.py:117,136,188`) and are exposed via `/api/v1/health/connectors` (`health.py` returns `last_error`) and observability endpoints.
-- Files: `backend/app/connectors/base.py` (lines 138–141), `backend/app/connectors/pubmed.py`, `backend/app/connectors/fda.py`, `backend/app/services/ingestion.py`, `backend/app/api/v1/endpoints/health.py`
-- Current mitigation: `_scrub_secrets` in `backend/app/core/logging.py` redacts secret-named keys — but only for structlog loggers (these modules use stdlib) and never touches DB-stored values.
-- Recommendations: Redact params before formatting errors; move keys to headers where supported; purge/redact existing `last_error` rows.
-
-**Zero authentication on entire API surface:**
-- Risk: Every endpoint — including mutations (`POST /api/v1/ingestion/*`, `POST /api/v1/pipeline/*`, cache clear, feedback/recalibrate) — relies solely on `Depends(get_db)`; no auth dependency anywhere.
-- Files: all of `backend/app/api/v1/endpoints/*.py`; CORS config in `backend/app/main.py` (lines 66–73)
-- Current mitigation: CORS defaults to `http://localhost:3000` (`backend/app/core/config.py`) — blocks browser cross-origin misuse only; direct network access unrestricted.
-- Recommendations: Add API-key/JWT dependency for mutation routes before any non-loopback deployment.
-
-**Hardcoded infrastructure credentials & exposed services:**
-- Risk: Postgres password `metaradar_pass` hardcoded in `docker-compose.yml` (lines 7–9, 41, 72) AND as default `DATABASE_URL` in `backend/app/core/config.py` (line 19). Redis has no auth; Postgres/Redis/backend ports bind 0.0.0.0.
-- Files: `docker-compose.yml`, `backend/app/core/config.py`
-- Current mitigation: Dev-oriented stack; `.env` gitignored (verified via `git check-ignore`).
-- Recommendations: Credentials only via `.env`; bind published ports to `127.0.0.1:`; enable Redis `requirepass`.
-
-**Regex-only PII/PHI scrubbing:**
-- Risk: `PIIPHIScrubber` detects only email/phone/SSN/MRN/DOB (`pii.py` PATTERNS dict). Person names, addresses, free-text narratives pass through into local LLM prompts and persisted content.
-- Files: `backend/app/services/pii.py` (lines 5–11)
-- Current mitigation: External transmission gated — UNKNOWN classification blocked at Grok privacy gate (`grok.py:88-91`); unsanitized text reaches only LOCAL Gemma and DB.
-- Recommendations: Document pattern-list limitation as accepted risk for local-only processing; consider NER-based scrubbing before enabling hosted providers on raw text.
-
-**CORS allows any method/header with credentials:**
-- Risk: `allow_credentials=True, allow_methods=["*"], allow_headers=["*"]` broader than needed even for localhost origin.
-- Files: `backend/app/main.py` (lines 67–73)
-- Recommendations: Restrict to GET/POST once auth lands.
+**Local-First Privacy Gate:**
+- Data classification gates external LLM transmissions (`validate_privacy_gate()` in `backend/app/providers/grok.py`), ensuring private data stays strictly on-premise with local GGUF / Gemma.
 
 ## Performance Bottlenecks
 

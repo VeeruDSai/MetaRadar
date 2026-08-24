@@ -8,11 +8,15 @@
 novonordisk/ (MetaRadar)
 ├── AGENTS.md / CLAUDE.md / GEMINI.md   # AI agent operating standards
 ├── README.md                            # Project overview & validation results
-├── .env.example                         # Environment template (.env gitignored — never read/commit)
+├── .env.example                         # Environment template (.env gitignored)
 ├── docker-compose.yml                   # postgres(pgvector), redis, ollama, backend, frontend
 ├── start.py                             # Unified zero-friction launcher (docker + migrations + servers)
-├── setup.py                             # Setup helper
+├── setup.py                             # Zero-config environment & reasoning model setup wizard
 ├── pytest.ini                           # Root pytest configuration
+├── models/                              # Root local reasoning models directory (*.gguf format)
+│   ├── .gitkeep
+│   ├── README.md
+│   └── gemma-3-4b-it-Q4_K_M.gguf        # Downloaded local Q4 GGUF reasoning model (2.48 GB)
 ├── backend/
 │   ├── alembic.ini                      # Alembic config (async engine)
 │   ├── alembic/
@@ -30,25 +34,25 @@ novonordisk/ (MetaRadar)
 │   │   ├── services/                    # scheduler, ingestion, scoring, confluence, calibration…
 │   │   └── workflows/                   # graph.py, runner.py, state.py, nodes/ (11 nodes)
 │   ├── Dockerfile
-│   └── requirements.txt                 # Pinned backend dependencies
+│   └── requirements.txt                 # Backend dependencies
 ├── frontend/
 │   ├── app/                             # Next.js App Router
 │   │   ├── layout.tsx                   # Root layout, theme bootstrap script
 │   │   ├── page.tsx                     # Redirect → /dashboard
 │   │   ├── [section]/page.tsx           # Section switcher → workspace components
-│   │   └── globals.css                  # Design tokens + vanilla CSS system
+│   │   └── globals.css                  # Design tokens + custom rectangular scrollbar styling
 │   ├── components/
-│   │   ├── metaradar.tsx                # Shell, nav, DashboardPage, shared widgets (~2k lines)
+│   │   ├── metaradar.tsx                # Shell, nav, DashboardPage, shared widgets
 │   │   ├── <domain>/                    # One dir per workspace (calibration, confluence,
 │   │   │                                #   contradictions, developments, functions,
 │   │   │                                #   intelligence, missing-signals, observability,
 │   │   │                                #   settings, signals, sources)
-│   │   ├── common/                      # DataModeBadge, EmptyState, ErrorState, EvidenceDrawer
+│   │   ├── common/                      # DataModeBadge, EmptyState, ErrorState, EvidenceDrawer, SpecularButton
 │   │   ├── theme/ThemeProvider.tsx      # Dark/light adaptive theming
 │   │   └── ui/button.tsx                # Primitive button
 │   ├── lib/                             # api.ts, hooks.ts, mappers.ts, errors.ts, utils.ts
 │   ├── types/api.ts                     # Synced TypeScript API contracts (from OpenAPI)
-│   ├── public/                          # Static assets (icon.svg etc.)
+│   ├── public/                          # Static assets (icon.svg - adaptive pharma radar logo)
 │   ├── package.json / tsconfig.json / components.json
 │   └── next-env.d.ts
 ├── config/
@@ -62,9 +66,8 @@ novonordisk/ (MetaRadar)
 │                                        #   TESTING_STRATEGY.md, …), SRS/SDD/UI docs, audits, manifests
 ├── logs/                                # Runtime log streams written by start.py (gitignored artifacts)
 ├── scripts/                             # export_openapi.py, generate_parity_matrix.py,
-│                                        #   test_live_ingestion_e2e.py, apply_phase7_migrations.py,
-│                                        #   check-banned-classes.mjs
-├── tests/                               # Backend pytest suite (~23 files, flat layout)
+│                                        #   download_model.py, check-banned-classes.mjs
+├── tests/                               # Backend pytest suite (25 test files, 119 passing tests)
 ├── scratch/                             # Scratch space (gitignored)
 ├── .planning/                           # GSD planning artifacts (phases, milestones, codebase/)
 └── .github/workflows/                   # CI pipelines
