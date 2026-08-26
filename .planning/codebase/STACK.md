@@ -1,59 +1,85 @@
-# Technology Stack (STACK.md)
+# Technology Stack
 
-**Project:** MetaRadar — Autonomous Decision Intelligence Platform  
-**Milestone:** v5.2 (Real Signal Workflow, Discovery Connectors & Demo Operator)  
-**Last Updated:** 2026-08-27  
+**Analysis Date:** 2026-08-27
+
+## Languages
+
+**Primary:**
+- **Python 3.11+ (CPython 3.13.5)** - Backend services, FastAPI REST API, LangGraph 11-node intelligence pipeline, ingestion connectors, SQLAlchemy 2.0 async ORM, background scheduler
+- **TypeScript 5.7.3** - Next.js 16.3.0 App Router frontend, 9 specialized intelligence workspaces, REST API client, strictly typed DTOs
+
+**Secondary:**
+- **SQL (PostgreSQL 16 Dialect)** - Relational schemas for Signals, Raw Bronze data, Audit Logs, Sources, Feedback, and pgvector cosine distance queries
+- **CSS / Tailwind CSS v4** - CSS-first design token system (`@theme inline`), CSS custom properties in `frontend/app/globals.css`
+- **Shell / Python Tooling** - Orchestration and verification scripts (`setup.py`, `start.py`, `scripts/export_openapi.py`, `scripts/check-banned-classes.mjs`)
+
+## Runtime
+
+**Environment:**
+- **Node.js**: `>= 20.9.0` (Frontend execution & Next.js production build)
+- **Python**: `3.11+` / `3.13.5` (Backend async event loop & pipeline execution)
+
+**Package Manager:**
+- **Frontend**: `pnpm@9.15.5` (configured via `pnpm-workspace.yaml`, `pnpm-lock.yaml`, and `.pnpmrc`) / `npm`
+- **Backend**: `pip` with `backend/requirements.txt`
+- **Lockfile**: `frontend/pnpm-lock.yaml` and `frontend/package-lock.json` present
+
+## Frameworks
+
+**Core:**
+- **Next.js 16.3.0 (App Router, Turbopack)** - Server/client components, nested routing, streaming layouts, error boundaries
+- **FastAPI >=0.110.0** - Asynchronous REST API, Server-Sent Events (SSE), automated OpenAPI 3.1 documentation, lifespan management
+- **LangGraph >=0.2.0** - 11-node stateful graph pipeline for biomedical competitive intelligence processing
+- **SQLAlchemy 2.0.28+ (Async) & asyncpg 0.29.0+** - Async PostgreSQL ORM, connection pooling, PostgreSQL advisory locks (`try_advisory_lock`)
+- **Pydantic v2 >=2.6.0 & pydantic-settings >=2.2.0** - Strict DTO schemas, domain configuration validation (`config/haemophilia.yaml`)
+
+**Testing:**
+- **Pytest 8.0.0+ with pytest-asyncio 0.23.0+ & pytest-httpx 0.30.0+** - Comprehensive backend test suites (139 executable unit & integration tests)
+- **ESLint 10.8.1 with `@next/eslint-plugin-next`** - Frontend linting and strict code quality rules
+- **Custom Linting Tooling**: `scripts/check-banned-classes.mjs` (banned Tailwind utility and hex color enforcement)
+
+**Build/Dev:**
+- **Turbopack (Next.js 16)** - Fast frontend bundler and compiler
+- **PostCSS 8.5 with `@tailwindcss/postcss` 4.3.3** - CSS-first token parsing
+- **Alembic 1.13.1+** - Async database schema migrations
+
+## Key Dependencies
+
+**Critical:**
+- `fastembed` >=0.4.0 / `sentence-transformers/all-MiniLM-L6-v2` - 384-dimensional dense semantic vector embeddings
+- `pgvector` >=0.2.5 - HNSW cosine similarity indexing and hybrid vector search in PostgreSQL
+- `framer-motion` ^13.1.0 & `recharts` ^3.10.1 - Smooth micro-animations, counters, and radar visualization
+- `@base-ui/react` ^1.5.0 & `lucide-react` ^1.16.0 - Accessible headless UI primitives and semantic icons
+- `structlog` >=24.1.0 & `asgi-correlation-id` >=4.3.0 - Structured JSON logging with correlation tracing and PII redaction
+
+**Infrastructure:**
+- `httpx` >=0.27.0 - Asynchronous HTTP client for external connector ingestion
+- `redis` >=5.0.3 - Distributed caching, health checks, and rate limiting
+- `pyyaml` >=6.0.1 - Disease area domain configuration parser (`config/haemophilia.yaml`)
+
+## Configuration
+
+**Environment:**
+- Managed through `.env` and `backend/app/core/config.py` using `pydantic-settings`
+- Critical keys: `DATABASE_URL`, `REDIS_URL`, `NEWSAPI_KEY`, `NCBI_API_KEY`, `OPENFDA_API_KEY`, `LLM_PROVIDER`, `OLLAMA_HOST`, `XAI_API_KEY`
+- Pure validator: `configuration_error_for(source_id)` for side-effect-free connector configuration status validation
+
+**Build:**
+- `frontend/next.config.mjs` - Turbopack, strict type and lint gating (`ignoreBuildErrors: false`)
+- `frontend/tsconfig.json` - Strict TypeScript configuration with `@/*` path alias mapping
+- `frontend/eslint.config.mjs` - ESLint 10 flat configuration
+- `pytest.ini` - Asyncio mode auto, test path configuration
+
+## Platform Requirements
+
+**Development:**
+- Windows / macOS / Linux with Python 3.11+, Node.js >= 20.9.0, PostgreSQL 16 with `pgvector`
+- Optional local GPU (e.g. RTX 3050 4GB VRAM) for Ollama Gemma 3 4B local inference
+
+**Production:**
+- Containerized deployment via Docker (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`)
+- Single-command zero-config onboarding (`setup.py`) and development runner (`start.py`)
 
 ---
 
-## 1. Core Frameworks & Runtimes
-
-| Layer | Technology | Version | Purpose |
-|---|---|---|---|
-| **Frontend Framework** | Next.js (App Router, Turbopack) | `16.3.0` | Server/client component rendering, streaming, responsive layout |
-| **Frontend Runtime** | React / React DOM | `^19.0.0` | UI component tree, optimistic updates, hooks |
-| **Frontend Styling** | Tailwind CSS v4 + Custom Tokens | `^4.3.3` | Token-based theme system (`var(--surface)`, `var(--border)`, etc.) |
-| **Animation & Charts** | Framer Motion & Recharts | `^13.1.0` / `^3.10.1` | Smooth micro-animations, counters, trend analysis charts |
-| **Icons & UI Primitives**| Lucide React, Base UI, Shadcn | `^1.16.0` / `^1.5.0` | Semantic iconography, accessible primitives |
-| **Backend Framework** | FastAPI (Python) | `^0.115.0` | High-performance asynchronous REST API & Server-Sent Events |
-| **Backend Runtime** | Python (CPython) | `3.13.5` | Pipeline execution, data transformation, async event loop |
-| **Pipeline Engine** | LangGraph / LangChain | `^0.2.0` | 11-node directed acyclic graph for signal processing |
-| **ORM & Database Client**| SQLAlchemy 2.0 (Async) + asyncpg | `^2.0.36` / `^0.30.0` | PostgreSQL async session management, connection pooling |
-| **Data Validation** | Pydantic v2 | `^2.10.0` | Strict schema validation, DTOs, domain config models |
-| **Observability** | Structlog + asgi-correlation-id | `^24.4.0` / `^4.3.0` | Structured JSON logging, request tracing, secret scrubbing |
-
----
-
-## 2. Data Storage & Search Infrastructure
-
-| Component | Technology | Purpose |
-|---|---|---|
-| **Primary Relational DB** | PostgreSQL 16 | Relational storage for Signals, Bronze data, Audit Logs, Sources, Feedback |
-| **Vector Search** | pgvector extension | 384-dimensional cosine distance semantic indexing |
-| **Cache & Distributed Locks** | Redis 7 (or asyncpg advisory locks) | Fast caching, rate-limiting, scheduler concurrency control |
-| **Local Embeddings** | SentenceTransformers / ONNX | Local 384-dim semantic embeddings for fast retrieval |
-
----
-
-## 3. Connector & Data Ingestion Stack
-
-| Source ID | Source Name | Freshness Class | Tier | Transport / Protocol |
-|---|---|---|:---:|---|
-| `clinical_trials` | ClinicalTrials.gov | `near_real_time` | 1 | REST API v2 (JSON with cursor pagination) |
-| `pubmed` | NCBI PubMed | `batch` | 1 | E-Utilities API (XML parsing with rate limiter) |
-| `fda` | Drugs@FDA / MedWatch | `adapter_ready` | 1 | openFDA REST API + FDA MedWatch RSS XML |
-| `ema` | European Medicines Agency | `adapter_ready` | 1 | Official EMA Medicines RSS XML Feed |
-| `newsapi` | NewsAPI Commercial News | `delayed` | 3 | NewsAPI `/v2/everything` REST JSON (Quota-aware) |
-| `fierce_pharma` | Fierce Pharma | `delayed` | 3 | Official RSS Feed (`fiercepharma.com/rss/xml`) |
-| `et_pharma` | ET Pharma | `delayed` | 3 | Top Stories & Drug Approvals RSS XML Feeds |
-| `biopharmadive` | BioPharma Dive | `manual` | 3 | Configured without feed (`status: configured_no_feed`) |
-
----
-
-## 4. LLM & Reasoning Stack
-
-| Provider | Model | Mode | Privacy & Guardrails |
-|---|---|---|---|
-| **Local Gemma** | Gemma 3 (Ollama / Local Inference) | `reasoning` | Default offline local reasoning engine |
-| **Grok (xAI)** | Grok-Beta / Grok-2 | `reasoning` | Optional cloud reasoning behind strict PII/PHI privacy gate |
-| **Deterministic Fallback**| Factual Extraction & Scored Heuristics | `degraded_factual` | Guaranteed offline operation when LLMs are unreachable |
+*Stack analysis: 2026-08-27*
