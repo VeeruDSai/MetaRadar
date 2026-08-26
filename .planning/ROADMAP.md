@@ -73,8 +73,18 @@
   - [x] 09-02-PLAN.md — Demo Operator selector + Audit History panel in Signal Detail + Routing Queue actions
   - [x] 09-03-PLAN.md — FiercePharmaRSSConnector + ETPharmaRSSConnector + BioPharma Dive configured_no_feed + Escalation logic
 
+### Phase 10: Undeniable Demo Journey, Evidence Convergence, BioPharma Dive & UX Refinement
+- **Goal:** Make the 6-question signal journey undeniable, integrate active BioPharma Dive RSS connector, add adaptive NewsAPI quota governor, surface Evidence Convergence & "Why This Signal?" explainers, expose Red-Team self-challenging counter-factuals, and run brutal end-to-end scenario verifications.
+- **Requirements:** REQ-P10-01 … REQ-P10-15
+- **Status:** Planned
+- **Plans:**
+  - [ ] 10-01-PLAN.md — BioPharma Dive RSS connector + adaptive NewsAPI quota governor & health UI
+  - [ ] 10-02-PLAN.md — Evidence convergence tree + "Why this signal?" explainer + Red-Team counter-factuals + source hierarchy tags
+  - [ ] 10-03-PLAN.md — Daily executive briefing dashboard + brutal 5-scenario E2E verification
+
 ---
 
 ## Future Backlog / Next Milestone
 
 Future milestone initiatives (v5.3 / v6.0) can be planned and tracked here using `/gsd-new-milestone`.
+
