@@ -1,26 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.1-extension
-milestone_name: "MetaRadar v5.1 Extension — Trustworthy Intelligence & Platform Hardening"
-status: phase_completed
-current_phase: "08"
-phase_name: "Phase 08: Provenance Traceability + Canonical Overview/Lifecycle Design System Hardening"
-last_updated: "2026-08-21T08:30:00.000Z"
+milestone: v5.2-signal-workflow
+milestone_name: "MetaRadar v5.2 — Real Signal Workflow, Discovery Connectors & Demo Operator"
+status: phase_in_progress
+current_phase: "09"
+phase_name: "Phase 09: Real Signal Workflow, NewsAPI Provenance Fix & Pharma RSS Discovery Connectors"
+last_updated: "2026-08-26T18:31:00.000Z"
 progress:
-  total_phases: 8
+  total_phases: 11
   completed_phases: 8
-  total_plans: 20
+  total_plans: 23
   completed_plans: 20
-  percent: 100
+  percent: 72
 ---
 
 # MetaRadar — Project State Memory
 
-> **Active Phase:** Phase 08 — Provenance Traceability + Canonical Overview/Lifecycle Design System Hardening (COMPLETED & VERIFIED)
+> **Active Phase:** Phase 09 — Real Signal Workflow, NewsAPI Provenance Fix & Pharma RSS Discovery Connectors (PLANNING COMPLETE — EXECUTION STARTED)
+> **Branch:** `feature/phase-09-signal-workflow-rss-connectors`
+> **Phase Directory:** [`.planning/phases/09-signal-workflow-rss-connectors/`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/09-signal-workflow-rss-connectors/)
+> **Context & Decisions:** [`.planning/phases/09-signal-workflow-rss-connectors/09-CONTEXT.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/09-signal-workflow-rss-connectors/09-CONTEXT.md) (D-09-01…09)
+> **Plan:** [`.planning/phases/09-signal-workflow-rss-connectors/09-PLAN.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/09-signal-workflow-rss-connectors/09-PLAN.md) (3 waves, 18 requirements)
+
+---
+
+## Phase 08 — COMPLETED & VERIFIED
+
 > **Phase Directory:** [`.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/)
 > **Context & Decisions:** [`.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-CONTEXT.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-CONTEXT.md) (D-08-01…12)
-> **Research:** [`.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-RESEARCH.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-RESEARCH.md)
-> **UI Design Contract:** [`.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-UI-SPEC.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-UI-SPEC.md)
 > **Validation:** [`.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-VALIDATION.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/08-provenance-traceability-canonical-overview-lifecycle-design/08-VALIDATION.md)
 
 ---

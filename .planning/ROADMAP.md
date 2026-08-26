@@ -50,4 +50,26 @@ Plans:
 
 ## Future Backlog / Next Milestone
 
-Future milestone initiatives (v5.2 / v6.0) can be planned and tracked here using `/gsd-new-milestone`.
+Future milestone initiatives (v5.3 / v6.0) can be planned and tracked here using `/gsd-new-milestone`.
+
+---
+
+### Milestone v5.2 — Real Signal Workflow, Discovery Connectors & Demo Operator (IN PROGRESS)
+
+> **Branch:** `feature/phase-09-signal-workflow-rss-connectors`
+> **Status:** Phase 09 — PLANNING COMPLETE, EXECUTION IN PROGRESS
+> **Core Objective:** Wire the review workflow to real API persistence, fix NewsAPI article-URL provenance, add Fierce Pharma + ET Pharma discovery connectors, implement Demo Operator for hackathon workflow demonstration, improve escalation logic.
+
+```
+Phase 09: Real Signal Workflow, NewsAPI Provenance Fix & Pharma RSS Discovery Connectors (IN PROGRESS)
+   │ └── Context: .planning/phases/09-signal-workflow-rss-connectors/09-CONTEXT.md (D-09-01…09)
+   │ └── Plan: .planning/phases/09-signal-workflow-rss-connectors/09-PLAN.md
+```
+
+#### Phase 09 Scope & Plans
+
+- [ ] 09-01-PLAN.md — NewsAPI URL fix (remove newsapi.org fallback, add provenance handler) + Review API wiring (POST /review called on all buttons) + test_signal_routing_workflow.py
+- [ ] 09-02-PLAN.md — Demo Operator selector (top nav, sessionStorage, 6 function roles) + Audit History panel in Signal Detail + Routing Queue display with live action buttons
+- [ ] 09-03-PLAN.md — FiercePharmaRSSConnector + ETPharmaRSSConnector (mirror EMARSSConnector pattern) + BioPharma Dive configured_no_feed registration + Escalation logic compound rule fix
+
+**Requirements:** REQ-P9-01 … REQ-P9-18 (18 requirements — see [09-CONTEXT.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/09-signal-workflow-rss-connectors/09-CONTEXT.md))
