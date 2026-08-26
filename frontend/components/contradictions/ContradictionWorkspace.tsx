@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import type { ContradictionItem } from '@/types/api'
 import { fetchRedTeamContradictions } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
-import { RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { RefreshCw, ShieldAlert, ShieldCheck, ExternalLink } from 'lucide-react'
 
 export function ContradictionWorkspace() {
   const [contradictions, setContradictions] = useState<ContradictionItem[]>([])
@@ -145,39 +146,49 @@ export function ContradictionWorkspace() {
                 </div>
               </div>
 
-              {/* Side-by-Side Verbatim Evidence Excerpts */}
+              {/* Side-by-Side Verbatim Evidence Excerpts with Direct Deep-Links */}
               <div className="contradiction-pair grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-[var(--border)] mt-2">
-                <div
-                  className="claim-box p-3 rounded border border-[var(--border)]"
+                <Link
+                  href={`/signals/${encodeURIComponent(c.claim_a_id)}`}
+                  className="claim-box p-3 rounded border border-[var(--border)] hover:border-[var(--signal)] transition-colors group block"
                   style={{ background: 'var(--surface-secondary)' }}
+                  title={`View Claim A Signal Evidence (ID: ${c.claim_a_id})`}
                 >
                   <div className="flex items-center justify-between text-[10px] font-semibold text-[var(--muted-foreground)] uppercase mb-1">
-                    <span>Claim A (Primary Ingestion)</span>
-                    <span className="font-mono">ID: {c.claim_a_id}</span>
+                    <span className="flex items-center gap-1">
+                      Claim A (Primary Ingestion)
+                      <ExternalLink size={10} className="opacity-60 group-hover:opacity-100 transition-opacity" />
+                    </span>
+                    <span className="font-mono text-[var(--signal)] font-bold">ID: {c.claim_a_id}</span>
                   </div>
                   <p className="text-xs text-[var(--foreground)] leading-relaxed m-0 font-mono select-text">
                     {c.claim_a_excerpt || 'Evidence excerpt recorded in bronze stream.'}
                   </p>
-                </div>
+                </Link>
 
-                <div
-                  className="claim-box p-3 rounded border"
+                <Link
+                  href={`/signals/${encodeURIComponent(c.claim_b_id)}`}
+                  className="claim-box p-3 rounded border hover:border-[var(--danger)] transition-colors group block"
                   style={{
                     background: 'color-mix(in srgb, var(--danger) 6%, var(--surface))',
                     borderColor: 'color-mix(in srgb, var(--danger) 25%, var(--border))',
                   }}
+                  title={`View Claim B Signal Evidence (ID: ${c.claim_b_id})`}
                 >
                   <div
                     className="flex items-center justify-between text-[10px] font-semibold uppercase mb-1"
                     style={{ color: 'var(--danger)' }}
                   >
-                    <span>Claim B (Contradicting Stream)</span>
-                    <span className="font-mono text-[var(--muted-foreground)]">ID: {c.claim_b_id}</span>
+                    <span className="flex items-center gap-1">
+                      Claim B (Contradicting Stream)
+                      <ExternalLink size={10} className="opacity-60 group-hover:opacity-100 transition-opacity" />
+                    </span>
+                    <span className="font-mono text-[var(--danger)] font-bold">ID: {c.claim_b_id}</span>
                   </div>
                   <p className="text-xs text-[var(--foreground)] leading-relaxed m-0 font-mono select-text">
                     {c.claim_b_excerpt || 'Contradicting evidence excerpt recorded in bronze stream.'}
                   </p>
-                </div>
+                </Link>
               </div>
             </Card>
           ))}

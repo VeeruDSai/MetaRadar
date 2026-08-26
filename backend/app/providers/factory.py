@@ -33,8 +33,9 @@ class ProviderFactory:
             except Exception as e:
                 logger.warning(f"Gemma execution failed: {e}. Falling back...")
 
-        # 2. Try Grok Hosted Fallback (if enabled & privacy gate passes)
-        if settings.ENABLE_GROK_FALLBACK and settings.LLM_PROVIDER in ["xai", "auto"] and self.grok.supports(required_capability):
+        # 2. Try Grok Hosted Fallback (if key is present / xai selected / fallback enabled)
+        has_grok_key = bool(settings.effective_xai_api_key or os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY"))
+        if has_grok_key and (settings.ENABLE_GROK_FALLBACK or settings.LLM_PROVIDER in ["xai", "auto", "local"]) and self.grok.supports(required_capability):
             try:
                 if self.grok.validate_privacy_gate(classification):
                     return await self.grok.generate_intelligence(evidence, task, classification)

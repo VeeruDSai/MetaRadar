@@ -258,6 +258,32 @@ class Signal(Base):
     interpretation = Column(Text, nullable=True)
     speculation = Column(Text, nullable=True)
 
+    # Core Decision Object Fields
+    what_changed = Column(Text, nullable=True)
+    why_it_matters = Column(Text, nullable=True)
+    relevant_function = Column(String(100), nullable=True)
+    route_destination = Column(String(100), nullable=True)
+    route_role = Column(String(50), nullable=True)
+    is_escalated = Column(Boolean, default=False, nullable=False)
+    routing_reason = Column(Text, nullable=True)
+    routing_timestamp = Column(DateTime(timezone=True), nullable=True)
+
+    # Source Authority & Validation
+    source_authority_tier = Column(String(50), nullable=True)
+    validation_status = Column(String(50), default="VALIDATED", nullable=False)
+
+    # Suggested Action
+    suggested_action = Column(Text, nullable=True)
+    action_rationale = Column(Text, nullable=True)
+
+    # Persisted Review State & Audit
+    review_status = Column(String(50), default="UNREVIEWED", nullable=False)
+    reviewed_by = Column(String(100), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    review_decision = Column(String(100), nullable=True)
+    review_notes = Column(Text, nullable=True)
+    resulting_action = Column(Text, nullable=True)
+
     priority = Column(String(50), default="MEDIUM", nullable=False)
     score_breakdown = Column(JSONB, nullable=True)
     model_metadata = Column(JSONB, nullable=True)
@@ -280,6 +306,10 @@ class Signal(Base):
         Index("ix_signals_source_name", "source_name"),
         Index("ix_signals_external_id", "external_id"),
         Index("ix_signals_provenance_status", "provenance_status"),
+        Index("ix_signals_review_status", "review_status"),
+        Index("ix_signals_relevant_function", "relevant_function"),
+        Index("ix_signals_is_escalated", "is_escalated"),
+        Index("ix_signals_source_authority_tier", "source_authority_tier"),
     )
 
 

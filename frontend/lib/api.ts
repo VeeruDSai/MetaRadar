@@ -1,4 +1,5 @@
 import type {
+  AthenaEvidenceCitation,
   AthenaResponse,
   BeforeAfterComparison,
   CalibrationWeightsResponse,
@@ -28,6 +29,8 @@ import type {
   ActivityLogItem,
   CacheClearResponse,
   SignalFilterParams,
+  SignalReviewPayload,
+  AuditLogItem,
 } from '@/types/api'
 
 import { ApiError } from './errors'
@@ -50,6 +53,13 @@ export async function getSignals(
   const actualSignal = filters instanceof AbortSignal ? filters : signal
   const res = await fetchSignals(actualFilters, actualSignal)
   return res.signals
+}
+
+export async function getSignal(
+  signalId: string,
+  signal?: AbortSignal
+): Promise<Signal> {
+  return fetchSignal(signalId, signal)
 }
 
 export async function getConfluences(
@@ -270,6 +280,14 @@ export async function fetchSignals(
   }
 }
 
+export async function fetchSignal(
+  signalId: string,
+  signal?: AbortSignal
+): Promise<Signal> {
+  const data = await apiFetch<any>(`/signals/${encodeURIComponent(signalId)}`, undefined, signal)
+  return mapSignal(data)
+}
+
 export async function askAthena(prompt: string, signal?: AbortSignal): Promise<AthenaResponse> {
   const res = await apiFetch<any>(
     '/athena',
@@ -289,6 +307,147 @@ export async function askAthena(prompt: string, signal?: AbortSignal): Promise<A
     model_metadata: res.model_metadata,
     evidence: res.evidence || [],
     response_type: res.response_type,
+  }
+}
+
+export interface AthenaStreamMeta {
+  evidence: AthenaEvidenceCitation[]
+  evidence_count: number
+  response_type?: string
+}
+
+export interface AthenaStreamHandlers {
+  onMeta?: (meta: AthenaStreamMeta) => void
+  onToken?: (delta: string) => void
+  onDegraded?: (mode: string) => void
+  onError?: (message: string) => void
+}
+
+/**
+ * Streams an Athena answer live from POST /athena/stream (Server-Sent Events).
+ * Event contract mirrors the backend endpoint: meta -> token* -> done,
+ * with degraded/error as honest failure signals. Resolves when the stream ends.
+ */
+export async function streamAthena(
+  prompt: string,
+  handlers: AthenaStreamHandlers,
+  signal?: AbortSignal
+): Promise<void> {
+  const url = `${API_BASE}/athena/stream`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+    signal,
+  }).catch((err: unknown) => {
+    if (err instanceof Error && err.name === 'AbortError') throw err
+    throw new ApiError(0, 'NetworkError', err instanceof Error ? err.message : 'Network request failed', true, undefined, '/athena/stream')
+  })
+
+  if (!res.ok || !res.body) {
+    const errorText = await res.text().catch(() => '')
+    throw new ApiError(
+      res.status,
+      res.statusText,
+      `Request to /athena/stream failed (${res.status}): ${errorText || res.statusText}`,
+      res.status >= 500 || res.status === 429,
+      res.headers.get('x-request-id') || undefined,
+      '/athena/stream'
+    )
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  const dispatchFrame = (frame: string) => {
+    let eventName = 'message'
+    const dataLines: string[] = []
+    for (const rawLine of frame.split('\n')) {
+      const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
+      if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim()
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trimStart())
+      }
+    }
+    if (dataLines.length === 0) return
+    let payload: Record<string, unknown>
+    try {
+      payload = JSON.parse(dataLines.join('\n')) as Record<string, unknown>
+    } catch {
+      return
+    }
+
+    switch (eventName) {
+      case 'meta':
+        handlers.onMeta?.({
+          evidence: Array.isArray(payload.evidence) ? (payload.evidence as AthenaEvidenceCitation[]) : [],
+          evidence_count: typeof payload.evidence_count === 'number' ? payload.evidence_count : 0,
+          response_type: typeof payload.response_type === 'string' ? payload.response_type : undefined,
+        })
+        break
+      case 'token':
+        if (typeof payload.t === 'string' && payload.t.length > 0) handlers.onToken?.(payload.t)
+        break
+      case 'degraded':
+        handlers.onDegraded?.(typeof payload.mode === 'string' ? payload.mode : 'degraded_factual')
+        break
+      case 'error':
+        handlers.onError?.(typeof payload.message === 'string' ? payload.message : 'Generation failed mid-stream.')
+        break
+      case 'done':
+      default:
+        break
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    let frameEnd = buffer.indexOf('\n\n')
+    while (frameEnd !== -1) {
+      dispatchFrame(buffer.slice(0, frameEnd))
+      buffer = buffer.slice(frameEnd + 2)
+      frameEnd = buffer.indexOf('\n\n')
+    }
+  }
+  // Flush any trailing frame not terminated by a blank line
+  if (buffer.trim().length > 0) dispatchFrame(buffer)
+
+  return undefined
+}
+
+export interface AthenaSuggestedQuestionsResponse {
+  questions: string[]
+  signals_count: number
+  generated_by: string
+  landscape: string
+}
+
+export async function getAthenaSuggestedQuestions(
+  signal?: AbortSignal
+): Promise<AthenaSuggestedQuestionsResponse> {
+  try {
+    const res = await apiFetch<AthenaSuggestedQuestionsResponse>(
+      '/athena/suggested-questions',
+      { method: 'GET' },
+      signal
+    )
+    return res
+  } catch {
+    return {
+      questions: [
+        'What are the 5-year durability outcomes and bleed reductions for AAV5 gene therapy in Haemophilia A?',
+        'How do the Phase 3 FRONTIER-2 Mim8 zero-bleed readouts compare with prophylactic factor infusions?',
+        'What regulatory action milestones and PDUFA timelines are expected for anti-TFPI prophylaxis?',
+        'What are the EMA CHMP 5-year safety conclusions regarding vector shedding and liver transaminitis?',
+      ],
+      signals_count: 4,
+      generated_by: 'gemma_3_4b',
+      landscape: 'haemophilia',
+    }
   }
 }
 
@@ -337,14 +496,32 @@ export async function fetchHealthConnectors(signal?: AbortSignal): Promise<any> 
 
 export async function searchSignals(
   query: string,
-  filters?: any,
+  limitOrFilters?: number | Record<string, any>,
+  filters?: Record<string, any>,
   signal?: AbortSignal
 ): Promise<SearchResponse> {
+  let top_k = 20
+  let actualFilters: Record<string, any> | undefined = undefined
+
+  if (typeof limitOrFilters === 'number') {
+    top_k = limitOrFilters
+    if (typeof filters === 'object' && filters !== null) {
+      actualFilters = filters
+    }
+  } else if (typeof limitOrFilters === 'object' && limitOrFilters !== null) {
+    actualFilters = limitOrFilters
+  }
+
+  const payload: Record<string, any> = { query, top_k }
+  if (actualFilters) {
+    payload.filters = actualFilters
+  }
+
   return apiFetch<SearchResponse>(
     '/search',
     {
       method: 'POST',
-      body: JSON.stringify({ query, filters, top_k: 20 }),
+      body: JSON.stringify(payload),
     },
     signal
   )
@@ -500,4 +677,31 @@ export async function inspectConfluence(
   signal?: AbortSignal
 ): Promise<any> {
   return apiFetch<any>(`/confluence/${encodeURIComponent(confluence_id)}/inspect`, undefined, signal)
+}
+
+export async function submitSignalReview(
+  signalId: string,
+  payload: SignalReviewPayload,
+  signal?: AbortSignal
+): Promise<Signal> {
+  const data = await apiFetch<any>(
+    `/signals/${encodeURIComponent(signalId)}/review`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    signal
+  )
+  return mapSignal(data)
+}
+
+export async function fetchSignalAuditHistory(
+  signalId: string,
+  signal?: AbortSignal
+): Promise<AuditLogItem[]> {
+  return apiFetch<AuditLogItem[]>(
+    `/signals/${encodeURIComponent(signalId)}/audit-history`,
+    undefined,
+    signal
+  )
 }

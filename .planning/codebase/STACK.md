@@ -1,95 +1,85 @@
 # Technology Stack
 
-**Analysis Date:** 2026-08-23
+**Analysis Date:** 2026-08-27
 
 ## Languages
 
 **Primary:**
-- Python (3.11 target) - FastAPI backend in `backend/app/`, run with `python:3.11-slim` in `backend/Dockerfile` and CI (`.github/workflows/ci.yml` uses Python 3.11). Local dev artifacts show CPython 3.13 (`__pycache__/*.cpython-313.pyc`) — treat 3.11 as canonical.
-- TypeScript 5.7.3 - Next.js frontend in `frontend/` (App Router), strict typecheck via `pnpm exec tsc --noEmit`.
+- **Python 3.11+ (CPython 3.13.5)** - Backend services, FastAPI REST API, LangGraph 11-node intelligence pipeline, ingestion connectors, SQLAlchemy 2.0 async ORM, background scheduler
+- **TypeScript 5.7.3** - Next.js 16.3.0 App Router frontend, 9 specialized intelligence workspaces, REST API client, strictly typed DTOs
 
 **Secondary:**
-- SQL - Alembic migrations in `backend/alembic/versions/` (11 migrations, PostgreSQL dialect)
-- YAML - domain config `config/haemophilia.yaml`
-- CSS/Tailwind - styling via `frontend/app/globals.css`
+- **SQL (PostgreSQL 16 Dialect)** - Relational schemas for Signals, Raw Bronze data, Audit Logs, Sources, Feedback, and pgvector cosine distance queries
+- **CSS / Tailwind CSS v4** - CSS-first design token system (`@theme inline`), CSS custom properties in `frontend/app/globals.css`
+- **Shell / Python Tooling** - Orchestration and verification scripts (`setup.py`, `start.py`, `scripts/export_openapi.py`, `scripts/check-banned-classes.mjs`)
 
 ## Runtime
 
 **Environment:**
-- Python 3.11+ (backend, uvicorn ASGI server)
-- Node.js >= 20.9.0 (frontend engines field; CI uses Node 22)
+- **Node.js**: `>= 20.9.0` (Frontend execution & Next.js production build)
+- **Python**: `3.11+` / `3.13.5` (Backend async event loop & pipeline execution)
 
 **Package Manager:**
-- Frontend: pnpm 9.15.5 (pinned via `packageManager` in `frontend/package.json`)
-  - Lockfile: present — `frontend/pnpm-lock.yaml`
-- Backend: pip with `>=` range constraints in `backend/requirements.txt`
-  - Lockfile: missing (no pinned hashes; versions are minimums only)
+- **Frontend**: `pnpm@9.15.5` (configured via `pnpm-workspace.yaml`, `pnpm-lock.yaml`, and `.pnpmrc`) / `npm`
+- **Backend**: `pip` with `backend/requirements.txt`
+- **Lockfile**: `frontend/pnpm-lock.yaml` and `frontend/package-lock.json` present
 
 ## Frameworks
 
 **Core:**
-- FastAPI >= 0.110.0 - REST API under `/api/v1`, app factory in `backend/app/main.py`
-- Uvicorn >= 0.28.0 - ASGI server (`CMD ["uvicorn", "app.main:app", ...]` in `backend/Dockerfile`)
-- LangGraph >= 0.2.0 - canonical 11-node intelligence pipeline, `backend/app/workflows/graph.py` (`StateGraph`)
-- Next.js 16.3.0 + React 19 - frontend App Router (`frontend/app/`)
-- Tailwind CSS >= 4.3.3 via `@tailwindcss/postcss` (`frontend/postcss.config.mjs`)
-- shadcn/ui (style "base-nova" on @base-ui/react) - component system per `frontend/components.json`
+- **Next.js 16.3.0 (App Router, Turbopack)** - Server/client components, nested routing, streaming layouts, error boundaries
+- **FastAPI >=0.110.0** - Asynchronous REST API, Server-Sent Events (SSE), automated OpenAPI 3.1 documentation, lifespan management
+- **LangGraph >=0.2.0** - 11-node stateful graph pipeline for biomedical competitive intelligence processing
+- **SQLAlchemy 2.0.28+ (Async) & asyncpg 0.29.0+** - Async PostgreSQL ORM, connection pooling, PostgreSQL advisory locks (`try_advisory_lock`)
+- **Pydantic v2 >=2.6.0 & pydantic-settings >=2.2.0** - Strict DTO schemas, domain configuration validation (`config/haemophilia.yaml`)
 
 **Testing:**
-- pytest >= 8.0.0 + pytest-asyncio + pytest-cov + pytest-httpx - backend suite in `tests/` (25 test files), config at `pytest.ini`
-- Frontend: no test runner detected — gates are `tsc --noEmit`, ESLint, banned-class check, `next build` (CI steps)
+- **Pytest 8.0.0+ with pytest-asyncio 0.23.0+ & pytest-httpx 0.30.0+** - Comprehensive backend test suites (139 executable unit & integration tests)
+- **ESLint 10.8.1 with `@next/eslint-plugin-next`** - Frontend linting and strict code quality rules
+- **Custom Linting Tooling**: `scripts/check-banned-classes.mjs` (banned Tailwind utility and hex color enforcement)
 
 **Build/Dev:**
-- Docker Compose - full local stack: Postgres 16+pgvector, Redis 7, Ollama sidecar, backend (+ optional `gpu` profile), frontend (`docker-compose.yml`)
-- `start.py` (repo root) - unified host-mode launcher: starts Docker backing services, uvicorn backend, Next.js dev/prod frontend with live telemetry
-- Alembic >= 1.13.1 - schema migrations (`backend/alembic/`, config `backend/alembic.ini`)
-- scripts/export_openapi.py - contract sync generator producing canonical `frontend/types/api.ts` from OpenAPI
-- ESLint 10 + eslint-config-next 16.3.0 (`frontend/eslint.config.mjs`) + custom gate `scripts/check-banned-classes.mjs`
+- **Turbopack (Next.js 16)** - Fast frontend bundler and compiler
+- **PostCSS 8.5 with `@tailwindcss/postcss` 4.3.3** - CSS-first token parsing
+- **Alembic 1.13.1+** - Async database schema migrations
 
 ## Key Dependencies
 
 **Critical:**
-- SQLAlchemy >= 2.0.28 + asyncpg >= 0.29.0 - async ORM/data layer, engine in `backend/app/db/session.py` (`create_async_engine`, pool_size=10, max_overflow=20)
-- pgvector >= 0.2.5 - vector column support (`from pgvector.sqlalchemy import Vector` in `backend/app/models/__init__.py`)
-- redis >= 5.0.3 - cache + health checks (`redis.asyncio` in `backend/app/api/v1/endpoints/cache.py`)
-- fastembed >= 0.4.0 - ONNX CPU embeddings (all-MiniLM-L6-v2, 384-dim) in `backend/app/services/embeddings.py`; deliberately no torch/sentence-transformers
-- pydantic >= 2.6.0 + pydantic-settings >= 2.2.0 - schemas and typed settings (`backend/app/core/config.py`)
-- httpx >= 0.27.0 - all outbound HTTP (connectors, LLM providers)
+- `fastembed` >=0.4.0 / `sentence-transformers/all-MiniLM-L6-v2` - 384-dimensional dense semantic vector embeddings
+- `pgvector` >=0.2.5 - HNSW cosine similarity indexing and hybrid vector search in PostgreSQL
+- `framer-motion` ^13.1.0 & `recharts` ^3.10.1 - Smooth micro-animations, counters, and radar visualization
+- `@base-ui/react` ^1.5.0 & `lucide-react` ^1.16.0 - Accessible headless UI primitives and semantic icons
+- `structlog` >=24.1.0 & `asgi-correlation-id` >=4.3.0 - Structured JSON logging with correlation tracing and PII redaction
 
 **Infrastructure:**
-- structlog >= 24.1.0 - JSON structured logging (`backend/app/core/logging.py`)
-- asgi-correlation-id >= 4.3.0 - request correlation middleware (`backend/app/core/middleware.py`)
-- python-dotenv >= 1.0.1 - env loading for settings
-- pyyaml >= 6.0.1 - domain config parsing (`backend/app/core/domain_config.py`)
-- langgraph - workflow orchestration (see above)
-- Frontend UI: framer-motion ^13, recharts ^3.10, lucide-react, class-variance-authority, clsx, tailwind-merge
+- `httpx` >=0.27.0 - Asynchronous HTTP client for external connector ingestion
+- `redis` >=5.0.3 - Distributed caching, health checks, and rate limiting
+- `pyyaml` >=6.0.1 - Disease area domain configuration parser (`config/haemophilia.yaml`)
 
 ## Configuration
 
 **Environment:**
-- Typed settings singleton in `backend/app/core/config.py` (`pydantic_settings.BaseSettings`, reads `.env`, `extra="ignore"`)
-- `.env` file present at repo root (secrets — never commit); `.env.example` documents expected variables
-- Key backend variables: `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `LLM_PROVIDER`, `LOCAL_LLM_MODEL`, `LLM_DEVICE`, `LLM_DTYPE`, `MAX_CONTEXT_TOKENS`, `MAX_OUTPUT_TOKENS`, `ENABLE_GROK_FALLBACK`, `XAI_API_KEY`, `OLLAMA_HOST`, `OLLAMA_MODEL`, `EMBEDDING_MODEL*`, `NEWSAPI_KEY`, `NCBI_API_KEY|NCBI_TOOL|NCBI_EMAIL`, `OPENFDA_API_KEY`, `ENABLE_BACKGROUND_SCHEDULER`, `SCHEDULER_*_INTERVAL_MINUTES`
-- Frontend variable: `NEXT_PUBLIC_API_URL` read in `frontend/lib/api.ts:142`. Note: `docker-compose.yml:102` sets `NEXT_PUBLIC_API_BASE_URL`, which the code does NOT read — set `NEXT_PUBLIC_API_URL` when running via Compose.
+- Managed through `.env` and `backend/app/core/config.py` using `pydantic-settings`
+- Critical keys: `DATABASE_URL`, `REDIS_URL`, `NEWSAPI_KEY`, `NCBI_API_KEY`, `OPENFDA_API_KEY`, `LLM_PROVIDER`, `OLLAMA_HOST`, `XAI_API_KEY`
+- Pure validator: `configuration_error_for(source_id)` for side-effect-free connector configuration status validation
 
 **Build:**
-- `backend/Dockerfile` - python:3.11-slim, non-root user, port 8000
-- `frontend/Dockerfile` - Next.js standalone build, port 3000
-- `frontend/tsconfig.json` - path alias `@/*` → repo-relative frontend root
-- `pytest.ini` - root test discovery config
-- `contracts/openapi.json` - committed API contract snapshot (drift-checked in CI by `tests/test_contract_drift.py`)
+- `frontend/next.config.mjs` - Turbopack, strict type and lint gating (`ignoreBuildErrors: false`)
+- `frontend/tsconfig.json` - Strict TypeScript configuration with `@/*` path alias mapping
+- `frontend/eslint.config.mjs` - ESLint 10 flat configuration
+- `pytest.ini` - Asyncio mode auto, test path configuration
 
 ## Platform Requirements
 
 **Development:**
-- Windows/macOS/Linux hosts supported; `start.py` orchestrates Docker Desktop + local processes on Windows (see `.planning/WINDOWS.md`)
-- Docker required for Postgres/Redis/Ollama unless running services natively
-- GPU optional: `docker compose --profile gpu up` uses `LLM_DEVICE=cuda:0` (~4 GB VRAM budget documented in docker-compose.yml comments); default is CPU (`gemma3:4b` Q4 int4)
+- Windows / macOS / Linux with Python 3.11+, Node.js >= 20.9.0, PostgreSQL 16 with `pgvector`
+- Optional local GPU (e.g. RTX 3050 4GB VRAM) for Ollama Gemma 3 4B local inference
 
 **Production:**
-- Deployment target: local/on-prem Docker Compose stack ("Local Gemma" privacy-first architecture; hosted LLM fallback disabled by default)
-- Health probes: `GET /api/v1/health` (compose healthchecks hit this endpoint)
+- Containerized deployment via Docker (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`)
+- Single-command zero-config onboarding (`setup.py`) and development runner (`start.py`)
 
 ---
 
-*Stack analysis: 2026-08-23*
+*Stack analysis: 2026-08-27*

@@ -48,6 +48,13 @@ class FactInterpretationSpeculationSchema(BaseModel):
     speculation: Optional[str] = None
 
 
+class AthenaSuggestedQuestionsResponse(BaseModel):
+    questions: List[str] = Field(default_factory=list)
+    signals_count: int = 0
+    generated_by: str = "gemma_3_4b"
+    landscape: str = "haemophilia"
+
+
 class ScoreBreakdownSchema(BaseModel):
     novelty: float = 0.0
     clinical: float = 0.0
@@ -88,6 +95,85 @@ class EvidenceSchema(BaseModel):
     created_at: datetime
 
 
+class OriginalEvidenceItemSchema(BaseModel):
+    source_id: str
+    source_name: str
+    authority_tier: str = "AUTHORITATIVE"  # AUTHORITATIVE | SECONDARY | DISCOVERY
+    validation_status: str = "VALIDATED"    # VALIDATED | PENDING_VALIDATION | NOT_VALIDATED | CONTRADICTED
+    title: Optional[str] = None
+    published_at: Optional[datetime] = None
+    retrieved_at: Optional[datetime] = None
+    url: Optional[str] = None
+    identifier: Optional[str] = None
+    excerpt: Optional[str] = None
+
+
+class AIInterpretationSchema(BaseModel):
+    summary: Optional[str] = None
+    why_it_matters: Optional[str] = None
+    facts: List[str] = Field(default_factory=list)
+    speculation: Optional[str] = None
+    confidence: Optional[float] = None
+    confidence_type: Optional[str] = None
+    generated_at: Optional[datetime] = None
+    model: Optional[str] = None
+    mode: Optional[str] = None
+
+
+class SuggestedActionSchema(BaseModel):
+    text: str
+    rationale: Optional[str] = None
+    target_function: str = "MEDICAL_AFFAIRS"
+    is_escalated: bool = False
+    generated_at: Optional[datetime] = None
+
+
+class ReviewStateSchema(BaseModel):
+    status: str = "UNREVIEWED"  # UNREVIEWED | IN_REVIEW | REVIEWED | ACTION_REQUIRED | ACTIONED | DISMISSED
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    decision: Optional[str] = None
+    notes: Optional[str] = None
+    resulting_action: Optional[str] = None
+
+
+class RoutingSchema(BaseModel):
+    destination: str
+    role: str = "FUNCTION"  # FUNCTION | LEADERSHIP
+    is_escalated: bool = False
+    reason: Optional[str] = None
+    timestamp: Optional[datetime] = None
+
+
+class FunctionSchema(BaseModel):
+    name: str
+    label: str
+
+
+class PrioritySchema(BaseModel):
+    level: str = "MEDIUM"
+    score: Optional[float] = None
+    score_breakdown: Optional[ScoreBreakdownSchema] = None
+
+
+class SignalReviewRequest(BaseModel):
+    status: str = Field(default="REVIEWED", description="UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED")
+    reviewer: Optional[str] = Field(default="Clinical Reviewer", description="Role/Actor performing review")
+    decision: Optional[str] = Field(default=None, description="Review decision outcome")
+    notes: Optional[str] = Field(default=None, description="Reviewer notes")
+    resulting_action: Optional[str] = Field(default=None, description="Action taken or initiated")
+
+
+class AuditLogItemSchema(BaseModel):
+    audit_id: UUID
+    entity_name: str
+    entity_id: str
+    action: str
+    performed_by: str
+    timestamp: datetime
+    details: Optional[Dict[str, Any]] = None
+
+
 class SignalSchema(BaseModel):
     signal_id: UUID
     source_id: str
@@ -119,6 +205,33 @@ class SignalSchema(BaseModel):
     raw_record_reference: Optional[str] = None
     scoring_status: str = "computed"
 
+    # Core Decision Object Fields
+    what_changed: Optional[str] = None
+    why_it_matters: Optional[str] = None
+    relevant_function: Optional[str] = None
+    route_destination: Optional[str] = None
+    route_role: Optional[str] = None
+    is_escalated: bool = False
+    routing_reason: Optional[str] = None
+    routing_timestamp: Optional[datetime] = None
+    source_authority_tier: Optional[str] = None
+    validation_status: str = "VALIDATED"
+    suggested_action: Optional[str] = None
+    action_rationale: Optional[str] = None
+    review_status: str = "UNREVIEWED"
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    review_decision: Optional[str] = None
+    review_notes: Optional[str] = None
+    resulting_action: Optional[str] = None
+
+    # Structured Decision Sub-Objects (for clear trust boundaries)
+    evidence: List[OriginalEvidenceItemSchema] = Field(default_factory=list)
+    interpretation_details: Optional[AIInterpretationSchema] = None
+    action_details: Optional[SuggestedActionSchema] = None
+    routing_details: Optional[RoutingSchema] = None
+    review_details: Optional[ReviewStateSchema] = None
+
     facts: List[str] = Field(default_factory=list)
     interpretation: Optional[str] = None
     speculation: Optional[str] = None
@@ -129,6 +242,26 @@ class SignalSchema(BaseModel):
     scoring_config_version: str = "haemophilia_v1"
     embedding_model_version: str = "v1"
     prompt_version: str = "v1.0.0"
+    created_at: datetime
+
+
+class SignalDecisionResponse(BaseModel):
+    id: str
+    title: str
+    signal_type: str
+    disease: str
+    priority: PrioritySchema
+    what_changed: str
+    why_it_matters: str
+    function: FunctionSchema
+    routing: RoutingSchema
+    evidence: List[OriginalEvidenceItemSchema] = Field(default_factory=list)
+    interpretation: AIInterpretationSchema
+    suggested_action: SuggestedActionSchema
+    review: ReviewStateSchema
+    lifecycle: Optional[Dict[str, Any]] = None
+    confluence: Optional[Dict[str, Any]] = None
+    contradictions: List[Dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
 
 

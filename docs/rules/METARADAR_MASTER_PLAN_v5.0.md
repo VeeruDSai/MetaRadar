@@ -590,17 +590,22 @@ BART is NEVER listed as a reasoning model.
 
 This section records the decisions from the final pre-implementation hardening pass. It is **not a redesign** — the §4 pipeline, ten nodes, five mechanisms, six functions, calibration loop, Ask Athena, and the provider abstraction are all unchanged. Every item below is a decision that would become expensive, dangerous, or difficult to change AFTER implementation begins, so it is locked here first.
 
-### 14.1 Local Model Execution — GPU Deployment Target (Gemma on RTX 3050)
+### 14.1 Local Model Execution — GPU Deployment Target & Root `models/` GGUF Discovery
 
-**Deployment target (actual development/demo machine):** NVIDIA RTX 3050, **4 GB VRAM**.
+**Deployment target (actual development/demo machine):** NVIDIA RTX 3050, **4 GB VRAM** (or CPU fallback).
 
-* **Gemma 3 4B Instruct, Q4/int4 — Local GPU.** All documentation that previously said "Gemma — Local CPU" is corrected to: **"Gemma 3 4B Instruct, Q4/int4 — Local GPU (NVIDIA RTX 3050 4 GB VRAM)."**
-* **4 GB VRAM does NOT guarantee successful inference.** Model weights, KV cache, runtime overhead, and context length are budgeted **separately** (weights ≈ 2.6 GB Q4; KV cache and context grow with `MAX_CONTEXT_TOKENS`; runtime/overhead depends on the runner).
+* **Gemma 3 4B Instruct, Q4/int4 — Local GPU / Direct GGUF.** Stored directly in the root `models/` directory (e.g. `models/gemma-3-4b-it-Q4_K_M.gguf`) or served via local Ollama sidecar (`http://localhost:11434`).
+* **Root `models/` Folder Architecture:** MetaRadar automatically scans the repository root `models/` directory for any reasoning `.gguf` file. Any user-placed quantized reasoning model (`*.gguf`) is auto-discovered and loaded for local reasoning, Four-Question synthesis, and Ask Athena.
+* **Interactive Setup (`setup.py`):** The automated setup wizard provides an interactive choice:
+  1. Download default local reasoning model (`gemma-3-4b-it-Q4_K_M.gguf` ~2.4 GB into `models/`) for 100% private, offline inference.
+  2. Enter Hosted LLM API Key (`xAI Grok`).
+  3. Skip (operate in source-grounded BART degraded factual fallback mode).
+* **4 GB VRAM does NOT guarantee successful inference.** Model weights, KV cache, runtime overhead, and context length are budgeted **separately** (weights ≈ 2.4 GB Q4; KV cache and context grow with `MAX_CONTEXT_TOKENS`; runtime/overhead depends on the runner).
 * **The system must never crash because Gemma cannot fit or execute.** Execution flow:
 
 ```text
-GPU available → Gemma 3 4B Q4 → reasoning output
-        ↓ init/inference failure
+Local GGUF in models/ or Ollama → Gemma 3 4B Q4 → reasoning output
+        ↓ init/inference failure / credits limit
 Grok API (if configured and permitted) → reasoning output
         ↓ failure
 BART factual degraded mode (source-grounded summary)
@@ -608,8 +613,8 @@ BART factual degraded mode (source-grounded summary)
 source-grounded factual signal + human-review flag (dashboard stays alive)
 ```
 
-* **Configurable settings (env vars, SRS §4.2):** `LOCAL_LLM_MODEL` · `LLM_DEVICE` (`cuda:0` / `cpu` / `auto`) · `LLM_DTYPE`/quantization (`int4`/Q4 default) · `MAX_CONTEXT_TOKENS` · `MAX_OUTPUT_TOKENS`. BART/spaCy/MiniLM/BART-MNLI remain CPU-friendly and are unaffected.
-* **No GPU-specific logic in LangGraph nodes.** The `LLMProvider` abstraction (`LocalGemmaProvider`/`XAIProvider`/`BartDegradedProvider`) owns ALL model execution, device selection, quantization, and failure handling (§13).
+* **Configurable settings (env vars, SRS §4.2):** `MODELS_DIR` (`./models`) · `LOCAL_GGUF_MODEL` · `LOCAL_LLM_MODEL` · `LLM_DEVICE` (`cuda:0` / `cpu` / `auto`) · `LLM_DTYPE`/quantization (`int4`/Q4 default) · `MAX_CONTEXT_TOKENS` · `MAX_OUTPUT_TOKENS`. BART/spaCy/MiniLM/BART-MNLI remain CPU-friendly and are unaffected.
+* **No GPU-specific logic in LangGraph nodes.** The `LLMProvider` abstraction (`GemmaProvider`/`GrokProvider`/`DegradedProvider`) owns ALL model execution, device selection, quantization, and failure handling (§13).
 
 ### 14.2 Canonical Entity Model & Database Architecture
 

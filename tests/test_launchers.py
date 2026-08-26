@@ -18,6 +18,9 @@ def test_setup_py_help():
     assert "MetaRadar" in res.stdout
     assert "--skip-docker" in res.stdout
     assert "--skip-models" in res.stdout
+    assert "--download-model" in res.stdout
+    assert "--api-key" in res.stdout
+    assert "--no-interactive" in res.stdout
     assert "--skip-frontend" in res.stdout
     assert "--skip-db-seed" in res.stdout
 

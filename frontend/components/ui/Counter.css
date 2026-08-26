@@ -1,0 +1,68 @@
+/* React Bits Animated Counter Styling */
+.counter-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.counter-counter {
+  display: inline-flex;
+  overflow: hidden;
+  line-height: 1;
+  align-items: center;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.counter-digit {
+  position: relative;
+  width: 0.58em;
+  min-width: 0.58em;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.counter-number {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  will-change: transform;
+}
+
+.gradient-container {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.top-gradient {
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.bottom-gradient {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}

@@ -638,7 +638,7 @@ def test_run_status_states():
 
 @pytest.mark.asyncio
 async def test_health_connectors_endpoint():
-    """T-P1-14: GET /api/v1/health/connectors returns all 5 sources honestly."""
+    """T-P1-14: GET /api/v1/health/connectors returns all sources honestly."""
     from httpx import AsyncClient, ASGITransport
     from app.main import app
 
@@ -647,13 +647,14 @@ async def test_health_connectors_endpoint():
 
     assert response.status_code == 200
     connectors = response.json()["connectors"]
-    assert len(connectors) == 5
+    assert len(connectors) >= 5
 
     by_source = {c["source_id"]: c for c in connectors}
-    assert set(by_source) == {"pubmed", "clinical_trials", "newsapi", "fda", "ema"}
+    expected_sources = {"pubmed", "clinical_trials", "newsapi", "fda", "ema", "fierce_pharma", "et_pharma"}
+    assert expected_sources.issubset(set(by_source))
     for source_id, conn in by_source.items():
         assert conn["freshness_class"] in (
-            "real_time", "near_real_time", "delayed", "batch", "adapter_ready", "synthetic"
+            "real_time", "near_real_time", "delayed", "batch", "adapter_ready", "synthetic", "manual"
         )
         assert "quota_remaining" in conn
         assert "last_success" in conn

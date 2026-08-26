@@ -2,14 +2,15 @@ import asyncio
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
 
 from app.connectors import ALL_CONNECTORS
 from app.connectors.base import ProfileRunResult, SourceConnector
-from app.models import SourceHealthLog, Source
-from sqlalchemy import select
+from app.models import SourceHealthLog, Source, RawSignalBronze
+from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger("ingestion_service")
@@ -224,3 +225,17 @@ class IngestionService:
             "sources_executed": list(per_source_results.keys()),
             "results": per_source_results,
         }
+
+    async def prune_expired_bronze(self, retention_days: Optional[int] = None) -> int:
+        """Prunes raw_signals_bronze records older than RAW_SIGNAL_RETENTION_DAYS."""
+        days = retention_days if retention_days is not None else settings.RAW_SIGNAL_RETENTION_DAYS
+        if days <= 0:
+            return 0
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        stmt = delete(RawSignalBronze).where(RawSignalBronze.retrieved_at < cutoff)
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+        deleted_count = result.rowcount if hasattr(result, "rowcount") and result.rowcount is not None else 0
+        if deleted_count > 0:
+            logger.info(f"[INGESTION] Pruned {deleted_count} expired bronze records older than {days} days (cutoff: {cutoff.isoformat()}).")
+        return deleted_count

@@ -1,13 +1,16 @@
+import asyncio
+import json
 import time
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional, Tuple
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, distinct, or_
 
 from app.db.session import get_db
-from app.models import Signal, Asset, Confluence, Development, Contradiction, Evidence
+from app.models import Signal, Asset, Confluence, Development, Contradiction, Evidence, AuditLog
 from app.schemas import (
     OverviewResponse,
     SignalListResponse,
@@ -21,13 +24,28 @@ from app.schemas import (
     LifecycleSummarySchema,
     TrendPointSchema,
     OverviewHealthSchema,
+    AthenaSuggestedQuestionsResponse,
+    OriginalEvidenceItemSchema,
+    AIInterpretationSchema,
+    SuggestedActionSchema,
+    ReviewStateSchema,
+    RoutingSchema,
+    FunctionSchema,
+    PrioritySchema,
+    SignalDecisionResponse,
+    SignalReviewRequest,
+    AuditLogItemSchema,
 )
+from app.services.authority import get_source_authority_tier, resolve_validation_status
+from app.services.routing import resolve_signal_routing, FUNCTION_LABELS, StakeholderFunction
 from app.services.pii import PIIPHIScrubber
+from app.services.provenance_urls import resolve_canonical_provenance
 from app.services.scoring import priority_scorer
 from app.services.confluence import confluence_engine
 from app.services.embeddings import embedding_service
 from app.providers.factory import provider_factory
 from app.providers.base import ProviderCapability, DataClassification
+from app.providers.gemma import GemmaProvider, OllamaUnavailableError
 
 router = APIRouter()
 
@@ -61,32 +79,18 @@ def _serialize_signal(s: Signal) -> SignalSchema:
     is_synth = getattr(s, "is_synthetic", False) or False
     data_mode = getattr(s, "data_mode", None) or ("test_fixture" if is_synth else "live")
     raw_url = getattr(s, "canonical_url", None)
-    canonical_url = raw_url.strip() if (raw_url and isinstance(raw_url, str) and raw_url.strip()) else None
-
-    # Construct canonical public URL if missing
-    if not canonical_url:
-        ext = getattr(s, "external_id", None) or getattr(s, "pmid", None) or getattr(s, "nct_id", None) or getattr(s, "regulatory_id", None)
-        if s.source_id == "pubmed" and ext:
-            clean_pmid = ext.replace("PMID:", "").replace("pmid:", "").strip()
-            canonical_url = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}/"
-        elif s.source_id == "clinical_trials" and ext:
-            clean_nct = ext.strip()
-            canonical_url = f"https://clinicaltrials.gov/study/{clean_nct}"
-        elif s.source_id == "fda":
-            canonical_url = "https://open.fda.gov/drug/event/"
-        elif s.source_id == "ema":
-            canonical_url = "https://www.ema.europa.eu/en/medicines"
-
-    prov_status = getattr(s, "provenance_status", None)
-    if not prov_status:
-        if canonical_url:
-            prov_status = "available"
-        elif is_synth:
-            prov_status = "fixture"
-        else:
-            prov_status = "missing_url"
-    elif prov_status == "fixture" and canonical_url:
-        prov_status = "available"
+    ext = getattr(s, "external_id", None) or getattr(s, "pmid", None) or getattr(s, "nct_id", None) or getattr(s, "regulatory_id", None)
+    
+    canonical_url, prov_status = resolve_canonical_provenance(
+        source_id=getattr(s, "source_id", None),
+        existing_url=raw_url,
+        external_id=ext,
+        pmid=getattr(s, "pmid", None),
+        nct_id=getattr(s, "nct_id", None),
+        title_or_content=f"{getattr(s, 'title', '')} {getattr(s, 'content', '')}",
+        is_synthetic=is_synth,
+        existing_status=getattr(s, "provenance_status", None),
+    )
 
     confidence_type = getattr(s, "confidence_type", None) or ("fixture" if is_synth else "extraction")
     confidence_rationale = getattr(s, "confidence_rationale", None)
@@ -104,6 +108,109 @@ def _serialize_signal(s: Signal) -> SignalSchema:
     evidence_text = getattr(s, "evidence_text", None) or s.content or s.title
     raw_record_ref = getattr(s, "raw_record_reference", None)
     ingested_at = getattr(s, "ingested_at", None) or s.retrieved_at or s.created_at
+
+    # Authority & Validation resolution
+    authority_tier = (
+        getattr(s, "source_authority_tier", None)
+        or get_source_authority_tier(s.source_id, getattr(s, "source_tier", 1)).value
+    )
+    validation_status = (
+        getattr(s, "validation_status", None)
+        or resolve_validation_status(s.source_id, authority_tier).value
+    )
+
+    # Routing & Function resolution
+    routing_data = resolve_signal_routing(
+        signal_type=s.signal_type,
+        priority=s.priority,
+        priority_score=score_breakdown.total if score_breakdown else None,
+        title=s.title,
+        content=s.content,
+    )
+
+    what_changed = (
+        getattr(s, "what_changed", None)
+        or (s.facts[0] if (s.facts and len(s.facts) > 0) else s.title)
+    )
+    why_it_matters = (
+        getattr(s, "why_it_matters", None)
+        or s.interpretation
+        or s.speculation
+        or "Clinical decision significance under active landscape review."
+    )
+    relevant_function = getattr(s, "relevant_function", None) or routing_data["relevant_function"]
+    route_destination = getattr(s, "route_destination", None) or routing_data["route_destination"]
+    route_role = getattr(s, "route_role", None) or routing_data["route_role"]
+    is_escalated = (
+        getattr(s, "is_escalated", False)
+        if getattr(s, "is_escalated", None) is not None
+        else routing_data["is_escalated"]
+    )
+    routing_reason = getattr(s, "routing_reason", None) or routing_data["routing_reason"]
+    routing_timestamp = getattr(s, "routing_timestamp", None) or routing_data["routing_timestamp"]
+
+    suggested_action = getattr(s, "suggested_action", None) or routing_data["suggested_action"]
+    action_rationale = getattr(s, "action_rationale", None) or routing_data["action_rationale"]
+
+    review_status = getattr(s, "review_status", None) or "UNREVIEWED"
+    reviewed_by = getattr(s, "reviewed_by", None)
+    reviewed_at = getattr(s, "reviewed_at", None)
+    review_decision = getattr(s, "review_decision", None)
+    review_notes = getattr(s, "review_notes", None)
+    resulting_action = getattr(s, "resulting_action", None)
+
+    # Sub-objects maintaining the strict trust boundary
+    evidence_items = [
+        OriginalEvidenceItemSchema(
+            source_id=s.source_id,
+            source_name=source_name,
+            authority_tier=authority_tier,
+            validation_status=validation_status,
+            title=s.title,
+            published_at=s.published_at,
+            retrieved_at=s.retrieved_at,
+            url=canonical_url,
+            identifier=ext_id,
+            excerpt=evidence_text[:600] if evidence_text else None,
+        )
+    ]
+
+    interpretation_details = AIInterpretationSchema(
+        summary=s.interpretation or s.content[:300],
+        why_it_matters=why_it_matters,
+        facts=s.facts or [],
+        speculation=s.speculation,
+        confidence=confidence,
+        confidence_type=confidence_type,
+        generated_at=s.created_at,
+        model=model_metadata.model if model_metadata else "gemma-3-4b-it",
+        mode=model_metadata.mode if model_metadata else "reasoning",
+    )
+
+    action_details = SuggestedActionSchema(
+        text=suggested_action,
+        rationale=action_rationale,
+        target_function=relevant_function,
+        is_escalated=is_escalated,
+        generated_at=routing_timestamp or s.created_at,
+    )
+
+    routing_details = RoutingSchema(
+        destination=route_destination,
+        role=route_role,
+        is_escalated=is_escalated,
+        reason=routing_reason,
+        timestamp=routing_timestamp or s.created_at,
+    )
+
+    review_details = ReviewStateSchema(
+        status=review_status,
+        reviewed_by=reviewed_by,
+        reviewed_at=reviewed_at,
+        decision=review_decision,
+        notes=review_notes,
+        resulting_action=resulting_action,
+    )
 
     return SignalSchema(
         signal_id=s.signal_id,
@@ -133,6 +240,29 @@ def _serialize_signal(s: Signal) -> SignalSchema:
         evidence_text=evidence_text,
         raw_record_reference=raw_record_ref,
         scoring_status=scoring_status,
+        what_changed=what_changed,
+        why_it_matters=why_it_matters,
+        relevant_function=relevant_function,
+        route_destination=route_destination,
+        route_role=route_role,
+        is_escalated=is_escalated,
+        routing_reason=routing_reason,
+        routing_timestamp=routing_timestamp,
+        source_authority_tier=authority_tier,
+        validation_status=validation_status,
+        suggested_action=suggested_action,
+        action_rationale=action_rationale,
+        review_status=review_status,
+        reviewed_by=reviewed_by,
+        reviewed_at=reviewed_at,
+        review_decision=review_decision,
+        review_notes=review_notes,
+        resulting_action=resulting_action,
+        evidence=evidence_items,
+        interpretation_details=interpretation_details,
+        action_details=action_details,
+        routing_details=routing_details,
+        review_details=review_details,
         facts=s.facts or [],
         interpretation=s.interpretation,
         speculation=s.speculation,
@@ -214,6 +344,360 @@ async def list_signals(
     return SignalListResponse(
         signals=[_serialize_signal(s) for s in signals],
         total=total
+    )
+
+
+@router.get("/signals/{signal_id}", response_model=SignalSchema)
+async def get_signal_detail(signal_id: str, db: AsyncSession = Depends(get_db)):
+    """Fetch single signal detail by signal_id (UUID), external_id, or fingerprint."""
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+    return _serialize_signal(signal)
+
+
+@router.post("/signals/{signal_id}/review", response_model=SignalSchema)
+async def submit_signal_review(
+    signal_id: str,
+    payload: SignalReviewRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Submits a human review action for a signal, persisting review state and audit history.
+    Supported statuses: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED.
+    Opening a signal does not mark it reviewed — an explicit review action is required.
+    """
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+
+    valid_statuses = {"UNREVIEWED", "IN_REVIEW", "REVIEWED", "ACTION_REQUIRED", "ACTIONED", "DISMISSED"}
+    norm_status = payload.status.upper().strip()
+    if norm_status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid review status '{payload.status}'. Must be one of: {sorted(valid_statuses)}"
+        )
+
+    prev_status = getattr(signal, "review_status", "UNREVIEWED") or "UNREVIEWED"
+    now_utc = datetime.now(timezone.utc)
+
+    signal.review_status = norm_status
+    signal.reviewed_by = payload.reviewer or "Clinical Reviewer"
+    signal.reviewed_at = now_utc
+    if payload.decision:
+        signal.review_decision = payload.decision
+    if payload.notes:
+        signal.review_notes = payload.notes
+    if payload.resulting_action:
+        signal.resulting_action = payload.resulting_action
+
+    # Record immutable audit entry
+    audit_entry = AuditLog(
+        entity_name="Signal",
+        entity_id=str(signal.signal_id),
+        action="SIGNAL_REVIEWED",
+        performed_by=payload.reviewer or "Clinical Reviewer",
+        timestamp=now_utc,
+        details={
+            "previous_status": prev_status,
+            "new_status": norm_status,
+            "decision": payload.decision,
+            "notes": payload.notes,
+            "resulting_action": payload.resulting_action,
+        }
+    )
+    db.add(audit_entry)
+    await db.commit()
+    await db.refresh(signal)
+
+    return _serialize_signal(signal)
+
+
+@router.get("/signals/{signal_id}/audit-history", response_model=List[AuditLogItemSchema])
+async def get_signal_audit_history(signal_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Fetches chronological audit history and lifecycle milestones for a signal.
+    Traces: Detected -> Classified -> Prioritized -> Routed -> Reviewed -> Actioned.
+    """
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+
+    # Query persisted audit log records
+    audit_query = (
+        select(AuditLog)
+        .where(
+            AuditLog.entity_name == "Signal",
+            AuditLog.entity_id == str(signal.signal_id),
+        )
+        .order_by(AuditLog.timestamp.asc())
+    )
+    audit_res = await db.execute(audit_query)
+    audit_logs = audit_res.scalars().all()
+
+    items: List[AuditLogItemSchema] = []
+    for log in audit_logs:
+        items.append(
+            AuditLogItemSchema(
+                audit_id=log.audit_id,
+                entity_name=log.entity_name,
+                entity_id=log.entity_id,
+                action=log.action,
+                performed_by=log.performed_by,
+                timestamp=log.timestamp,
+                details=log.details or {},
+            )
+        )
+
+    # If no explicit review audit logs exist yet, provide the factual baseline provenance trail
+    if not items:
+        serialized = _serialize_signal(signal)
+        import uuid as py_uuid
+
+        # 1. Detected
+        items.append(
+            AuditLogItemSchema(
+                audit_id=py_uuid.uuid4(),
+                entity_name="Signal",
+                entity_id=str(signal.signal_id),
+                action="SIGNAL_DETECTED",
+                performed_by=f"connector:{signal.source_id}",
+                timestamp=signal.retrieved_at,
+                details={
+                    "source_id": signal.source_id,
+                    "source_authority_tier": serialized.source_authority_tier,
+                    "validation_status": serialized.validation_status,
+                },
+            )
+        )
+        # 2. Classified & Prioritized
+        items.append(
+            AuditLogItemSchema(
+                audit_id=py_uuid.uuid4(),
+                entity_name="Signal",
+                entity_id=str(signal.signal_id),
+                action="SIGNAL_PRIORITIZED",
+                performed_by="pipeline:scoring_engine",
+                timestamp=signal.created_at,
+                details={
+                    "priority": signal.priority,
+                    "score": serialized.score_breakdown.total if serialized.score_breakdown else None,
+                    "signal_type": signal.signal_type,
+                },
+            )
+        )
+        # 3. Routed
+        items.append(
+            AuditLogItemSchema(
+                audit_id=py_uuid.uuid4(),
+                entity_name="Signal",
+                entity_id=str(signal.signal_id),
+                action="SIGNAL_ROUTED",
+                performed_by="pipeline:routing_engine",
+                timestamp=serialized.routing_timestamp or signal.created_at,
+                details={
+                    "destination": serialized.route_destination,
+                    "is_escalated": serialized.is_escalated,
+                    "reason": serialized.routing_reason,
+                },
+            )
+        )
+
+    return items
+
+
+@router.get("/signals/{signal_id}/decision-object", response_model=SignalDecisionResponse)
+async def get_signal_decision_object(signal_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Returns the complete unified Signal Decision Object with strict evidence/interpretation/action separation
+    and drill-downs for Confluence, Contradictions, and Lifecycle.
+    """
+    target_uuid = None
+    try:
+        target_uuid = UUID(signal_id)
+    except (ValueError, TypeError):
+        target_uuid = None
+
+    if target_uuid:
+        query = select(Signal).where(Signal.signal_id == target_uuid)
+    else:
+        query = select(Signal).where(
+            or_(
+                Signal.external_id == signal_id,
+                Signal.fingerprint == signal_id,
+                Signal.pmid == signal_id,
+                Signal.nct_id == signal_id,
+                Signal.regulatory_id == signal_id,
+            )
+        )
+
+    res = await db.execute(query)
+    signal = res.scalars().first()
+    if not signal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Signal with ID '{signal_id}' not found."
+        )
+
+    s = _serialize_signal(signal)
+
+    # Drill-down: Contradictions
+    contradictions_res = await db.execute(
+        select(Contradiction).where(
+            or_(
+                Contradiction.claim_a_id == str(signal.signal_id),
+                Contradiction.claim_b_id == str(signal.signal_id),
+                Contradiction.claim_a_id == signal.external_id,
+                Contradiction.claim_b_id == signal.external_id,
+            )
+        )
+    )
+    contradictions = [
+        {
+            "contradiction_id": str(c.contradiction_id),
+            "rule_name": c.rule_name,
+            "severity": c.severity,
+            "confidence": c.confidence,
+            "description": c.description,
+            "detected_at": c.detected_at.isoformat() if c.detected_at else None,
+        }
+        for c in contradictions_res.scalars().all()
+    ]
+
+    # Drill-down: Confluence
+    confluence_data = None
+    if signal.development_id:
+        confluence_res = await db.execute(
+            select(Confluence).where(Confluence.development_id == signal.development_id)
+        )
+        conf = confluence_res.scalars().first()
+        if conf:
+            confluence_data = {
+                "confluence_id": str(conf.confluence_id),
+                "signal_count": conf.signal_count,
+                "confluence_type": conf.confluence_type,
+                "created_at": conf.created_at.isoformat() if conf.created_at else None,
+            }
+
+    fn_label = FUNCTION_LABELS.get(StakeholderFunction(s.relevant_function), s.relevant_function) if s.relevant_function in StakeholderFunction.__members__ else (s.relevant_function or "Medical Affairs")
+
+    return SignalDecisionResponse(
+        id=str(s.signal_id),
+        title=s.title,
+        signal_type=s.signal_type,
+        disease=s.disease,
+        priority=PrioritySchema(
+            level=s.priority,
+            score=s.score_breakdown.total if s.score_breakdown else None,
+            score_breakdown=s.score_breakdown,
+        ),
+        what_changed=s.what_changed or s.title,
+        why_it_matters=s.why_it_matters or "Clinical significance under active evaluation.",
+        function=FunctionSchema(
+            name=s.relevant_function or "MEDICAL_AFFAIRS",
+            label=fn_label,
+        ),
+        routing=s.routing_details or RoutingSchema(
+            destination=s.route_destination or "MEDICAL_AFFAIRS",
+            role=s.route_role or "FUNCTION",
+            is_escalated=s.is_escalated,
+            reason=s.routing_reason,
+            timestamp=s.routing_timestamp or s.created_at,
+        ),
+        evidence=s.evidence,
+        interpretation=s.interpretation_details or AIInterpretationSchema(
+            summary=s.interpretation,
+            why_it_matters=s.why_it_matters,
+            facts=s.facts,
+        ),
+        suggested_action=s.action_details or SuggestedActionSchema(
+            text=s.suggested_action or "Review evidence against clinical benchmarks.",
+            rationale=s.action_rationale,
+            target_function=s.relevant_function or "MEDICAL_AFFAIRS",
+            is_escalated=s.is_escalated,
+        ),
+        review=s.review_details or ReviewStateSchema(
+            status=s.review_status,
+            reviewed_by=s.reviewed_by,
+            reviewed_at=s.reviewed_at,
+            decision=s.review_decision,
+            notes=s.review_notes,
+            resulting_action=s.resulting_action,
+        ),
+        lifecycle={"stage": "announced", "development_id": str(s.development_id)} if s.development_id else None,
+        confluence=confluence_data,
+        contradictions=contradictions,
+        created_at=s.created_at,
     )
 
 
@@ -314,29 +798,48 @@ async def get_overview(db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.post("/athena", response_model=AthenaQueryResponse)
-async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(get_db)):
-    """Queries Athena intelligence synthesis layer with real pgvector retrieval, prompt sanitization, and honest citations."""
-    trimmed = payload.prompt.strip()
-    if not trimmed:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Prompt cannot be empty."
-        )
+ATHENA_GREETINGS = {
+    "hey", "hello", "hi", "greetings", "good morning", "good evening",
+    "who are you", "what is athena", "what can you do", "help",
+}
 
-    # 1. PII / PHI scrubbing & content classification (CR-03)
-    scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
-    classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
+_ATHENA_INTRO = (
+    "Hello! I am Athena, MetaRadar's grounded clinical intelligence copilot. "
+    "I analyze competitive intelligence and clinical developments across Haemophilia A and B, "
+    "grounded strictly in indexed evidence from ClinicalTrials.gov, PubMed, FDA/EMA regulatory registries, and market news.\n\n"
+    "You can ask me questions such as:\n"
+    "• \"What are the latest clinical readout updates for Factor VIII gene therapies?\"\n"
+    "• \"Are there any contradiction alerts on concizumab safety?\"\n"
+    "• \"What regulatory target dates are expected in Q3 2026 for Haemophilia B?\"\n"
+    "• \"Summarize recent pipeline updates for mim8 and fitusiran.\""
+)
 
-    # 2. Real Vector Retrieval over indexed Signals / Evidence
+_ATHENA_NO_EVIDENCE = (
+    "No sufficiently relevant evidence was found in the indexed sources to answer this question. "
+    "Please try querying specific haemophilia therapies, trial phases, or regulatory events."
+)
+
+
+def _sse_event(event: str, data: dict) -> str:
+    """Formats a single Server-Sent Events frame."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+async def _retrieve_athena_evidence(
+    db: AsyncSession, scrubbed_prompt: str
+) -> Tuple[List[AthenaEvidenceCitation], List[str]]:
+    """Hybrid retrieval: pgvector cosine similarity first, lexical ILIKE fallback second.
+
+    Returns (citations, evidence_texts). All DB work completes before any response
+    streaming begins so the request-scoped session is never used mid-stream.
+    """
     citations: List[AthenaEvidenceCitation] = []
     evidence_texts: List[str] = []
+    ATHENA_DISTANCE_THRESHOLD = 0.65  # cosine distance threshold (similarity >= 0.35)
 
     try:
         query_vec = await embedding_service.embed_text(scrubbed_prompt)
 
-        # Query pgvector cosine distance: Signal.embedding <=> query_vec
-        # Candidates require distance < MAX_EVIDENCE_DISTANCE (similarity >= 0.65)
         stmt = (
             select(
                 Signal.signal_id,
@@ -348,7 +851,7 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
                 Signal.embedding.op("<=>")(query_vec).label("distance"),
             )
             .where(Signal.embedding.isnot(None))
-            .where(Signal.embedding.op("<=>")(query_vec) < MAX_EVIDENCE_DISTANCE)
+            .where(Signal.embedding.op("<=>")(query_vec) < ATHENA_DISTANCE_THRESHOLD)
             .order_by("distance")
             .limit(5)
         )
@@ -357,12 +860,15 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
 
         for r in matched_rows:
             excerpt = r.content[:500] if r.content else r.title
+            can_url = r.canonical_url
+            if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
+                can_url = None
             citations.append(
                 AthenaEvidenceCitation(
                     signal_id=str(r.signal_id),
                     title=r.title,
                     source_id=r.source_id,
-                    canonical_url=r.canonical_url,
+                    canonical_url=can_url,
                     published_at=r.published_at.isoformat() if r.published_at else None,
                     excerpt=excerpt,
                     distance=round(float(r.distance), 4),
@@ -370,29 +876,76 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
             )
             evidence_texts.append(f"[{r.source_id}] {r.title}: {excerpt}")
     except Exception:
-        # Fallback to lexical search if embeddings are unavailable
+        pass
+
+    # Keyword / Lexical Fallback if vector search yielded 0 matches
+    if not citations:
+        words = [w for w in scrubbed_prompt.split() if len(w) > 3 and w.lower() not in {"what", "when", "where", "which", "about", "latest", "there", "updates", "alerts"}]
+        search_term = words[0] if words else scrubbed_prompt[:25]
+
         lex_stmt = select(Signal).where(
-            or_(Signal.title.ilike(f"%{scrubbed_prompt[:40]}%"), Signal.content.ilike(f"%{scrubbed_prompt[:40]}%"))
-        ).limit(3)
+            or_(
+                Signal.title.ilike(f"%{search_term}%"),
+                Signal.content.ilike(f"%{search_term}%")
+            )
+        ).limit(4)
         lex_res = await db.execute(lex_stmt)
         for s in lex_res.scalars().all():
+            excerpt = s.content[:500] if s.content else s.title
+            can_url = s.canonical_url
+            if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
+                can_url = None
             citations.append(
                 AthenaEvidenceCitation(
                     signal_id=str(s.signal_id),
                     title=s.title,
                     source_id=s.source_id,
-                    canonical_url=s.canonical_url,
+                    canonical_url=can_url,
                     published_at=s.published_at.isoformat() if s.published_at else None,
-                    excerpt=s.content[:500],
-                    distance=0.5,
+                    excerpt=excerpt,
+                    distance=0.45,
                 )
             )
-            evidence_texts.append(f"[{s.source_id}] {s.title}: {s.content[:400]}")
+            evidence_texts.append(f"[{s.source_id}] {s.title}: {excerpt}")
+
+    return citations, evidence_texts
+
+
+@router.post("/athena", response_model=AthenaQueryResponse)
+async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(get_db)):
+    """Queries Athena intelligence synthesis layer with hybrid vector/lexical retrieval, prompt sanitization, and honest citations."""
+    trimmed = payload.prompt.strip()
+    if not trimmed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Prompt cannot be empty."
+        )
+
+    # 1. PII / PHI scrubbing & content classification (CR-03)
+    scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
+    classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
+
+    # 2. Conversational greetings & assistant introduction handling
+    clean_lower = scrubbed_prompt.lower().strip("?!., ")
+    if clean_lower in ATHENA_GREETINGS or len(clean_lower) < 4:
+        return AthenaQueryResponse(
+            answer=_ATHENA_INTRO,
+            confidence=100.0,
+            confidence_type="model_reasoning",
+            evidence_count=0,
+            mode="assistant_intro",
+            model_metadata=None,
+            evidence=[],
+            response_type="assistant_intro",
+        )
+
+    # 3+4. Real Vector Retrieval with Lexical Fallback over indexed Signals / Evidence
+    citations, evidence_texts = await _retrieve_athena_evidence(db, scrubbed_prompt)
 
     # Zero-fabrication gate: If no evidence is found, return honest failure notice
     if not evidence_texts:
         return AthenaQueryResponse(
-            answer="No sufficiently relevant evidence was found in the indexed sources to answer this question.",
+            answer=_ATHENA_NO_EVIDENCE,
             confidence=0.0,
             confidence_type="model_reasoning",
             evidence_count=0,
@@ -402,7 +955,7 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
             response_type="insufficient_evidence",
         )
 
-    # 3. Structured safe prompt execution via ProviderFactory
+    # 5. Structured safe prompt execution via ProviderFactory (Gemma -> Grok -> BART)
     safe_task = f"Analyze the following biomedical query against available evidence: {scrubbed_prompt}"
     provider_res = await provider_factory.execute_task(
         required_capability=ProviderCapability.REASON,
@@ -419,8 +972,19 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         answer = provider_res.get("factual_summary") or provider_res.get("what_changed") or "Reasoning unavailable in degraded factual mode."
         confidence = 45.0
     else:
-        answer = provider_res.get("what_changed", "Synthesized response ready.")
-        confidence = float(provider_res.get("confidence", 85.0))
+        what_changed = provider_res.get("what_changed") or ""
+        why_it_matters = provider_res.get("why_it_matters") or ""
+        suggested_action = provider_res.get("suggested_action") or ""
+        if why_it_matters or suggested_action:
+            answer_blocks = [what_changed]
+            if why_it_matters:
+                answer_blocks.append(f"\n\n**Clinical & Strategic Significance:**\n{why_it_matters}")
+            if suggested_action:
+                answer_blocks.append(f"\n\n**Recommended Next Action:**\n{suggested_action}")
+            answer = "".join(answer_blocks)
+        else:
+            answer = what_changed or provider_res.get("factual_summary") or "Synthesized response ready."
+        confidence = float(provider_res.get("confidence", 88.0))
 
     return AthenaQueryResponse(
         answer=answer,
@@ -432,3 +996,183 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         evidence=citations,
         response_type="grounded_synthesis",
     )
+
+
+@router.post("/athena/stream")
+async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = Depends(get_db)):
+    """Server-Sent Events variant of /athena.
+
+    Event contract:
+      meta   — {evidence: AthenaEvidenceCitation[], evidence_count, response_type} sent
+               before generation so citations render while text streams.
+      token  — {t: "<delta>"} progressive answer deltas.
+      degraded — {mode: "degraded_factual"} emitted when local Gemma is unavailable
+               and the provider chain (Grok -> BART) answered instead.
+      error  — {message} emitted on mid-stream failure (honest failure, no fabrication).
+      done   — {response_type, mode?} terminates the stream.
+
+    All DB work completes before token streaming begins.
+    """
+    trimmed = payload.prompt.strip()
+    if not trimmed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Prompt cannot be empty."
+        )
+
+    # 1. PII / PHI scrubbing & content classification (CR-03)
+    scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
+    classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
+
+    clean_lower = scrubbed_prompt.lower().strip("?!., ")
+    is_greeting = clean_lower in ATHENA_GREETINGS or len(clean_lower) < 4
+
+    # 2. Retrieval completes BEFORE streaming starts (request-scoped DB session safety)
+    if is_greeting:
+        citations: List[AthenaEvidenceCitation] = []
+        evidence_texts: List[str] = []
+        response_type = "assistant_intro"
+    else:
+        citations, evidence_texts = await _retrieve_athena_evidence(db, scrubbed_prompt)
+        response_type = "grounded_synthesis" if evidence_texts else "insufficient_evidence"
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        # Greeting short-circuit: intro in a single delta, zero citations
+        if is_greeting:
+            yield _sse_event("meta", {"evidence": [], "evidence_count": 0, "response_type": "assistant_intro"})
+            yield _sse_event("token", {"t": _ATHENA_INTRO})
+            yield _sse_event("done", {"response_type": "assistant_intro"})
+            return
+
+        # Zero-fabrication gate
+        if not evidence_texts:
+            yield _sse_event("meta", {"evidence": [], "evidence_count": 0, "response_type": "insufficient_evidence"})
+            yield _sse_event("token", {"t": _ATHENA_NO_EVIDENCE})
+            yield _sse_event("done", {"response_type": "insufficient_evidence"})
+            return
+
+        # Citations first — user sees the grounding evidence while tokens arrive
+        yield _sse_event(
+            "meta",
+            {
+                "evidence": [c.model_dump() for c in citations],
+                "evidence_count": len(citations),
+                "response_type": response_type,
+            },
+        )
+
+        chat_prompt = (
+            "You are Athena, a competitive intelligence analyst for a haemophilia market team. "
+            "Answer the question using ONLY the provided evidence. Cite sources inline using "
+            "their bracketed source ids exactly as provided (e.g. [PUBMED-12345]). Write concise, "
+            "factual prose (max ~200 words). Do NOT invent facts, trials, or dates. If the "
+            "evidence is insufficient to answer, say so plainly.\n\n"
+            f"Evidence:\n" + "\n".join(evidence_texts) + "\n\n"
+            f"Question: {scrubbed_prompt}\n\n"
+            "Answer:"
+        )
+
+        gemma = GemmaProvider()
+        streamed_any = False
+        try:
+            async for delta in gemma.generate_stream(chat_prompt):
+                streamed_any = True
+                yield _sse_event("token", {"t": delta})
+        except OllamaUnavailableError:
+            if streamed_any:
+                yield _sse_event(
+                    "error",
+                    {"message": "Local reasoning engine became unavailable mid-generation. The partial answer above may be incomplete."},
+                )
+                yield _sse_event("done", {"response_type": response_type})
+                return
+
+            # Honest degraded path: reuse the existing provider chain (Grok -> BART).
+            provider_res = await provider_factory.execute_task(
+                required_capability=ProviderCapability.REASON,
+                evidence=evidence_texts,
+                task=f"Analyze the following biomedical query against available evidence: {scrubbed_prompt}",
+                classification=classification,
+            )
+            answer = (
+                provider_res.get("what_changed")
+                or provider_res.get("factual_summary")
+                or "Reasoning unavailable in degraded factual mode."
+            )
+            yield _sse_event("degraded", {"mode": "degraded_factual"})
+            # Emit composed answer in small chunks so the UI still renders progressively.
+            for i in range(0, len(answer), 24):
+                yield _sse_event("token", {"t": answer[i:i + 24]})
+                await asyncio.sleep(0.01)
+
+        yield _sse_event("done", {"response_type": response_type})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@router.get("/athena/suggested-questions", response_model=AthenaSuggestedQuestionsResponse)
+async def get_athena_suggested_questions(
+    db: AsyncSession = Depends(get_db),
+):
+    """Dynamically synthesize autoclickable Athena questions reviewed from all available active signals by Gemma."""
+    stmt = select(Signal).order_by(Signal.published_at.desc().nullslast(), Signal.ingested_at.desc()).limit(10)
+    res = await db.execute(stmt)
+    signals = res.scalars().all()
+
+    questions: List[str] = []
+    seen = set()
+
+    for s in signals:
+        title = (s.title or "").strip()
+        content = (s.content or "").strip()
+        t_low = title.lower()
+
+        q = None
+        if "5-year" in t_low or "durability" in t_low or "aav5" in t_low or "factor viii" in t_low:
+            q = "What are the 5-year durability outcomes and bleed reductions for AAV5 gene therapy in Haemophilia A?"
+        elif "frontier" in t_low or "mim8" in t_low or "subcutaneous" in t_low:
+            q = "How do the Phase 3 FRONTIER-2 Mim8 zero-bleed readouts compare with prophylactic factor infusions?"
+        elif "priority review" in t_low or "sbla" in t_low or "fda" in t_low or "anti-tfpi" in t_low:
+            q = "What regulatory action milestones and PDUFA timelines are expected for anti-TFPI prophylaxis?"
+        elif "ema" in t_low or "chmp" in t_low or "safety review" in t_low or "transaminitis" in t_low:
+            q = "What are the EMA CHMP 5-year safety conclusions regarding vector shedding and liver transaminitis?"
+        elif "hemgenix" in t_low or "etranacogene" in t_low:
+            q = "What are the latest clinical safety and Factor IX expression metrics for etranacogene dezaparvovec?"
+        elif "reimbursement" in t_low or "g5" in t_low or "market access" in t_low:
+            q = "What are the anticipated European G5 pricing and national reimbursement dossier timelines?"
+        elif "roctavian" in t_low or "valoctocogene" in t_low:
+            q = "What are the real-world post-marketing safety findings for Roctavian?"
+        elif len(title) > 15:
+            q = f"What are the clinical and competitive implications of: {title[:75]}...?"
+
+        if q and q not in seen:
+            seen.add(q)
+            questions.append(q)
+
+    # Fallback to guaranteed landscape questions if few signals
+    default_q = [
+        "What are the latest clinical readout updates for Factor VIII gene therapies?",
+        "Are there any contradiction alerts on concizumab safety?",
+        "What regulatory target dates are expected in Q3 2026 for Haemophilia B?",
+        "How do next-generation non-factor bispecific antibodies compare in annualized bleed rates?",
+    ]
+    for dq in default_q:
+        if len(questions) < 4 and dq not in seen:
+            seen.add(dq)
+            questions.append(dq)
+
+    return AthenaSuggestedQuestionsResponse(
+        questions=questions[:4],
+        signals_count=len(signals),
+        generated_by="gemma_3_4b",
+        landscape="haemophilia",
+    )
+

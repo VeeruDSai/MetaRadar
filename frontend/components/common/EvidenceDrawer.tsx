@@ -138,7 +138,7 @@ export function EvidenceDrawer({
           </div>
 
           <div className="mt-2">
-            {signal.canonical_url ? (
+            {signal.canonical_url && !signal.canonical_url.includes('metaradar.internal') ? (
               <a
                 href={signal.canonical_url}
                 target="_blank"
@@ -149,6 +149,13 @@ export function EvidenceDrawer({
                 <span>Open Original Source</span>
                 <ExternalLink size={13} />
               </a>
+            ) : signal.is_synthetic || signal.provenance_status === 'fixture' ? (
+              <div className="flex items-center gap-2">
+                <Badge tone="low">TEST FIXTURE (SYNTHETIC BENCHMARK)</Badge>
+                <span className="text-[11px] text-[var(--muted-foreground)] italic font-mono">
+                  Offline pipeline validation baseline
+                </span>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Badge tone="high">SOURCE URL UNAVAILABLE</Badge>

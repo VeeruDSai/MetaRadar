@@ -50,7 +50,7 @@ async def apply_migrations():
         # 5. Alembic version
         await conn.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num));"))
         await conn.execute(text("DELETE FROM alembic_version;"))
-        await conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('004_phase7_truthfulness');"))
+        await conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('011_widen_fingerprint');"))
 
         print("Phase 07 database schema and all columns successfully applied!")
 

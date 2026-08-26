@@ -6,6 +6,7 @@ import { fetchSourcesHealth, triggerIngestAndPipelineSync } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
+import { SpecularButton } from '@/components/ui/SpecularButton'
 import { Activity, AlertTriangle, BookOpen, CheckCircle2, RefreshCw, Zap } from 'lucide-react'
 
 export function SourcesOperationsWorkspace() {
@@ -126,24 +127,36 @@ export function SourcesOperationsWorkspace() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             <span>Refresh Telemetry</span>
           </button>
-          <button
+          <SpecularButton
+            size="default"
+            radius={8}
+            intensity={1.2}
+            shineSize={14}
+            shineFade={45}
+            thickness={1}
+            speed={0.4}
+            followMouse
+            proximity={220}
+            loading={syncing}
+            autoAnimate={syncing}
             onClick={handleLiveSync}
             disabled={syncing}
-            className="inline-flex items-center gap-1.5 px-4 h-8 rounded text-xs font-semibold text-white transition border border-transparent"
-            style={{ background: 'var(--primary)', opacity: syncing ? 0.7 : 1 }}
+            title="Trigger live multi-source biomedical ingestion run"
+            aria-label="Run live ingestion now"
+            className="h-8 shadow-sm cursor-pointer"
           >
             {syncing ? (
               <>
-                <RefreshCw size={13} className="animate-spin" />
-                <span>Ingesting Live Data...</span>
+                <RefreshCw size={13} className="animate-spin text-[var(--primary)]" />
+                <span className="font-semibold">Ingesting Live Data...</span>
               </>
             ) : (
               <>
-                <Zap size={13} />
-                <span>Run Ingestion Now</span>
+                <Zap size={13} className="text-amber-400" />
+                <span className="font-semibold">Run Ingestion Now</span>
               </>
             )}
-          </button>
+          </SpecularButton>
         </div>
       </div>
 

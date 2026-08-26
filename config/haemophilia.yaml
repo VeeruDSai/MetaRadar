@@ -189,6 +189,9 @@ source_tiers:
     - "company_press"
   tier_3_discovery:
     - "newsapi"
+    - "fierce_pharma"
+    - "et_pharma"
+    - "biopharmadive"
     - "reuters"
     - "bloomberg"
   tier_4_lead_only:
@@ -243,6 +246,46 @@ connectors:
       - id: gene_therapy_news
         query: "gene therapy haemophilia OR hemophilia (Hemgenix OR Roctavian OR fidanacogene)"
         language: en
+
+  fierce_pharma:
+    freshness_class: delayed
+    tier: 3
+    rss_url: "https://www.fiercepharma.com/rss/xml"
+    backfill_days: 30
+    rolling_window_days: 7
+    profiles:
+      - id: haemophilia_pharma_news
+        rss_url: "https://www.fiercepharma.com/rss/xml"
+        keywords: ["haemophilia", "hemophilia", "emicizumab", "fitusiran", "concizumab", "mim8", "gene therapy", "Novo Nordisk", "FDA approval", "EMA", "Alhemo", "Hemlibra", "Hemgenix", "Hympavzi", "Qfitlia", "factor VIII", "factor IX"]
+
+  et_pharma:
+    freshness_class: delayed
+    tier: 3
+    rss_url: "https://pharma.economictimes.indiatimes.com/rss/topstories"
+    backfill_days: 30
+    rolling_window_days: 7
+    profiles:
+      - id: haemophilia_pharma_news
+        rss_url: "https://pharma.economictimes.indiatimes.com/rss/topstories"
+        keywords: ["haemophilia", "hemophilia", "bleeding disorder", "gene therapy", "Novo Nordisk", "Roche", "CSL Behring", "Sanofi", "emicizumab", "fitusiran"]
+      - id: drug_approvals
+        rss_url: "https://pharma.economictimes.indiatimes.com/rss/drug_approvals"
+        keywords: ["haemophilia", "hemophilia", "factor VIII", "factor IX", "rare disease", "drug approval", "FDA", "EMA"]
+
+  biopharmadive:
+    freshness_class: delayed
+    tier: 3
+    rss_url: "https://www.biopharmadive.com/feeds/news/"
+    backfill_days: 30
+    rolling_window_days: 7
+    notes: >
+      BioPharma Dive covers FDA approvals, clinical readouts, oncology, rare disease, and M&A.
+      Official news feed at https://www.biopharmadive.com/feeds/news/
+    profiles:
+      - id: haemophilia_biopharmadive
+        rss_url: "https://www.biopharmadive.com/feeds/news/"
+        keywords: ["haemophilia", "hemophilia", "emicizumab", "fitusiran", "concizumab", "mim8", "gene therapy", "Novo Nordisk", "Roche", "Sanofi", "BioMarin", "Pfizer", "CSL Behring", "FDA", "EMA", "approval", "clinical trial", "phase 3", "phase iii", "rare disease", "clotting factor"]
+
 
   fda:
     freshness_class: adapter_ready

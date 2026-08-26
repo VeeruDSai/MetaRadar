@@ -33,6 +33,28 @@ LOGS_DIR = BASE_DIR / "logs"
 active_processes: list[subprocess.Popen] = []
 
 
+def load_env_file(env_path: Path):
+    """Parses key-value pairs from .env and populates os.environ if not already set."""
+    if not env_path.exists():
+        return
+    try:
+        lines = env_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip()
+                if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                    val = val[1:-1]
+                if key and key not in os.environ:
+                    os.environ[key] = val
+    except Exception as e:
+        print(f"  [WARNING] Could not parse .env: {e}", file=sys.stderr)
+
+
 def signal_handler(sig, frame):
     print("\n\n[SHUTDOWN] Received termination signal. Stopping all child processes...")
     cleanup_processes()
@@ -286,6 +308,9 @@ def main():
 
     args = parser.parse_args()
 
+    # Load environment variables from root .env
+    load_env_file(BASE_DIR / ".env")
+
     # Register signal handlers
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
@@ -295,8 +320,18 @@ def main():
 
     print("=" * 70)
     print(" MetaRadar Decision Intelligence Platform — Process Launcher")
-    print(" Version 5.1.0 | Fast In-Memory Pipelines (No Celery) | Local Gemma")
+    print(" Version 5.1.0 | Fast In-Memory Pipelines (No Celery) | Local Gemma + CUDA")
     print("=" * 70)
+
+    # Detect Reasoning Engine
+    models_dir = BASE_DIR / "models"
+    gguf_files = list(models_dir.glob("*.gguf")) if models_dir.exists() else []
+    if gguf_files:
+        print(f"  [REASONING] Local GGUF Engine: {gguf_files[0].name}")
+    elif os.environ.get("XAI_API_KEY"):
+        print("  [REASONING] Hosted Engine: xAI Grok (API key detected)")
+    else:
+        print("  [REASONING] Factual Mode: BART summarizer fallback")
 
     # 1. Backing Services & Database Migrations
     start_docker_services(args.no_docker)
@@ -360,11 +395,11 @@ def main():
                                 line = raw_line.strip()
                                 if not line:
                                     continue
-                                # Surface operational events (ingestion, pipeline, errors, warnings)
-                                if any(marker in line for marker in ["[INGESTION]", "[PIPELINE]", "ERROR", "WARNING"]):
-                                    print(f"  {line}")
-                                elif any(k in line.lower() for k in ["/api/v1/ingestion", "ingest", "confluence", "contradiction", "recalibration"]):
-                                    print(f"  [OP-LOG] {line}")
+                                # Surface operational events (ingestion, pipeline, LLM lifecycle, errors, warnings)
+                                if any(marker in line for marker in ["[INGESTION]", "[PIPELINE]", "[LLM]", "[ATHENA]", "ERROR", "WARNING"]):
+                                    print(f"  {line}", flush=True)
+                                elif any(k in line.lower() for k in ["/api/v1/ingestion", "ingest", "confluence", "contradiction", "recalibration", "/api/v1/athena", "ollama", "gemma"]):
+                                    print(f"  [OP-LOG] {line}", flush=True)
                 except Exception:
                     pass
 
