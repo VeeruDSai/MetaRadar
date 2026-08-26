@@ -25,9 +25,9 @@ MetaRadar is a near-real-time competitive intelligence platform that converts fr
 
 *"A conventional AI system summarizes documents. MetaRadar builds an evidence story around a development."* — Transforming raw biomedical noise into calibrated strategic intelligence across Medical Affairs, Regulatory, Safety, Market Access, Comms, and Leadership.
 
-## Active & Shipped Requirements
+## Requirements
 
-### Shipped Baseline & Hardening (Phases 00–08)
+### Shipped Baseline & Hardening (Phases 00–09)
 - [x] Phase 0: Baseline Stabilization & Quality Governance (Next.js 16 + FastAPI + Alembic + PII/PHI scrubber + Red-Team engine)
 - [x] Phase 1: Ingestion Connectors & Data Pipeline (PubMed, ClinicalTrials, NewsAPI, OpenFDA, EMA RSS + Bronze storage + Deduplication)
 - [x] Phase 2: LangGraph 10-Node Intelligence Engine (MetaRadarState + 10 workflow nodes + PipelineRunner + 51 tests)
