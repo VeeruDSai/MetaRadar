@@ -1,45 +1,32 @@
-# Codebase Concerns
+# Codebase Concerns & Observations (CONCERNS.md)
 
-**Analysis Date:** 2026-08-25
+**Project:** MetaRadar — Autonomous Decision Intelligence Platform  
+**Milestone:** v5.2  
+**Last Updated:** 2026-08-27  
 
-## Technical Debt
+---
 
-**1. Residual Shell Monolith in `metaradar.tsx`:**
-- **Description:** Although domain workspaces have been modularized under `frontend/components/` (`signals/`, `confluence/`, `calibration/`, `observability/`, etc.), `frontend/components/metaradar.tsx` remains a large orchestration component.
-- **Impact:** Moderate state duplication across top-level views and complex prop passing.
-- **Remediation:** Further decouple top-level workspace state into dedicated React contexts or URL search params.
+## 1. Resolved Technical Debt & Hardening Accomplished
 
-**2. Endpoint Layer Complexity in `backend/app/api/v1/endpoints/signals.py`:**
-- **Description:** `signals.py` encompasses signal listing, overview aggregation, detail serialization, review actions, and Athena evidence validation.
-- **Impact:** High cognitive load and duplicated serialization logic.
-- **Remediation:** Extract serialization and transformation helpers into dedicated converter schemas or service layers.
+- **NewsAPI Provenance Repaired:** Replaced generic portal fallback with verified `article.url` and blocked registration landing pages.
+- **Workflow State Persisted:** Evolved passive destination classification into a persistent database-backed review workflow with immutable `AuditLog` history.
+- **Demo Operator Available:** Added 6-role non-auth persona selector for judges and stakeholders to test queue routing and decision actions.
+- **Discovery Feeds Added:** Fierce Pharma and ET Pharma integrated as Tier 3 RSS discovery connectors. BioPharma Dive registered with honest `configured_no_feed` status.
+- **Escalation Rules Improved:** Replaced single score threshold with compound strategic domain and inflection event rules.
+- **Zero Banned Tailwind Classes:** 100% compliant with CSS token custom properties (`scripts/check-banned-classes.mjs`).
 
-**3. In-Memory Rate Limiting:**
-- **Description:** `backend/app/api/deps.py` enforces client rate limits using an in-process dictionary (`_rate_buckets`).
-- **Impact:** Limits do not scale across multiple uvicorn worker processes and are reset on restart.
-- **Remediation:** Move rate-limit state tracking to Redis via the existing `REDIS_URL` connection.
+---
 
-**4. Migration Chain History:**
-- **Description:** 12 sequential Alembic migrations exist in `backend/alembic/versions/` (001 through 012).
-- **Impact:** Historical patches for column widening and dropped unique constraints create a multi-step upgrade path for new environments.
-- **Remediation:** Consider consolidating/squashing migrations prior to future major version releases.
+## 2. Active Areas for Future Enhancement
 
-## Operational & Performance Risks
+### A. Next Codegen Migration (Contract Sync)
+- **Current State:** `scripts/export_openapi.py` re-emits a static template verbatim to `frontend/types/api.ts` to enforce CI diff gates.
+- **Future Milestone:** Integrate `openapi-typescript` for automated end-to-end AST-based type generation directly from FastAPI OpenAPI JSON.
 
-**1. External Life-Science API Rate Limits & Availability:**
-- **Description:** Connectors interface with public external services (NCBI PubMed, ClinicalTrials.gov v2, OpenFDA, EMA RSS).
-- **Mitigation:** Exponential backoff with jitter is implemented in `backend/app/connectors/base.py`, and failures degrade gracefully without crashing the pipeline.
+### B. Redis Cluster & Distributed Lock Scalability
+- **Current State:** Ingestion scheduler uses PostgreSQL 31-bit advisory locks (`try_advisory_lock()`), which work reliably for single-instance or moderately scaled Postgres setups.
+- **Future Milestone:** Transition to Redis distributed locks (`Redlock`) if running across multi-region stateless backend clusters.
 
-**2. Local LLM Inference Latency on Low-Spec Hardware:**
-- **Description:** Running Gemma 3 4B on CPU-only machines can introduce latency in the `nlp_extract` and `synthesize` pipeline nodes.
-- **Mitigation:** The pipeline supports automatic GPU offload (`LLM_GPU_LAYERS`), background batch execution via `runner.py`, and a deterministic Degraded mode fallback.
-
-## Security & Privacy Guardrails
-
-**1. Cloud Provider Privacy Boundary:**
-- **Description:** When Grok cloud fallback is enabled (`ENABLE_GROK_FALLBACK=true`), requests must never contain private or unscrubbed clinical data.
-- **Enforcement:** Enforced at the architectural boundary by `validate_privacy_gate()` in `backend/app/providers/grok.py` and guarded by `tests/test_privacy_boundary.py`.
-
-**2. Design Token & Class Safety:**
-- **Description:** Prevention of hardcoded arbitrary hex colors or banned Tailwind utility classes (`slate-*`).
-- **Enforcement:** Enforced in CI via `node scripts/check-banned-classes.mjs`.
+### C. Rate Limiting Multi-Worker Sync
+- **Current State:** NewsAPI 100 req/day quota is tracked per connector state in PostgreSQL.
+- **Future Milestone:** Add centralized Redis sliding-window rate limiters across all external connector targets.

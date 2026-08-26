@@ -1,48 +1,38 @@
-# Coding Conventions
+# Development Conventions & Standards (CONVENTIONS.md)
 
-**Analysis Date:** 2026-08-25
+**Project:** MetaRadar — Autonomous Decision Intelligence Platform  
+**Milestone:** v5.2  
+**Last Updated:** 2026-08-27  
 
-## Naming Standards
+---
 
-**Files & Directories:**
-- Python modules: `snake_case.py` matching service or domain area (`backend/app/services/calibration.py`, `backend/app/workflows/nodes/synthesize.py`)
-- React components: `PascalCase.tsx` corresponding to the primary exported component (`frontend/components/signals/SignalDetailWorkspace.tsx`, `frontend/components/common/ProvenanceLink.tsx`)
-- TypeScript library modules: `camelCase.ts` (`frontend/lib/api.ts`, `frontend/lib/mappers.ts`, `frontend/lib/utils.ts`)
-- Component-scoped CSS: `kebab-case.css` or `PascalCase.css` (`frontend/components/effects/star-portal/styles.css`)
-- Test suites: `test_<area>.py` located in the root `tests/` directory (`tests/test_provenance.py`, `tests/test_signals_endpoints.py`)
+## 1. Design System & CSS Rules
 
-**Functions & Methods:**
-- Python: `snake_case` for all sync and async functions (`compute_brier_score()`, `resolve_canonical_url()`, `node_synthesize()`). Private helpers prefixed with `_` (`_serialize_signal()`).
-- TypeScript: `camelCase` for utilities, custom hooks (`useLiveData`, `useSignalDetail`), and API fetchers (`fetchOverview`, `fetchSignals`).
+- **CSS Token Enforcement:** All styles must use CSS custom properties defined in `globals.css` (`var(--surface)`, `var(--surface-secondary)`, `var(--border)`, `var(--foreground)`, `var(--muted-foreground)`, `var(--primary)`, `var(--warning)`, `var(--danger)`, `var(--success)`).
+- **Banned Classes:** No hardcoded hex colors (e.g. `#1e293b`) or default `slate-*` Tailwind utility classes.
+- **Automated Gate:** Every frontend commit must pass `node scripts/check-banned-classes.mjs` with 0 violations.
+- **Responsive Layout:** Dynamic layouts must support mobile, tablet, and widescreen desktop breakpoints cleanly.
 
-**Types & Interfaces:**
-- Python: `PascalCase` for classes, Pydantic schemas, and dataclasses (`SignalSchema`, `ScoreBreakdown`, `MetaRadarState`). Enums inherit `(str, Enum)` with UPPERCASE keys.
-- TypeScript: `PascalCase` for types and interfaces (`Signal`, `ConfluenceCluster`, `CalibrationOverview`). Props interfaces follow `<ComponentName>Props`.
+---
 
-## Code Style & Best Practices
+## 2. API Contract & Type Safety
 
-**Backend (Python 3.11):**
-- Strict type annotations on all function signatures using standard `typing` constructs (`Optional[T]`, `List[T]`, `Dict[str, Any]`, `Union[A, B]`).
-- Stateless domain services instantiated as singletons or classmethods (`priority_scorer`, `calibration_service`, `embedding_service`).
-- Honest telemetry: Missing data must produce explicit null/omission indicators rather than fabricated defaults.
-- Structured logging: Standardized on `structlog.get_logger(...)` with request correlation IDs injected via middleware.
-- Error handling: Explicit HTTP exceptions with standard RFC 7807 error detail payloads.
+- **Contract Synchronization:** TypeScript interfaces in `frontend/types/api.ts` must maintain strict parity with FastAPI Pydantic schemas in `backend/app/schemas/`.
+- **Export Script:** Schema modifications require editing the template in `scripts/export_openapi.py`, running `python scripts/export_openapi.py`, and committing both `contracts/openapi.json` and `frontend/types/api.ts`.
+- **Zero Type Suppressions:** No `@ts-ignore`, `any` type casting where strict DTOs exist, or `ignoreBuildErrors: true` in `next.config.mjs`.
 
-**Frontend (Next.js 16 / TypeScript 5.7):**
-- Strict compiler mode (`strict: true`) with zero tolerance for `@ts-ignore` or `ignoreBuildErrors`.
-- Client boundary discipline: Explicit `'use client'` directive on all interactive client components.
-- Design tokens & CSS Variables: Zero hardcoded hex colors (`#...`) or Tailwind `slate-*` classes allowed in `frontend/components/`. All styling must use CSS custom properties (`var(--surface)`, `var(--primary)`, `var(--text-muted)`) and `color-mix()` for alpha blending. Enforced by `node scripts/check-banned-classes.mjs`.
-- Contract fidelity: Frontend models in `frontend/types/api.ts` must stay strictly synchronized with the backend OpenAPI specification.
+---
 
-## Import Ordering
+## 3. Truthfulness & Provenance Invariants
 
-**Python:**
-1. Standard library (`os`, `sys`, `typing`, `datetime`)
-2. Third-party packages (`fastapi`, `sqlalchemy`, `pydantic`, `structlog`, `httpx`)
-3. Internal application packages (`app.core.*`, `app.services.*`, `app.models.*`)
+- **No Synthetic Leaks:** In `data_mode="live"`, signals must never contain fabricated test fixtures or synthetic tags.
+- **Honest Telemetry:** Connector health statuses (`HEALTHY`, `DEGRADED`, `UNHEALTHY`, `CONFIGURATION_ERROR`) must reflect real operational results.
+- **Provenance Honesty:** Canonical URLs must point to specific record endpoints (PubMed, NCT study, Drugs@FDA, EPAR, Fierce/ET Pharma direct link) or report `missing_url`. Generic portal homepages are strictly blocked.
 
-**TypeScript:**
-1. React and Next.js built-ins (`react`, `next/navigation`, `next/link`)
-2. External UI libraries (`lucide-react`, `framer-motion`, `@base-ui/react`)
-3. Internal utilities and types (`@/lib/api`, `@/lib/utils`, `@/types/api`)
-4. Internal components (`@/components/common/Badge`, `@/components/ui/card`)
+---
+
+## 4. Backend Database & Async Standards
+
+- **SQLAlchemy 2.0 Async:** Use `async_session_factory()` for database interactions.
+- **Synchronous `.add()`:** Note that SQLAlchemy `session.add(instance)` is synchronous even on an `AsyncSession` — never await `session.add()`.
+- **Immutable Audit Logging:** Every review status change or administrative action must insert an immutable `AuditLog` row before committing.

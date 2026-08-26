@@ -1,81 +1,87 @@
-# Codebase Structure
+# Codebase Structure (STRUCTURE.md)
 
-**Analysis Date:** 2026-08-25
+**Project:** MetaRadar — Autonomous Decision Intelligence Platform  
+**Milestone:** v5.2  
+**Last Updated:** 2026-08-27  
 
-## Directory Layout
+---
+
+## 1. Directory Tree Overview
 
 ```
-novonordisk/                         # MetaRadar v5.1 monorepo root
-├── backend/                         # FastAPI Python backend
-│   ├── alembic/                     # Database migrations (env.py + versions/ 001–012)
-│   ├── alembic.ini                  # Alembic migration configuration
+novonordisk/
+├── backend/                        # FastAPI Backend Application
 │   ├── app/
-│   │   ├── api/                     # HTTP API layer
-│   │   │   ├── deps.py              # Auth and rate-limiting dependencies
-│   │   │   └── v1/endpoints/        # 10 REST routers (health, signals, pipeline, etc.)
-│   │   ├── connectors/              # External life-science source connectors (5 + base)
-│   │   ├── core/                    # App settings, domain YAML parser, logging, middleware
-│   │   ├── db/                      # DB session factory, pooling, advisory locks, seeding
-│   │   ├── models/                  # SQLAlchemy ORM models in __init__.py
-│   │   ├── providers/               # LLM provider implementations (Gemma, Grok, Degraded)
-│   │   ├── schemas/                 # Pydantic schemas and DTOs
-│   │   ├── services/                # 16 domain business logic services
-│   │   ├── workflows/               # LangGraph pipeline (state, graph, runner, 11 nodes)
-│   │   └── main.py                  # FastAPI application entry point
-│   ├── requirements.txt             # Python dependencies
-│   └── Dockerfile                   # Backend container definition
-├── frontend/                        # Next.js 16 App Router UI
-│   ├── app/                         # App Router pages and global CSS
-│   │   ├── [section]/page.tsx       # Dynamic workspace section router
-│   │   ├── signals/[signalId]/      # Deep-link signal detail page
-│   │   ├── globals.css              # CSS variables, design tokens, light/dark themes
-│   │   ├── layout.tsx               # Root HTML shell, fonts, providers
-│   │   └── page.tsx                 # Default index redirect
-│   ├── components/                  # UI components and domain workspaces
-│   │   ├── calibration/             # Probabilistic calibration & reliability UI
-│   │   ├── common/                  # Reusable badges, error/empty/loading states
-│   │   ├── confluence/              # Multi-source confluence & topic clustering
-│   │   ├── contradictions/          # Contradiction detection & evidence conflict UI
-│   │   ├── developments/            # Strategic developments & event trackers
-│   │   ├── effects/                 # Ambient background & particle effects
-│   │   ├── functions/               # Functional tools & pipeline execution widgets
-│   │   ├── intelligence/            # Athena multi-evidence synthesis chat & insights
-│   │   ├── missing-signals/         # Surveillance gap analysis workspace
-│   │   ├── observability/           # System health, connector telemetry, scheduler logs
-│   │   ├── settings/                # Domain config viewer & user preferences
-│   │   ├── signals/                 # Signal feed, filtering, and detail drawers
-│   │   ├── sources/                 # Source connector health & status overview
-│   │   ├── theme/                   # Theme toggle and color mode providers
-│   │   ├── ui/                      # Base UI / shadcn primitive components
-│   │   └── metaradar.tsx            # Main shell component
-│   ├── lib/                         # API client, custom hooks, utilities, mappers
-│   ├── types/                       # Shared TypeScript types (synced api.ts)
-│   ├── package.json                 # Pinned frontend dependencies (pnpm)
-│   ├── tsconfig.json                # Strict TypeScript configuration
-│   └── eslint.config.mjs            # ESLint flat config
-├── config/
-│   └── haemophilia.yaml             # Domain single source of truth configuration
-├── contracts/
-│   └── openapi.json                 # Exported OpenAPI 3.1 contract specification
-├── tests/                           # Pytest test suite (25 test files)
-├── scripts/                         # Utility scripts (check-banned-classes, export_openapi)
-├── docs/                            # Governance, SRS, SDD, UI specs, and process rules
-├── data/
-│   └── synthetic_signals.json       # Synthetic baseline dataset
-├── models/                          # Local GGUF quantized models directory
-├── docker-compose.yml               # Multi-container local deployment definition
-├── setup.py                         # Environment bootstrapper
-├── start.py                         # Unified service orchestrator
-├── pytest.ini                       # Test suite runner configuration
-├── AGENTS.md                        # AI agent operating standards
-└── GEMINI.md                        # Gemini process standards
+│   │   ├── api/v1/endpoints/       # REST API Route Handlers
+│   │   │   ├── signals.py          # Signal list, detail, review, audit history
+│   │   │   ├── athena.py           # Clinical reasoning Q&A + SSE streaming
+│   │   │   ├── confluence.py       # Multi-source confluence alerts
+│   │   │   ├── red_team.py         # Contradiction evaluations
+│   │   │   ├── health.py           # Ready, models, connectors telemetry
+│   │   │   ├── sources.py          # Source registry and health
+│   │   │   └── calibration.py      # Stakeholder weight adjustments
+│   │   ├── connectors/             # Source Ingestion Adapters
+│   │   │   ├── base.py             # Abstract base connector + bronze persistence
+│   │   │   ├── pubmed.py           # NCBI PubMed E-Utilities
+│   │   │   ├── clinical_trials.py  # ClinicalTrials.gov API v2
+│   │   │   ├── fda.py              # openFDA + FDA RSS
+│   │   │   ├── ema.py              # EMA Medicines RSS
+│   │   │   ├── newsapi.py          # NewsAPI JSON adapter
+│   │   │   ├── fierce_pharma.py    # Fierce Pharma RSS adapter
+│   │   │   └── et_pharma.py        # ET Pharma RSS adapter
+│   │   ├── core/                   # Configuration & Domain Models
+│   │   │   ├── config.py           # Environment settings
+│   │   │   └── domain_config.py    # Pydantic models for haemophilia.yaml
+│   │   ├── db/                     # Database Session & Migrations
+│   │   │   ├── session.py          # AsyncSession & advisory locks
+│   │   │   └── base.py             # Declarative base
+│   │   ├── models/                 # SQLAlchemy 2.0 ORM Models
+│   │   │   └── __init__.py         # Signal, Evidence, Development, AuditLog, Source, etc.
+│   │   ├── services/               # Domain Business Logic
+│   │   │   ├── provenance_urls.py  # Canonical URL construction & validation
+│   │   │   ├── routing.py          # Stakeholder function routing & escalation
+│   │   │   ├── scheduler.py        # Autonomous background ingestion scheduler
+│   │   │   ├── deduplication.py    # Fingerprint generation & deduplication
+│   │   │   ├── pii.py              # PII/PHI scrubbing regex engine
+│   │   │   └── scoring.py          # Deterministic priority scoring formula
+│   │   └── workflows/              # LangGraph Intelligence Pipeline
+│   │       ├── graph.py            # 11-node graph definition
+│   │       ├── runner.py           # Pipeline runner & state manager
+│   │       └── nodes/              # Individual pipeline node implementations
+│   └── requirements.txt            # Python dependencies
+├── frontend/                       # Next.js 16 (App Router) Frontend
+│   ├── app/                        # App Router Pages
+│   │   ├── layout.tsx              # Root HTML & theme shell
+│   │   ├── page.tsx                # Dashboard overview
+│   │   ├── [section]/page.tsx      # Deep-dive workspace routes
+│   │   └── signals/[signalId]/     # Full Signal Detail Workspace
+│   ├── components/                 # React UI Components
+│   │   ├── common/                 # Reusable Design System Primitives
+│   │   │   ├── DemoOperatorSelector.tsx # 6-role demo persona selector
+│   │   │   ├── DataModeBadge.tsx   # Live / Test Fixture badge
+│   │   │   ├── ErrorState.tsx      # Error UI with correlation IDs
+│   │   │   └── EvidenceDrawer.tsx  # Side drawer for deep evidence inspection
+│   │   ├── signals/                # Signal Cards, Tables, Detail Workspaces
+│   │   │   ├── SignalCard.tsx      # Signal card with priority counter & queue badge
+│   │   │   └── SignalDetailWorkspace.tsx # 3-pillar workspace + audit history
+│   │   ├── ui/                     # Interactive UI Elements (Stepper, Counter, etc.)
+│   │   └── metaradar.tsx           # Navigation shell, header, footer
+│   ├── lib/                        # Client Utilities & API Adapters
+│   │   ├── api.ts                  # Typed REST fetchers (submitSignalReview, etc.)
+│   │   ├── mappers.ts              # API payload to domain model mappers
+│   │   └── hooks.ts                # Custom SWR / state hooks
+│   └── types/                      # TypeScript Contract Definitions
+│       └── api.ts                  # Canonical API contract (synced via export_openapi.py)
+├── config/                         # YAML Domain Configurations
+│   └── haemophilia.yaml            # Haemophilia disease area configuration
+├── contracts/                      # OpenAPI JSON Schemas
+│   └── openapi.json                # Live exported OpenAPI 3.1 contract
+├── scripts/                        # Tooling & Verification Scripts
+│   ├── export_openapi.py           # Dumps openapi.json & syncs api.ts
+│   └── check-banned-classes.mjs    # Linter for banned Tailwind classes
+└── tests/                          # Pytest Backend Test Suites (139 tests)
+    ├── test_signal_routing_workflow.py # Review state machine tests
+    ├── test_provenance.py          # Canonical URL & provenance tests
+    ├── test_connector_health.py    # Connector registration & health tests
+    └── test_truthfulness_and_invariants.py # Determinism & invariant gates
 ```
-
-## Directory Details
-
-- **`backend/app/api/v1/endpoints/`**: Router modules for `health`, `signals`, `intelligence`, `registry`, `observability`, `cache`, `pipeline`, `ingestion`, `search`, and `feedback`.
-- **`backend/app/connectors/`**: `base.py` (abstract connector interface), `pubmed.py`, `clinical_trials.py`, `fda.py`, `ema.py`, `newsapi.py`.
-- **`backend/app/services/`**: 16 dedicated service modules encapsulating domain scoring, vector search, calibration, PII filtering, canonical URL resolution, and routing.
-- **`backend/app/workflows/nodes/`**: 11 modular node functions executed in sequence by the LangGraph pipeline runner.
-- **`frontend/components/`**: Clean modular domain workspaces eliminating monolithic sprawl.
-- **`tests/`**: Centralized test suite testing API contracts, database transactions, provider failovers, privacy boundaries, and LangGraph workflow invariants.
