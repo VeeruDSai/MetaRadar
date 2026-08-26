@@ -190,6 +190,27 @@ export function SignalCard({
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge tone={priorityKey}>{priorityStr}</Badge>
+            <span
+              className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border shrink-0 ${
+                authority.tier === 'authoritative'
+                  ? 'bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/25'
+                  : sourceName.toLowerCase().includes('fda') || sourceName.toLowerCase().includes('ema')
+                  ? 'bg-[var(--primary)]/10 text-[var(--primary)] border-[var(--primary)]/25'
+                  : 'bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/25'
+              }`}
+            >
+              {authority.tier === 'authoritative'
+                ? 'EVIDENCE PRIMARY'
+                : sourceName.toLowerCase().includes('fda') || sourceName.toLowerCase().includes('ema')
+                ? 'VALIDATION'
+                : 'DISCOVERY'}
+            </span>
+            {sourcesCount > 1 && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
+                <Network size={11} />
+                <span>{sourcesCount}x Convergence</span>
+              </span>
+            )}
             {escalateToLeadership && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--priority-critical)]/10 text-[var(--priority-critical)] border border-[var(--priority-critical)]/20">
                 <ShieldAlert size={12} />

@@ -12,6 +12,9 @@ import Stepper, { Step } from '@/components/ui/Stepper'
 import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { getSourceAuthority, getSignalFunction, getSuggestedAction } from './SignalCard'
+import { EvidenceConvergenceWidget } from './EvidenceConvergenceWidget'
+import { PriorityScoreExplainer } from './PriorityScoreExplainer'
+import { RedTeamCounterFactuals } from './RedTeamCounterFactuals'
 import { askAthena, submitSignalReview, fetchSignalAuditHistory } from '@/lib/api'
 import {
   Activity,
@@ -665,6 +668,15 @@ export function SignalDetailWorkspace({
             <span className="font-mono">Priority: {priorityStr}</span>
           </div>
         </div>
+      </div>
+
+      {/* Evidence Convergence Visual Tree (REQ-P10-05) */}
+      <EvidenceConvergenceWidget signal={signal} />
+
+      {/* Priority Scoring Factor Breakdown & Red-Team Falsification (REQ-P10-06, REQ-P10-07) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <PriorityScoreExplainer signal={signal} />
+        <RedTeamCounterFactuals signal={signal} hasContradictions={contradictions.length > 0} />
       </div>
 
       {/* Six-Stage Progression Stepper */}
