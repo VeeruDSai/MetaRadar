@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any, Dict, List, Optional
 from app.providers.base import LLMProvider, ProviderCapability, DataClassification
 from app.providers.gemma import GemmaProvider

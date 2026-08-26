@@ -7,6 +7,7 @@ falls through to BART degraded mode — CI stays green without a key (D-16).
 """
 
 import json
+import os
 import time
 from typing import Any, Dict, List, Optional
 
