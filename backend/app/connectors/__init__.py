@@ -1,4 +1,4 @@
-"""Connector registry — the five Phase 1 source adapters (plan §4.11).
+"""Connector registry — Phase 1, Phase 9 & Phase 10 source adapters.
 
 Importing this module instantiates one connector per source; instances load
 their per-source query blocks from the haemophilia domain config.
@@ -11,6 +11,7 @@ from app.connectors.fda import OpenFDAConnector
 from app.connectors.ema import EMARSSConnector
 from app.connectors.fierce_pharma import FiercePharmaRSSConnector
 from app.connectors.et_pharma import ETPharmaRSSConnector
+from app.connectors.biopharma_dive import BioPharmaDiveRSSConnector
 
 ALL_CONNECTORS = [
     PubMedConnector(),
@@ -20,6 +21,7 @@ ALL_CONNECTORS = [
     EMARSSConnector(),
     FiercePharmaRSSConnector(),
     ETPharmaRSSConnector(),
+    BioPharmaDiveRSSConnector(),
 ]
 
 __all__ = [
@@ -30,5 +32,6 @@ __all__ = [
     "EMARSSConnector",
     "FiercePharmaRSSConnector",
     "ETPharmaRSSConnector",
+    "BioPharmaDiveRSSConnector",
     "ALL_CONNECTORS",
 ]

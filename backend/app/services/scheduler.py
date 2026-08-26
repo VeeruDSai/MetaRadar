@@ -136,7 +136,19 @@ class SourceScheduler:
                         job.last_status = "SKIPPED_LOCKED"
                     else:
                         try:
-                            # 2. Execute connector profiles via IngestionService
+                            # 2. NewsAPI Quota-Awareness Governor (REQ-P10-03)
+                            quota_rem = getattr(connector, "quota_remaining", None)
+                            if connector.source_id == "newsapi" and quota_rem is not None and quota_rem < 15:
+                                logger.info("NewsAPI quota preserved (%s remaining < 15). Skipping automatic cycle to prevent demo exhaustion.", quota_rem)
+                                job.last_status = "HEALTHY (QUOTA_PRESERVED)"
+                                job.last_error = f"Quota low ({quota_rem}/100) — automatic polling paused until rollover."
+                                job.records_fetched_last_run = 0
+                                job.records_new_last_run = 0
+                                # Force backoff to preserve quota
+                                job.current_backoff_minutes = 90
+                                continue
+
+                            # Execute connector profiles via IngestionService
                             ingest_service = IngestionService(session)
                             result = await ingest_service.run_connectors(connector_ids=[connector.source_id])
                             

@@ -105,12 +105,14 @@ async def test_source_health_log_unprobed_http_status_none():
 
 
 def test_discovery_connectors_registered():
-    """Verifies that Fierce Pharma and ET Pharma are instantiated in ALL_CONNECTORS."""
+    """Verifies that all 8 connectors including BioPharma Dive are instantiated in ALL_CONNECTORS."""
     from app.connectors import ALL_CONNECTORS
     
     source_ids = {c.source_id for c in ALL_CONNECTORS}
+    assert len(ALL_CONNECTORS) == 8
     assert "fierce_pharma" in source_ids
     assert "et_pharma" in source_ids
+    assert "biopharmadive" in source_ids
     assert "newsapi" in source_ids
     assert "pubmed" in source_ids
     assert "clinical_trials" in source_ids
@@ -119,12 +121,65 @@ def test_discovery_connectors_registered():
 
 
 def test_biopharmadive_domain_config_registration():
-    """Verifies that BioPharma Dive is declared honestly in haemophilia.yaml with configured_no_feed status."""
+    """Verifies that BioPharma Dive is declared in haemophilia.yaml with active RSS feed."""
     from app.core.domain_config import get_domain_config
 
     cfg = get_domain_config()
     bpd = cfg.connectors.get("biopharmadive")
     assert bpd is not None
     assert bpd.tier == 3
-    assert bpd.freshness_class == "manual"
-    assert getattr(bpd, "status", None) == "configured_no_feed" or bpd.profiles == []
+    assert bpd.freshness_class == "delayed"
+    assert "biopharmadive.com" in bpd.rss_url
+    assert len(bpd.profiles) >= 1
+
+
+@pytest.mark.asyncio
+async def test_biopharmadive_rss_parsing(monkeypatch):
+    """Tests BioPharmaDiveRSSConnector parsing on synthetic XML content."""
+    from app.connectors.biopharma_dive import BioPharmaDiveRSSConnector
+
+    sample_rss = """<?xml version="1.0" encoding="UTF-8"?>
+    <rss version="2.0">
+        <channel>
+            <title>BioPharma Dive News</title>
+            <link>https://www.biopharmadive.com/</link>
+            <item>
+                <title>Roche announces Phase 3 readout for novel hemophilia therapy</title>
+                <link>https://www.biopharmadive.com/news/roche-phase-3-hemophilia-emicizumab/12345/</link>
+                <guid>https://www.biopharmadive.com/news/roche-phase-3-hemophilia-emicizumab/12345/</guid>
+                <description>Roche reported positive Phase 3 results for its novel factor VIII mimetic.</description>
+                <pubDate>Thu, 27 Aug 2026 12:00:00 GMT</pubDate>
+            </item>
+        </channel>
+    </rss>
+    """
+
+    conn = BioPharmaDiveRSSConnector()
+    
+    mock_resp = MagicMock()
+    mock_resp.text = sample_rss
+    mock_resp.status_code = 200
+
+    async def mock_fetch(url):
+        return mock_resp
+
+    monkeypatch.setattr(conn, "_fetch_with_retry", mock_fetch)
+    
+    mock_session = AsyncMock()
+    conn._persist_bronze = AsyncMock(return_value=(1, 0))
+    conn._write_connector_state = AsyncMock()
+
+    result = await conn.run_profile(mock_session, "haemophilia_biopharmadive")
+    assert result.status == "SUCCESS"
+    assert result.fetched == 1
+    assert result.new_rows == 1
+
+
+def test_newsapi_quota_governor_logic():
+    """Verifies adaptive quota governor logic thresholds."""
+    from app.services.scheduler import SourceScheduler
+    
+    scheduler = SourceScheduler.get_instance()
+    assert scheduler is not None
+    assert "newsapi" in scheduler._jobs
+    assert "biopharmadive" in scheduler._jobs

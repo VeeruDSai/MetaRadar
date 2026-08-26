@@ -273,16 +273,19 @@ connectors:
         keywords: ["haemophilia", "hemophilia", "factor VIII", "factor IX", "rare disease", "drug approval", "FDA", "EMA"]
 
   biopharmadive:
-    freshness_class: manual
+    freshness_class: delayed
     tier: 3
-    status: configured_no_feed
-    backfill_days: 0
-    rolling_window_days: 0
+    rss_url: "https://www.biopharmadive.com/feeds/news/"
+    backfill_days: 30
+    rolling_window_days: 7
     notes: >
-      BioPharma Dive covers FDA approvals, clinical readouts, drug pricing, and M&A.
-      No public RSS or API feed available. Integration pending compliant mechanism.
-      Source URL: https://www.biopharmadive.com/
-    profiles: []
+      BioPharma Dive covers FDA approvals, clinical readouts, oncology, rare disease, and M&A.
+      Official news feed at https://www.biopharmadive.com/feeds/news/
+    profiles:
+      - id: haemophilia_biopharmadive
+        rss_url: "https://www.biopharmadive.com/feeds/news/"
+        keywords: ["haemophilia", "hemophilia", "emicizumab", "fitusiran", "concizumab", "mim8", "gene therapy", "Novo Nordisk", "Roche", "Sanofi", "BioMarin", "Pfizer", "CSL Behring", "FDA", "EMA", "approval", "clinical trial", "phase 3", "phase iii", "rare disease", "clotting factor"]
+
 
   fda:
     freshness_class: adapter_ready
