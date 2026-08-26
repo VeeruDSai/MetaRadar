@@ -303,6 +303,149 @@
         }
       }
     },
+    "/api/v1/signals/{signal_id}/review": {
+      "post": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Submit Signal Review",
+        "description": "Submits a human review action for a signal, persisting review state and audit history.\nSupported statuses: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED.\nOpening a signal does not mark it reviewed \u2014 an explicit review action is required.",
+        "operationId": "submit_signal_review_api_v1_signals__signal_id__review_post",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{signal_id}/audit-history": {
+      "get": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Get Signal Audit History",
+        "description": "Fetches chronological audit history and lifecycle milestones for a signal.\nTraces: Detected -> Classified -> Prioritized -> Routed -> Reviewed -> Actioned.",
+        "operationId": "get_signal_audit_history_api_v1_signals__signal_id__audit_history_get",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogItemSchema"
+                  },
+                  "title": "Response Get Signal Audit History Api V1 Signals  Signal Id  Audit History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{signal_id}/decision-object": {
+      "get": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Get Signal Decision Object",
+        "description": "Returns the complete unified Signal Decision Object with strict evidence/interpretation/action separation\nand drill-downs for Confluence, Contradictions, and Lifecycle.",
+        "operationId": "get_signal_decision_object_api_v1_signals__signal_id__decision_object_get",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalDecisionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/overview": {
       "get": {
         "tags": [
@@ -360,6 +503,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/athena/stream": {
+      "post": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Query Athena Stream",
+        "description": "Server-Sent Events variant of /athena.\n\nEvent contract:\n  meta   \u2014 {evidence: AthenaEvidenceCitation[], evidence_count, response_type} sent\n           before generation so citations render while text streams.\n  token  \u2014 {t: \"<delta>\"} progressive answer deltas.\n  degraded \u2014 {mode: \"degraded_factual\"} emitted when local Gemma is unavailable\n           and the provider chain (Grok -> BART) answered instead.\n  error  \u2014 {message} emitted on mid-stream failure (honest failure, no fabrication).\n  done   \u2014 {response_type, mode?} terminates the stream.\n\nAll DB work completes before token streaming begins.",
+        "operationId": "query_athena_stream_api_v1_athena_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AthenaQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/athena/suggested-questions": {
+      "get": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Get Athena Suggested Questions",
+        "description": "Dynamically synthesize autoclickable Athena questions reviewed from all available active signals by Gemma.",
+        "operationId": "get_athena_suggested_questions_api_v1_athena_suggested_questions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AthenaSuggestedQuestionsResponse"
                 }
               }
             }
@@ -1403,6 +1608,108 @@
   },
   "components": {
     "schemas": {
+      "AIInterpretationSchema": {
+        "properties": {
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "why_it_matters": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why It Matters"
+          },
+          "facts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "speculation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speculation"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "confidence_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Type"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          }
+        },
+        "type": "object",
+        "title": "AIInterpretationSchema"
+      },
       "ActivityLogItem": {
         "properties": {
           "id": {
@@ -1622,6 +1929,86 @@
           "evidence_count"
         ],
         "title": "AthenaQueryResponse"
+      },
+      "AthenaSuggestedQuestionsResponse": {
+        "properties": {
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "signals_count": {
+            "type": "integer",
+            "title": "Signals Count",
+            "default": 0
+          },
+          "generated_by": {
+            "type": "string",
+            "title": "Generated By",
+            "default": "gemma_3_4b"
+          },
+          "landscape": {
+            "type": "string",
+            "title": "Landscape",
+            "default": "haemophilia"
+          }
+        },
+        "type": "object",
+        "title": "AthenaSuggestedQuestionsResponse"
+      },
+      "AuditLogItemSchema": {
+        "properties": {
+          "audit_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Audit Id"
+          },
+          "entity_name": {
+            "type": "string",
+            "title": "Entity Name"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "performed_by": {
+            "type": "string",
+            "title": "Performed By"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audit_id",
+          "entity_name",
+          "entity_id",
+          "action",
+          "performed_by",
+          "timestamp"
+        ],
+        "title": "AuditLogItemSchema"
       },
       "BeforeAfterComparisonSchema": {
         "properties": {
@@ -2753,6 +3140,24 @@
         ],
         "title": "FeedbackSummaryResponse"
       },
+      "FunctionSchema": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label"
+        ],
+        "title": "FunctionSchema"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3231,6 +3636,102 @@
         ],
         "title": "ModelMetadataSchema"
       },
+      "OriginalEvidenceItemSchema": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "authority_tier": {
+            "type": "string",
+            "title": "Authority Tier",
+            "default": "AUTHORITATIVE"
+          },
+          "validation_status": {
+            "type": "string",
+            "title": "Validation Status",
+            "default": "VALIDATED"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "source_name"
+        ],
+        "title": "OriginalEvidenceItemSchema"
+      },
       "OverviewHealthSchema": {
         "properties": {
           "api": {
@@ -3416,6 +3917,38 @@
         ],
         "title": "PipelineRunResponseSchema"
       },
+      "PrioritySchema": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "title": "Level",
+            "default": "MEDIUM"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "score_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreBreakdownSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "PrioritySchema"
+      },
       "RecalibrateResponse": {
         "properties": {
           "status": {
@@ -3483,6 +4016,73 @@
         ],
         "title": "RecalibrateResponse"
       },
+      "ReviewStateSchema": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "UNREVIEWED"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "resulting_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resulting Action"
+          }
+        },
+        "type": "object",
+        "title": "ReviewStateSchema"
+      },
       "RoleWeightSchema": {
         "properties": {
           "stakeholder_function": {
@@ -3516,6 +4116,52 @@
           "updated_at"
         ],
         "title": "RoleWeightSchema"
+      },
+      "RoutingSchema": {
+        "properties": {
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "FUNCTION"
+          },
+          "is_escalated": {
+            "type": "boolean",
+            "title": "Is Escalated",
+            "default": false
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "destination"
+        ],
+        "title": "RoutingSchema"
       },
       "SchedulerJobStatus": {
         "properties": {
@@ -3865,6 +4511,113 @@
         ],
         "title": "SearchResponse"
       },
+      "SignalDecisionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "signal_type": {
+            "type": "string",
+            "title": "Signal Type"
+          },
+          "disease": {
+            "type": "string",
+            "title": "Disease"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/PrioritySchema"
+          },
+          "what_changed": {
+            "type": "string",
+            "title": "What Changed"
+          },
+          "why_it_matters": {
+            "type": "string",
+            "title": "Why It Matters"
+          },
+          "function": {
+            "$ref": "#/components/schemas/FunctionSchema"
+          },
+          "routing": {
+            "$ref": "#/components/schemas/RoutingSchema"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/OriginalEvidenceItemSchema"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "interpretation": {
+            "$ref": "#/components/schemas/AIInterpretationSchema"
+          },
+          "suggested_action": {
+            "$ref": "#/components/schemas/SuggestedActionSchema"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewStateSchema"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle"
+          },
+          "confluence": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confluence"
+          },
+          "contradictions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Contradictions"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "signal_type",
+          "disease",
+          "priority",
+          "what_changed",
+          "why_it_matters",
+          "function",
+          "routing",
+          "interpretation",
+          "suggested_action",
+          "review",
+          "created_at"
+        ],
+        "title": "SignalDecisionResponse"
+      },
       "SignalListResponse": {
         "properties": {
           "signals": {
@@ -3885,6 +4638,67 @@
           "total"
         ],
         "title": "SignalListResponse"
+      },
+      "SignalReviewRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED",
+            "default": "REVIEWED"
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer",
+            "description": "Role/Actor performing review",
+            "default": "Clinical Reviewer"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision",
+            "description": "Review decision outcome"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Reviewer notes"
+          },
+          "resulting_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resulting Action",
+            "description": "Action taken or initiated"
+          }
+        },
+        "type": "object",
+        "title": "SignalReviewRequest"
       },
       "SignalSchema": {
         "properties": {
@@ -4104,6 +4918,235 @@
             "title": "Scoring Status",
             "default": "computed"
           },
+          "what_changed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "What Changed"
+          },
+          "why_it_matters": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why It Matters"
+          },
+          "relevant_function": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Function"
+          },
+          "route_destination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Destination"
+          },
+          "route_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Role"
+          },
+          "is_escalated": {
+            "type": "boolean",
+            "title": "Is Escalated",
+            "default": false
+          },
+          "routing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Reason"
+          },
+          "routing_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Timestamp"
+          },
+          "source_authority_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Authority Tier"
+          },
+          "validation_status": {
+            "type": "string",
+            "title": "Validation Status",
+            "default": "VALIDATED"
+          },
+          "suggested_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Action"
+          },
+          "action_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Rationale"
+          },
+          "review_status": {
+            "type": "string",
+            "title": "Review Status",
+            "default": "UNREVIEWED"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "review_decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Decision"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "resulting_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resulting Action"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/OriginalEvidenceItemSchema"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "interpretation_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AIInterpretationSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "action_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestedActionSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "routing_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutingSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "review_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewStateSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "facts": {
             "items": {
               "type": "string"
@@ -4260,9 +5303,7 @@
           "signal_type",
           "disease",
           "priority",
-          "similarity_score",
-          "embedding_model_version",
-          "created_at"
+          "similarity_score"
         ],
         "title": "SignalSearchResult"
       },
@@ -4463,6 +5504,52 @@
           "status"
         ],
         "title": "SourceRegistryItem"
+      },
+      "SuggestedActionSchema": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "target_function": {
+            "type": "string",
+            "title": "Target Function",
+            "default": "MEDICAL_AFFAIRS"
+          },
+          "is_escalated": {
+            "type": "boolean",
+            "title": "Is Escalated",
+            "default": false
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SuggestedActionSchema"
       },
       "TrendPointSchema": {
         "properties": {

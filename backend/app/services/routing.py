@@ -95,22 +95,27 @@ def resolve_signal_routing(
 
     # Leadership Escalation Policy
     is_critical = (priority.upper() == "CRITICAL")
-    has_high_score = (priority_score is not None and priority_score >= 80.0)
-    is_major_event = any(w in title.lower() for w in ["approved", "approval", "crl", "complete response letter", "black box", "trial halted", "suspended"])
+    is_major_event = any(w in f"{title} {content}".lower() for w in [
+        "approved", "approval", "crl", "complete response letter",
+        "black box", "trial halted", "suspended", "patent cliff", "litigation", "breakthrough therapy"
+    ])
+    is_strategic_domain = primary_fn in (StakeholderFunction.REGULATORY, StakeholderFunction.LEADERSHIP, StakeholderFunction.SAFETY)
+    has_high_priority = priority.upper() in ("CRITICAL", "HIGH")
+    has_strategic_score = (priority_score is not None and priority_score >= 80.0)
 
-    if is_critical or (has_high_score and is_major_event):
+    if is_critical or (is_strategic_domain and is_major_event and (has_high_priority or has_strategic_score)):
         is_escalated = True
         route_destination = "LEADERSHIP"
         route_role = "LEADERSHIP"
         routing_reason = (
-            f"Escalated to Executive Leadership due to CRITICAL impact "
+            f"Escalated to Executive Leadership due to high-impact strategic inflection event in {fn_label} "
             f"(Priority: {priority}, Score: {priority_score or 'N/A'}) requiring cross-functional alignment."
         )
     else:
         is_escalated = False
         route_destination = primary_fn.value
         route_role = "FUNCTION"
-        routing_reason = f"Routed to {fn_label} based on {signal_type or 'intelligence'} domain classification."
+        routing_reason = f"Routed to {fn_label} queue based on {signal_type or 'intelligence'} domain classification."
 
     # Formulate Contextual Suggested Action
     suggested_action, action_rationale = formulate_suggested_action(primary_fn, is_escalated, signal_type, title)

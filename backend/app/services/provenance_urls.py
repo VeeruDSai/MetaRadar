@@ -8,10 +8,18 @@ from urllib.parse import urlparse
 
 FDA_LANDING_PAGE = "https://open.fda.gov/drug/event/"
 EMA_LANDING_PAGE = "https://www.ema.europa.eu/en/medicines"
+NEWSAPI_PORTAL = "https://newsapi.org"
+NEWSAPI_REGISTER = "https://newsapi.org/register"
 
 LANDING_PAGE_URLS = {
     FDA_LANDING_PAGE.rstrip("/"),
     EMA_LANDING_PAGE.rstrip("/"),
+    NEWSAPI_PORTAL.rstrip("/"),
+    NEWSAPI_REGISTER.rstrip("/"),
+    "http://newsapi.org",
+    "http://newsapi.org/register",
+    "https://newsapi.org/pricing",
+    "https://newsapi.org/docs",
 }
 
 ProvenancePair = Tuple[Optional[str], str]
@@ -118,8 +126,17 @@ def resolve_canonical_provenance(
             url = _ema_document_url(title_or_content, ext)
         elif source == "fda":
             url = _fda_document_url(title_or_content, ext)
+        elif source in ("newsapi", "fierce_pharma", "et_pharma", "biopharmadive"):
+            # If the external_id itself is a valid article URL and existing_url was a landing page
+            if ext and _looks_like_http_url(ext) and not is_generic_landing_page(ext):
+                url = ext
+            else:
+                url = None
 
     if url and ("metaradar.internal" in url or url.endswith(".internal")):
+        url = None
+
+    if url and is_generic_landing_page(url):
         url = None
 
     if url and not _looks_like_http_url(url):

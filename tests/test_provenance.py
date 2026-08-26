@@ -307,3 +307,32 @@ async def test_ema_provenance_integration():
     assert payload.raw_payload.get("source_name") == "EMA"
     assert payload.raw_payload.get("signal_type") == "REGULATORY"
     assert payload.raw_payload.get("url") == "https://www.ema.europa.eu/en/medicines/human/EPAR/roctavian"
+
+
+def test_resolve_canonical_provenance_newsapi_article_url():
+    """NewsAPI signals must preserve and pass-through the direct article URL."""
+    from app.services.provenance_urls import resolve_canonical_provenance
+
+    article_url = "https://www.fiercepharma.com/pharma/novo-nordisks-mim8-shows-robust-efficacy-phase-3-haemophilia-trial"
+    url, status = resolve_canonical_provenance(
+        source_id="newsapi",
+        existing_url=article_url,
+        external_id=article_url,
+        title_or_content="Novo Nordisk Mim8 readout",
+    )
+    assert url == article_url
+    assert status == "available"
+
+
+def test_resolve_canonical_provenance_newsapi_landing_page_blocked():
+    """NewsAPI generic portal or registration URLs must be rejected rather than fabricated as evidence links."""
+    from app.services.provenance_urls import resolve_canonical_provenance
+
+    url, status = resolve_canonical_provenance(
+        source_id="newsapi",
+        existing_url="https://newsapi.org/register",
+        external_id="some-sha256-hash",
+        title_or_content="Haemophilia market update",
+    )
+    assert url is None
+    assert status == "missing_url"

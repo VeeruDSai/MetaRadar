@@ -9,6 +9,8 @@ from app.connectors.clinical_trials import ClinicalTrialsConnector
 from app.connectors.newsapi import NewsAPIConnector
 from app.connectors.fda import OpenFDAConnector
 from app.connectors.ema import EMARSSConnector
+from app.connectors.fierce_pharma import FiercePharmaRSSConnector
+from app.connectors.et_pharma import ETPharmaRSSConnector
 
 ALL_CONNECTORS = [
     PubMedConnector(),
@@ -16,6 +18,8 @@ ALL_CONNECTORS = [
     NewsAPIConnector(),
     OpenFDAConnector(),
     EMARSSConnector(),
+    FiercePharmaRSSConnector(),
+    ETPharmaRSSConnector(),
 ]
 
 __all__ = [
@@ -24,5 +28,7 @@ __all__ = [
     "NewsAPIConnector",
     "OpenFDAConnector",
     "EMARSSConnector",
+    "FiercePharmaRSSConnector",
+    "ETPharmaRSSConnector",
     "ALL_CONNECTORS",
 ]

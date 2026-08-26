@@ -160,9 +160,8 @@ export function SignalCard({
     (signal.speculation ? `Strategic perspective: ${signal.speculation}` : null) ||
     'Decision significance pending automated cross-source synthesis.'
 
-  const reviewStatus = signal.status
-    ? signal.status.charAt(0).toUpperCase() + signal.status.slice(1).replace(/_/g, ' ')
-    : 'Pending review'
+  const rawStatus = (signal.review_status || signal.status || 'UNREVIEWED').toUpperCase()
+  const reviewStatusLabel = rawStatus.replace(/_/g, ' ')
 
   const sourcesCount = signal.sources?.length || 1
   const publishedDate = signal.published_at
@@ -305,9 +304,21 @@ export function SignalCard({
       {/* 7. Footer: Review Status, Provenance Counts, & CTA */}
       <div className="flex items-center justify-between pt-2.5 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)] mt-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--muted-foreground)]">
-            <CheckCircle size={12} />
-            <span>Review: <strong className="text-[var(--foreground)]">{reviewStatus}</strong></span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                rawStatus === 'UNREVIEWED'
+                  ? 'bg-[var(--warning)]'
+                  : rawStatus === 'IN_REVIEW'
+                  ? 'bg-[var(--primary)]'
+                  : rawStatus === 'REVIEWED'
+                  ? 'bg-[var(--success)]'
+                  : rawStatus === 'ACTIONED'
+                  ? 'bg-[var(--accent)]'
+                  : 'bg-[var(--muted-foreground)]'
+              }`}
+            />
+            <span>Queue: <strong className="text-[var(--foreground)]">{reviewStatusLabel}</strong></span>
           </span>
           <span className="text-[11px] text-[var(--muted-foreground)]">·</span>
           <span className="text-[11px] text-[var(--muted-foreground)]">

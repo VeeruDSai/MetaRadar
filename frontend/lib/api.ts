@@ -29,6 +29,8 @@ import type {
   ActivityLogItem,
   CacheClearResponse,
   SignalFilterParams,
+  SignalReviewPayload,
+  AuditLogItem,
 } from '@/types/api'
 
 import { ApiError } from './errors'
@@ -675,4 +677,31 @@ export async function inspectConfluence(
   signal?: AbortSignal
 ): Promise<any> {
   return apiFetch<any>(`/confluence/${encodeURIComponent(confluence_id)}/inspect`, undefined, signal)
+}
+
+export async function submitSignalReview(
+  signalId: string,
+  payload: SignalReviewPayload,
+  signal?: AbortSignal
+): Promise<Signal> {
+  const data = await apiFetch<any>(
+    `/signals/${encodeURIComponent(signalId)}/review`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    signal
+  )
+  return mapSignal(data)
+}
+
+export async function fetchSignalAuditHistory(
+  signalId: string,
+  signal?: AbortSignal
+): Promise<AuditLogItem[]> {
+  return apiFetch<AuditLogItem[]>(
+    `/signals/${encodeURIComponent(signalId)}/audit-history`,
+    undefined,
+    signal
+  )
 }

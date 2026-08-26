@@ -47,6 +47,7 @@ import {
 
 import { SpecularButton } from '@/components/ui/SpecularButton'
 import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
+import { DemoOperatorSelector } from '@/components/common/DemoOperatorSelector'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { SignalCard } from '@/components/signals/SignalCard'
 import Counter from '@/components/ui/Counter'
@@ -379,6 +380,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </>
               )}
             </SpecularButton>
+            <DemoOperatorSelector />
             <button
               className="search-button"
               onClick={() => setSearchOpen(true)}

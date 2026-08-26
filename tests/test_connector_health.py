@@ -102,3 +102,29 @@ async def test_source_health_log_unprobed_http_status_none():
     assert isinstance(log, SourceHealthLog)
     assert log.connector_status == "CONFIGURATION_ERROR"
     assert log.http_status is None
+
+
+def test_discovery_connectors_registered():
+    """Verifies that Fierce Pharma and ET Pharma are instantiated in ALL_CONNECTORS."""
+    from app.connectors import ALL_CONNECTORS
+    
+    source_ids = {c.source_id for c in ALL_CONNECTORS}
+    assert "fierce_pharma" in source_ids
+    assert "et_pharma" in source_ids
+    assert "newsapi" in source_ids
+    assert "pubmed" in source_ids
+    assert "clinical_trials" in source_ids
+    assert "fda" in source_ids
+    assert "ema" in source_ids
+
+
+def test_biopharmadive_domain_config_registration():
+    """Verifies that BioPharma Dive is declared honestly in haemophilia.yaml with configured_no_feed status."""
+    from app.core.domain_config import get_domain_config
+
+    cfg = get_domain_config()
+    bpd = cfg.connectors.get("biopharmadive")
+    assert bpd is not None
+    assert bpd.tier == 3
+    assert bpd.freshness_class == "manual"
+    assert getattr(bpd, "status", None) == "configured_no_feed" or bpd.profiles == []

@@ -1,17 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { Signal, ConfluenceAlertItem, ContradictionItem } from '@/types/api'
+import type { Signal, ConfluenceAlertItem, ContradictionItem, AuditLogItem, SignalReviewPayload } from '@/types/api'
 import { Badge, Card, SectionTitle } from '@/components/metaradar'
 import { DataModeBadge } from '@/components/common/DataModeBadge'
+import { useDemoOperator } from '@/components/common/DemoOperatorSelector'
 import Counter from '@/components/ui/Counter'
 import Stepper, { Step } from '@/components/ui/Stepper'
 import { GlowingThinkingButton } from '@/components/ui/GlowingThinkingButton'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { getSourceAuthority, getSignalFunction, getSuggestedAction } from './SignalCard'
-import { askAthena } from '@/lib/api'
+import { askAthena, submitSignalReview, fetchSignalAuditHistory } from '@/lib/api'
 import {
   Activity,
   AlertTriangle,
@@ -31,6 +32,8 @@ import {
   Filter,
   FlaskConical,
   Globe,
+  History,
+  Inbox,
   Layers,
   Network,
   RefreshCw,
@@ -40,7 +43,12 @@ import {
   ShieldCheck,
   Sparkles,
   Tag,
+  ThumbsDown,
+  ThumbsUp,
+  User,
+  UserCheck,
   Users,
+  XCircle,
   Zap,
 } from 'lucide-react'
 
@@ -51,12 +59,54 @@ export interface SignalDetailWorkspaceProps {
 }
 
 export function SignalDetailWorkspace({
-  signal,
+  signal: initialSignal,
   confluences = [],
   contradictions = [],
 }: SignalDetailWorkspaceProps) {
   const router = useRouter()
   const { isDark } = useTheme()
+  const { operator: demoOperator } = useDemoOperator()
+
+  // State-persisted signal model
+  const [signal, setSignal] = useState<Signal>(initialSignal)
+  const targetId = signal.signal_id || signal.id || initialSignal.signal_id || initialSignal.id
+
+  // Audit history state
+  const [auditHistory, setAuditHistory] = useState<AuditLogItem[]>([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [auditError, setAuditError] = useState<string | null>(null)
+
+  // Review interaction state
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewNotice, setReviewNotice] = useState<string | null>(null)
+  const [reviewError, setReviewError] = useState<string | null>(null)
+  const [inlineActionType, setInlineActionType] = useState<'REJECT' | 'EVIDENCE' | 'ACTION' | null>(null)
+  const [inlineNotes, setInlineNotes] = useState('')
+
+  const loadAuditHistory = useCallback(async () => {
+    if (!targetId) return
+    setAuditLoading(true)
+    setAuditError(null)
+    try {
+      const history = await fetchSignalAuditHistory(targetId)
+      setAuditHistory(history)
+    } catch (err: any) {
+      setAuditError(err?.message || 'Failed to load audit trail')
+    } finally {
+      setAuditLoading(false)
+    }
+  }, [targetId])
+
+  useEffect(() => {
+    loadAuditHistory()
+  }, [loadAuditHistory])
+
+  // Athena contextual reasoning state
+  const [athenaQuery, setAthenaQuery] = useState('')
+  const [athenaLoading, setAthenaLoading] = useState(false)
+  const [athenaAnswer, setAthenaAnswer] = useState<string | null>(null)
+  const [athenaError, setAthenaError] = useState<string | null>(null)
+
   const priorityStr = (signal.priority || signal.severity || 'MEDIUM').toUpperCase()
   const priorityKey = (priorityStr.toLowerCase() || 'medium') as
     | 'critical'
@@ -82,16 +132,20 @@ export function SignalDetailWorkspace({
   const suggestedAction = getSuggestedAction(signal)
 
   const whatChanged =
-    signal.facts && signal.facts.length > 0
+    signal.what_changed ||
+    (signal.facts && signal.facts.length > 0
       ? signal.facts.join(' ')
-      : signal.evidence_text || signal.summary || signal.content || signal.title
+      : signal.evidence_text || signal.summary || signal.content || signal.title)
 
   const whyItMatters =
+    signal.why_it_matters ||
     signal.interpretation ||
     (signal.speculation ? `Strategic perspective: ${signal.speculation}` : null) ||
     'Decision significance pending live clinical reasoning synthesis.'
 
   const rawPayload = (signal as any).raw_payload || {}
+
+  // Canonical Evidence URL resolution: honest fallback chain, NO hardcoded newsapi.org
   const evidenceUrl =
     signal.canonical_url ||
     (signal as any).url ||
@@ -100,27 +154,40 @@ export function SignalDetailWorkspace({
     rawPayload.url ||
     rawPayload.article?.url ||
     rawPayload.link ||
-    (signal.source_id === 'newsapi' ? 'https://newsapi.org' : null)
+    null
 
-  // Review status state management (for interactive user reviews)
-  const [reviewState, setReviewState] = useState(
-    signal.status
-      ? signal.status.charAt(0).toUpperCase() + signal.status.slice(1).replace(/_/g, ' ')
-      : 'Pending Review'
-  )
-  const [reviewNotice, setReviewNotice] = useState<string | null>(null)
+  const reviewStatus = (signal.review_status || signal.status || 'UNREVIEWED').toUpperCase()
 
-  const handleUpdateReview = (newStatus: string) => {
-    setReviewState(newStatus)
-    setReviewNotice(`Signal review status updated to: ${newStatus}`)
-    setTimeout(() => setReviewNotice(null), 4000)
+  const handleReviewAction = async (
+    newStatus: string,
+    decision?: string,
+    notes?: string,
+    resultingAction?: string
+  ) => {
+    if (!targetId) return
+    setReviewLoading(true)
+    setReviewError(null)
+    try {
+      const payload: SignalReviewPayload = {
+        status: newStatus as any,
+        reviewer: demoOperator,
+        decision,
+        notes: notes || undefined,
+        resulting_action: resultingAction || undefined,
+      }
+      const updated = await submitSignalReview(targetId, payload)
+      setSignal(updated)
+      setInlineActionType(null)
+      setInlineNotes('')
+      setReviewNotice(`Signal status updated to ${newStatus} by ${demoOperator}`)
+      await loadAuditHistory()
+      setTimeout(() => setReviewNotice(null), 5000)
+    } catch (err: any) {
+      setReviewError(err?.message || 'Review status update failed. Please retry.')
+    } finally {
+      setReviewLoading(false)
+    }
   }
-
-  // Athena contextual reasoning state
-  const [athenaQuery, setAthenaQuery] = useState('')
-  const [athenaLoading, setAthenaLoading] = useState(false)
-  const [athenaAnswer, setAthenaAnswer] = useState<string | null>(null)
-  const [athenaError, setAthenaError] = useState<string | null>(null)
 
   const handleAskAthena = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -140,9 +207,11 @@ export function SignalDetailWorkspace({
 
   // Calculate actual lifecycle step from backend state
   let currentLifecycleStep = 3 // default: detected, classified, prioritized
-  if (reviewState.toLowerCase().includes('reviewed') || reviewState.toLowerCase().includes('actioned')) {
+  if (reviewStatus === 'ACTIONED') {
+    currentLifecycleStep = 6
+  } else if (reviewStatus === 'REVIEWED') {
     currentLifecycleStep = 5
-  } else if (signal.status && signal.status.toLowerCase() !== 'new') {
+  } else if (reviewStatus === 'IN_REVIEW' || reviewStatus === 'ACTION_REQUIRED') {
     currentLifecycleStep = 4
   }
 
@@ -187,15 +256,40 @@ export function SignalDetailWorkspace({
         <div className="flex items-center gap-2">
           <DataModeBadge mode={signal.data_mode} isSynthetic={signal.is_synthetic} />
           <span className="text-xs text-[var(--muted-foreground)] font-mono">
-            ID: {signal.id || signal.signal_id}
+            ID: {targetId}
           </span>
         </div>
       </div>
 
       {reviewNotice && (
-        <div className="p-3 rounded-md bg-[var(--success)]/10 border border-[var(--success)]/30 text-xs font-medium text-[var(--success)] flex items-center gap-2">
-          <CheckCircle2 size={16} />
-          <span>{reviewNotice}</span>
+        <div className="p-3 rounded-md bg-[var(--success)]/10 border border-[var(--success)]/30 text-xs font-medium text-[var(--success)] flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="shrink-0" />
+            <span>{reviewNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReviewNotice(null)}
+            className="text-[var(--success)] hover:opacity-80 text-xs font-bold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {reviewError && (
+        <div className="p-3 rounded-md bg-[var(--danger)]/10 border border-[var(--danger)]/30 text-xs font-medium text-[var(--danger)] flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="shrink-0" />
+            <span>{reviewError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReviewError(null)}
+            className="text-[var(--danger)] hover:opacity-80 text-xs font-bold"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -213,7 +307,7 @@ export function SignalDetailWorkspace({
               )}
               <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full bg-[var(--surface-secondary)] text-[var(--foreground)] border border-[var(--border)]">
                 <Network size={13} className="text-[var(--primary)]" />
-                <span>{functionName}</span>
+                <span>Destination: {functionName}</span>
               </span>
               <span className="text-xs text-[var(--muted-foreground)]">
                 Published: {publishedDate}
@@ -245,32 +339,168 @@ export function SignalDetailWorkspace({
           </div>
         </div>
 
-        {/* Status & Review Workflow Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border)] text-xs">
-          <div className="flex items-center gap-3">
-            <span className="text-[var(--muted-foreground)]">Review Status:</span>
-            <div className="flex items-center gap-1.5">
-              {['Pending Review', 'Under Review', 'Reviewed', 'Action Required'].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => handleUpdateReview(st)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-all ${
-                    reviewState === st
-                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]'
-                      : 'bg-[var(--surface)] text-[var(--muted-foreground)] border-[var(--border)] hover:bg-[var(--surface-secondary)]'
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
+        {/* Workflow & Review Queue Action Bar */}
+        <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Inbox size={15} className="text-[var(--primary)]" />
+              <span className="font-bold text-[var(--foreground)] uppercase text-[11px] tracking-wider">
+                Review Workflow State:
+              </span>
+              <span
+                className={`font-bold px-2 py-0.5 rounded text-[11px] uppercase ${
+                  reviewStatus === 'UNREVIEWED'
+                    ? 'bg-[var(--warning)]/15 text-[var(--warning)] border border-[var(--warning)]/30'
+                    : reviewStatus === 'IN_REVIEW'
+                    ? 'bg-[var(--primary)]/15 text-[var(--primary)] border border-[var(--primary)]/30'
+                    : reviewStatus === 'REVIEWED'
+                    ? 'bg-[var(--success)]/15 text-[var(--success)] border border-[var(--success)]/30'
+                    : reviewStatus === 'ACTIONED'
+                    ? 'bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30'
+                    : 'bg-[var(--surface-secondary)] text-[var(--muted-foreground)] border border-[var(--border)]'
+                }`}
+              >
+                {reviewStatus.replace(/_/g, ' ')}
+              </span>
+              {signal.reviewed_by && (
+                <span className="text-[var(--muted-foreground)] text-[11px] ml-1">
+                  by <strong>{signal.reviewed_by}</strong>
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
+              <UserCheck size={13} className="text-[var(--warning)]" />
+              <span>Acting as: <strong>{demoOperator}</strong></span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
-            <Clock size={13} />
-            <span>Observed: {signal.detectedAt || 'Recently'}</span>
+          {/* Interactive Workflow Buttons */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {reviewStatus === 'UNREVIEWED' && (
+              <button
+                type="button"
+                disabled={reviewLoading}
+                onClick={() => handleReviewAction('IN_REVIEW', undefined, 'Acknowledged by destination reviewer')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity disabled:opacity-50 shadow-xs"
+              >
+                {reviewLoading ? <RefreshCw size={13} className="animate-spin" /> : <Eye size={13} />}
+                <span>Acknowledge & Start Review</span>
+              </button>
+            )}
+
+            {(reviewStatus === 'UNREVIEWED' || reviewStatus === 'IN_REVIEW') && (
+              <>
+                <button
+                  type="button"
+                  disabled={reviewLoading}
+                  onClick={() => handleReviewAction('REVIEWED', 'APPROVED', 'Validated against clinical and regulatory baseline')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--success)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 shadow-xs"
+                >
+                  {reviewLoading ? <RefreshCw size={13} className="animate-spin" /> : <ThumbsUp size={13} />}
+                  <span>Approve Signal</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={reviewLoading}
+                  onClick={() => setInlineActionType(inlineActionType === 'REJECT' ? null : 'REJECT')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--surface-secondary)] text-[var(--danger)] border border-[var(--danger)]/30 hover:bg-[var(--danger)]/10 transition-colors disabled:opacity-50"
+                >
+                  <ThumbsDown size={13} />
+                  <span>Reject / Contest</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={reviewLoading}
+                  onClick={() => setInlineActionType(inlineActionType === 'EVIDENCE' ? null : 'EVIDENCE')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--surface-secondary)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-secondary)]/80 transition-colors disabled:opacity-50"
+                >
+                  <FileCheck size={13} />
+                  <span>Request Additional Evidence</span>
+                </button>
+              </>
+            )}
+
+            {reviewStatus === 'REVIEWED' && (
+              <button
+                type="button"
+                disabled={reviewLoading}
+                onClick={() => setInlineActionType(inlineActionType === 'ACTION' ? null : 'ACTION')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity disabled:opacity-50 shadow-xs"
+              >
+                <Zap size={13} />
+                <span>Execute & Record Action</span>
+              </button>
+            )}
+
+            {reviewStatus !== 'DISMISSED' && (
+              <button
+                type="button"
+                disabled={reviewLoading}
+                onClick={() => handleReviewAction('DISMISSED', 'DISMISSED', 'Dismissed by stakeholder')}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--surface-secondary)] transition-colors ml-auto"
+              >
+                <XCircle size={13} />
+                <span>Dismiss</span>
+              </button>
+            )}
           </div>
+
+          {/* Inline Action Note Inputs */}
+          {inlineActionType && (
+            <div className="p-3 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] flex flex-col gap-2 mt-1 animate-in fade-in">
+              <span className="text-[11px] font-bold text-[var(--foreground)]">
+                {inlineActionType === 'REJECT'
+                  ? 'Rejection Rationale & Notes'
+                  : inlineActionType === 'EVIDENCE'
+                  ? 'Evidence Clarification Request'
+                  : 'Action Taken / Operational Directive'}
+              </span>
+              <textarea
+                value={inlineNotes}
+                onChange={(e) => setInlineNotes(e.target.value)}
+                placeholder={
+                  inlineActionType === 'REJECT'
+                    ? 'State reasons for contesting this signal (e.g. flawed study methodology, out of date cohort)...'
+                    : inlineActionType === 'EVIDENCE'
+                    ? 'Specify missing endpoints or data required before approval...'
+                    : 'Describe operational follow-up (e.g. updated ICER dossier, briefed commercial lead)...'
+                }
+                rows={2}
+                className="w-full px-3 py-2 text-xs rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--primary)] resize-none"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInlineActionType(null)
+                    setInlineNotes('')
+                  }}
+                  className="px-2.5 py-1 rounded text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={reviewLoading}
+                  onClick={() => {
+                    if (inlineActionType === 'REJECT') {
+                      handleReviewAction('REVIEWED', 'REJECTED', inlineNotes || 'Contested by reviewer')
+                    } else if (inlineActionType === 'EVIDENCE') {
+                      handleReviewAction('ACTION_REQUIRED', 'REQUEST_EVIDENCE', inlineNotes || 'Additional evidence requested')
+                    } else if (inlineActionType === 'ACTION') {
+                      handleReviewAction('ACTIONED', undefined, undefined, inlineNotes || 'Action recorded in roadmap')
+                    }
+                  }}
+                  className="px-3 py-1 rounded text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-50"
+                >
+                  {reviewLoading ? 'Submitting...' : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -324,7 +554,7 @@ export function SignalDetailWorkspace({
             </div>
           </div>
 
-          {evidenceUrl && (
+          {evidenceUrl ? (
             <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between">
               <a
                 href={evidenceUrl}
@@ -332,16 +562,16 @@ export function SignalDetailWorkspace({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
               >
-                <span>
-                  {signal.source_id === 'newsapi'
-                    ? `View provider source (${sourceName})`
-                    : 'View primary evidence source'}
-                </span>
+                <span>View original source article</span>
                 <ExternalLink size={13} />
               </a>
               <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-mono">
                 Verified Provenance
               </span>
+            </div>
+          ) : (
+            <div className="pt-3 border-t border-[var(--border)] text-[11px] text-[var(--muted-foreground)] italic">
+              Direct source URL unavailable in upstream feed.
             </div>
           )}
         </div>
@@ -380,71 +610,75 @@ export function SignalDetailWorkspace({
             )}
           </div>
 
-          <div className="pt-3 border-t border-[var(--border)] text-[11px] text-[var(--muted-foreground)] flex items-center justify-between">
-            <span>Model: {signal.model_metadata?.model || 'Gemma 3 (Local)'}</span>
-            <span>Confidence: {signal.confidence ? `${signal.confidence}%` : '88%'}</span>
+          <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
+            <span>Model: {signal.model_metadata?.model || 'Local Gemma 3'}</span>
+            <span className="font-mono">{signal.scoring_model_version || 'haemophilia_v2.0'}</span>
           </div>
         </div>
 
-        {/* Column 3: SUGGESTED ACTION & ROUTING */}
+        {/* Column 3: SUGGESTED ACTION */}
         <div className="p-5 rounded-[var(--radius-lg,12px)] bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">
-                <Zap size={15} className="text-[var(--warning)]" />
+                <ArrowRight size={15} className="text-[var(--accent)]" />
                 <span>Suggested Action</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-[var(--warning)]/10 text-[var(--warning)] border border-[var(--warning)]/20">
-                Action Required
+              <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+                Actionable
               </span>
             </div>
 
             <div className="mb-3">
               <span className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] block mb-1">
-                Recommended Functional Action
+                Target Organizational Destination
               </span>
-              <div className="p-3 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs font-medium text-[var(--foreground)] leading-relaxed">
-                {suggestedAction}
+              <div className="flex items-center gap-1.5 font-bold text-xs text-[var(--foreground)]">
+                <Users size={14} className="text-[var(--primary)]" />
+                <span>{functionName}</span>
               </div>
             </div>
 
             <div className="mb-3">
               <span className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] block mb-1">
-                Assigned Team & Escalation
+                Action Recommendation
               </span>
-              <div className="p-2.5 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[var(--muted-foreground)]">Functional Owner:</span>
-                  <strong className="text-[var(--foreground)]">{functionName}</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--muted-foreground)]">Leadership Escalation:</span>
-                  <strong className={escalateToLeadership ? 'text-[var(--priority-critical)]' : 'text-[var(--muted-foreground)]'}>
-                    {escalateToLeadership ? 'Escalated' : 'Standard Routine'}
-                  </strong>
-                </div>
+              <div className="p-3 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs text-[var(--foreground)] leading-relaxed">
+                {signal.suggested_action || suggestedAction}
               </div>
             </div>
+
+            {signal.action_rationale && (
+              <div className="mb-3">
+                <span className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] block mb-1">
+                  Action Rationale
+                </span>
+                <p className="text-[11px] text-[var(--muted-foreground)] m-0 leading-normal">
+                  {signal.action_rationale}
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="pt-3 border-t border-[var(--border)] text-[11px] text-[var(--muted-foreground)]">
-            <span>Action status: <strong>{reviewState}</strong></span>
+          <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
+            <span>Escalation: {escalateToLeadership ? 'Leadership Steering' : 'Direct Functional Queue'}</span>
+            <span className="font-mono">Priority: {priorityStr}</span>
           </div>
         </div>
       </div>
 
-      {/* Signal Lifecycle Progression (React Bits Stepper) */}
+      {/* Six-Stage Progression Stepper */}
       <div className="p-5 rounded-[var(--radius-lg,12px)] bg-[var(--surface)] border border-[var(--border)]">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-bold text-[var(--foreground)] m-0">
-              Signal Lifecycle Progression
-            </h2>
-            <p className="text-xs text-[var(--muted-foreground)] m-0">
-              Auditable progression through MetaRadar's decision intelligence lifecycle.
-            </p>
+          <div className="flex items-center gap-2">
+            <Layers size={16} className="text-[var(--primary)]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">
+              Signal Intelligence Lifecycle
+            </span>
           </div>
-          <Badge tone={priorityKey}>Stage {currentLifecycleStep} of 6</Badge>
+          <span className="text-xs text-[var(--muted-foreground)] font-mono">
+            Stage {currentLifecycleStep} of 6
+          </span>
         </div>
 
         <Stepper initialStep={currentLifecycleStep} showNavigationControls={false}>
@@ -487,18 +721,18 @@ export function SignalDetailWorkspace({
                 4. Functional Routing & Escalation
               </p>
               <p className="text-[var(--muted-foreground)] m-0">
-                Dispatched to <strong>{functionName}</strong> workspace {escalateToLeadership ? 'with Executive Leadership alert' : ''}.
+                Dispatched to <strong>{functionName}</strong> queue {escalateToLeadership ? 'with Executive Leadership alert' : ''}.
               </p>
             </div>
           </Step>
 
-          <Step title="Reviewed" subtitle={reviewState} status={currentLifecycleStep >= 5 ? 'completed' : 'pending'}>
+          <Step title="Reviewed" subtitle={reviewStatus} status={currentLifecycleStep >= 5 ? 'completed' : 'pending'}>
             <div className="text-xs">
               <p className="font-semibold text-[var(--foreground)] mb-1">
                 5. Expert Stakeholder Review
               </p>
               <p className="text-[var(--muted-foreground)] m-0">
-                Current status: <strong>{reviewState}</strong>.
+                Current status: <strong>{reviewStatus}</strong>.
               </p>
             </div>
           </Step>
@@ -509,11 +743,104 @@ export function SignalDetailWorkspace({
                 6. Decision Execution
               </p>
               <p className="text-[var(--muted-foreground)] m-0">
-                Decision closed and incorporated into therapeutic roadmap.
+                {signal.resulting_action || 'Decision closed and incorporated into therapeutic roadmap.'}
               </p>
             </div>
           </Step>
         </Stepper>
+      </div>
+
+      {/* Immutable Audit Trail Panel */}
+      <div className="p-5 rounded-[var(--radius-lg,12px)] bg-[var(--surface)] border border-[var(--border)]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <History size={16} className="text-[var(--primary)]" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)] m-0">
+              Audit Trail & Workflow History
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={loadAuditHistory}
+            disabled={auditLoading}
+            className="inline-flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-semibold transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={auditLoading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+        </div>
+
+        {auditLoading && auditHistory.length === 0 && (
+          <div className="p-4 text-center text-xs text-[var(--muted-foreground)]">
+            <Activity size={16} className="animate-spin inline mr-1 text-[var(--primary)]" />
+            <span>Loading audit history...</span>
+          </div>
+        )}
+
+        {auditError && (
+          <div className="p-3 rounded-md bg-[var(--danger)]/10 text-[var(--danger)] text-xs mb-2">
+            {auditError}
+          </div>
+        )}
+
+        {!auditLoading && auditHistory.length === 0 && (
+          <div className="p-4 rounded-md bg-[var(--surface-secondary)]/50 border border-[var(--border)] text-xs text-[var(--muted-foreground)] text-center">
+            <span>No explicit review actions recorded yet. Initial lifecycle created on signal ingestion.</span>
+          </div>
+        )}
+
+        {auditHistory.length > 0 && (
+          <div className="flex flex-col gap-2.5">
+            {auditHistory.map((item) => {
+              const itemDate = new Date(item.timestamp).toLocaleString('en-US', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })
+              const details = item.details || {}
+              return (
+                <div
+                  key={item.audit_id}
+                  className="p-3 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs flex flex-col gap-1"
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[var(--foreground)] font-mono text-[11px] px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)]">
+                        {item.action}
+                      </span>
+                      {details.new_status && (
+                        <span className="text-[var(--primary)] font-bold text-xs">
+                          → {details.new_status}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[var(--muted-foreground)]">{itemDate}</span>
+                  </div>
+
+                  <div className="text-[var(--muted-foreground)] text-[11px]">
+                    Actor: <strong className="text-[var(--foreground)]">{item.performed_by}</strong>
+                    {details.decision && (
+                      <span className="ml-2">
+                        · Decision: <strong className="text-[var(--success)]">{details.decision}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  {details.notes && (
+                    <p className="text-[var(--foreground)] m-0 mt-1 pl-2 border-l-2 border-[var(--border)] italic">
+                      "{details.notes}"
+                    </p>
+                  )}
+
+                  {details.resulting_action && (
+                    <p className="text-[var(--accent)] font-semibold m-0 mt-1 pl-2 border-l-2 border-[var(--accent)]">
+                      Action: {details.resulting_action}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Supporting Confluence & Contradiction Intelligence */}

@@ -135,6 +135,26 @@ export interface Signal {
   prompt_version?: string;
   created_at?: string;
 
+  // Decision Object & Persisted Review State
+  what_changed?: string;
+  why_it_matters?: string;
+  relevant_function?: string;
+  route_destination?: string;
+  route_role?: string;
+  is_escalated?: boolean;
+  routing_reason?: string;
+  routing_timestamp?: string;
+  source_authority_tier?: string;
+  validation_status?: string;
+  suggested_action?: string;
+  action_rationale?: string;
+  review_status?: "UNREVIEWED" | "IN_REVIEW" | "REVIEWED" | "ACTION_REQUIRED" | "ACTIONED" | "DISMISSED" | string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_decision?: string;
+  review_notes?: string;
+  resulting_action?: string;
+
   // Frontend UI & Dashboard properties
   id: string;
   summary: string;
@@ -145,6 +165,24 @@ export interface Signal {
   tags?: string[];
   sources: SignalSource[];
   stakeholders: Record<string, number>;
+}
+
+export interface SignalReviewPayload {
+  status: "UNREVIEWED" | "IN_REVIEW" | "REVIEWED" | "ACTION_REQUIRED" | "ACTIONED" | "DISMISSED" | string;
+  reviewer?: string;
+  decision?: string;
+  notes?: string;
+  resulting_action?: string;
+}
+
+export interface AuditLogItem {
+  audit_id: string;
+  entity_name: string;
+  entity_id: string;
+  action: string;
+  performed_by: string;
+  timestamp: string;
+  details?: Record<string, any>;
 }
 
 export interface Development {

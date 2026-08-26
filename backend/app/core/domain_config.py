@@ -63,13 +63,15 @@ class ConnectorConfig(BaseModel):
 
     freshness_class: str
     tier: int = 1
-    backfill_days: int
-    rolling_window_days: int
+    backfill_days: int = 30
+    rolling_window_days: int = 7
     max_results_per_profile: Optional[int] = None
     quota_per_day: Optional[int] = None
     base_url: Optional[str] = None
     rss_url: Optional[str] = None
-    profiles: List[ConnectorQueryProfile]
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    profiles: List[ConnectorQueryProfile] = Field(default_factory=list)
 
 
 class CrossSourceGroupConfig(BaseModel):
