@@ -30,7 +30,7 @@
 - **NewsAPI:**
   - Purpose: Monitors commercial trade press, industry coverage, and general biomedical news
   - Client: `backend/app/connectors/newsapi.py` (`httpx.AsyncClient`)
-  - Auth: `NEWSAPI_KEY` or `NEWS_API_KEY` (100 req/day developer quota tracking)
+  - Auth: `NEWSAPI_KEY` or `NEWS_API_KEY` (100 req/day developer quota tracking with adaptive quota governor in `backend/app/services/scheduler.py`)
   - Canonical URL: Direct article URL (`article.url`), blocking generic registration/landing pages
 - **Fierce Pharma RSS:**
   - Purpose: Continuous monitoring of biopharma corporate developments, M&A, regulatory submissions, and commercial strategy
@@ -42,9 +42,11 @@
   - Client: `backend/app/connectors/et_pharma.py` (RSS XML parser)
   - Auth: None (public RSS feeds `.../rss/topstories` & `.../rss/drug_approvals`)
   - Canonical URL: Direct article link
-- **BioPharma Dive:**
-  - Purpose: Biopharma business intelligence monitoring
-  - Client: Registered in source catalog with `status: configured_no_feed` for honest administrative visibility
+- **BioPharma Dive RSS:**
+  - Purpose: Real-time biopharma news and industry intelligence monitoring
+  - Client: `backend/app/connectors/biopharma_dive.py` (RSS XML parser with keyword filtering)
+  - Auth: None (public RSS feed `https://www.biopharmadive.com/feeds/news/`)
+  - Canonical URL: Direct article link
 
 **LLM & Reasoning Providers:**
 - **Local Gemma (Ollama):**
@@ -103,7 +105,7 @@
 
 **CI Pipeline:**
 - GitHub Actions (`.github/workflows/ci.yml`):
-  - Job 1: Pytest backend verification with coverage gates
+  - Job 1: Pytest backend verification with coverage gates (141 tests)
   - Job 2: OpenAPI & TypeScript contract synchronization check (`scripts/export_openapi.py`)
   - Job 3: Frontend banned Tailwind classes gate (`scripts/check-banned-classes.mjs`)
   - Job 4: Next.js 16 build (`npm run build`) & ESLint (`npm run lint`)

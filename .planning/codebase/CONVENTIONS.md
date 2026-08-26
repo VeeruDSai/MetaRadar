@@ -5,10 +5,10 @@
 ## Naming Patterns
 
 **Files:**
-- Frontend Components: `PascalCase.tsx` (`SignalDetailWorkspace.tsx`, `DemoOperatorSelector.tsx`)
-- Frontend Utilities & Hooks: `camelCase.ts` (`api.ts`, `errors.ts`, `mappers.ts`, `hooks.ts`)
-- Backend Modules: `snake_case.py` (`provenance_urls.py`, `fierce_pharma.py`, `redteam.py`)
-- Test Files: `test_<feature>.py` (`test_provenance.py`, `test_connector_health.py`)
+- Frontend Components: `PascalCase.tsx` (`SignalDetailWorkspace.tsx`, `DemoOperatorSelector.tsx`, `PriorityScoreExplainer.tsx`)
+- Frontend Utilities & Hooks: `camelCase.ts` (`api.ts`, `errors.ts`, `mappers.ts`, `utils.ts`)
+- Backend Modules: `snake_case.py` (`provenance_urls.py`, `biopharma_dive.py`, `redteam.py`, `authority.py`)
+- Test Files: `test_<feature>.py` (`test_provenance.py`, `test_connector_health.py`, `test_signal_decision_refinement.py`)
 
 **Functions:**
 - Python: `snake_case()` (`resolve_canonical_provenance()`, `calculate_authority_tier()`, `fetch_records()`)
@@ -55,7 +55,7 @@
 ## Error Handling
 
 **Patterns:**
-- **Frontend:** API errors are wrapped in strongly-typed `ApiError` instances (`frontend/lib/errors.ts`) preserving HTTP status codes and backend detail payloads. Error boundaries and `ErrorState` components render user-friendly messages with correlation IDs.
+- **Frontend:** API errors are wrapped in strongly-typed `ApiError` instances (`frontend/lib/errors.ts`) preserving HTTP status codes and backend detail payloads. Error boundaries render user-friendly messages with correlation IDs.
 - **Backend:** Route handlers catch domain exceptions and re-raise structured `HTTPException(status_code=..., detail=...)`.
 - **Database Transactions:** Always wrap modifying queries in `try...except` blocks with explicit `await session.rollback()` on failure.
 - **SQLAlchemy 2.0 Invariant:** `session.add()` is synchronous on `AsyncSession`; never await `session.add()`.

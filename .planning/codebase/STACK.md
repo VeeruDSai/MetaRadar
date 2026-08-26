@@ -5,13 +5,13 @@
 ## Languages
 
 **Primary:**
-- **Python 3.11+ (CPython 3.13.5)** - Backend services, FastAPI REST API, LangGraph 11-node intelligence pipeline, ingestion connectors, SQLAlchemy 2.0 async ORM, background scheduler
+- **Python 3.11+ (CPython 3.13.5)** - Backend services, FastAPI REST API, LangGraph 11-node intelligence pipeline, 8 ingestion connectors, SQLAlchemy 2.0 async ORM, background scheduler with NewsAPI quota governor
 - **TypeScript 5.7.3** - Next.js 16.3.0 App Router frontend, 9 specialized intelligence workspaces, REST API client, strictly typed DTOs
 
 **Secondary:**
 - **SQL (PostgreSQL 16 Dialect)** - Relational schemas for Signals, Raw Bronze data, Audit Logs, Sources, Feedback, and pgvector cosine distance queries
 - **CSS / Tailwind CSS v4** - CSS-first design token system (`@theme inline`), CSS custom properties in `frontend/app/globals.css`
-- **Shell / Python Tooling** - Orchestration and verification scripts (`setup.py`, `start.py`, `scripts/export_openapi.py`, `scripts/check-banned-classes.mjs`)
+- **Shell / Python Tooling** - Orchestration and verification scripts (`setup.py`, `start.py`, `scripts/export_openapi.py`, `scripts/check-banned-classes.mjs`, `scripts/test_demo_scenarios_e2e.py`)
 
 ## Runtime
 
@@ -34,7 +34,7 @@
 - **Pydantic v2 >=2.6.0 & pydantic-settings >=2.2.0** - Strict DTO schemas, domain configuration validation (`config/haemophilia.yaml`)
 
 **Testing:**
-- **Pytest 8.0.0+ with pytest-asyncio 0.23.0+ & pytest-httpx 0.30.0+** - Comprehensive backend test suites (139 executable unit & integration tests)
+- **Pytest 8.0.0+ with pytest-asyncio 0.23.0+ & pytest-httpx 0.30.0+** - Comprehensive backend test suites (141 executable unit & integration tests)
 - **ESLint 10.8.1 with `@next/eslint-plugin-next`** - Frontend linting and strict code quality rules
 - **Custom Linting Tooling**: `scripts/check-banned-classes.mjs` (banned Tailwind utility and hex color enforcement)
 

@@ -1,4 +1,3 @@
-<!-- refreshed: 2026-08-27 -->
 # Architecture
 
 **Analysis Date:** 2026-08-27
@@ -24,11 +23,12 @@
                    ▼                                      ▼
 ┌──────────────────────────────────────┐ ┌────────────────────────────────────┐
 │      11-NODE LANGGRAPH PIPELINE      │ │      INGESTION & SCHEDULER TIER    │
-│  Ingest → Validate/PII → NLP Extract │ │  7 Connectors (PubMed, CT.gov,     │
-│  → Ontology → Embed → Confluence     │ │  FDA, EMA, NewsAPI, Fierce, ET)    │
-│  → Lifecycle → Red Team → Gap        │ │  PostgreSQL Advisory Lock Scheduler│
-│  → Synthesize → Calibrate            │ │  `backend/app/connectors/`         │
-│  `backend/app/workflows/`            │ │  `backend/app/services/scheduler.py│
+│  Ingest → Validate/PII → NLP Extract │ │  8 Connectors (PubMed, CT.gov,     │
+│  → Ontology → Embed → Confluence     │ │  FDA, EMA, NewsAPI, Fierce, ET,    │
+│  → Lifecycle → Red Team → Gap        │ │  BioPharma Dive)                   │
+│  → Synthesize → Calibrate            │ │  PostgreSQL Advisory Lock Scheduler│
+│  `backend/app/workflows/`            │ │  `backend/app/connectors/`         │
+│                                      │ │  `backend/app/services/scheduler.py│
 └──────────────────┬───────────────────┘ └─────────────────┬──────────────────┘
                    │                                       │
                    └───────────────────┬───────────────────┘
@@ -48,15 +48,17 @@
 |---|---|---|
 | **App Router & Layout** | Shell layout, theme provider, navigation sidebar, demo operator role state | `frontend/app/layout.tsx`, `frontend/components/metaradar.tsx` |
 | **Workspaces UI** | Specialized views for Signals, Confluences, Contradictions, Missing Signals, Calibration, Observability | `frontend/components/*/*Workspace.tsx` |
+| **Signal Detail & Explainer** | 4-Question decision view, Evidence Convergence Tree, Priority Score Explainer, Red-Team Counter-factuals | `frontend/components/signals/SignalDetailWorkspace.tsx`, `frontend/components/signals/PriorityScoreExplainer.tsx`, `frontend/components/signals/EvidenceConvergenceWidget.tsx` |
+| **Executive Briefing** | Daily top-3 prioritized signals hero card with strategic triage | `frontend/components/signals/SignalList.tsx` |
 | **API Client & Mappers** | Type-safe REST client, error mapping, and contract transformers | `frontend/lib/api.ts`, `frontend/lib/mappers.ts` |
 | **FastAPI Core** | Application lifecycle, correlation tracing, JSON logging, CORS | `backend/app/main.py`, `backend/app/core/middleware.py` |
 | **Signals & Review Router** | Signal retrieval, filtering, 4-question decision data, review status transitions | `backend/app/api/v1/endpoints/signals.py` |
 | **Athena Clinical Q&A** | Grounded clinical question answering with SSE token streaming and citation injection | `backend/app/api/v1/endpoints/intelligence.py` |
 | **LangGraph Runner** | 11-node stateful workflow execution, error resilience, and state transitions | `backend/app/workflows/runner.py`, `backend/app/workflows/graph.py` |
-| **Ingestion Connectors** | Multi-source data retrieval, normalization, and raw Bronze persistence | `backend/app/connectors/base.py`, `backend/app/connectors/*.py` |
-| **Autonomous Scheduler** | Background connector scheduling with backoff, jitter, and advisory locking | `backend/app/services/scheduler.py` |
+| **Ingestion Connectors** | Multi-source data retrieval, normalization, and raw Bronze persistence (8 connectors) | `backend/app/connectors/base.py`, `backend/app/connectors/*.py` |
+| **Autonomous Scheduler & Governor** | Background connector scheduling with backoff, jitter, advisory locking, and NewsAPI quota protection | `backend/app/services/scheduler.py` |
 | **Red-Team Engine** | Contradiction detection against a 19-rule clinical registry | `backend/app/services/redteam.py` |
-| **Routing & Authority** | Strategic role assignment, score calculation, and leadership escalation | `backend/app/services/routing.py`, `backend/app/services/scoring.py` |
+| **Routing & Authority** | Strategic role assignment, authority hierarchy, score calculation, and leadership escalation | `backend/app/services/routing.py`, `backend/app/services/authority.py`, `backend/app/services/scoring.py` |
 | **Provenance Resolver** | Canonical record URL validation, direct article link resolution, landing page blocking | `backend/app/services/provenance_urls.py` |
 | **Database Models** | SQLAlchemy 2.0 ORM definitions for Signals, Evidence, AuditLog, and metadata | `backend/app/models/__init__.py` |
 
@@ -101,100 +103,67 @@
 
 ## Data Flow
 
-### Primary Ingestion & Pipeline Path
+**Intelligence Processing Flow:**
 
-1. **Connector Fetch:** Connector (`backend/app/connectors/*.py`) retrieves raw items from external APIs/RSS feeds.
-2. **Bronze Storage:** Verbatim payload is inserted into `raw_signals_bronze` with SHA-256 content hash.
-3. **Graph Execution:** `PipelineRunner` initializes `MetaRadarState` and executes the 11-node graph.
-4. **Validation & PII:** `validate` node runs `PIIPHIScrubber` to sanitize patient identifiers.
-5. **Extraction & Embedding:** `nlp_extract` extracts entities; `embed` generates 384-dim vector with `fastembed`.
-6. **Confluence & Red-Team:** `confluence` detects multi-source clustering; `redteam` checks pairwise claim contradictions.
-7. **Synthesis & Routing:** `synthesize` invokes Gemma 3 / Grok to generate the 4-question decision object; `routing` assigns priority and primary stakeholder function.
-8. **Signal Persistence:** Final signal is committed to `signals` table with `review_status="UNREVIEWED"`.
-
-### Signal Review & Decision Workflow
-
-1. **User Action:** Stakeholder selects action in UI (e.g. "Approve Priority & Route").
-2. **API Call:** Frontend sends `POST /api/v1/signals/{id}/review` with operator persona and decision notes.
-3. **DB Mutation:** Backend updates `Signal.review_status`, `Signal.reviewed_by`, `Signal.reviewed_at`, and `Signal.review_decision`.
-4. **Audit Trail:** Backend synchronously inserts an `AuditLog` row documenting the state transition.
-5. **Response:** Updated signal object is returned to UI for optimistic updates and queue re-filtering.
+1. **Ingest Node** (`backend/app/workflows/nodes/ingest.py`): Ingests candidate payloads from Bronze storage into the pipeline state.
+2. **Validate & PII Node** (`backend/app/workflows/nodes/validate.py`): Validates schema integrity and sanitizes candidate text through `PIIPHIScrubber`.
+3. **NLP Extract Node** (`backend/app/workflows/nodes/nlp_extract.py`): Extracts clinical entities (drugs, targets, trial phases, patient populations).
+4. **Medical Ontology Node** (`backend/app/workflows/nodes/ontology.py`): Maps extracted terms against domain configuration (`config/haemophilia.yaml`).
+5. **Dense Embedding Node** (`backend/app/workflows/nodes/embed.py`): Generates 384-dimensional FastEmbed dense vectors.
+6. **Confluence Clustering Node** (`backend/app/workflows/nodes/confluence.py`): Discovers multi-source temporal clusters and updates confluence scores.
+7. **Lifecycle Tracking Node** (`backend/app/workflows/nodes/lifecycle.py`): Maps developmental milestones and updates asset pipelines.
+8. **Red-Team Node** (`backend/app/workflows/nodes/redteam.py`): Scans signals against the 19 clinical contradiction rules.
+9. **Gap Analysis Node** (`backend/app/workflows/nodes/missing_signal.py`): Detects regulatory and clinical reporting anomalies.
+10. **Synthesis Node** (`backend/app/workflows/nodes/synthesize.py`): Generates structured 4-question decision data, executive briefing, and role actions using Gemma 3 / Grok.
+11. **Calibration Node** (`backend/app/workflows/nodes/calibrate.py`): Applies stakeholder calibrated scoring weights and finalizes priority scores.
 
 **State Management:**
-- Frontend: Local component state + `sessionStorage` for demo operator persona + SWR caching.
-- Backend: PostgreSQL ACID transactions with `AsyncSession`.
+- Relational state stored in PostgreSQL 16.
+- In-memory workflow state passed immutably across LangGraph nodes via `MetaRadarState`.
+- Frontend role switcher state stored in browser `sessionStorage`.
 
 ## Key Abstractions
 
-**`BaseConnector`:**
-- Purpose: Abstract base class enforcing standardized fetching, deduplication, and Bronze storage.
-- Location: `backend/app/connectors/base.py`
-- Pattern: Template Method Pattern.
+**`SourceConnector` (`backend/app/connectors/base.py`):**
+- Abstract base class for all 8 data connectors providing Bronze storage persistence, rate-limiting, error logging, and health telemetry.
 
-**`LLMProvider`:**
-- Purpose: Unified interface for multi-backend AI reasoning (`LocalGemmaProvider`, `GrokProvider`, `DegradedFactualProvider`).
-- Location: `backend/app/providers/base.py`, `backend/app/providers/factory.py`
-- Pattern: Strategy & Abstract Factory Pattern.
+**`LLMProvider` (`backend/app/providers/base.py`):**
+- Unified contract for structured completion and streaming responses across Local Gemma, xAI Grok, and Degraded Factual fallback.
 
-**`DomainConfig`:**
-- Purpose: Extensible YAML-driven domain model defining disease terms, competitor assets, and priority weights.
-- Location: `backend/app/core/domain_config.py` (`config/haemophilia.yaml`)
-- Pattern: Data Transfer Object & Singleton Configuration.
+**`MetaRadarState` (`backend/app/workflows/state.py`):**
+- TypedDict carrying signal payloads, extracted entities, embeddings, and intermediate analysis across graph nodes.
 
 ## Entry Points
 
-**Backend API Entry:**
+**Backend API:**
 - Location: `backend/app/main.py`
-- Triggers: Uvicorn ASGI server (`uvicorn app.main:app --port 8000`)
-- Responsibilities: Initializes structlog, loads domain config, starts `SourceScheduler`, binds middleware and routers.
+- Triggers: Uvicorn ASGI server invocation
+- Responsibilities: Lifespan management, database connection pool startup, scheduler initialization, CORS, and route mounting.
 
-**Frontend Web Entry:**
-- Location: `frontend/app/layout.tsx`, `frontend/app/page.tsx`
-- Triggers: Next.js dev or production server (`next start`)
-- Responsibilities: Renders root layout, loads theme custom tokens, initializes demo operator persona.
+**Frontend Application:**
+- Location: `frontend/app/layout.tsx` & `frontend/app/page.tsx`
+- Triggers: Next.js server/browser rendering
+- Responsibilities: Global theme providers, shell layout, and radar overview rendering.
 
-**Development Orchestrators:**
-- Location: `setup.py`, `start.py`
-- Triggers: CLI execution (`python setup.py`, `python start.py`)
-- Responsibilities: Pre-flight dependency check, database initialization, parallel backend/frontend process launcher.
-
-## Architectural Constraints
-
-- **Threading & Async Model:** FastAPI runs on `asyncio` event loop. Long-running CPU-bound embeddings or model downloads execute in executor threads or background workers.
-- **Global State:** Database engine and sessionmaker are managed via `backend/app/db/session.py`. Scheduler is a managed singleton (`SourceScheduler.get_instance()`).
-- **Circular Imports:** Avoid importing FastAPI endpoint routers inside service layers; all service dependencies are passed via parameters or constructor injection.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Hardcoded Tailwind Colors & Utilities
-**What happens:** Using arbitrary hex codes (e.g. `bg-[#0f172a]`) or hardcoded `text-slate-400`.  
-**Why it's wrong:** Breaks dark/light theme adaptability and violates design system consistency.  
-**Do this instead:** Use semantic CSS variables (`bg-[var(--surface)]`, `text-[var(--muted-foreground)]`).
-
-### Anti-Pattern 2: Awaiting Synchronous SQLAlchemy Methods
-**What happens:** Writing `await session.add(instance)`.  
-**Why it's wrong:** `session.add()` is synchronous in SQLAlchemy 2.0 even when using `AsyncSession`. Awaiting it raises runtime `TypeError`.  
-**Do this instead:** Call `session.add(instance)` synchronously, then `await session.commit()`.
-
-### Anti-Pattern 3: Generic Portal URLs for Evidence Provenance
-**What happens:** Emitting generic homepage URLs (`https://newsapi.org/register`, `https://www.fda.gov`).  
-**Why it's wrong:** Violates the Truthful Provenance Invariant by presenting non-evidential landing pages.  
-**Do this instead:** Use `resolve_canonical_provenance()` to generate document-specific links or report `missing_url`.
+**Autonomous Ingestion Runner:**
+- Location: `backend/app/services/scheduler.py`
+- Triggers: Async background loop started on FastAPI startup
+- Responsibilities: Schedules and triggers connectors at domain-configured intervals with advisory locking and quota protection.
 
 ## Error Handling
 
-**Strategy:** Structured hierarchical exception handling with correlation ID tracking.
+**Strategy:** Multi-tier graceful degradation with structured fallback.
 
 **Patterns:**
-- Custom HTTP error responses via `ApiError` (`frontend/lib/errors.ts`) and FastAPI `HTTPException`.
-- Database error rollback: Automatic `await session.rollback()` on transaction failure.
-- Ingestion error resilience: Connectors capture errors in `Source.last_error` and `SourceHealthLog` without crashing the scheduler loop.
+- **Provider Fallback:** Local Gemma → xAI Grok (if enabled and gated) → Degraded Factual Deterministic Provider.
+- **Database Safety:** Explicit session rollback and advisory lock release in `finally` blocks.
+- **Client Error Mapping:** Strongly typed `ApiError` instances with fallback mock/demo data for graceful offline presentations.
 
 ## Cross-Cutting Concerns
 
-**Logging:** Structured JSON logs via `structlog` with correlation IDs (`X-Correlation-ID`) and automated regex redaction of sensitive patient data.  
-**Validation:** Strict input validation via Pydantic v2 schemas across all API boundaries.  
-**Authentication:** Persona-driven review tracking with immutable audit logging.
+**Logging:** Structured JSON logging via `structlog` with correlation IDs.
+**Security & Privacy:** Automated PII/PHI redaction in logs and LLM prompts via `PIIPHIScrubber` and `backend/app/core/redact.py`.
+**Verification:** Contract synchronization gating with automated OpenAPI schema export.
 
 ---
 

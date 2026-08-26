@@ -24,6 +24,9 @@ pytest tests/ --cov=backend/app --cov-report=term-missing
 
 # Run specific test module
 pytest tests/test_provenance.py -v
+
+# Run 5-scenario end-to-end demo test harness
+python scripts/test_demo_scenarios_e2e.py
 ```
 
 ## Test File Organization
@@ -101,68 +104,54 @@ async def test_signal_review_workflow_and_audit_trail(client: AsyncClient, db_se
     assert response.status_code == 200
     data = response.json()
     assert data["review_status"] == "REVIEWED"
-    assert data["reviewed_by"] == "Medical Affairs"
 ```
+
+**Patterns:**
+- **Arrange-Act-Assert (AAA):** Structure all tests with clear separation between setup, execution, and verification.
+- **Transactional Rollback:** Database tests run in isolated transactions that rollback after each test to prevent test cross-contamination.
 
 ## Mocking
 
-**Framework:** `unittest.mock` (`AsyncMock`, `patch`) and `pytest-httpx` for HTTP intercepting.
+**Framework:** `unittest.mock` (`AsyncMock`, `MagicMock`) + `pytest-httpx` for HTTP endpoint mocking.
+
+**Patterns:**
+```python
+# Mocking external HTTP responses with pytest-httpx
+def test_pubmed_connector_mock_http(httpx_mock):
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        json={"esearchresult": {"idlist": ["12345678"]}}
+    )
+```
 
 **What to Mock:**
-- External third-party HTTP endpoints (ClinicalTrials.gov, PubMed, NewsAPI, EMA RSS)
-- Cloud LLM network calls (xAI Grok API)
-- Time-based decay functions when testing deterministic scoring invariants
+- External network requests to third-party APIs (PubMed, ClinicalTrials.gov, NewsAPI).
+- Long-running cloud LLM completions in deterministic unit tests.
 
 **What NOT to Mock:**
-- Local database queries: Run against real PostgreSQL / AsyncSession or transactional rollback fixtures
-- PII/PHI Scrubbing rules: Test real regex expressions against realistic patient payloads
-- State machine transitions: Test real database mutations and ORM relationship updates
-
-## Fixtures and Factories
-
-**Test Fixtures:**
-- `client`: Async HTTP test client configured with FastAPI `app`
-- `db_session`: Async database session with automatic transaction cleanup
-- `clean_sources`: Resets source telemetry and connector states between tests
-- Location: `tests/conftest.py` or module-level pytest fixtures
+- Local database queries and transactions (use test PostgreSQL or SQLite async dialect).
+- Core mathematical calculations (priority scoring, time decay, calibration weights).
+- PII/PHI scrubbing regex algorithms.
 
 ## Coverage
 
-**Requirements:** High coverage on core intelligence algorithms (routing, contradiction detection, PII scrubbing, canonical URL resolution, review state transitions).
+**Requirements:** High branch coverage across core services, connectors, endpoints, and intelligence nodes.
 
 **View Coverage:**
 ```bash
-pytest tests/ --cov=app --cov-report=html
+pytest --cov=backend/app --cov-report=term-missing
 ```
 
 ## Test Types
 
 **Unit Tests:**
-- Fast, isolated checks for pure functions (`scoring.py`, `provenance_urls.py`, `pii.py`, `redact.py`).
+- Fast tests validating pure functions: scoring formulas, PII sanitization, URL validation, and ontology mappings.
 
 **Integration Tests:**
-- Ingestion pipeline runs, LangGraph node transitions, FastAPI endpoints, and database state machines.
+- Testing FastAPI route controllers with active database transactions and Pydantic validation.
 
-**Invariant & Determinism Tests:**
-- Specialized invariant test suites (`test_truthfulness_and_invariants.py`, `test_contract_drift.py`) ensuring no synthetic data leaks into live mode, zero banned CSS classes, and strict type synchronization.
-
-## Common Patterns
-
-**Async Testing:**
-```python
-@pytest.mark.asyncio
-async def test_async_service_operation():
-    result = await my_async_service()
-    assert result is not None
-```
-
-**Error & Edge-Case Testing:**
-```python
-@pytest.mark.asyncio
-async def test_invalid_review_transition_rejected(client: AsyncClient):
-    response = await client.post("/api/v1/signals/invalid-uuid/review", json={})
-    assert response.status_code == 404
-```
+**End-to-End Tests:**
+- 5-Scenario Demo Journey test harness (`scripts/test_demo_scenarios_e2e.py`) validating the complete lifecycle from ingestion and LangGraph synthesis to UI review and feedback calibration.
 
 ---
 
