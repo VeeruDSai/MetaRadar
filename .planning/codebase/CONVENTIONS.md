@@ -1,102 +1,112 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-08-27
+**Analysis Date:** 2026-08-28
 
 ## Naming Patterns
 
-**Files:**
-- Frontend Components: `PascalCase.tsx` (`SignalDetailWorkspace.tsx`, `DemoOperatorSelector.tsx`, `PriorityScoreExplainer.tsx`)
-- Frontend Utilities & Hooks: `camelCase.ts` (`api.ts`, `errors.ts`, `mappers.ts`, `utils.ts`)
-- Backend Modules: `snake_case.py` (`provenance_urls.py`, `biopharma_dive.py`, `redteam.py`, `authority.py`)
-- Test Files: `test_<feature>.py` (`test_provenance.py`, `test_connector_health.py`, `test_signal_decision_refinement.py`)
+**Files & Folders:**
+- Python backend modules: `snake_case.py` (e.g., `backend/app/services/vector_query.py`, `backend/app/connectors/clinical_trials.py`)
+- Frontend React components: `PascalCase.tsx` (e.g., `frontend/components/signals/SignalCard.tsx`, `frontend/components/intelligence/AthenaWorkspace.tsx`)
+- Frontend utilities, hooks, and helpers: `camelCase.ts` (e.g., `frontend/lib/api.ts`, `frontend/lib/hooks.ts`)
+- TypeScript types: `frontend/types/api.ts`
 
-**Functions:**
-- Python: `snake_case()` (`resolve_canonical_provenance()`, `calculate_authority_tier()`, `fetch_records()`)
-- TypeScript / React: `camelCase()` (`fetchSignals()`, `mapSignal()`, `useSignals()`, `handleStatusChange()`)
+**Functions & Methods:**
+- Python: `snake_case` (e.g., `get_domain_config()`, `compute_priority_score()`, `extract_entities()`)
+- TypeScript: `camelCase` (e.g., `fetchSignals()`, `useSignalDetail()`, `formatDate()`)
+- React Components: `PascalCase` (e.g., `EvidenceDrawer()`, `PersonaSwitcher()`)
 
-**Variables:**
-- Python: `snake_case` (`signal_id`, `review_status`, `raw_payload`, `records_fetched`)
-- TypeScript: `camelCase` (`selectedSignal`, `isSubmitting`, `activeRole`, `errorMessage`)
-- Constants & Enums: `UPPER_SNAKE_CASE` (`DEFAULT_RETENTION_DAYS`, `VALID_REVIEW_STATUSES`, `PII_PATTERNS`)
+**Variables & Constants:**
+- Local variables: `snake_case` (Python), `camelCase` (TypeScript)
+- Global constants & Config settings: `UPPER_SNAKE_CASE` (e.g., `DATABASE_URL`, `RAW_SIGNAL_RETENTION_DAYS`, `MAX_CONTEXT_TOKENS`)
 
-**Types:**
-- TypeScript Interfaces / Types: `PascalCase` (`Signal`, `ConfluenceAlertItem`, `SignalReviewPayload`, `HealthStatus`)
-- Pydantic Models & SQLAlchemy Classes: `PascalCase` (`SignalCreate`, `SignalReviewUpdate`, `PipelineRun`, `RawSignalBronze`)
+**Types & Interfaces:**
+- Python Pydantic Models & SQLAlchemy Classes: `PascalCase` (e.g., `SignalCreate`, `SignalResponse`, `RawSignalBronze`, `User`)
+- TypeScript Interfaces & Types: `PascalCase` (e.g., `Signal`, `PriorityScore`, `HealthStatusResponse`)
 
 ## Code Style
 
 **Formatting:**
-- Frontend: Prettier / ESLint with 2 spaces indentation, single quotes for TypeScript strings, and semicolons omitted where standard.
-- Backend: PEP 8 standard, 4 spaces indentation, type hints on all public function signatures.
+- Python: Formatted with standard PEP 8, 4-space indentation, clear docstrings on public services and routers.
+- TypeScript / React: Formatted with 2-space indentation, semicolons enabled, clean JSX structure.
 
 **Linting:**
-- Frontend: ESLint 10 with `@next/eslint-plugin-next` and custom rules. Zero warnings permitted in CI.
-- CSS Token Enforcement: `scripts/check-banned-classes.mjs` prevents hardcoded hex colors and default `slate-*` Tailwind classes.
-- Type Safety: `tsc --noEmit` and `ignoreBuildErrors: false` in `next.config.mjs`.
+- Python: Clean type hints with `typing` module (`List`, `Optional`, `Dict`, `Any`, `UUID`).
+- Frontend: ESLint 10.8.1 with Next.js rules (`frontend/eslint.config.mjs`). Banned classes checked via `scripts/check-banned-classes.mjs`.
 
 ## Import Organization
 
-**Order (TypeScript / Frontend):**
-1. React & framework core imports (`import React, { useState, useEffect } from 'react'`)
-2. Third-party packages (`framer-motion`, `lucide-react`, `recharts`, `@base-ui/react`)
-3. Internal library utilities & mappers (`import { getSignals } from '@/lib/api'`, `import { cn } from '@/lib/utils'`)
-4. Type definitions (`import type { Signal, HealthStatus } from '@/types/api'`)
-5. Sibling / child UI components (`import { SignalCard } from './SignalCard'`)
+**Python Backend:**
+```python
+# 1. Standard library imports
+import os
+import uuid
+from datetime import datetime, timezone
+from typing import List, Optional, Dict, Any
 
-**Order (Python / Backend):**
-1. Standard library modules (`import uuid`, `from datetime import datetime, timezone`, `from typing import Optional, List`)
-2. Third-party libraries (`from fastapi import FastAPI, Depends`, `import structlog`, `from sqlalchemy import select`)
-3. Local application modules (`from app.core.config import settings`, `from app.models import Signal`, `from app.services.routing import route_signal`)
+# 2. Third-party library imports
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
-**Path Aliases:**
-- Frontend: `@/*` maps to `frontend/*` (e.g. `@/components/common/DataModeBadge`, `@/lib/api`, `@/types/api`).
-- Backend: `app.*` maps to `backend/app/*` (e.g. `from app.core.config import settings`).
+# 3. Application internal imports
+from app.core.config import settings
+from app.db.session import get_db
+from app.models import Signal
+from app.schemas.intelligence import SignalResponse
+from app.services.scoring import compute_priority_score
+```
+
+**TypeScript / React Frontend:**
+```typescript
+// 1. React and Next.js core
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+
+// 2. Third-party UI & icon libraries
+import { motion, AnimatePresence } from "framer-motion";
+import { Shield, Sparkles, AlertTriangle, ArrowRight } from "lucide-react";
+
+// 3. Application context & hooks
+import { useAuth } from "@/context/AuthContext";
+import { useSignals } from "@/lib/hooks";
+
+// 4. Application types and utilities
+import { Signal, PriorityLevel } from "@/types/api";
+import { cn, formatDate } from "@/lib/utils";
+```
 
 ## Error Handling
 
-**Patterns:**
-- **Frontend:** API errors are wrapped in strongly-typed `ApiError` instances (`frontend/lib/errors.ts`) preserving HTTP status codes and backend detail payloads. Error boundaries render user-friendly messages with correlation IDs.
-- **Backend:** Route handlers catch domain exceptions and re-raise structured `HTTPException(status_code=..., detail=...)`.
-- **Database Transactions:** Always wrap modifying queries in `try...except` blocks with explicit `await session.rollback()` on failure.
-- **SQLAlchemy 2.0 Invariant:** `session.add()` is synchronous on `AsyncSession`; never await `session.add()`.
+**Backend Strategy:**
+- Use FastAPI `HTTPException` with explicit status codes (400, 401, 403, 404, 422, 500) and descriptive detail strings.
+- Graceful degradation for external connectors: If an external API (e.g., NewsAPI or PubMed) times out or returns an error, catch the specific exception, log it via `structlog`, update the connector's health status in `source_health_logs`, and return available results without crashing the application.
+- LLM Provider fallback cascade: If local Gemma inference is unavailable, fall back to Grok or BART summarizer.
+
+**Frontend Strategy:**
+- All API client methods in `frontend/lib/api.ts` wrap network calls with structured error catching (`frontend/lib/errors.ts`).
+- Component-level error boundaries and `<ErrorState />` UI components provide retry buttons and clear failure messages.
 
 ## Logging
 
-**Framework:** `structlog` (`backend/app/core/logging.py`) with JSON output and correlation tracing.
+**Framework:**
+- Backend: Structured JSON logging with `structlog` (`backend/app/core/logging.py`).
+- Correlation IDs: Injected on every request via `asgi-correlation-id` and `backend/app/core/middleware.py`.
 
 **Patterns:**
-- Use key-value structured logging: `logger.info("signal_routed", signal_id=str(signal.signal_id), destination=dest, score=score)`.
-- Automatic PII/PHI scrubbing: `backend/app/core/redact.py` automatically scrubs patient names, MRNs, and email patterns before output.
-- Request correlation: Every log event includes `correlation_id` propagated via `asgi-correlation-id`.
+```python
+# Use event name as first positional parameter followed by structured key-values:
+logger.info("ingestion_connector_started", source="pubmed", query="haemophilia")
+logger.warning("connector_rate_limited", source="newsapi", retry_after=60)
+logger.error("pipeline_execution_failed", error=str(e), signal_id=str(signal_id))
+```
 
-## Comments
+## Security & Privacy Invariants
 
-**When to Comment:**
-- Document non-obvious business rules, regulatory logic, or mathematical weighting algorithms.
-- Explain decisions matching formal project decisions (e.g. `// Ref: Decision D-09-01`).
-- Avoid redundant comments that simply restate function names.
-
-**Docstrings / TSDoc:**
-- All Python service methods, connectors, and endpoints require concise docstrings with parameter and return type notes.
-- Exported TypeScript API helper functions in `frontend/lib/api.ts` include TSDoc parameter descriptions.
-
-## Function Design
-
-**Size:** Keep functions modular (<50 lines where practical). Extract complex branching or mathematical scoring into dedicated helper services.
-
-**Parameters:** Prefer explicit keyword arguments or Pydantic DTO schemas in Python. Use typed parameter objects for TypeScript functions with >2 arguments.
-
-**Return Values:** Always declare explicit return type annotations (`Promise<Signal[]>`, `-> Tuple[str, float]`). Avoid untyped dictionary or `any` returns.
-
-## Module Design
-
-**Exports:**
-- Use named exports for components and utility functions in TypeScript.
-- Group public package exports in `__init__.py` for Python packages (`backend/app/connectors/__init__.py`, `backend/app/models/__init__.py`).
-
-**Barrel Files:**
-- Use focused barrel files for clean module boundaries without creating circular import hazards.
+1. **Zero Secrets in Code:** Secrets and API keys must only be loaded via environment variables in `backend/app/core/config.py`.
+2. **Audit Immutability:** Records in `audit_log` are strictly append-only. SQLAlchemy before-update and before-delete event listeners raise `PermissionError` on any modification attempts.
+3. **Privacy Boundary:** Internal patient or sensitive pipeline data must never be transmitted to third-party LLMs without PII redaction (`backend/app/services/pii.py`).
+4. **RBAC Verification:** Protected endpoints verify user persona permissions through dependency injection (`app/api/v1/endpoints/auth.py`).
 
 ---
 
-*Convention analysis: 2026-08-27*
+*Convention analysis: 2026-08-28*

@@ -1,158 +1,97 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-08-27
+**Analysis Date:** 2026-08-28
 
 ## Test Framework
 
 **Runner:**
-- Pytest 8.0.0+ (`pytest-asyncio` 0.23.0+, `pytest-cov` 4.1.0+, `pytest-httpx` 0.30.0+)
-- Config: `pytest.ini`
-
-**Assertion Library:**
-- Native Python `assert` with rich pytest diff reporting
+- Pytest >=8.0.0
+- Async Testing: `pytest-asyncio` >=0.23.0 (`asyncio_mode = auto`)
+- HTTP Client Mocking: `pytest-httpx` >=0.30.0
+- Coverage Reporting: `pytest-cov` >=4.1.0
+- Config File: `pytest.ini`
 
 **Run Commands:**
 ```bash
-# Run all backend unit and integration tests (excluding live network calls)
-pytest tests/ -v -m "not live"
+# Run all test suites
+pytest
 
-# Run fast fail-fast test execution
-pytest tests/ -x -q
+# Run tests with detailed verbosity
+pytest -v
 
-# Run coverage audit with report
-pytest tests/ --cov=backend/app --cov-report=term-missing
+# Run a specific test suite
+pytest tests/test_api_endpoints.py
 
-# Run specific test module
-pytest tests/test_provenance.py -v
+# Run tests with code coverage report
+pytest --cov=backend/app tests/
 
-# Run 5-scenario end-to-end demo test harness
-python scripts/test_demo_scenarios_e2e.py
+# Run frontend linting & code style checks
+cd frontend && pnpm run lint
+node scripts/check-banned-classes.mjs
 ```
 
 ## Test File Organization
 
 **Location:**
-- Dedicated `tests/` directory at the repository root
+- Dedicated `tests/` directory at the repository root containing unit, integration, security, and contract drift tests.
 
 **Naming:**
-- Files: `test_<module_or_feature>.py`
-- Test functions: `test_<behavior_under_test>()`
-- Async test functions: `async def test_<behavior_under_test>()`
+- Files: `test_[module_or_feature].py`
+- Test functions: `test_[expected_behavior]()` or `async def test_[expected_behavior]()`
+- Test classes: `Test[FeatureName]`
 
-**Structure:**
-```
-tests/
-├── test_api_endpoints.py                 # REST API endpoints & payload serialization
-├── test_calibration_service.py           # HITL feedback & dynamic weight adjustments
-├── test_config.py                        # Settings parsing & default resolution
-├── test_config_errors.py                 # Pure configuration error evaluation
-├── test_confluence_semantics.py          # Multi-source temporal clustering
-├── test_connector_health.py              # Connector status precedence & registration
-├── test_contract_drift.py                # OpenAPI schema parity with TypeScript
-├── test_e2e_calibration_scenario.py      # End-to-end feedback-to-routing lifecycle
-├── test_failure_injection.py             # Resilience during provider outages
-├── test_foundation.py                    # Database connection & migration sanity
-├── test_gemma_stream.py                  # SSE streaming token delivery
-├── test_ingestion.py                     # Source ingestion & Bronze deduplication
-├── test_intelligence_nodes.py            # LangGraph 11-node pipeline step verification
-├── test_launchers.py                     # setup.py and start.py orchestration
-├── test_observability.py                 # Ingestion health telemetry & JSON logs
-├── test_parity_matrix.py                 # Feature and documentation parity matrix
-├── test_privacy_boundary.py              # PII/PHI scrubber & Grok gate isolation
-├── test_provenance.py                    # Canonical URL truthfulness & link resolution
-├── test_provider_matrix.py               # Local Gemma vs. Grok fallback matrix
-├── test_providers_live.py                # Optional live network provider tests
-├── test_redteam_behavior.py              # Contradiction rule evaluation (Rules A-S)
-├── test_retrieval.py                     # pgvector 384-dim semantic & hybrid search
-├── test_signal_decision_refinement.py    # Authority hierarchy & decision objects
-├── test_signal_routing_workflow.py       # Review state machine & immutable AuditLog
-└── test_truthfulness_and_invariants.py   # Determinism, secret scrubbing, scoring
-```
+## Test Structure & Patterns
 
-## Test Structure
-
-**Suite Organization:**
+**Async Endpoint Test Example:**
 ```python
 import pytest
 from httpx import AsyncClient
-from app.models import Signal, AuditLog
-from app.services.routing import route_signal
+from app.main import app
 
 @pytest.mark.asyncio
-async def test_signal_review_workflow_and_audit_trail(client: AsyncClient, db_session):
-    # Arrange: Create initial test signal
-    signal = Signal(
-        title="Roche Announces Hemlibra Phase III Data",
-        signal_type="trial_readout",
-        disease="Haemophilia A",
-        review_status="UNREVIEWED",
-        priority="HIGH"
-    )
-    db_session.add(signal)
-    await db_session.commit()
-
-    # Act: Submit review action
-    payload = {
-        "operator_role": "Medical Affairs",
-        "action_taken": "APPROVE_PRIORITY",
-        "notes": "Reviewed against Roche readout",
-        "resulting_action": "Schedule ad-board review"
-    }
-    response = await client.post(f"/api/v1/signals/{signal.signal_id}/review", json=payload)
-
-    # Assert: Verify response and persistent database state
+async def test_health_check_endpoint():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get("/api/v1/health")
     assert response.status_code == 200
     data = response.json()
-    assert data["review_status"] == "REVIEWED"
+    assert data["status"] in ("ok", "healthy")
 ```
 
-**Patterns:**
-- **Arrange-Act-Assert (AAA):** Structure all tests with clear separation between setup, execution, and verification.
-- **Transactional Rollback:** Database tests run in isolated transactions that rollback after each test to prevent test cross-contamination.
+**Database Fixtures & Session Management (`tests/conftest.py`):**
+- Test database sessions use async fixtures yielding an isolated `AsyncSession`.
+- Database rollback or transaction isolation ensures test isolation across runs.
 
 ## Mocking
 
-**Framework:** `unittest.mock` (`AsyncMock`, `MagicMock`) + `pytest-httpx` for HTTP endpoint mocking.
+**Framework:**
+- `unittest.mock` (`AsyncMock`, `patch`, `MagicMock`)
+- `pytest-httpx` for mocking external third-party biomedical APIs (PubMed, FDA, EMA, ClinicalTrials.gov) without triggering outbound network requests during CI.
 
-**Patterns:**
-```python
-# Mocking external HTTP responses with pytest-httpx
-def test_pubmed_connector_mock_http(httpx_mock):
-    httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-        json={"esearchresult": {"idlist": ["12345678"]}}
-    )
-```
+**Mocking Guidelines:**
+- **What to Mock:**
+  - Outbound third-party HTTP requests (`httpx.AsyncClient` calls to NCBI, OpenFDA, NewsAPI, xAI).
+  - Heavy GPU inference models during fast unit test runs (use `AsyncMock` or test dummy providers).
+  - Background system timers and sleep calls.
+- **What NOT to Mock:**
+  - Business logic algorithms (priority scoring formula, weight calibration, deduplication hash computation).
+  - Pydantic schema validation and JSON serialization.
+  - LangGraph state transformations and linear workflow routing.
 
-**What to Mock:**
-- External network requests to third-party APIs (PubMed, ClinicalTrials.gov, NewsAPI).
-- Long-running cloud LLM completions in deterministic unit tests.
+## Test Suites & Coverage Matrix
 
-**What NOT to Mock:**
-- Local database queries and transactions (use test PostgreSQL or SQLite async dialect).
-- Core mathematical calculations (priority scoring, time decay, calibration weights).
-- PII/PHI scrubbing regex algorithms.
-
-## Coverage
-
-**Requirements:** High branch coverage across core services, connectors, endpoints, and intelligence nodes.
-
-**View Coverage:**
-```bash
-pytest --cov=backend/app --cov-report=term-missing
-```
-
-## Test Types
-
-**Unit Tests:**
-- Fast tests validating pure functions: scoring formulas, PII sanitization, URL validation, and ontology mappings.
-
-**Integration Tests:**
-- Testing FastAPI route controllers with active database transactions and Pydantic validation.
-
-**End-to-End Tests:**
-- 5-Scenario Demo Journey test harness (`scripts/test_demo_scenarios_e2e.py`) validating the complete lifecycle from ingestion and LangGraph synthesis to UI review and feedback calibration.
+| Test Suite | Purpose | Key Files Covered |
+|------------|---------|-------------------|
+| `test_api_endpoints.py` | REST API routes, parameter validation, response payloads | `backend/app/api/v1/endpoints/` |
+| `test_auth.py` / `test_rbac.py` | Persona authentication, RBAC, session expiration, cookies | `backend/app/services/auth_service.py`, `backend/app/models/auth.py` |
+| `test_intelligence_nodes.py` | 11 LangGraph pipeline nodes and state flow | `backend/app/workflows/nodes/` |
+| `test_calibration_service.py` | Functional weighting algorithms & stakeholder recalibration | `backend/app/services/calibration.py`, `backend/app/services/scoring.py` |
+| `test_ingestion.py` | Data connectors, XML/JSON parsing, deduplication | `backend/app/connectors/`, `backend/app/services/ingestion.py` |
+| `test_contract_drift.py` | OpenAPI schema drift between FastAPI and frontend TypeScript | `backend/app/schemas/`, `frontend/types/api.ts` |
+| `test_retrieval.py` | Dense vector similarity, FastEmbed embeddings, hybrid search | `backend/app/services/vector_query.py`, `backend/app/services/embeddings.py` |
+| `test_truthfulness_and_invariants.py` | Anti-hallucination, provenance tracking, audit immutability | `backend/app/models/__init__.py`, `backend/app/services/provenance_urls.py` |
+| `test_privacy_boundary.py` | PII and sensitive internal data scrubbing before LLM calls | `backend/app/services/pii.py`, `backend/app/core/redact.py` |
+| `test_security.py` | Password hashing, rate limiting, secure headers | `backend/app/core/security.py`, `backend/app/core/middleware.py` |
 
 ---
 
-*Testing analysis: 2026-08-27*
+*Testing analysis: 2026-08-28*

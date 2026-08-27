@@ -1,224 +1,159 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-08-27
+**Analysis Date:** 2026-08-28
 
 ## Directory Layout
 
 ```
-novonordisk/
-├── .github/                        # CI/CD Workflows
-│   └── workflows/
-│       └── ci.yml                  # Unified GitHub Actions test & build pipeline
-├── .planning/                      # GSD Milestone & Architecture Memory
-│   ├── PROJECT.md                  # Project charter, vision, and active milestone
-│   ├── STATE.md                    # Current execution state and phase history
-│   ├── codebase/                   # 7 Structured codebase mapping documents
-│   └── phases/                     # Historical and active phase plan directories
-├── backend/                        # FastAPI Application & Intelligence Engine
-│   ├── alembic/                    # Database migration scripts
-│   ├── app/
-│   │   ├── api/v1/endpoints/       # REST API route handlers
-│   │   │   ├── auth.py             # Authentication & session verification endpoints
-│   │   │   ├── cache.py            # Cache invalidation endpoints
-│   │   │   ├── feedback.py         # Stakeholder calibration feedback endpoints
-│   │   │   ├── health.py           # Readiness, models, and connector health endpoints
-│   │   │   ├── ingestion.py        # Trigger live connector ingestion
-│   │   │   ├── intelligence.py     # Athena Q&A, confluence, contradictions, lifecycles
-│   │   │   ├── observability.py    # Ingestion activity streams and telemetry
-│   │   │   ├── pipeline.py         # Manual pipeline execution runner
-│   │   │   ├── registry.py         # Sources, assets, and companies registry
-│   │   │   ├── search.py           # Vector and hybrid semantic search
-│   │   │   └── signals.py          # Signal list, detail, 4-question view, review workflow
-│   │   ├── connectors/             # Source ingestion adapters (8 connectors)
-│   │   │   ├── base.py             # Abstract BaseConnector + Bronze persistence
-│   │   │   ├── biopharma_dive.py   # BioPharma Dive RSS news connector
-│   │   │   ├── clinical_trials.py  # ClinicalTrials.gov API v2 connector
-│   │   │   ├── ema.py              # EMA Medicines RSS feed connector
-│   │   │   ├── et_pharma.py        # ET Pharma RSS feed connector
-│   │   │   ├── fda.py              # openFDA and MedWatch connector
-│   │   │   ├── fierce_pharma.py    # Fierce Pharma RSS feed connector
-│   │   │   ├── newsapi.py          # NewsAPI JSON commercial news connector
-│   │   │   └── pubmed.py           # NCBI PubMed E-Utilities connector
-│   │   ├── core/                   # Global configuration & security
-│   │   │   ├── config.py           # Pydantic BaseSettings & env parsing
-│   │   │   ├── domain_config.py    # Disease domain configuration loader
-│   │   │   ├── logging.py          # Structlog JSON configuration
-│   │   │   ├── middleware.py       # Correlation ID ASGI middleware
-│   │   │   └── redact.py           # PII/PHI automated log scrubber
-│   │   ├── db/                     # Async database sessions & seed data
-│   │   │   ├── seed.py             # Database seed data initializer
-│   │   │   └── session.py          # Async engine, sessionmaker, and advisory locks
-│   │   ├── models/                 # SQLAlchemy 2.0 ORM models
-│   │   │   └── __init__.py         # Signal, Evidence, Development, AuditLog, etc.
-│   │   ├── providers/              # LLM reasoning providers
-│   │   │   ├── base.py             # Abstract LLMProvider interface
-│   │   │   ├── degraded.py         # Deterministic factual fallback provider
-│   │   │   ├── factory.py          # Provider factory with fallback chain
-│   │   │   ├── gemma.py            # Local Ollama Gemma 3 4B provider
-│   │   │   └── grok.py             # xAI Grok provider with privacy gate
-│   │   ├── schemas/                # Pydantic request/response DTOs
-│   │   │   ├── intelligence.py     # Signal, Review, Athena, and Confluence schemas
-│   │   │   └── registry.py         # Source and Asset schemas
-│   │   ├── services/               # Core business logic services
-│   │   │   ├── auth_service.py     # Role-based access control & demo operator auth
-│   │   │   ├── authority.py        # Source authority calculation
-│   │   │   ├── calibration.py      # Stakeholder weight calibration
-│   │   │   ├── confluence.py       # Multi-source confluence clustering
-│   │   │   ├── deduplication.py    # Content hashing and fingerprinting
-│   │   │   ├── embeddings.py       # FastEmbed 384-dim embedding generator
-│   │   │   ├── embeddings_backfill.py # Backfill embeddings for legacy signal records
-│   │   │   ├── ingestion.py        # Orchestrated source ingestion
-│   │   │   ├── pii.py              # PII/PHI regex scrubbing service
-│   │   │   ├── provenance_urls.py  # Canonical URL validation & resolution
-│   │   │   ├── redteam.py          # Contradiction detection engine (Rules A-S)
-│   │   │   ├── relevance.py        # Disease domain keyword & semantic relevance
-│   │   │   ├── routing.py          # Stakeholder routing & escalation rules
-│   │   │   ├── scheduler.py        # Background ingestion scheduler & governor
-│   │   │   ├── scoring.py          # Priority scoring & time-decay engine
-│   │   │   ├── source_independence.py # Multi-source independent verification scoring
-│   │   │   └── vector_query.py     # pgvector cosine similarity retrieval
-│   │   └── workflows/              # LangGraph 11-node intelligence pipeline
-│   │       ├── graph.py            # LangGraph state graph definition
-│   │       ├── runner.py           # Pipeline runner & state manager
-│   │       ├── state.py            # MetaRadarState TypedDict
-│   │       └── nodes/              # Pipeline node implementations (11 nodes)
-│   ├── Dockerfile                  # Production backend container definition
-│   └── requirements.txt            # Python dependencies
-├── config/                         # Domain Knowledge Configurations
-│   └── haemophilia.yaml            # Haemophilia disease area configuration
-├── contracts/                      # OpenAPI 3.1 Schemas
-│   └── openapi.json                # Exported backend OpenAPI 3.1 contract
-├── frontend/                       # Next.js 16 (App Router) Frontend
-│   ├── app/                        # App Router routing tree
-│   │   ├── [section]/page.tsx      # Dynamic deep-dive workspace routes
-│   │   ├── signals/[signalId]/     # Dedicated Signal Detail Workspace
-│   │   ├── globals.css             # Theme custom properties and typography
-│   │   ├── layout.tsx              # Root HTML, navigation shell, and theme provider
-│   │   └── page.tsx                # Radar Dashboard Overview
-│   ├── components/                 # React UI components
-│   │   ├── calibration/            # Stakeholder calibration workspace
-│   │   ├── common/                 # Reusable primitives (DemoOperatorSelector, Badges, Logo)
-│   │   ├── confluence/             # Confluence radar workspace
-│   │   ├── contradictions/         # Red-team contradiction workspace
-│   │   ├── developments/           # Asset development timelines workspace
-│   │   ├── effects/                # Shader animations and dynamic visual effects
-│   │   ├── functions/              # Role-tailored functional review queues
-│   │   ├── intelligence/           # Athena clinical Q&A workspace
-│   │   ├── missing-signals/        # Regulatory and trial gap detection workspace
-│   │   ├── observability/          # Activity stream and connector telemetry workspace
-│   │   ├── settings/               # System configuration and provider workspace
-│   │   ├── signals/                # Signal detail, list, explainer, counter-factuals
-│   │   ├── sources/                # Source catalog and operations workspace
-│   │   ├── theme/                  # Theme switching utilities
-│   │   └── ui/                     # Accessible UI primitives (Buttons, Counter, Stepper)
-│   ├── lib/                        # Client libraries & utilities
-│   │   ├── api.ts                  # Type-safe API client
-│   │   ├── errors.ts               # Structured ApiError classes
-│   │   ├── mappers.ts              # Contract to UI model mappers
-│   │   └── utils.ts                # Class merging and string helpers
-│   ├── types/                      # TypeScript type definitions
-│   │   └── api.ts                  # Generated & handcrafted DTO contracts
-│   ├── Dockerfile                  # Production frontend container definition
-│   └── package.json                # Frontend dependencies
-├── models/                         # Local weights & README
-├── scripts/                        # Automation & verification scripts
-│   ├── check-banned-classes.mjs    # CSS token linter
-│   ├── export_openapi.py           # Backend contract sync tool
-│   ├── download_model.py           # FastEmbed model pre-fetcher
-│   └── test_demo_scenarios_e2e.py  # 5-scenario demo journey test harness
-├── tests/                          # Automated backend test suites (141 tests)
-├── docker-compose.yml              # Local multi-service development compose
-├── setup.py                        # Zero-config initial environment installer
-└── start.py                        # Single-command dev runner
+MetaRadar/
+├── backend/                  # FastAPI 0.110+ Backend Service
+│   ├── alembic/              # Database migration scripts & env.py
+│   │   └── versions/         # Migration versions (DDL scripts)
+│   ├── app/                  # Application core package
+│   │   ├── api/              # API layer & versioned route endpoints
+│   │   │   └── v1/endpoints/ # Router modules (health, signals, auth, search, etc.)
+│   │   ├── connectors/       # Data ingestion connectors (PubMed, FDA, EMA, News)
+│   │   ├── core/             # Configuration, logging, security, and middleware
+│   │   ├── data/             # Synthetic reference data & seeds
+│   │   ├── db/               # SQLAlchemy async engine, session, and seed runner
+│   │   ├── models/           # Declarative database models (Postgres + pgvector)
+│   │   ├── providers/        # LLM inference providers (Gemma GGUF, Grok, BART)
+│   │   ├── schemas/          # Pydantic v2 validation models & request/responses
+│   │   ├── services/         # Business logic (scoring, calibration, redteam, vector)
+│   │   └── workflows/        # LangGraph 11-node intelligence pipeline & nodes
+│   ├── Dockerfile            # Container definition for backend service
+│   └── requirements.txt      # Python dependencies
+├── frontend/                 # Next.js 16 + React 19 Frontend Application
+│   ├── app/                  # Next.js App Router (layout, pages, dynamic routes)
+│   │   ├── [section]/        # Dynamic section router (dashboard, calibration, etc.)
+│   │   └── signals/          # Signal feed & detailed individual signal pages
+│   ├── components/           # UI components, workspaces, widgets, and shaders
+│   │   ├── auth/             # Persona switcher & authentication UI
+│   │   ├── calibration/      # Stakeholder weight calibration workspace
+│   │   ├── common/           # Shared badges, logos, drawers, empty states
+│   │   ├── confluence/       # Multi-source confluence workspace
+│   │   ├── contradictions/   # Medical claim contradiction detector
+│   │   ├── developments/     # Asset development lifecycle timeline
+│   │   ├── effects/          # Star-portal WebGL / Canvas shader buttons
+│   │   ├── intelligence/     # Ask Athena LLM reasoning chat workspace
+│   │   ├── observability/    # Activity stream & system health monitoring
+│   │   ├── signals/          # Signal cards, score explainers, red team widgets
+│   │   └── ui/               # Base UI primitives, counters, animated elements
+│   ├── context/              # React context providers (AuthContext)
+│   ├── lib/                  # REST API client, error handlers, custom hooks, utils
+│   ├── public/               # Static assets & SVG icons
+│   ├── types/                # TypeScript interface definitions (api.ts)
+│   ├── Dockerfile            # Container definition for frontend service
+│   ├── package.json          # Node dependencies and scripts
+│   └── tsconfig.json         # TypeScript configuration
+├── config/                   # Domain configuration & disease ontology (haemophilia.yaml)
+├── models/                   # Local GGUF model binaries (Gemma 3 4B)
+├── scripts/                  # Utilities, parity checkers, migration runners
+├── tests/                    # Pytest test suite (unit, integration, e2e, RBAC)
+├── .planning/                # GSD project plans, roadmap, state, and codebase map
+├── docker-compose.yml        # Multi-container local orchestration
+├── setup.py                  # Zero-config environment setup automation
+└── start.py                  # Unified process runner with real-time telemetry
 ```
 
 ## Directory Purposes
 
 **`backend/app/api/v1/endpoints/`:**
-- Purpose: Contains route controllers for all public REST and SSE API endpoints.
-- Contains: `signals.py`, `intelligence.py`, `health.py`, `observability.py`, etc.
-- Key files: `signals.py`, `intelligence.py`
+- Purpose: HTTP request routing and API parameter serialization.
+- Contains: Route handlers for signals (`signals.py`), search (`search.py`), authentication (`auth.py`), ingestion (`ingestion.py`), observability (`observability.py`), and feedback (`feedback.py`).
+- Key files: `signals.py`, `intelligence.py`, `ingestion.py`.
 
 **`backend/app/connectors/`:**
-- Purpose: Houses external data ingestion adapters with Bronze raw record persistence.
-- Contains: `pubmed.py`, `clinical_trials.py`, `fda.py`, `ema.py`, `newsapi.py`, `fierce_pharma.py`, `et_pharma.py`, `biopharma_dive.py`.
-- Key files: `base.py`
+- Purpose: External API integration and web scrapers for biomedical data sources.
+- Contains: Base connector class and source-specific fetching logic with rate limiting and retry handling.
+- Key files: `pubmed.py`, `clinical_trials.py`, `fda.py`, `ema.py`, `newsapi.py`.
 
-**`backend/app/workflows/`:**
-- Purpose: 11-node LangGraph workflow processing raw documents into synthesized competitive signals.
-- Contains: `runner.py`, `graph.py`, `state.py`, and `nodes/*.py`.
-- Key files: `runner.py`, `nodes/synthesize.py`
+**`backend/app/workflows/nodes/`:**
+- Purpose: 11 LangGraph intelligence pipeline node implementations.
+- Contains: Transformation nodes that process raw incoming signals into structured gold signals.
+- Key files: `ingest.py`, `validate.py`, `embed.py`, `nlp_extract.py`, `ontology.py`, `confluence.py`, `lifecycle.py`, `redteam.py`, `missing_signal.py`, `synthesize.py`, `calibrate.py`.
+
+**`backend/app/services/`:**
+- Purpose: Core algorithms, domain math, and background task execution.
+- Contains: FastEmbed vector embedding (`embeddings.py`), stakeholder scoring (`scoring.py`, `calibration.py`), deduplication (`deduplication.py`), and scheduler (`scheduler.py`).
+- Key files: `scheduler.py`, `calibration.py`, `vector_query.py`.
 
 **`frontend/components/`:**
-- Purpose: React UI components divided into 9 intelligence workspaces and shared primitives.
-- Contains: `signals/`, `confluence/`, `contradictions/`, `intelligence/`, `observability/`, etc.
-- Key files: `metaradar.tsx`, `signals/SignalDetailWorkspace.tsx`
+- Purpose: Domain-specific UI workspaces and interactive modules.
+- Contains: Workspaces for signals, calibration, confluence, contradictions, Athena intelligence, observability, and settings.
+- Key files: `metaradar.tsx`, `intelligence/AthenaWorkspace.tsx`, `signals/SignalCard.tsx`.
 
 ## Key File Locations
 
 **Entry Points:**
-- `backend/app/main.py`: FastAPI server entry point
-- `frontend/app/layout.tsx` & `page.tsx`: Next.js shell and root dashboard
-- `setup.py`: Zero-config environment setup script
-- `start.py`: Multi-service launcher
+- Backend API: `backend/app/main.py`
+- Frontend Shell: `frontend/app/layout.tsx` & `frontend/app/page.tsx`
+- Process Runner: `start.py`
+- Setup Script: `setup.py`
 
 **Configuration:**
-- `config/haemophilia.yaml`: Haemophilia domain configuration
-- `backend/app/core/config.py`: Backend settings
-- `frontend/next.config.mjs`: Frontend build config
+- Backend Settings: `backend/app/core/config.py`
+- Disease Area & Ontology: `config/haemophilia.yaml`
+- Frontend Next Config: `frontend/next.config.mjs`
+- Database Migrations: `backend/alembic.ini`
 
-**Core Logic:**
-- `backend/app/services/`: Core calculation and intelligence services
-- `backend/app/workflows/nodes/`: Discrete LangGraph intelligence nodes
-- `frontend/lib/api.ts`: Frontend client communication layer
+**Core Logic & Workflows:**
+- LangGraph Pipeline Graph: `backend/app/workflows/graph.py`
+- LLM Provider Factory: `backend/app/providers/factory.py`
+- Vector Embeddings: `backend/app/services/embeddings.py`
 
 **Testing:**
-- `tests/`: Pytest suite (141 tests)
-- `scripts/test_demo_scenarios_e2e.py`: End-to-end scenario verification harness
+- Python Tests: `tests/`
+- Frontend Banned Classes Check: `scripts/check-banned-classes.mjs`
+- Schema Parity Check: `scripts/generate_parity_matrix.py`
 
 ## Naming Conventions
 
 **Files:**
-- React components: `PascalCase.tsx`
-- Frontend libraries/hooks: `camelCase.ts`
-- Backend Python modules: `snake_case.py`
-- Test files: `test_<module>.py`
+- Backend Python: `snake_case.py` (e.g., `vector_query.py`, `domain_config.py`)
+- Frontend Components: `PascalCase.tsx` (e.g., `SignalCard.tsx`, `AthenaWorkspace.tsx`)
+- Frontend Utilities & Hooks: `camelCase.ts` (e.g., `api.ts`, `hooks.ts`, `utils.ts`)
+- Configuration / Domain YAML: `snake_case.yaml` (e.g., `haemophilia.yaml`)
 
 **Directories:**
-- Frontend component folders: `kebab-case` or lowercase (`missing-signals`, `signals`, `common`)
-- Backend Python packages: `snake_case` (`api`, `core`, `models`, `services`, `workflows`)
+- Backend: `snake_case` (e.g., `app/api/v1/endpoints/`)
+- Frontend Components: `kebab-case` (e.g., `components/missing-signals/`, `components/star-portal/`)
 
 ## Where to Add New Code
 
-**New Ingestion Source:**
-- Adapter: `backend/app/connectors/<new_source>.py` (inheriting from `SourceConnector`)
-- Registration: Register in `backend/app/connectors/__init__.py` and `backend/app/services/ingestion.py`
-- Configuration: Add source definition to `config/haemophilia.yaml`
-- Tests: Add connector tests to `tests/test_connector_health.py` and `tests/test_ingestion.py`
+**New Ingestion Connector:**
+- Connector Implementation: `backend/app/connectors/[source_name].py` (subclass `BaseConnector` from `base.py`)
+- Register in Connector Registry: `backend/app/api/v1/endpoints/registry.py` & `backend/app/services/scheduler.py`
+- Connector Test: `tests/test_ingestion.py`
 
-**New Intelligence Pipeline Step:**
-- Node: `backend/app/workflows/nodes/<node_name>.py`
-- State: Update `backend/app/workflows/state.py`
-- Graph: Register node and edge in `backend/app/workflows/graph.py`
-- Tests: Add node unit test in `tests/test_intelligence_nodes.py`
+**New API Endpoint / Feature:**
+- Route Handler: `backend/app/api/v1/endpoints/[feature].py`
+- Mount Router: `backend/app/main.py`
+- Pydantic Schema: `backend/app/schemas/[feature].py`
+- Business Logic: `backend/app/services/[feature].py`
+- Frontend TypeScript Type: `frontend/types/api.ts`
+- Frontend API Client Call: `frontend/lib/api.ts`
+- Frontend UI Component: `frontend/components/[feature]/[Feature]Workspace.tsx`
+- Backend Test: `tests/test_[feature].py`
 
-**New Workspace / UI Feature:**
-- Workspace Component: `frontend/components/<workspace_name>/<WorkspaceName>Workspace.tsx`
-- Navigation: Add tab/route in `frontend/components/metaradar.tsx`
-- API client method: Add typed method to `frontend/lib/api.ts`
+**New Intelligence Pipeline Node:**
+- Node Function: `backend/app/workflows/nodes/[node_name].py`
+- Wire in Graph: `backend/app/workflows/graph.py`
+- State Definition: `backend/app/workflows/state.py`
+- Pipeline Test: `tests/test_intelligence_nodes.py`
 
 ## Special Directories
 
-**`.planning/`:**
-- Purpose: Stores GSD memory, project specifications, roadmap, and phase execution records.
-- Generated: Maintained by GSD workflow tools.
-- Committed: Yes.
+**`models/`:**
+- Purpose: Stores local GGUF quant models (e.g. `gemma-3-4b-it-Q4_K_M.gguf`).
+- Generated: Downloaded via `setup.py --download-model` or `scripts/download_model.py`.
+- Committed: No (gitignored, contains large binary files >2 GB).
 
-**`contracts/`:**
-- Purpose: Canonical OpenAPI 3.1 specification exported from backend schemas.
-- Generated: Yes (via `python scripts/export_openapi.py`).
-- Committed: Yes.
+**`logs/`:**
+- Purpose: Local runtime execution logs for backend and frontend.
+- Generated: Created automatically by `start.py`.
+- Committed: No (gitignored).
 
 ---
 
-*Structure analysis: 2026-08-27*
+*Structure analysis: 2026-08-28*
