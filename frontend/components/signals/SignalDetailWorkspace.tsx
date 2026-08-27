@@ -565,26 +565,119 @@ export function SignalDetailWorkspace({
             </div>
           </div>
 
-          {evidenceUrl ? (
-            <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between">
-              <a
-                href={evidenceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
-              >
-                <span>View original source article</span>
-                <ExternalLink size={13} />
-              </a>
-              <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-mono">
-                Verified Provenance
-              </span>
-            </div>
-          ) : (
-            <div className="pt-3 border-t border-[var(--border)] text-[11px] text-[var(--muted-foreground)] italic">
-              Direct source URL unavailable in upstream feed.
-            </div>
-          )}
+          {/* Provenance & Verification Panel */}
+          {(() => {
+            const pmidUrl = signal.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${signal.pmid}/` : null
+            const nctUrl = signal.nct_id ? `https://clinicaltrials.gov/study/${signal.nct_id}` : null
+            const waybackUrl = evidenceUrl ? `https://web.archive.org/web/*/${evidenceUrl}` : null
+            const scholarUrl = signal.title
+              ? `https://scholar.google.com/scholar?q=${encodeURIComponent(signal.title)}`
+              : null
+            const pubmedSearchUrl = signal.title
+              ? `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(signal.title)}`
+              : null
+            const hasAlternatives = pmidUrl || nctUrl || waybackUrl || scholarUrl
+            const isSynthetic = signal.is_synthetic || signal.data_mode === 'test_fixture'
+            const ingestedAt = signal.retrieved_at || signal.ingested_at
+              ? new Date((signal.retrieved_at || signal.ingested_at) as string).toLocaleDateString('en-US', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })
+              : null
+
+            return (
+              <div className="pt-3 border-t border-[var(--border)] flex flex-col gap-2.5">
+                {/* Primary source link */}
+                {evidenceUrl ? (
+                  <div className="flex items-center justify-between">
+                    <a
+                      href={evidenceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
+                    >
+                      <span>View original source article</span>
+                      <ExternalLink size={13} />
+                    </a>
+                    <span className="text-[10px] text-[var(--muted-foreground)] uppercase font-mono">
+                      Verified Provenance
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-[var(--muted-foreground)] italic">
+                    Direct source URL unavailable in upstream feed.
+                  </p>
+                )}
+
+                {/* Ingestion timestamp note — evidence_text is the captured record */}
+                {ingestedAt && (
+                  <p className="text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+                    <span className="font-semibold text-[var(--foreground)]">Evidence text captured at ingestion</span>
+                    {' '}on {ingestedAt}. The excerpt above reflects the authoritative record as retrieved from the upstream feed.
+                    {isSynthetic && (
+                      <span className="ml-1 text-[var(--warning)]">
+                        (Synthetic demo signal — URLs are illustrative.)
+                      </span>
+                    )}
+                  </p>
+                )}
+
+                {/* Verification alternatives — always show if primary URL may be unavailable or is 404 */}
+                {hasAlternatives && (
+                  <details className="group">
+                    <summary className="cursor-pointer list-none flex items-center gap-1.5 text-[11px] font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors select-none">
+                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm border border-[var(--border)] text-[8px] group-open:rotate-90 transition-transform">▶</span>
+                      Verification alternatives — if primary link is unavailable
+                    </summary>
+                    <div className="mt-2 pl-5 flex flex-col gap-1.5">
+                      {pmidUrl && (
+                        <a href={pmidUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--foreground)] hover:text-[var(--primary)] hover:underline transition-colors">
+                          <BookOpen size={12} className="text-[var(--success)] shrink-0" />
+                          <span>PubMed abstract — PMID {signal.pmid} (permanent identifier)</span>
+                          <ExternalLink size={11} className="opacity-50" />
+                        </a>
+                      )}
+                      {nctUrl && (
+                        <a href={nctUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--foreground)] hover:text-[var(--primary)] hover:underline transition-colors">
+                          <FlaskConical size={12} className="text-[var(--primary)] shrink-0" />
+                          <span>ClinicalTrials.gov — {signal.nct_id} (official registry)</span>
+                          <ExternalLink size={11} className="opacity-50" />
+                        </a>
+                      )}
+                      {waybackUrl && (
+                        <a href={waybackUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--foreground)] hover:text-[var(--primary)] hover:underline transition-colors">
+                          <Clock size={12} className="text-[var(--warning)] shrink-0" />
+                          <span>Wayback Machine archived versions</span>
+                          <ExternalLink size={11} className="opacity-50" />
+                        </a>
+                      )}
+                      {pubmedSearchUrl && (
+                        <a href={pubmedSearchUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--foreground)] hover:text-[var(--primary)] hover:underline transition-colors">
+                          <FileText size={12} className="text-[var(--muted-foreground)] shrink-0" />
+                          <span>Search PubMed by signal title</span>
+                          <ExternalLink size={11} className="opacity-50" />
+                        </a>
+                      )}
+                      {scholarUrl && (
+                        <a href={scholarUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--foreground)] hover:text-[var(--primary)] hover:underline transition-colors">
+                          <Layers size={12} className="text-[var(--muted-foreground)] shrink-0" />
+                          <span>Google Scholar — find citing literature</span>
+                          <ExternalLink size={11} className="opacity-50" />
+                        </a>
+                      )}
+                      <p className="text-[10px] text-[var(--muted-foreground)] italic mt-0.5">
+                        The factual evidence excerpt above was captured verbatim at ingestion time and constitutes the authoritative record regardless of external URL availability.
+                      </p>
+                    </div>
+                  </details>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Column 2: AI INTERPRETATION */}
