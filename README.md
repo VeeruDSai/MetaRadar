@@ -303,6 +303,23 @@ metaradar/
 
 # Getting Started
 
+## Local Demo Login
+
+When `DEMO_MODE=true`, use these demo identities:
+
+| Role | Demo email |
+| --- | --- |
+| Medical Affairs | `medical.affairs@metaradar.internal` |
+| Regulatory | `regulatory@metaradar.internal` |
+| Safety | `safety@metaradar.internal` |
+| Market Access | `market.access@metaradar.internal` |
+| Communications | `comms@metaradar.internal` |
+| Leadership | `leadership@metaradar.internal` |
+| Developer (all signals) | `developer@metaradar.internal` |
+| Admin | `admin@metaradar.internal` |
+
+Set `DEMO_USER_PASSWORD` to choose the shared local demo password. If it is unset, MetaRadar generates a one-session password and prints it once to the terminal; no static demo password is stored in the repository. The Developer identity can inspect all stakeholder signal queues.
+
 ### Prerequisites
 - **Git**
 - **Docker Desktop** (running PostgreSQL and Redis)

@@ -48,6 +48,10 @@ DEMO_PERSONAS: Dict[str, Dict[str, str]] = {
         "email": "admin@metaradar.internal",
         "display_name": "System Administrator",
     },
+    "DEVELOPER": {
+        "email": "developer@metaradar.internal",
+        "display_name": "MetaRadar Developer",
+    },
 }
 
 _generated_demo_password: Optional[str] = None

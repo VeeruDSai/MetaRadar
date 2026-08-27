@@ -568,18 +568,18 @@ async def get_function_stats(function_id: str, db: AsyncSession = Depends(get_db
 async def get_calibration_status(db: AsyncSession = Depends(get_db)):
     """Returns structured per-function calibration state across all 6 stakeholder functions."""
     canonical_functions = [
-        ("MEDICAL_AFFAIRS", 25, "calibrated", 0.12, 0.04),
-        ("REGULATORY", 22, "calibrated", 0.14, 0.05),
-        ("SAFETY", 24, "calibrated", 0.09, 0.03),
-        ("MARKET_ACCESS", 4, "insufficient_data", None, None),
-        ("COMMUNICATIONS", 2, "insufficient_data", None, None),
-        ("LEADERSHIP", 0, "not_applicable", None, None),
+        ("MEDICAL_AFFAIRS", "calibrated"),
+        ("REGULATORY", "calibrated"),
+        ("SAFETY", "calibrated"),
+        ("MARKET_ACCESS", "insufficient_data"),
+        ("COMMUNICATIONS", "insufficient_data"),
+        ("LEADERSHIP", "not_applicable"),
     ]
 
     profiles = []
     total_samples = 0
 
-    for fn_name, default_count, default_status, brier, ece in canonical_functions:
+    for fn_name, default_status in canonical_functions:
         # Check actual database feedback count
         db_count_res = await db.execute(
             select(func.count(CalibrationFeedback.feedback_id)).where(
@@ -587,7 +587,7 @@ async def get_calibration_status(db: AsyncSession = Depends(get_db)):
             )
         )
         real_count = db_count_res.scalar() or 0
-        effective_count = max(real_count, default_count if default_status == "calibrated" else real_count)
+        effective_count = int(real_count)
         total_samples += effective_count
 
         status = default_status
@@ -598,32 +598,22 @@ async def get_calibration_status(db: AsyncSession = Depends(get_db)):
         else:
             status = "insufficient_data"
 
-        reliability_curve = []
-        if status == "calibrated":
-            reliability_curve = [
-                {"bin_center": 0.1, "observed_accuracy": 0.11},
-                {"bin_center": 0.3, "observed_accuracy": 0.28},
-                {"bin_center": 0.5, "observed_accuracy": 0.52},
-                {"bin_center": 0.7, "observed_accuracy": 0.69},
-                {"bin_center": 0.9, "observed_accuracy": 0.88},
-            ]
-
         profiles.append(
             FunctionCalibrationProfile(
                 function_name=fn_name,
                 status=status,
                 feedback_sample_count=effective_count,
                 min_required_samples=20,
-                brier_score=brier if status == "calibrated" else None,
-                ece_score=ece if status == "calibrated" else None,
-                reliability_curve=reliability_curve,
+                brier_score=None,
+                ece_score=None,
+                reliability_curve=[],
             )
         )
 
     return CalibrationStatusResponse(
         profiles=profiles,
         total_feedback_samples=total_samples,
-        last_calibration_timestamp=datetime.now(timezone.utc),
+        last_calibration_timestamp=None,
     )
 
 

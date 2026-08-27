@@ -651,6 +651,7 @@ export interface SignalFilterParams {
   source?: string;
   limit?: number;
   offset?: number;
+  all_functions?: boolean;
 }
 
 export interface UserMe {

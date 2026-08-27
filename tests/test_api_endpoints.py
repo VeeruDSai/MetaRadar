@@ -1,5 +1,6 @@
 import pytest
 import sys
+import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 from httpx import AsyncClient, ASGITransport
@@ -10,6 +11,8 @@ sys.path.insert(0, str(base_dir / "backend"))
 from app.main import app
 from app.core.config import settings
 from app.db.session import get_db
+from app.api.deps import get_current_user
+from app.models.auth import User
 
 
 @pytest.mark.asyncio
@@ -63,16 +66,32 @@ async def test_business_endpoints():
     mock_res_all_empty = MagicMock()
     mock_res_all_empty.all.return_value = []
 
-    mock_db.execute.side_effect = [
-        mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_count, mock_res_scalars, mock_res_none, # overview
-        mock_res_scalars, mock_res_count, # signals
-        mock_res_all_empty, mock_res_all_empty, # athena
-    ]
+    async def mock_execute(stmt):
+        mock_res = MagicMock()
+        mock_res.scalars.return_value.all.return_value = []
+        mock_res.scalars.return_value.first.return_value = None
+        mock_res.scalar.return_value = 0
+        mock_res.scalar_one_or_none.return_value = None
+        mock_res.all.return_value = []
+        return mock_res
+
+    mock_db.execute.side_effect = mock_execute
 
     async def mock_get_db():
         yield mock_db
 
+    async def mock_current_user():
+        return User(
+            user_id=uuid.uuid4(),
+            email="developer@metaradar.internal",
+            display_name="MetaRadar Developer",
+            hashed_password="test",
+            role="DEVELOPER",
+            is_active=True,
+        )
+
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_current_user
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             # /api/v1/overview
@@ -93,6 +112,7 @@ async def test_business_endpoints():
             assert athena_data["confidence"] >= 0
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio

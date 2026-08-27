@@ -318,6 +318,7 @@ export async function fetchSignals(
   if (filters?.source) queryParams.set('source', filters.source)
   if (filters?.limit) queryParams.set('limit', String(filters.limit))
   if (filters?.offset) queryParams.set('offset', String(filters.offset))
+  if (filters?.all_functions) queryParams.set('all_functions', 'true')
 
   const qs = queryParams.toString()
   const endpoint = qs ? `/signals?${qs}` : '/signals'

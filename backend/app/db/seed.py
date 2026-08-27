@@ -1,7 +1,11 @@
 import asyncio
 import sys
 import uuid
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from sqlalchemy import select, delete, update
 from app.db.session import async_session_factory
 from app.models import (
@@ -15,6 +19,7 @@ from app.models import (
     Contradiction,
     WatchItem,
     ScoringWeights,
+    CalibrationFeedback,
 )
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -42,7 +47,7 @@ async def seed_data():
         await session.execute(delete(Source).where(Source.source_id.in_(legacy_source_ids)))
         await session.flush()
 
-        # 2. Canonical Data Sources (Exactly the 5 registered pipeline connectors)
+        # 2. Canonical Data Sources (All 8 registered pipeline connectors)
         sources_data = [
             {
                 "source_id": "pubmed",
@@ -79,6 +84,27 @@ async def seed_data():
                 "syndication_group": "Press / Media",
                 "status": "active",
                 "quota_remaining": 100,
+            },
+            {
+                "source_id": "fierce_pharma",
+                "name": "Fierce Pharma RSS",
+                "freshness_class": "near_real_time",
+                "syndication_group": "Press / Media",
+                "status": "active",
+            },
+            {
+                "source_id": "biopharma_dive",
+                "name": "BioPharma Dive RSS",
+                "freshness_class": "near_real_time",
+                "syndication_group": "Press / Media",
+                "status": "active",
+            },
+            {
+                "source_id": "et_pharma",
+                "name": "ET Pharma (India)",
+                "freshness_class": "near_real_time",
+                "syndication_group": "Press / Media",
+                "status": "active",
             },
         ]
         for s in sources_data:
@@ -574,17 +600,130 @@ async def seed_data():
                 sig_obj.interpretation = s_data["interpretation"]
                 sig_obj.speculation = s_data["speculation"]
 
-        # 11. Scoring Weights
-        roles = ["MEDICAL_AFFAIRS", "REGULATORY", "SAFETY", "MARKET_ACCESS", "COMMUNICATIONS", "LEADERSHIP"]
-        for r in roles:
+        # 11. Scoring Weights & Calibration Feedback
+        roles_weights = {
+            "MEDICAL_AFFAIRS": {"impact": 1.15, "urgency": 1.10, "novelty": 0.95},
+            "REGULATORY": {"impact": 1.20, "urgency": 1.15, "novelty": 0.90},
+            "SAFETY": {"impact": 1.25, "urgency": 1.20, "novelty": 0.85},
+            "MARKET_ACCESS": {"impact": 1.10, "urgency": 1.05, "novelty": 1.00},
+            "COMMUNICATIONS": {"impact": 1.05, "urgency": 1.05, "novelty": 1.00},
+            "LEADERSHIP": {"impact": 1.00, "urgency": 1.00, "novelty": 1.00},
+        }
+        for r, w in roles_weights.items():
             existing = await session.execute(select(ScoringWeights).where(ScoringWeights.stakeholder_function == r))
-            if not existing.scalar_one_or_none():
+            row = existing.scalar_one_or_none()
+            if not row:
                 session.add(ScoringWeights(
                     stakeholder_function=r,
-                    impact_weight=1.0,
-                    urgency_weight=1.0,
-                    novelty_weight=1.0,
+                    impact_weight=w["impact"],
+                    urgency_weight=w["urgency"],
+                    novelty_weight=w["novelty"],
                 ))
+            else:
+                row.impact_weight = w["impact"]
+                row.urgency_weight = w["urgency"]
+                row.novelty_weight = w["novelty"]
+
+        # 12. Seed Calibration Feedback for Stakeholder Functions
+        await session.execute(delete(CalibrationFeedback))
+        sample_signals_res = await session.execute(select(Signal).limit(10))
+        sample_signals = sample_signals_res.scalars().all()
+        
+        if sample_signals:
+            feedbacks_to_add = [
+                # Medical Affairs feedback
+                CalibrationFeedback(
+                    signal_id=sample_signals[0].signal_id,
+                    stakeholder_function="MEDICAL_AFFAIRS",
+                    relevance_rating=5,
+                    urgency_rating=4,
+                    action_appropriate=True,
+                    comments="Critical 5-year durability data directly informs MSL field briefings.",
+                    submitted_at=now - timedelta(days=2),
+                ),
+                CalibrationFeedback(
+                    signal_id=sample_signals[min(1, len(sample_signals)-1)].signal_id,
+                    stakeholder_function="MEDICAL_AFFAIRS",
+                    relevance_rating=4,
+                    urgency_rating=4,
+                    action_appropriate=True,
+                    comments="Pivotal trial endpoints corroborate our non-factor comparative dataset.",
+                    submitted_at=now - timedelta(days=4),
+                ),
+                # Regulatory feedback
+                CalibrationFeedback(
+                    signal_id=sample_signals[min(2, len(sample_signals)-1)].signal_id,
+                    stakeholder_function="REGULATORY",
+                    relevance_rating=5,
+                    urgency_rating=5,
+                    action_appropriate=True,
+                    comments="Priority review designation requires immediate filing schedule alignment.",
+                    submitted_at=now - timedelta(days=1),
+                ),
+                CalibrationFeedback(
+                    signal_id=sample_signals[min(3, len(sample_signals)-1)].signal_id,
+                    stakeholder_function="REGULATORY",
+                    relevance_rating=4,
+                    urgency_rating=4,
+                    action_appropriate=True,
+                    comments="EMA CHMP scientific opinion verified against European filing dossiers.",
+                    submitted_at=now - timedelta(days=3),
+                ),
+                # Safety feedback
+                CalibrationFeedback(
+                    signal_id=sample_signals[min(3, len(sample_signals)-1)].signal_id,
+                    stakeholder_function="SAFETY",
+                    relevance_rating=5,
+                    urgency_rating=5,
+                    action_appropriate=True,
+                    comments="Transaminitis surveillance profile confirms baseline safety threshold.",
+                    submitted_at=now - timedelta(days=2),
+                ),
+                # Market Access feedback
+                CalibrationFeedback(
+                    signal_id=sample_signals[0].signal_id,
+                    stakeholder_function="MARKET_ACCESS",
+                    relevance_rating=4,
+                    urgency_rating=3,
+                    action_appropriate=True,
+                    comments="Durability curves strengthen health economics dossier for reimbursement.",
+                    submitted_at=now - timedelta(days=5),
+                ),
+                # Communications feedback
+                CalibrationFeedback(
+                    signal_id=sample_signals[min(1, len(sample_signals)-1)].signal_id,
+                    stakeholder_function="COMMUNICATIONS",
+                    relevance_rating=4,
+                    urgency_rating=4,
+                    action_appropriate=True,
+                    comments="Clear scientific narrative for press statement and external communications.",
+                    submitted_at=now - timedelta(days=3),
+                ),
+            ]
+            session.add_all(feedbacks_to_add)
+
+        # 13. Backfill vector embeddings and multi-factor scores for all signals
+        all_signals_res = await session.execute(select(Signal))
+        all_signals = all_signals_res.scalars().all()
+        
+        from app.services.embeddings import embedding_service
+        from app.services.scoring import priority_scorer
+        
+        for sig in all_signals:
+            text_to_process = f"{sig.title or ''} {sig.content or ''}"
+            # Embed if missing
+            if sig.embedding is None:
+                try:
+                    sig.embedding = await embedding_service.embed_text(text_to_process)
+                except Exception:
+                    pass
+            # Multi-factor score if missing
+            if not sig.score_breakdown or not isinstance(sig.score_breakdown, dict) or not sig.score_breakdown.get("total"):
+                sb = priority_scorer.score_text(text_to_process, sig.published_at or now, novelty_distance=0.6)
+                if sb:
+                    sig.score_breakdown = sb.to_dict()
+                    if not sig.priority:
+                        sig.priority = sb.priority_level
 
         await session.commit()
         print("[SUCCESS] Database seeding and source reconciliation complete.")
@@ -592,3 +731,4 @@ async def seed_data():
 
 if __name__ == "__main__":
     asyncio.run(seed_data())
+

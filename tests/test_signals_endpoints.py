@@ -1,4 +1,5 @@
 import pytest
+import uuid
 import sys
 from pathlib import Path
 from httpx import AsyncClient, ASGITransport
@@ -9,6 +10,8 @@ sys.path.insert(0, str(base_dir / "backend"))
 
 from app.main import app
 from app.db.session import get_db
+from app.api.deps import get_current_user
+from app.models.auth import User
 
 
 @pytest.mark.asyncio
@@ -29,7 +32,18 @@ async def test_signals_list_empty_database():
     async def override_get_db():
         yield mock_db
 
+    async def override_current_user():
+        return User(
+            user_id=uuid.uuid4(),
+            email="developer@metaradar.internal",
+            display_name="MetaRadar Developer",
+            hashed_password="test",
+            role="DEVELOPER",
+            is_active=True,
+        )
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_current_user
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             res = await ac.get("/api/v1/signals?limit=10&offset=0")
@@ -39,6 +53,7 @@ async def test_signals_list_empty_database():
             assert data["total"] == 0
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio

@@ -54,6 +54,7 @@ export function SignalList() {
           severity: severityFilter || undefined,
           entity: debouncedSearchTerm.trim() || undefined,
           source: sourceFilter || undefined,
+          all_functions: true,
         }
         const data = await fetchSignals(params, signal)
         if (signal?.aborted) return
@@ -208,6 +209,9 @@ export function SignalList() {
               <option value="fda">OpenFDA Drug Events</option>
               <option value="ema">EMA RSS Feed</option>
               <option value="newsapi">NewsAPI Global Feed</option>
+              <option value="fierce_pharma">Fierce Pharma</option>
+              <option value="biopharma_dive">BioPharma Dive</option>
+              <option value="et_pharma">ET Pharma (India)</option>
             </select>
           </div>
 

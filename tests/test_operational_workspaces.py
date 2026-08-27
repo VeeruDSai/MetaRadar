@@ -88,13 +88,15 @@ async def test_per_function_calibration_status_endpoint():
 
         profiles_by_fn = {p["function_name"]: p for p in data["profiles"]}
         
-        # Verify calibrated profiles
-        assert profiles_by_fn["MEDICAL_AFFAIRS"]["status"] == "calibrated"
-        assert profiles_by_fn["MEDICAL_AFFAIRS"]["brier_score"] == 0.12
-        assert len(profiles_by_fn["MEDICAL_AFFAIRS"]["reliability_curve"]) == 5
-
-        assert profiles_by_fn["REGULATORY"]["status"] == "calibrated"
-        assert profiles_by_fn["SAFETY"]["status"] == "calibrated"
+        # Calibration status is derived from real feedback, never seeded with
+        # fabricated sample counts or reliability metrics.
+        for function_name in ("MEDICAL_AFFAIRS", "REGULATORY", "SAFETY"):
+            profile = profiles_by_fn[function_name]
+            expected_status = "calibrated" if profile["feedback_sample_count"] >= 20 else "insufficient_data"
+            assert profile["status"] == expected_status
+            assert profile["brier_score"] is None
+            assert profile["ece_score"] is None
+            assert profile["reliability_curve"] == []
 
         # Verify insufficient data profiles
         assert profiles_by_fn["MARKET_ACCESS"]["status"] == "insufficient_data"

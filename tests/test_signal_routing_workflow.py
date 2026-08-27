@@ -11,7 +11,19 @@ sys.path.insert(0, str(base_dir / "backend"))
 
 from app.main import app
 from app.models import Signal, AuditLog, Source
+from app.models.auth import User
 from app.db.session import get_db
+from app.api.deps import get_current_user
+
+
+def _create_mock_user():
+    return User(
+        user_id=uuid.uuid4(),
+        email="demo.safety@metaradar.internal",
+        display_name="Demo Safety Reviewer",
+        role="SAFETY",
+        is_active=True,
+    )
 
 
 def _create_test_signal(sig_id: uuid.UUID) -> Signal:
@@ -103,6 +115,7 @@ async def test_signal_review_lifecycle_state_machine():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -161,6 +174,7 @@ async def test_signal_review_lifecycle_state_machine():
             assert history[0]["performed_by"] == "Demo Regulatory Affairs Reviewer"
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio
@@ -178,6 +192,7 @@ async def test_signal_review_invalid_status():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -190,6 +205,7 @@ async def test_signal_review_invalid_status():
             assert "Invalid review status" in resp.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio
@@ -204,6 +220,7 @@ async def test_signal_review_nonexistent_signal():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -216,3 +233,4 @@ async def test_signal_review_nonexistent_signal():
             assert "not found" in resp.json()["detail"].lower()
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)

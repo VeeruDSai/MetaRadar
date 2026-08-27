@@ -48,6 +48,7 @@ from app.services.provenance_urls import resolve_canonical_provenance
 from app.services.scoring import priority_scorer
 from app.services.confluence import confluence_engine
 from app.services.embeddings import embedding_service
+from app.services.vector_query import vector_query_service
 from app.providers.factory import provider_factory
 from app.providers.base import ProviderCapability, DataClassification
 from app.providers.gemma import GemmaProvider, OllamaUnavailableError
@@ -368,7 +369,7 @@ async def list_signals(
     all_functions: bool = Query(False, description="Whether to return signals across all stakeholder functions (LEADERSHIP and ADMIN only)"),
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Returns filtered signals list with RBAC role scoping, pagination, and total count."""
@@ -378,12 +379,12 @@ async def list_signals(
     # Role-Based Filtering
     if current_user:
         if all_functions:
-            if current_user.role not in {"LEADERSHIP", "ADMIN"}:
+            if current_user.role not in {"LEADERSHIP", "ADMIN", "DEVELOPER"}:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Forbidden: Only LEADERSHIP and ADMIN roles can access all_functions=true",
                 )
-        elif current_user.role not in {"LEADERSHIP", "ADMIN"}:
+        elif current_user.role not in {"LEADERSHIP", "ADMIN", "DEVELOPER"}:
             query = query.where(Signal.relevant_function == current_user.role)
             count_query = count_query.where(Signal.relevant_function == current_user.role)
 
@@ -526,31 +527,14 @@ async def submit_signal_review(
     signal_id: str,
     payload: SignalReviewRequest,
     request: Request,
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Submits a review action for a signal, validating FSM transition invariants,
     handling leadership escalations, and appending immutable audit records.
     """
-    # Resolve reviewer identity
     user = current_user
-    if not user or not hasattr(user, "role") or not isinstance(user, User):
-        from app.services.auth_service import get_or_create_demo_user
-        try:
-            user = await get_or_create_demo_user(db, "MEDICAL_AFFAIRS")
-        except Exception:
-            user = None
-        if not user or not hasattr(user, "role") or not isinstance(user, User):
-            user = User(
-                user_id=uuid.uuid4(),
-                email="demo.medical@metaradar.internal",
-                display_name="Demo Medical Affairs Reviewer",
-                role="MEDICAL_AFFAIRS",
-                is_active=True,
-            )
-
-
     target_uuid = None
     try:
         target_uuid = UUID(signal_id)
@@ -1031,54 +1015,47 @@ def _sse_event(event: str, data: dict) -> str:
 async def _retrieve_athena_evidence(
     db: AsyncSession, scrubbed_prompt: str
 ) -> Tuple[List[AthenaEvidenceCitation], List[str]]:
-    """Hybrid retrieval: pgvector cosine similarity first, lexical ILIKE fallback second.
+    """Hybrid retrieval: pgvector cosine similarity via VectorQueryService with keyword and landscape fallbacks.
 
     Returns (citations, evidence_texts). All DB work completes before any response
     streaming begins so the request-scoped session is never used mid-stream.
     """
     citations: List[AthenaEvidenceCitation] = []
     evidence_texts: List[str] = []
-    ATHENA_DISTANCE_THRESHOLD = 0.65  # cosine distance threshold (similarity >= 0.35)
 
     try:
-        query_vec = await embedding_service.embed_text(scrubbed_prompt)
-
-        stmt = (
-            select(
-                Signal.signal_id,
-                Signal.title,
-                Signal.source_id,
-                Signal.canonical_url,
-                Signal.published_at,
-                Signal.content,
-                Signal.embedding.op("<=>")(query_vec).label("distance"),
-            )
-            .where(Signal.embedding.isnot(None))
-            .where(Signal.embedding.op("<=>")(query_vec) < ATHENA_DISTANCE_THRESHOLD)
-            .order_by("distance")
-            .limit(5)
+        results = await vector_query_service.search(
+            db=db,
+            query_text=scrubbed_prompt,
+            top_k=5,
         )
-        res = await db.execute(stmt)
-        matched_rows = res.all()
+        if results:
+            sig_ids = [uuid.UUID(r.signal_id) for r in results]
+            stmt = select(Signal).where(Signal.signal_id.in_(sig_ids))
+            db_res = await db.execute(stmt)
+            signals_by_id = {str(s.signal_id): s for s in db_res.scalars().all()}
 
-        for r in matched_rows:
-            excerpt = r.content[:500] if r.content else r.title
-            can_url = r.canonical_url
-            if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
-                can_url = None
-            citations.append(
-                AthenaEvidenceCitation(
-                    signal_id=str(r.signal_id),
-                    title=r.title,
-                    source_id=r.source_id,
-                    canonical_url=can_url,
-                    published_at=r.published_at.isoformat() if r.published_at else None,
-                    excerpt=excerpt,
-                    distance=round(float(r.distance), 4),
+            for r in results:
+                s = signals_by_id.get(r.signal_id)
+                if not s:
+                    continue
+                excerpt = s.content[:500] if s.content else s.title
+                can_url = s.canonical_url
+                if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
+                    can_url = None
+                citations.append(
+                    AthenaEvidenceCitation(
+                        signal_id=r.signal_id,
+                        title=s.title,
+                        source_id=s.source_id,
+                        canonical_url=can_url,
+                        published_at=s.published_at.isoformat() if s.published_at else None,
+                        excerpt=excerpt,
+                        distance=round(max(0.0, 1.0 - float(r.similarity_score)), 4),
+                    )
                 )
-            )
-            evidence_texts.append(f"[{r.source_id}] {r.title}: {excerpt}")
-    except Exception:
+                evidence_texts.append(f"[{s.source_id.upper()}] {s.title}: {excerpt}")
+    except Exception as e:
         pass
 
     # Keyword / Lexical Fallback if vector search yielded 0 matches
@@ -1109,7 +1086,32 @@ async def _retrieve_athena_evidence(
                     distance=0.45,
                 )
             )
-            evidence_texts.append(f"[{s.source_id}] {s.title}: {excerpt}")
+            evidence_texts.append(f"[{s.source_id.upper()}] {s.title}: {excerpt}")
+
+    # Broad landscape / weekly summary fallback
+    if not citations:
+        broad_keywords = {"summarize", "summary", "signals", "hemophilia", "haemophilia", "week", "overview", "updates", "all", "latest", "landscape", "findings"}
+        prompt_words = {w.lower().strip("?!., ") for w in scrubbed_prompt.split()}
+        if len(prompt_words.intersection(broad_keywords)) >= 2:
+            broad_stmt = select(Signal).order_by(Signal.published_at.desc().nullslast(), Signal.ingested_at.desc()).limit(5)
+            broad_res = await db.execute(broad_stmt)
+            for s in broad_res.scalars().all():
+                excerpt = s.content[:500] if s.content else s.title
+                can_url = s.canonical_url
+                if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
+                    can_url = None
+                citations.append(
+                    AthenaEvidenceCitation(
+                        signal_id=str(s.signal_id),
+                        title=s.title,
+                        source_id=s.source_id,
+                        canonical_url=can_url,
+                        published_at=s.published_at.isoformat() if s.published_at else None,
+                        excerpt=excerpt,
+                        distance=0.45,
+                    )
+                )
+                evidence_texts.append(f"[{s.source_id.upper()}] {s.title}: {excerpt}")
 
     return citations, evidence_texts
 
@@ -1337,6 +1339,9 @@ async def get_athena_suggested_questions(
         title = (s.title or "").strip()
         content = (s.content or "").strip()
         t_low = title.lower()
+
+        if "test" in t_low or "permission" in t_low:
+            continue
 
         q = None
         if "5-year" in t_low or "durability" in t_low or "aav5" in t_low or "factor viii" in t_low:

@@ -74,7 +74,10 @@ async def get_sources_registry(
     result = await db.execute(query)
     sources = result.scalars().all()
 
-    CANONICAL_SOURCE_IDS = {"pubmed", "clinical_trials", "fda", "ema", "newsapi"}
+    CANONICAL_SOURCE_IDS = {
+        "pubmed", "clinical_trials", "fda", "ema", "newsapi",
+        "fierce_pharma", "biopharma_dive", "et_pharma",
+    }
     items = []
     for s in sources:
         if s.source_id not in CANONICAL_SOURCE_IDS:
@@ -92,6 +95,7 @@ async def get_sources_registry(
                 source_id=s.source_id,
                 name=s.name,
                 freshness_class=s.freshness_class,
+                tier=s.tier,
                 syndication_group=s.syndication_group,
                 status=s.status,
                 quota_remaining=s.quota_remaining,
@@ -114,6 +118,9 @@ async def get_sources_registry(
         {"source_id": "fda", "name": "openFDA Drugs & Adverse Events", "freshness_class": "delayed", "syndication_group": "Regulatory"},
         {"source_id": "ema", "name": "European Medicines Agency", "freshness_class": "delayed", "syndication_group": "Regulatory"},
         {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "quota_remaining": 100},
+        {"source_id": "fierce_pharma", "name": "Fierce Pharma", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "tier": 3},
+        {"source_id": "biopharma_dive", "name": "BioPharma Dive", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "tier": 3},
+        {"source_id": "et_pharma", "name": "ET Pharma India", "freshness_class": "near_real_time", "syndication_group": "India Pharma Media", "tier": 3},
     ]
     for c in canonical_fallbacks:
         if c["source_id"] not in seen_ids:
@@ -125,6 +132,7 @@ async def get_sources_registry(
                     source_id=c["source_id"],
                     name=c["name"],
                     freshness_class=c["freshness_class"],
+                    tier=c.get("tier", 1),
                     syndication_group=c.get("syndication_group", "Public Feed"),
                     status="active",
                     quota_remaining=c.get("quota_remaining"),

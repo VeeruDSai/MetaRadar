@@ -49,6 +49,12 @@ export const DEMO_OPERATORS: DemoOperator[] = [
     functionId: 'LEADERSHIP',
     badgeTone: 'var(--priority-critical)',
   },
+  {
+    value: 'MetaRadar Developer',
+    label: 'Developer (All Signals)',
+    functionId: 'DEVELOPER',
+    badgeTone: 'var(--signal)',
+  },
 ]
 
 const STORAGE_KEY = 'metaradar_demo_operator'

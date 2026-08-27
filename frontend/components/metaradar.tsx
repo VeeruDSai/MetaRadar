@@ -182,6 +182,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme()
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   // Live health status polling (60s cadence)
   const { data: healthReady } = useLiveData<HealthReadyResponse>(getHealthReady, 60000)
@@ -390,10 +391,30 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <span>Search signals</span>
               <kbd>⌘ K</kbd>
             </button>
-            <button className="icon-button notification" aria-label="Notifications">
+            <button
+              className="icon-button notification"
+              aria-label="Notifications"
+              aria-expanded={notificationsOpen}
+              onClick={() => setNotificationsOpen((open) => !open)}
+            >
               <Bell size={17} />
               <i />
             </button>
+            {notificationsOpen && (
+              <div className="absolute right-12 top-12 z-50 w-72 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <strong className="text-xs">Notifications</strong>
+                  <button
+                    className="text-xs text-[var(--muted-foreground)]"
+                    onClick={() => setNotificationsOpen(false)}
+                    aria-label="Close notifications"
+                  >
+                    Close
+                  </button>
+                </div>
+                <p className="m-0 mt-3 text-xs text-[var(--muted-foreground)]">No new operational notifications.</p>
+              </div>
+            )}
             <button
               className="theme-toggle"
               onClick={toggleTheme}

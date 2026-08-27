@@ -18,6 +18,7 @@ novonordisk/
 │   ├── alembic/                    # Database migration scripts
 │   ├── app/
 │   │   ├── api/v1/endpoints/       # REST API route handlers
+│   │   │   ├── auth.py             # Authentication & session verification endpoints
 │   │   │   ├── cache.py            # Cache invalidation endpoints
 │   │   │   ├── feedback.py         # Stakeholder calibration feedback endpoints
 │   │   │   ├── health.py           # Readiness, models, and connector health endpoints
@@ -59,18 +60,23 @@ novonordisk/
 │   │   │   ├── intelligence.py     # Signal, Review, Athena, and Confluence schemas
 │   │   │   └── registry.py         # Source and Asset schemas
 │   │   ├── services/               # Core business logic services
+│   │   │   ├── auth_service.py     # Role-based access control & demo operator auth
 │   │   │   ├── authority.py        # Source authority calculation
 │   │   │   ├── calibration.py      # Stakeholder weight calibration
 │   │   │   ├── confluence.py       # Multi-source confluence clustering
 │   │   │   ├── deduplication.py    # Content hashing and fingerprinting
 │   │   │   ├── embeddings.py       # FastEmbed 384-dim embedding generator
+│   │   │   ├── embeddings_backfill.py # Backfill embeddings for legacy signal records
 │   │   │   ├── ingestion.py        # Orchestrated source ingestion
 │   │   │   ├── pii.py              # PII/PHI regex scrubbing service
 │   │   │   ├── provenance_urls.py  # Canonical URL validation & resolution
 │   │   │   ├── redteam.py          # Contradiction detection engine (Rules A-S)
+│   │   │   ├── relevance.py        # Disease domain keyword & semantic relevance
 │   │   │   ├── routing.py          # Stakeholder routing & escalation rules
 │   │   │   ├── scheduler.py        # Background ingestion scheduler & governor
-│   │   │   └── scoring.py          # Priority scoring & time-decay engine
+│   │   │   ├── scoring.py          # Priority scoring & time-decay engine
+│   │   │   ├── source_independence.py # Multi-source independent verification scoring
+│   │   │   └── vector_query.py     # pgvector cosine similarity retrieval
 │   │   └── workflows/              # LangGraph 11-node intelligence pipeline
 │   │       ├── graph.py            # LangGraph state graph definition
 │   │       ├── runner.py           # Pipeline runner & state manager

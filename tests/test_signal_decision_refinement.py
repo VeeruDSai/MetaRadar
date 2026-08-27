@@ -15,6 +15,18 @@ sys.path.insert(0, str(base_dir / "backend"))
 from app.main import app
 from app.db.session import get_db
 from app.models import Signal, AuditLog
+from app.models.auth import User
+from app.api.deps import get_current_user
+
+
+def _create_mock_user():
+    return User(
+        user_id=uuid.uuid4(),
+        email="demo.medical@metaradar.internal",
+        display_name="Senior Medical Director",
+        role="MEDICAL_AFFAIRS",
+        is_active=True,
+    )
 from app.services.authority import (
     SourceAuthorityTier,
     ValidationStatus,
@@ -185,6 +197,7 @@ async def test_signal_decision_object_endpoint():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -216,6 +229,7 @@ async def test_signal_decision_object_endpoint():
             assert detail["review_details"]["status"] == "UNREVIEWED"
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio
@@ -276,6 +290,7 @@ async def test_signal_review_submission_and_audit_history():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -302,6 +317,7 @@ async def test_signal_review_submission_and_audit_history():
             assert audit_trail[0]["performed_by"] == "Senior Medical Director"
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio
@@ -310,24 +326,25 @@ async def test_signal_decision_object_unified_endpoint():
     mock_signal = _create_mock_signal()
     mock_db = AsyncMock()
 
-    # 1. find signal
-    mock_res_sig = MagicMock()
-    mock_res_sig.scalars.return_value.first.return_value = mock_signal
+    async def mock_execute(query):
+        q_str = str(query)
+        mock_res = MagicMock()
+        if "FROM contradictions" in q_str:
+            mock_res.scalars.return_value.all.return_value = []
+        elif "FROM confluence" in q_str:
+            mock_res.scalars.return_value.first.return_value = None
+        else:
+            mock_res.scalars.return_value.first.return_value = mock_signal
+            mock_res.scalars.return_value.all.return_value = [mock_signal]
+        return mock_res
 
-    # 2. contradictions
-    mock_res_contra = MagicMock()
-    mock_res_contra.scalars.return_value.all.return_value = []
-
-    # 3. confluence
-    mock_res_conf = MagicMock()
-    mock_res_conf.scalars.return_value.first.return_value = None
-
-    mock_db.execute.side_effect = [mock_res_sig, mock_res_contra, mock_res_conf]
+    mock_db.execute.side_effect = mock_execute
 
     async def override_get_db():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -347,3 +364,4 @@ async def test_signal_decision_object_unified_endpoint():
             assert decision_obj["review"]["status"] == "UNREVIEWED"
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
