@@ -28,6 +28,15 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+hash_session_token = hash_token
+
+
+def verify_session_token_hash(raw_token: str, hashed_token: str) -> bool:
+    """Verifies that a raw token matches its SHA-256 hex hash."""
+    return hmac.compare_digest(hash_token(raw_token), hashed_token)
+
+
+
 def sign_session_token(session_id: str, secret: str) -> str:
     """Signs a session UUID into a timestamped cookie token."""
     signer = TimestampSigner(secret)

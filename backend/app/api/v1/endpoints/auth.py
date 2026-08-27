@@ -11,7 +11,9 @@ from app.api.deps import (
     get_current_user,
     get_optional_user,
     require_preauth_origin,
+    require_csrf,
 )
+
 from app.core.config import settings
 from app.core.security import (
     SESSION_COOKIE_NAME,
@@ -191,13 +193,14 @@ async def demo_login(
     )
 
 
-@router.post("/logout", response_model=LogoutResponse)
+@router.post("/logout", response_model=LogoutResponse, dependencies=[Depends(require_csrf)])
 async def logout(
     request: Request,
     response: Response,
     current_user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
+
     """Terminates the current session, revokes DB session token, and clears auth cookies."""
     token = request.cookies.get(SESSION_COOKIE_NAME)
     if token:

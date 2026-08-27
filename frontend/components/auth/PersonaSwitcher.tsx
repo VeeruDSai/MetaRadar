@@ -65,10 +65,11 @@ export const PERSONAS: PersonaOption[] = [
     id: 'ADMIN',
     label: 'System Admin',
     description: 'Platform configuration & security overrides',
-    badgeColor: 'bg-slate-500/15 dark:bg-slate-500/20',
-    textColor: 'text-slate-700 dark:text-slate-300',
-    borderColor: 'border-slate-500/30',
+    badgeColor: 'bg-muted/60',
+    textColor: 'text-muted-foreground',
+    borderColor: 'border-border/50',
   },
+
 ]
 
 export function PersonaSwitcher() {

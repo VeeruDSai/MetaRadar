@@ -246,10 +246,31 @@ async def test_signal_review_submission_and_audit_history():
     mock_res_audit = MagicMock()
     mock_res_audit.scalars.return_value.all.return_value = [mock_audit]
 
-    # 1. find signal for review POST
-    # 2. find signal for audit GET
-    # 3. find audit logs
-    mock_db.execute.side_effect = [mock_res_single, mock_res_single, mock_res_audit]
+    async def mock_execute(query):
+        q_str = str(query)
+        mock_res = MagicMock()
+        if "FROM audit_log" in q_str:
+            mock_res.scalars.return_value.all.return_value = [mock_audit]
+            mock_res.scalars.return_value.first.return_value = mock_audit
+
+        elif "FROM users" in q_str:
+            from app.models.auth import User
+            mock_user = User(
+                user_id=uuid.uuid4(),
+                email="demo.medical@metaradar.internal",
+                display_name="Senior Medical Director",
+                role="MEDICAL_AFFAIRS",
+                is_active=True,
+            )
+            mock_res.scalars.return_value.first.return_value = mock_user
+            mock_res.scalars.return_value.all.return_value = [mock_user]
+        else:
+            mock_res.scalars.return_value.first.return_value = mock_signal
+            mock_res.scalars.return_value.all.return_value = [mock_signal]
+        return mock_res
+
+    mock_db.execute.side_effect = mock_execute
+
 
     async def override_get_db():
         yield mock_db

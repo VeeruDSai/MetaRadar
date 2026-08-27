@@ -76,9 +76,24 @@ async def test_signal_review_lifecycle_state_machine():
         q_str = str(query)
         if "FROM audit_log" in q_str:
             mock_res.scalars.return_value.all.return_value = list(audit_logs)
+            mock_res.scalars.return_value.first.return_value = audit_logs[0] if audit_logs else None
+        elif "FROM users" in q_str:
+            from app.models.auth import User
+            mock_user = User(
+                user_id=uuid.uuid4(),
+                email="demo.safety@metaradar.internal",
+                display_name="Demo Safety Reviewer",
+                role="SAFETY",
+                is_active=True,
+            )
+            mock_res.scalars.return_value.first.return_value = mock_user
+            mock_res.scalars.return_value.all.return_value = [mock_user]
+
         else:
             mock_res.scalars.return_value.first.return_value = signal
+            mock_res.scalars.return_value.all.return_value = [signal]
         return mock_res
+
 
     mock_db.execute.side_effect = mock_execute
     mock_db.commit = AsyncMock()
