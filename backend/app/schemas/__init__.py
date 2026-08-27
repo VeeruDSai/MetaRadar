@@ -19,6 +19,14 @@ from app.schemas.registry import (
     SourceRegistryItem,
     SourceHealthLogItem,
 )
+from app.schemas.auth import (
+    LoginRequest,
+    DemoLoginRequest,
+    UserMe,
+    CsrfResponse,
+    LogoutResponse,
+)
+
 
 
 def utc_now():

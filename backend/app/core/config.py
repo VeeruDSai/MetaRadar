@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Security & CORS
+    SECRET_KEY: str = "dev-secret-change-in-production"
+    SESSION_LIFETIME_SECONDS: int = 28800      # 8 hours absolute
+    SESSION_IDLE_TIMEOUT_SECONDS: int = 3600   # 1 hour idle
+    SESSION_COOKIE_SECURE: bool = False       # True in HTTPS production
+    DEMO_MODE: bool = True                    # Enables /auth/demo-login
+    DEMO_AUTO_SEED_USERS: bool = True
+    DEMO_USER_PASSWORD: Optional[str] = None
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 5
     CORS_ORIGINS: str = "http://localhost:3000"
     METARADAR_API_KEY: Optional[str] = None
     MUTATION_RATE_LIMIT_PER_MINUTE: int = 60
@@ -38,6 +46,7 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
 
     # LLM Provider & Hardware Settings
     LLM_PROVIDER: str = "local"  # local | xai | auto

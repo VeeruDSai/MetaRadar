@@ -8,6 +8,8 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from pgvector.sqlalchemy import Vector
 from app.db.session import Base
 from app.core.config import settings
+from app.models.auth import User, Session
+
 
 
 def utc_now():

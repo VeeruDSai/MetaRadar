@@ -7,9 +7,10 @@ import structlog
 from app.core.config import settings
 from app.core.domain_config import get_domain_config
 from app.core.logging import configure_structlog
-from app.core.middleware import CorrelationIdMiddleware
+from app.core.middleware import CorrelationIdMiddleware, SecurityHeadersMiddleware
 from app.api.v1.endpoints import (
     health,
+    auth,
     signals,
     pipeline,
     search,
@@ -40,6 +41,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("domain_config_load_failed", error=str(e))
 
+    # Auto-seed demo personas if in DEMO_MODE
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.services.auth_service import seed_demo_users_if_needed
+        async with AsyncSessionLocal() as session:
+            await seed_demo_users_if_needed(session)
+    except Exception as e:
+        logger.debug("Demo user auto-seed skipped: %s", e)
+
     # Initialize & Start Autonomous Ingestion Scheduler
     from app.services.scheduler import SourceScheduler
     scheduler = SourceScheduler.get_instance()
@@ -59,7 +69,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Correlation ID & Observability Tracing Middleware (must be added first to wrap outer request)
+# Middleware Setup (Order matters in Starlette: last added runs first on request)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 
 # CORS Middleware Setup
@@ -74,6 +85,7 @@ if settings.cors_origins_list:
 
 # Router Registrations
 app.include_router(health.router, prefix=f"{settings.API_V1_STR}/health", tags=["Health & Diagnostics"])
+app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication & Identity"])
 app.include_router(signals.router, prefix=f"{settings.API_V1_STR}", tags=["Signals & Intelligence"])
 app.include_router(intelligence.router, prefix=f"{settings.API_V1_STR}", tags=["Intelligence Views"])
 app.include_router(registry.router, prefix=f"{settings.API_V1_STR}", tags=["Registry"])
