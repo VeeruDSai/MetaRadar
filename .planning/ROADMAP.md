@@ -84,7 +84,32 @@
 
 ---
 
+---
+
+### Milestone v5.3 — MetaRadar Productionization (IN PLANNING)
+
+> **Branch:** `feature/phase-11-productionization`  
+> **Status:** Phase 11 — PLANNED  
+> **Core Objective:** Turn MetaRadar v5.2 into a functional, end-to-end, role-aware, reviewable, auditable, and secure decision-intelligence application. Complete vertical slice: Login → Role-Queue → Signal → Evidence → Review → Approve/Contest → Audit → Action → Leadership Visibility.
+
+### Phase 11: MetaRadar Productionization
+- **Goal:** Real authentication (User/Session/bcrypt), server-side RBAC, review state machine permission matrix, role-filtered signal queues, provenance completeness, operational FunctionsWorkspace, honest CalibrationWorkspace, Leadership cross-functional view, security hardening (CSRF, rate limiting, security headers, auth audit events), 30+ new tests, E2E vertical slice.
+- **Priority:** P0 (auth/RBAC/provenance) → P1 (operational UI) → P2 (security hardening)
+- **Requirements:** REQ-P11-01 … REQ-P11-42
+- **Status:** Planned
+- **Context:** [11-CONTEXT.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/11-productionization/11-CONTEXT.md)
+- **Plans:**
+  - [ ] 11-01-PLAN.md — Identity & Auth Foundation (User/Session models, bcrypt, /auth/* endpoints)
+  - [ ] 11-02-PLAN.md — Server-Side RBAC & Review Enforcement (role filtering, permission matrix, queue endpoint)
+  - [ ] 11-03-PLAN.md — Provenance Completeness & Pharma Source Validation (NewsAPI URL, SOURCE_UNAVAILABLE)
+  - [ ] 11-04-PLAN.md — Operational Intelligence UI (FunctionsWorkspace, CalibrationWorkspace, Leadership view)
+  - [ ] 11-05-PLAN.md — Frontend Auth Integration & Demo Persona (real auth, ReviewQueue, signal lifecycle)
+  - [ ] 11-06-PLAN.md — Security Hardening (security headers, CSRF, rate limiting, auth audit events)
+  - [ ] 11-07-PLAN.md — Test Suite Expansion & E2E Vertical Slice (32 new tests, vertical slice script)
+
+---
+
 ## Future Backlog / Next Milestone
 
-Future milestone initiatives (v5.3 / v6.0) can be planned and tracked here using `/gsd-new-milestone`.
+Future milestone initiatives (v6.0+) can be planned and tracked here using `/gsd-new-milestone`.
 
