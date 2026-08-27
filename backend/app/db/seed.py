@@ -26,6 +26,30 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 
+async def seed_canonical_sources_if_needed(session):
+    """Ensures all 8 canonical data sources are seeded in the database."""
+    sources_data = [
+        {"source_id": "pubmed", "name": "PubMed MEDLINE (E-Utilities)", "freshness_class": "batch", "syndication_group": "Literature", "status": "active"},
+        {"source_id": "clinical_trials", "name": "ClinicalTrials.gov API v2", "freshness_class": "near_real_time", "syndication_group": "Trial Registries", "status": "active"},
+        {"source_id": "fda", "name": "openFDA Drugs & Adverse Events", "freshness_class": "delayed", "syndication_group": "Regulatory", "status": "active"},
+        {"source_id": "ema", "name": "European Medicines Agency", "freshness_class": "delayed", "syndication_group": "Regulatory", "status": "active"},
+        {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "status": "active", "quota_remaining": 100},
+        {"source_id": "fierce_pharma", "name": "Fierce Pharma RSS", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "status": "active"},
+        {"source_id": "biopharmadive", "name": "BioPharma Dive RSS", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "status": "active"},
+        {"source_id": "biopharma_dive", "name": "BioPharma Dive RSS", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "status": "active"},
+        {"source_id": "et_pharma", "name": "ET Pharma (India)", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "status": "active"},
+    ]
+    for s in sources_data:
+        existing = await session.get(Source, s["source_id"])
+        if not existing:
+            session.add(Source(**s))
+        else:
+            existing.name = s["name"]
+            existing.freshness_class = s["freshness_class"]
+            existing.syndication_group = s["syndication_group"]
+            existing.status = s["status"]
+
+
 async def seed_data():
     async with async_session_factory() as session:
         print("[SEED] Seeding MetaRadar reference and synthetic landscape data...")
@@ -48,81 +72,7 @@ async def seed_data():
         await session.flush()
 
         # 2. Canonical Data Sources (All 8 registered pipeline connectors)
-        sources_data = [
-            {
-                "source_id": "pubmed",
-                "name": "PubMed MEDLINE (E-Utilities)",
-                "freshness_class": "batch",
-                "syndication_group": "Literature",
-                "status": "active",
-            },
-            {
-                "source_id": "clinical_trials",
-                "name": "ClinicalTrials.gov API v2",
-                "freshness_class": "near_real_time",
-                "syndication_group": "Trial Registries",
-                "status": "active",
-            },
-            {
-                "source_id": "fda",
-                "name": "openFDA Drugs & Adverse Events",
-                "freshness_class": "delayed",
-                "syndication_group": "Regulatory",
-                "status": "active",
-            },
-            {
-                "source_id": "ema",
-                "name": "European Medicines Agency",
-                "freshness_class": "delayed",
-                "syndication_group": "Regulatory",
-                "status": "active",
-            },
-            {
-                "source_id": "newsapi",
-                "name": "NewsAPI Industry Feed",
-                "freshness_class": "near_real_time",
-                "syndication_group": "Press / Media",
-                "status": "active",
-                "quota_remaining": 100,
-            },
-            {
-                "source_id": "fierce_pharma",
-                "name": "Fierce Pharma RSS",
-                "freshness_class": "near_real_time",
-                "syndication_group": "Press / Media",
-                "status": "active",
-            },
-            {
-                "source_id": "biopharmadive",
-                "name": "BioPharma Dive RSS",
-                "freshness_class": "near_real_time",
-                "syndication_group": "Press / Media",
-                "status": "active",
-            },
-            {
-                "source_id": "biopharma_dive",
-                "name": "BioPharma Dive RSS",
-                "freshness_class": "near_real_time",
-                "syndication_group": "Press / Media",
-                "status": "active",
-            },
-            {
-                "source_id": "et_pharma",
-                "name": "ET Pharma (India)",
-                "freshness_class": "near_real_time",
-                "syndication_group": "Press / Media",
-                "status": "active",
-            },
-        ]
-        for s in sources_data:
-            existing = await session.get(Source, s["source_id"])
-            if not existing:
-                session.add(Source(**s))
-            else:
-                existing.name = s["name"]
-                existing.freshness_class = s["freshness_class"]
-                existing.syndication_group = s["syndication_group"]
-                existing.status = s["status"]
+        await seed_canonical_sources_if_needed(session)
         await session.flush()
 
         # 3. Companies

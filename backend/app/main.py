@@ -41,14 +41,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("domain_config_load_failed", error=str(e))
 
-    # Auto-seed demo personas if in DEMO_MODE
+    # Auto-seed demo personas and canonical data sources
     try:
         from app.db.session import AsyncSessionLocal
         from app.services.auth_service import seed_demo_users_if_needed
+        from app.db.seed import seed_canonical_sources_if_needed
         async with AsyncSessionLocal() as session:
             await seed_demo_users_if_needed(session)
+            await seed_canonical_sources_if_needed(session)
+            await session.commit()
     except Exception as e:
-        logger.debug("Demo user auto-seed skipped: %s", e)
+        logger.debug("Startup auto-seed skipped/failed: %s", e)
 
     # Initialize & Start Autonomous Ingestion Scheduler
     from app.services.scheduler import SourceScheduler
