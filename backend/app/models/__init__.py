@@ -2,8 +2,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from sqlalchemy import (
-    Column, String, Text, DateTime, Integer, Boolean, Float, ForeignKey, Index, UniqueConstraint
+    Column, String, Text, DateTime, Integer, Boolean, Float, ForeignKey, Index, UniqueConstraint, event
 )
+
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from pgvector.sqlalchemy import Vector
 from app.db.session import Base
@@ -428,5 +429,18 @@ class AuditLog(Base):
     entity_id = Column(String(100), nullable=False)
     action = Column(String(50), nullable=False)
     performed_by = Column(String(100), default="system", nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True)
+    correlation_id = Column(String(36), nullable=True, index=True)
     timestamp = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     details = Column(JSONB, nullable=True)
+
+
+@event.listens_for(AuditLog, "before_update")
+def block_audit_log_update(mapper, connection, target):
+    raise PermissionError("Security Invariant Violation: AuditLog records are append-only and cannot be updated.")
+
+
+@event.listens_for(AuditLog, "before_delete")
+def block_audit_log_delete(mapper, connection, target):
+    raise PermissionError("Security Invariant Violation: AuditLog records are append-only and cannot be deleted.")
+

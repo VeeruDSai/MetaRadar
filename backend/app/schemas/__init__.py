@@ -165,11 +165,15 @@ class PrioritySchema(BaseModel):
 
 
 class SignalReviewRequest(BaseModel):
-    status: str = Field(default="REVIEWED", description="UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED")
-    reviewer: Optional[str] = Field(default="Clinical Reviewer", description="Role/Actor performing review")
+    status: str = Field(default="REVIEWED", description="Target review status: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED")
+    reviewer: Optional[str] = Field(default=None, description="Optional legacy reviewer name; server defaults to authenticated user")
     decision: Optional[str] = Field(default=None, description="Review decision outcome")
     notes: Optional[str] = Field(default=None, description="Reviewer notes")
     resulting_action: Optional[str] = Field(default=None, description="Action taken or initiated")
+    escalate: bool = Field(default=False, description="Whether to trigger leadership escalation")
+    escalation_reason: Optional[str] = Field(default=None, description="Reason for leadership escalation")
+    resolve_escalation: bool = Field(default=False, description="Whether leadership is resolving an active escalation")
+    is_override: bool = Field(default=False, description="Whether leadership/admin is performing a direct override")
 
 
 class AuditLogItemSchema(BaseModel):
@@ -178,8 +182,11 @@ class AuditLogItemSchema(BaseModel):
     entity_id: str
     action: str
     performed_by: str
+    user_id: Optional[UUID] = None
+    correlation_id: Optional[str] = None
     timestamp: datetime
     details: Optional[Dict[str, Any]] = None
+
 
 
 class SignalSchema(BaseModel):

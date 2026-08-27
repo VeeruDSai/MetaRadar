@@ -4,13 +4,16 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, List, Optional, Tuple
 from uuid import UUID
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, distinct, or_
 
 from app.db.session import get_db
 from app.models import Signal, Asset, Confluence, Development, Contradiction, Evidence, AuditLog
+from app.models.auth import User
+from app.api.deps import get_current_user, get_optional_user
+
 from app.schemas import (
     OverviewResponse,
     SignalListResponse,
@@ -277,6 +280,64 @@ def _serialize_signal(s: Signal) -> SignalSchema:
     )
 
 
+VALID_TRANSITIONS = {
+    "UNREVIEWED": {"IN_REVIEW", "DISMISSED"},
+    "IN_REVIEW": {"REVIEWED", "ACTION_REQUIRED", "DISMISSED"},
+    "REVIEWED": {"ACTION_REQUIRED", "ACTIONED"},
+    "ACTION_REQUIRED": {"ACTIONED", "IN_REVIEW"},
+    "DISMISSED": {"IN_REVIEW"},
+    "ACTIONED": set(),
+}
+
+ACTIONED_ALLOWED_ROLES = {"SAFETY", "MARKET_ACCESS", "LEADERSHIP", "ADMIN"}
+
+
+def validate_state_transition(
+    current_status: str,
+    target_status: str,
+    user: User,
+    escalate: bool = False,
+    is_override: bool = False,
+) -> None:
+    curr = current_status.upper().strip()
+    target = target_status.upper().strip()
+
+    # 1. Terminal State Invariant
+    if curr == "ACTIONED":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Conflict: Signal is in terminal state 'ACTIONED' and cannot be modified."
+        )
+
+    # 2. Escalation Target Invariant
+    if escalate and target not in {"REVIEWED", "ACTION_REQUIRED"}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Conflict: Escalation is only permitted when transitioning to 'REVIEWED' or 'ACTION_REQUIRED'."
+        )
+
+    # 3. Role Authorization for ACTIONED
+    if target == "ACTIONED" and user.role not in ACTIONED_ALLOWED_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Role '{user.role}' is not authorized to mark signals as ACTIONED."
+        )
+
+    # 4. Leadership / Admin Non-Terminal Override
+    if user.role in {"LEADERSHIP", "ADMIN"} and is_override:
+        valid_overrides = {"IN_REVIEW", "REVIEWED", "ACTION_REQUIRED"}
+        if target in valid_overrides or (curr in {"REVIEWED", "ACTION_REQUIRED"} and target == "ACTIONED"):
+            return
+
+    # 5. Standard Transition Check
+    allowed = VALID_TRANSITIONS.get(curr, set())
+    if target not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Conflict: Invalid transition from '{curr}' to '{target}'."
+        )
+
+
 @router.get("/signals", response_model=SignalListResponse)
 async def list_signals(
     severity: Optional[str] = Query(None, description="Filter by priority: CRITICAL, HIGH, MEDIUM, LOW"),
@@ -285,13 +346,27 @@ async def list_signals(
     date_to: Optional[datetime] = Query(None, description="Filter signals published on or before date"),
     signal_type: Optional[str] = Query(None, description="Filter by signal type"),
     source: Optional[str] = Query(None, description="Filter by source ID"),
+    all_functions: bool = Query(False, description="Whether to return signals across all stakeholder functions (LEADERSHIP and ADMIN only)"),
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Returns filtered signals list with deterministic ordering, limit/offset pagination, and total count."""
+    """Returns filtered signals list with RBAC role scoping, pagination, and total count."""
     query = select(Signal)
     count_query = select(func.count(Signal.signal_id))
+
+    # Role-Based Filtering
+    if current_user:
+        if all_functions:
+            if current_user.role not in {"LEADERSHIP", "ADMIN"}:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: Only LEADERSHIP and ADMIN roles can access all_functions=true",
+                )
+        elif current_user.role not in {"LEADERSHIP", "ADMIN"}:
+            query = query.where(Signal.relevant_function == current_user.role)
+            count_query = count_query.where(Signal.relevant_function == current_user.role)
 
     if severity:
         sev_list = [s.strip().upper() for s in severity.split(",") if s.strip()]
@@ -343,7 +418,55 @@ async def list_signals(
 
     return SignalListResponse(
         signals=[_serialize_signal(s) for s in signals],
-        total=total
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/signals/queue/{function_id}", response_model=SignalListResponse)
+async def get_function_queue(
+    function_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetches incoming review queue for a specific stakeholder function with RBAC isolation."""
+    fn = function_id.upper().strip()
+    if current_user.role not in {"LEADERSHIP", "ADMIN"} and current_user.role != fn:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Role '{current_user.role}' is not authorized to access queue for '{fn}'.",
+        )
+
+    query = (
+        select(Signal)
+        .where(
+            Signal.relevant_function == fn,
+            Signal.review_status.in_(["UNREVIEWED", "IN_REVIEW"])
+        )
+        .order_by(Signal.published_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    count_query = (
+        select(func.count(Signal.signal_id))
+        .where(
+            Signal.relevant_function == fn,
+            Signal.review_status.in_(["UNREVIEWED", "IN_REVIEW"])
+        )
+    )
+    res = await db.execute(query)
+    signals = res.scalars().all()
+    count_res = await db.execute(count_query)
+    total = count_res.scalar() or 0
+
+    return SignalListResponse(
+        signals=[_serialize_signal(s) for s in signals],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -383,13 +506,25 @@ async def get_signal_detail(signal_id: str, db: AsyncSession = Depends(get_db)):
 async def submit_signal_review(
     signal_id: str,
     payload: SignalReviewRequest,
-    db: AsyncSession = Depends(get_db)
+    request: Request,
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
-    Submits a human review action for a signal, persisting review state and audit history.
-    Supported statuses: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED.
-    Opening a signal does not mark it reviewed — an explicit review action is required.
+    Submits a review action for a signal, validating FSM transition invariants,
+    handling leadership escalations, and appending immutable audit records.
     """
+    # Resolve reviewer identity
+    user = current_user
+    if not user:
+        from app.services.auth_service import get_or_create_demo_user
+        user = await get_or_create_demo_user(db, "MEDICAL_AFFAIRS")
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to submit signal review.",
+            )
+
     target_uuid = None
     try:
         target_uuid = UUID(signal_id)
@@ -417,19 +552,22 @@ async def submit_signal_review(
             detail=f"Signal with ID '{signal_id}' not found."
         )
 
-    valid_statuses = {"UNREVIEWED", "IN_REVIEW", "REVIEWED", "ACTION_REQUIRED", "ACTIONED", "DISMISSED"}
-    norm_status = payload.status.upper().strip()
-    if norm_status not in valid_statuses:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid review status '{payload.status}'. Must be one of: {sorted(valid_statuses)}"
-        )
-
     prev_status = getattr(signal, "review_status", "UNREVIEWED") or "UNREVIEWED"
-    now_utc = datetime.now(timezone.utc)
+    target_status = payload.status.upper().strip()
 
-    signal.review_status = norm_status
-    signal.reviewed_by = payload.reviewer or "Clinical Reviewer"
+    validate_state_transition(
+        current_status=prev_status,
+        target_status=target_status,
+        user=user,
+        escalate=payload.escalate,
+        is_override=payload.is_override,
+    )
+
+    now_utc = datetime.now(timezone.utc)
+    correlation_id = getattr(request.state, "correlation_id", None) or request.headers.get("X-Correlation-ID")
+
+    signal.review_status = target_status
+    signal.reviewed_by = user.display_name
     signal.reviewed_at = now_utc
     if payload.decision:
         signal.review_decision = payload.decision
@@ -438,22 +576,50 @@ async def submit_signal_review(
     if payload.resulting_action:
         signal.resulting_action = payload.resulting_action
 
-    # Record immutable audit entry
-    audit_entry = AuditLog(
+    # Escalation Handling
+    if payload.escalate:
+        signal.is_escalated = True
+        signal.routing_reason = payload.escalation_reason or "Reviewer initiated leadership escalation"
+        db.add(AuditLog(
+            entity_name="Signal",
+            entity_id=str(signal.signal_id),
+            action="SIGNAL_ESCALATED",
+            performed_by=user.display_name,
+            user_id=user.user_id,
+            correlation_id=correlation_id,
+            timestamp=now_utc,
+            details={"reason": signal.routing_reason, "target": "LEADERSHIP"},
+        ))
+    elif payload.resolve_escalation and user.role in {"LEADERSHIP", "ADMIN"}:
+        signal.is_escalated = False
+        db.add(AuditLog(
+            entity_name="Signal",
+            entity_id=str(signal.signal_id),
+            action="ESCALATION_RESOLVED",
+            performed_by=user.display_name,
+            user_id=user.user_id,
+            correlation_id=correlation_id,
+            timestamp=now_utc,
+            details={"resolution_status": target_status, "resulting_action": payload.resulting_action},
+        ))
+
+    # Standard Review Audit Record
+    db.add(AuditLog(
         entity_name="Signal",
         entity_id=str(signal.signal_id),
         action="SIGNAL_REVIEWED",
-        performed_by=payload.reviewer or "Clinical Reviewer",
+        performed_by=user.display_name,
+        user_id=user.user_id,
+        correlation_id=correlation_id,
         timestamp=now_utc,
         details={
             "previous_status": prev_status,
-            "new_status": norm_status,
+            "new_status": target_status,
             "decision": payload.decision,
             "notes": payload.notes,
             "resulting_action": payload.resulting_action,
-        }
-    )
-    db.add(audit_entry)
+        },
+    ))
     await db.commit()
     await db.refresh(signal)
 
@@ -514,10 +680,13 @@ async def get_signal_audit_history(signal_id: str, db: AsyncSession = Depends(ge
                 entity_id=log.entity_id,
                 action=log.action,
                 performed_by=log.performed_by,
+                user_id=log.user_id,
+                correlation_id=log.correlation_id,
                 timestamp=log.timestamp,
                 details=log.details or {},
             )
         )
+
 
     # If no explicit review audit logs exist yet, provide the factual baseline provenance trail
     if not items:
