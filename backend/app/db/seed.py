@@ -93,6 +93,13 @@ async def seed_data():
                 "status": "active",
             },
             {
+                "source_id": "biopharmadive",
+                "name": "BioPharma Dive RSS",
+                "freshness_class": "near_real_time",
+                "syndication_group": "Press / Media",
+                "status": "active",
+            },
+            {
                 "source_id": "biopharma_dive",
                 "name": "BioPharma Dive RSS",
                 "freshness_class": "near_real_time",

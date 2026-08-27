@@ -76,12 +76,20 @@ async def get_sources_registry(
 
     CANONICAL_SOURCE_IDS = {
         "pubmed", "clinical_trials", "fda", "ema", "newsapi",
-        "fierce_pharma", "biopharma_dive", "et_pharma",
+        "fierce_pharma", "biopharmadive", "biopharma_dive", "et_pharma",
     }
     items = []
+    seen_ids = set()
     for s in sources:
         if s.source_id not in CANONICAL_SOURCE_IDS:
             continue
+        if s.source_id in seen_ids:
+            continue
+        seen_ids.add(s.source_id)
+        if s.source_id == "biopharma_dive":
+            seen_ids.add("biopharmadive")
+        elif s.source_id == "biopharmadive":
+            seen_ids.add("biopharma_dive")
         config_err = configuration_error_for(s.source_id)
         if config_err:
             conn_status = "CONFIGURATION_ERROR"
@@ -111,7 +119,6 @@ async def get_sources_registry(
             )
         )
 
-    seen_ids = {s.source_id for s in sources}
     canonical_fallbacks = [
         {"source_id": "pubmed", "name": "PubMed MEDLINE (E-Utilities)", "freshness_class": "batch", "syndication_group": "Literature"},
         {"source_id": "clinical_trials", "name": "ClinicalTrials.gov API v2", "freshness_class": "near_real_time", "syndication_group": "Trial Registries"},
@@ -119,12 +126,16 @@ async def get_sources_registry(
         {"source_id": "ema", "name": "European Medicines Agency", "freshness_class": "delayed", "syndication_group": "Regulatory"},
         {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "quota_remaining": 100},
         {"source_id": "fierce_pharma", "name": "Fierce Pharma", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "tier": 3},
-        {"source_id": "biopharma_dive", "name": "BioPharma Dive", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "tier": 3},
+        {"source_id": "biopharmadive", "name": "BioPharma Dive", "freshness_class": "near_real_time", "syndication_group": "Press / Media", "tier": 3},
         {"source_id": "et_pharma", "name": "ET Pharma India", "freshness_class": "near_real_time", "syndication_group": "India Pharma Media", "tier": 3},
     ]
     for c in canonical_fallbacks:
         if c["source_id"] not in seen_ids:
             seen_ids.add(c["source_id"])
+            if c["source_id"] == "biopharmadive":
+                seen_ids.add("biopharma_dive")
+            elif c["source_id"] == "biopharma_dive":
+                seen_ids.add("biopharmadive")
             config_err = configuration_error_for(c["source_id"])
             conn_status = "CONFIGURATION_ERROR" if config_err else "NEVER_CONNECTED"
             items.append(

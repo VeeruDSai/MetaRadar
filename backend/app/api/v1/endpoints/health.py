@@ -27,6 +27,10 @@ _CONNECTOR_NAMES = {
     "newsapi": "NewsAPI",
     "fda": "OpenFDA / FDA Regulatory",
     "ema": "EMA RSS / Decisions",
+    "fierce_pharma": "Fierce Pharma RSS",
+    "biopharmadive": "BioPharma Dive RSS",
+    "biopharma_dive": "BioPharma Dive RSS",
+    "et_pharma": "ET Pharma (India) RSS",
 }
 
 

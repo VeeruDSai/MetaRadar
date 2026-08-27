@@ -18,3 +18,5 @@ fastembed>=0.4.0
 structlog>=24.1.0
 asgi-correlation-id>=4.3.0
 pytest-httpx>=0.30.0
+bcrypt>=4.1.0
+itsdangerous>=2.1.0

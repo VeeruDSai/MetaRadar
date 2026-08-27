@@ -106,6 +106,12 @@ SOURCE_AUTHORITY_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "BioPharma Dive Life Sciences Reporting",
         "trust_score": 0.65,
     },
+    "biopharmadive": {
+        "tier": SourceAuthorityTier.DISCOVERY,
+        "category": "PHARMA_MEDIA",
+        "description": "BioPharma Dive Life Sciences Reporting",
+        "trust_score": 0.65,
+    },
     "et_pharma": {
         "tier": SourceAuthorityTier.DISCOVERY,
         "category": "PHARMA_MEDIA",
