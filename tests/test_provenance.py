@@ -19,6 +19,10 @@ from app.connectors.clinical_trials import ClinicalTrialsConnector
 from app.connectors.newsapi import NewsAPIConnector
 from app.connectors.fda import OpenFDAConnector
 from app.connectors.ema import EMARSSConnector
+from app.connectors.fierce_pharma import FiercePharmaRSSConnector
+from app.connectors.et_pharma import ETPharmaRSSConnector
+from app.connectors.biopharma_dive import BioPharmaDiveRSSConnector
+
 
 
 # ---------------------------------------------------------------------------
@@ -336,3 +340,109 @@ def test_resolve_canonical_provenance_newsapi_landing_page_blocked():
     )
     assert url is None
     assert status == "missing_url"
+
+
+@pytest.mark.asyncio
+async def test_fierce_pharma_provenance_integration():
+    """Fierce Pharma RSS XML -> connector parse -> raw_payload provenance"""
+    rss_xml = """
+    <item>
+        <title>Novo Nordisk scores breakthrough designation for Mim8</title>
+        <link>https://www.fiercepharma.com/pharma/novo-nordisk-scores-breakthrough-designation-mim8</link>
+        <description>Next-generation subcutaneous factor VIII mimetic receives priority regulatory pathway.</description>
+        <pubDate>Mon, 23 Feb 2026 12:00:00 GMT</pubDate>
+    </item>
+    """
+    item = ET.fromstring(rss_xml.strip())
+    connector = FiercePharmaRSSConnector()
+    retrieved_at = datetime.now(timezone.utc)
+    guid = "https://www.fiercepharma.com/pharma/novo-nordisk-scores-breakthrough-designation-mim8"
+    title = "Novo Nordisk scores breakthrough designation for Mim8"
+    description = "Next-generation subcutaneous factor VIII mimetic receives priority regulatory pathway."
+    payload = connector._parse_item(item, guid, title, description, retrieved_at)
+
+    assert payload is not None
+    assert payload.url == "https://www.fiercepharma.com/pharma/novo-nordisk-scores-breakthrough-designation-mim8"
+    assert payload.raw_payload.get("source_name") == "Fierce Pharma"
+    assert payload.raw_payload.get("signal_type") == "NEWS"
+    assert payload.raw_payload.get("url") == "https://www.fiercepharma.com/pharma/novo-nordisk-scores-breakthrough-designation-mim8"
+
+
+@pytest.mark.asyncio
+async def test_et_pharma_provenance_integration():
+    """ET Pharma RSS XML -> connector parse -> raw_payload provenance"""
+    rss_xml = """
+    <item>
+        <title>European market authorization review underway for hemophilia therapeutics</title>
+        <link>https://health.economictimes.indiatimes.com/news/pharma/european-market-authorization-review-underway/10101010</link>
+        <description>Comprehensive overview of emerging non-factor replacement therapies.</description>
+        <pubDate>Tue, 24 Feb 2026 08:30:00 GMT</pubDate>
+    </item>
+    """
+    item = ET.fromstring(rss_xml.strip())
+    connector = ETPharmaRSSConnector()
+    retrieved_at = datetime.now(timezone.utc)
+    guid = "https://health.economictimes.indiatimes.com/news/pharma/european-market-authorization-review-underway/10101010"
+    title = "European market authorization review underway for hemophilia therapeutics"
+    description = "Comprehensive overview of emerging non-factor replacement therapies."
+    payload = connector._parse_item(item, guid, title, description, retrieved_at)
+
+    assert payload is not None
+    assert payload.url == "https://health.economictimes.indiatimes.com/news/pharma/european-market-authorization-review-underway/10101010"
+    assert payload.raw_payload.get("source_name") == "ET Pharma"
+    assert payload.raw_payload.get("signal_type") == "NEWS"
+
+
+
+@pytest.mark.asyncio
+async def test_biopharma_dive_provenance_integration():
+    """BioPharma Dive RSS XML -> connector parse -> raw_payload provenance"""
+    rss_xml = """
+    <item>
+        <title>Pfizer advances marstacimab commercialization following FDA filing acceptance</title>
+        <link>https://www.biopharmadive.com/news/pfizer-marstacimab-fda-filing-acceptance/702345/</link>
+        <description>Anti-TFPI antibody targets routine prophylaxis in both hemophilia A and B.</description>
+        <pubDate>Wed, 25 Feb 2026 15:45:00 GMT</pubDate>
+    </item>
+    """
+    item = ET.fromstring(rss_xml.strip())
+    connector = BioPharmaDiveRSSConnector()
+    retrieved_at = datetime.now(timezone.utc)
+    guid = "https://www.biopharmadive.com/news/pfizer-marstacimab-fda-filing-acceptance/702345/"
+    title = "Pfizer advances marstacimab commercialization following FDA filing acceptance"
+    description = "Anti-TFPI antibody targets routine prophylaxis in both hemophilia A and B."
+    payload = connector._parse_item(item, guid, title, description, retrieved_at)
+
+    assert payload is not None
+    assert payload.url == "https://www.biopharmadive.com/news/pfizer-marstacimab-fda-filing-acceptance/702345/"
+    assert payload.raw_payload.get("source_name") == "BioPharma Dive"
+    assert payload.raw_payload.get("signal_type") == "NEWS"
+
+
+def test_all_8_connectors_provenance_and_reachability_matrix():
+    """Asserts that all 8 connectors have valid, verifiable canonical URL resolution and zero generic landing pages."""
+    from app.services.provenance_urls import resolve_canonical_provenance
+
+    connectors_test_data = [
+        ("pubmed", "https://pubmed.ncbi.nlm.nih.gov/38123456/", "38123456", "Mim8 clinical study", "https://pubmed.ncbi.nlm.nih.gov/38123456/"),
+        ("clinical_trials", "https://clinicaltrials.gov/study/NCT05551234", "NCT05551234", "Phase 3 Study", "https://clinicaltrials.gov/study/NCT05551234"),
+        ("fda", None, "761083", "Hemlibra emicizumab approval", "https://www.accessdata.fda.gov/scripts/cder/daf/index.cfm?event=overview.process&ApplNo=761083"),
+        ("ema", None, "roctavian", "Roctavian valoctocogene roxaparvovec EPAR", "https://www.ema.europa.eu/en/medicines/human/EPAR/roctavian"),
+        ("newsapi", "https://www.reuters.com/business/healthcare/test-article", "reuters-1", "Market update", "https://www.reuters.com/business/healthcare/test-article"),
+        ("fierce_pharma", "https://www.fiercepharma.com/pharma/article-1", "fp-1", "Fierce update", "https://www.fiercepharma.com/pharma/article-1"),
+        ("et_pharma", "https://health.economictimes.indiatimes.com/news/pharma/article-2", "et-2", "ET update", "https://health.economictimes.indiatimes.com/news/pharma/article-2"),
+        ("biopharmadive", "https://www.biopharmadive.com/news/article-3/123/", "bpd-3", "BioPharma update", "https://www.biopharmadive.com/news/article-3/123/"),
+    ]
+
+    assert len(connectors_test_data) == 8
+
+    for source_id, url_input, ext_id, title, expected_url in connectors_test_data:
+        url, status = resolve_canonical_provenance(
+            source_id=source_id,
+            existing_url=url_input,
+            external_id=ext_id,
+            title_or_content=title,
+        )
+        assert url == expected_url, f"Failed for connector {source_id}: expected {expected_url}, got {url}"
+        assert status == "available"
+
