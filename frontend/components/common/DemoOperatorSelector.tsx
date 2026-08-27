@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { UserCheck, ChevronDown, ShieldAlert } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+
 
 export interface DemoOperator {
   value: string
@@ -53,34 +55,43 @@ const STORAGE_KEY = 'metaradar_demo_operator'
 const DEFAULT_OPERATOR = DEMO_OPERATORS[0].value
 
 export function useDemoOperator() {
+  const { role, demoLogin } = useAuth()
   const [operator, setOperator] = useState<string>(DEFAULT_OPERATOR)
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        setOperator(stored)
-      }
-    } catch {
-      // sessionStorage not available (SSR or privacy mode)
+    // Sync with role from AuthContext if available
+    const matched = DEMO_OPERATORS.find((o) => o.functionId === role)
+    if (matched) {
+      setOperator(matched.value)
+    } else {
+      try {
+        const stored = sessionStorage.getItem(STORAGE_KEY)
+        if (stored) {
+          setOperator(stored)
+        }
+      } catch {}
     }
     setIsHydrated(true)
-  }, [])
+  }, [role])
 
   const changeOperator = (newOp: string) => {
     setOperator(newOp)
+    const target = DEMO_OPERATORS.find((o) => o.value === newOp)
+    if (target) {
+      demoLogin(target.functionId).catch(() => {})
+    }
     try {
       sessionStorage.setItem(STORAGE_KEY, newOp)
-    } catch {
-      // ignore
+    } catch {}
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('demo_operator_changed'))
     }
-    // Dispatch storage event for other components listening
-    window.dispatchEvent(new Event('demo_operator_changed'))
   }
 
   return { operator, changeOperator, isHydrated }
 }
+
 
 export function DemoOperatorSelector() {
   const { operator, changeOperator, isHydrated } = useDemoOperator()

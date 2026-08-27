@@ -652,3 +652,64 @@ export interface SignalFilterParams {
   limit?: number;
   offset?: number;
 }
+
+export interface UserMe {
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface DemoLoginRequest {
+  role: string;
+}
+
+export interface CsrfResponse {
+  csrf_token: string;
+}
+
+export interface LogoutResponse {
+  status: string;
+  message: string;
+}
+
+export interface FunctionStatsResponse {
+  function_id: string;
+  unreviewed_count: number;
+  in_review_count: number;
+  escalation_count: number;
+  total_decisions: number;
+  time_to_first_review_hours?: number | null;
+  time_to_final_decision_hours?: number | null;
+  recent_decisions: Signal[];
+}
+
+export interface FunctionCalibrationProfile {
+  function_name: string;
+  status: string;
+  feedback_sample_count: number;
+  min_required_samples: number;
+  brier_score?: number | null;
+  ece_score?: number | null;
+  reliability_curve: Array<{ bin_center: number; observed_accuracy: number }>;
+}
+
+export interface CalibrationStatusResponse {
+  profiles: FunctionCalibrationProfile[];
+  total_feedback_samples: number;
+  last_calibration_timestamp?: string | null;
+}
+
+export interface LeadershipSummaryResponse {
+  pending_escalations: Signal[];
+  critical_unreviewed: Signal[];
+  per_function_counts: Record<string, { unreviewed: number; in_review: number; escalated: number }>;
+  total_open_signals: number;
+}

@@ -31,7 +31,17 @@ import type {
   SignalFilterParams,
   SignalReviewPayload,
   AuditLogItem,
+  UserMe,
+  LoginRequest,
+  DemoLoginRequest,
+  CsrfResponse,
+  LogoutResponse,
+  FunctionStatsResponse,
+  FunctionCalibrationProfile,
+  CalibrationStatusResponse,
+  LeadershipSummaryResponse,
 } from '@/types/api'
+
 
 import { ApiError } from './errors'
 import { mapSignal } from './mappers'
@@ -149,7 +159,31 @@ export function mapSearchResult(r: any): Signal {
   })
 }
 
+function getCsrfCookie(): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(/(?:^|;\s*)metaradar_csrf=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+let cachedCsrfToken: string | null = null
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+
+export async function fetchCsrfToken(signal?: AbortSignal): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/csrf`, {
+      credentials: 'include',
+      signal,
+    })
+    if (res.ok) {
+      const data = (await res.json()) as CsrfResponse
+      cachedCsrfToken = data.csrf_token
+      return data.csrf_token
+    }
+  } catch {}
+  return ''
+}
+
 
 async function apiFetch<T>(
   endpoint: string,
@@ -158,12 +192,27 @@ async function apiFetch<T>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`
   try {
+    const method = (options?.method || 'GET').toUpperCase()
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options?.headers as Record<string, string>),
+    }
+
+    // Attach CSRF token on mutating requests
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      let csrf = getCsrfCookie() || cachedCsrfToken
+      if (!csrf && typeof window !== 'undefined') {
+        csrf = await fetchCsrfToken(signal)
+      }
+      if (csrf) {
+        headers['X-CSRF-Token'] = csrf
+      }
+    }
+
     const fetchOptions: RequestInit = {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      credentials: 'include',
+      headers,
     }
     // Only add signal when defined — some browsers reject undefined as AbortSignal
     if (signal !== undefined) {
@@ -705,3 +754,98 @@ export async function fetchSignalAuditHistory(
     signal
   )
 }
+
+// ---------------------------------------------------------------------------
+// Auth & Identity API
+// ---------------------------------------------------------------------------
+
+export async function login(payload: LoginRequest, signal?: AbortSignal): Promise<UserMe> {
+  return apiFetch<UserMe>(
+    '/auth/login',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    signal
+  )
+}
+
+export async function demoLogin(role: string, signal?: AbortSignal): Promise<UserMe> {
+  return apiFetch<UserMe>(
+    '/auth/demo-login',
+    {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    },
+    signal
+  )
+}
+
+export async function logout(signal?: AbortSignal): Promise<LogoutResponse> {
+  return apiFetch<LogoutResponse>(
+    '/auth/logout',
+    {
+      method: 'POST',
+    },
+    signal
+  )
+}
+
+export async function getMe(signal?: AbortSignal): Promise<UserMe> {
+  return apiFetch<UserMe>('/auth/me', undefined, signal)
+}
+
+// ---------------------------------------------------------------------------
+// Operational Workspaces & Leadership API
+// ---------------------------------------------------------------------------
+
+export async function getFunctionQueue(
+  functionId: string,
+  limit = 50,
+  offset = 0,
+  signal?: AbortSignal
+): Promise<{ signals: Signal[]; total: number }> {
+  const data = await apiFetch<{ signals: any[]; total: number }>(
+    `/signals/queue/${encodeURIComponent(functionId)}?limit=${limit}&offset=${offset}`,
+    undefined,
+    signal
+  )
+  return {
+    signals: (data.signals || []).map(mapSignal),
+    total: data.total,
+  }
+}
+
+export async function getFunctionStats(
+  functionId: string,
+  signal?: AbortSignal
+): Promise<FunctionStatsResponse> {
+  const data = await apiFetch<any>(
+    `/function-stats/${encodeURIComponent(functionId)}`,
+    undefined,
+    signal
+  )
+  return {
+    ...data,
+    recent_decisions: (data.recent_decisions || []).map(mapSignal),
+  }
+}
+
+export async function getCalibrationStatus(
+  signal?: AbortSignal
+): Promise<CalibrationStatusResponse> {
+  return apiFetch<CalibrationStatusResponse>('/calibration/status', undefined, signal)
+}
+
+export async function getLeadershipSummary(
+  signal?: AbortSignal
+): Promise<LeadershipSummaryResponse> {
+  const data = await apiFetch<any>('/leadership/summary', undefined, signal)
+  return {
+    pending_escalations: (data.pending_escalations || []).map(mapSignal),
+    critical_unreviewed: (data.critical_unreviewed || []).map(mapSignal),
+    per_function_counts: data.per_function_counts || {},
+    total_open_signals: data.total_open_signals || 0,
+  }
+}
+

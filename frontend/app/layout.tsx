@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import { AuthProvider } from '@/context/AuthContext'
 import { ScrollReveal } from '@/components/common/ScrollReveal'
 
 export const metadata: Metadata = {
@@ -49,10 +50,13 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-background text-foreground min-h-screen">
         <ThemeProvider>
-          <ScrollReveal />
-          {children}
+          <AuthProvider>
+            <ScrollReveal />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
   )
 }
+
