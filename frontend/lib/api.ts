@@ -383,12 +383,23 @@ export async function streamAthena(
   signal?: AbortSignal
 ): Promise<void> {
   const url = `${API_BASE}/athena/stream`
+  let csrf = getCsrfCookie() || cachedCsrfToken
+  if (!csrf && typeof window !== 'undefined') {
+    csrf = await fetchCsrfToken(signal)
+  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (csrf) {
+    headers['X-CSRF-Token'] = csrf
+  }
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
+    credentials: 'include',
     body: JSON.stringify({ prompt }),
     signal,
   }).catch((err: unknown) => {
+
+
     if (err instanceof Error && err.name === 'AbortError') throw err
     throw new ApiError(0, 'NetworkError', err instanceof Error ? err.message : 'Network request failed', true, undefined, '/athena/stream')
   })
