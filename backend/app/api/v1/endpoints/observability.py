@@ -120,7 +120,10 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
 
     from app.core.config import configuration_error_for
 
-    CANONICAL_SOURCE_IDS = {"pubmed", "clinical_trials", "fda", "ema", "newsapi"}
+    CANONICAL_SOURCE_IDS = {
+        "pubmed", "clinical_trials", "fda", "ema", "newsapi",
+        "fierce_pharma", "biopharma_dive", "et_pharma",
+    }
     items = []
     seen_ids = set()
 

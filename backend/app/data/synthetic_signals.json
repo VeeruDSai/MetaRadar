@@ -32,7 +32,7 @@
     "published_at": "2025-06-01T12:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-emicizumab-update-in-haemophilia-a-2"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-emicizumab-update-in-haemophilia-a-1"
   },
   {
     "id": "syn-0004",
@@ -84,14 +84,14 @@
   },
   {
     "id": "syn-0008",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-clinical-trial-fidanacogene-elaparvovec-update-in-",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-clinical-trial-fidanacogene-elaparvovec-updat",
     "title": "Clinical Trial: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Phase 2 Clinical Evaluation of fidanacogene elaparvovec (fidanacogene) by Pfizer in Haemophilia A. A prospective multicenter open-label trial (NCT04010007) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-06-02T18:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-fidanacogene-elaparvovec-update-in-/articleshow/10000007.cms"
+    "url": "https://www.fiercepharma.com/pharma/clinical-trial-fidanacogene-elaparvovec-updat-2"
   },
   {
     "id": "syn-0009",
@@ -143,14 +143,14 @@
   },
   {
     "id": "syn-0013",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-safety-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-safety-roctavian-update-in-haemophilia-a",
     "title": "Safety: Roctavian Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for Roctavian (Roctavian). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-06-04T00:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/safety-roctavian-update-in-haemophilia-a-12"
+    "url": "https://www.biopharmadive.com/news/safety-roctavian-update-in-haemophilia-a-3"
   },
   {
     "id": "syn-0014",
@@ -202,14 +202,14 @@
   },
   {
     "id": "syn-0018",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-regulatory-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-regulatory-concizumab-update-in-haemophilia-a",
     "title": "Regulatory: concizumab Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for concizumab (concizumab) in Haemophilia A. Novo Nordisk announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10017). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-06-05T06:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/regulatory-concizumab-update-in-haemophilia-a-17"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/regulatory-concizumab-update-in-haemophilia-a/articleshow/10892004.cms"
   },
   {
     "id": "syn-0019",
@@ -262,13 +262,13 @@
   {
     "id": "syn-0023",
     "source_id": "newsapi",
-    "external_id": "reuters-publications-marstacimab-update-in-haemophilia-a",
+    "external_id": "reuters-publications-marstacimab-update-in-haemophili",
     "title": "Publications: marstacimab Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of marstacimab (Hympavzi) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Pfizer's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-06-06T12:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-marstacimab-update-in-haemophilia-a-22"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-marstacimab-update-in-haemophili-5"
   },
   {
     "id": "syn-0024",
@@ -320,14 +320,14 @@
   },
   {
     "id": "syn-0028",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-access-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-access-hemgenix-update-in-haemophilia-a",
     "title": "Access: Hemgenix Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for Hemgenix. National pricing and reimbursement authority issued positive recommendation for CSL Behring's etranacogene dezaparvovec in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-06-07T18:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/access-hemgenix-update-in-haemophilia-a/articleshow/10000027.cms"
+    "url": "https://www.fiercepharma.com/pharma/access-hemgenix-update-in-haemophilia-a-6"
   },
   {
     "id": "syn-0029",
@@ -379,14 +379,14 @@
   },
   {
     "id": "syn-0033",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-commercial-patent-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-commercial-patent-mim8-update-in-haemophilia-",
     "title": "Commercial Patent: mim8 Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for mim8. Novo Nordisk secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-06-09T00:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/commercial-patent-mim8-update-in-haemophilia-a-32"
+    "url": "https://www.biopharmadive.com/news/commercial-patent-mim8-update-in-haemophilia--7"
   },
   {
     "id": "syn-0034",
@@ -438,14 +438,14 @@
   },
   {
     "id": "syn-0038",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-congress-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-congress-fitusiran-update-in-haemophilia-a",
     "title": "Congress: fitusiran Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: fitusiran Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10037) regarding Sanofi's fitusiran. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-06-10T06:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/congress-fitusiran-update-in-haemophilia-a-37"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/congress-fitusiran-update-in-haemophilia-a/articleshow/10892008.cms"
   },
   {
     "id": "syn-0039",
@@ -498,13 +498,13 @@
   {
     "id": "syn-0043",
     "source_id": "newsapi",
-    "external_id": "reuters-clinical-trial-emicizumab-update-in-haemophilia-a",
+    "external_id": "reuters-clinical-trial-emicizumab-update-in-haemophil",
     "title": "Clinical Trial: emicizumab Update in Haemophilia A",
     "content": "Phase 1 Clinical Evaluation of emicizumab (Hemlibra) by Roche in Haemophilia A. A prospective multicenter open-label trial (NCT04010042) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-06-11T12:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-emicizumab-update-in-haemophilia-a-42"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-emicizumab-update-in-haemophil-9"
   },
   {
     "id": "syn-0044",
@@ -556,14 +556,14 @@
   },
   {
     "id": "syn-0048",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-safety-fidanacogene-elaparvovec-update-in-haemophi",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-safety-fidanacogene-elaparvovec-update-in-hae",
     "title": "Safety: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for fidanacogene elaparvovec (fidanacogene). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-06-12T18:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/safety-fidanacogene-elaparvovec-update-in-haemophi/articleshow/10000047.cms"
+    "url": "https://www.fiercepharma.com/pharma/safety-fidanacogene-elaparvovec-update-in-hae-10"
   },
   {
     "id": "syn-0049",
@@ -615,14 +615,14 @@
   },
   {
     "id": "syn-0053",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-regulatory-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-regulatory-roctavian-update-in-haemophilia-a",
     "title": "Regulatory: Roctavian Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for Roctavian (Roctavian) in Haemophilia A. BioMarin announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10052). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-06-14T00:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/regulatory-roctavian-update-in-haemophilia-a-52"
+    "url": "https://www.biopharmadive.com/news/regulatory-roctavian-update-in-haemophilia-a-11"
   },
   {
     "id": "syn-0054",
@@ -674,14 +674,14 @@
   },
   {
     "id": "syn-0058",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-publications-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-publications-concizumab-update-in-haemophilia",
     "title": "Publications: concizumab Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of concizumab (concizumab) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Novo Nordisk's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-06-15T06:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/publications-concizumab-update-in-haemophilia-a-57"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/publications-concizumab-update-in-haemophilia/articleshow/10892012.cms"
   },
   {
     "id": "syn-0059",
@@ -740,7 +740,7 @@
     "published_at": "2025-06-16T12:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-marstacimab-update-in-haemophilia-a-62"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-marstacimab-update-in-haemophilia-a-13"
   },
   {
     "id": "syn-0064",
@@ -792,14 +792,14 @@
   },
   {
     "id": "syn-0068",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-commercial-patent-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-commercial-patent-hemgenix-update-in-haemophi",
     "title": "Commercial Patent: Hemgenix Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for Hemgenix. CSL Behring secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-06-17T18:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/commercial-patent-hemgenix-update-in-haemophilia-a/articleshow/10000067.cms"
+    "url": "https://www.fiercepharma.com/pharma/commercial-patent-hemgenix-update-in-haemophi-14"
   },
   {
     "id": "syn-0069",
@@ -851,14 +851,14 @@
   },
   {
     "id": "syn-0073",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-congress-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-congress-mim8-update-in-haemophilia-a",
     "title": "Congress: mim8 Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: mim8 Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10072) regarding Novo Nordisk's mim8. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-06-19T00:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/congress-mim8-update-in-haemophilia-a-72"
+    "url": "https://www.biopharmadive.com/news/congress-mim8-update-in-haemophilia-a-15"
   },
   {
     "id": "syn-0074",
@@ -910,14 +910,14 @@
   },
   {
     "id": "syn-0078",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-clinical-trial-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-clinical-trial-fitusiran-update-in-haemophili",
     "title": "Clinical Trial: fitusiran Update in Haemophilia A",
     "content": "Phase 3 Clinical Evaluation of fitusiran (fitusiran) by Sanofi in Haemophilia A. A prospective multicenter open-label trial (NCT04010077) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-06-20T06:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/clinical-trial-fitusiran-update-in-haemophilia-a-77"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-fitusiran-update-in-haemophili/articleshow/10892016.cms"
   },
   {
     "id": "syn-0079",
@@ -976,7 +976,7 @@
     "published_at": "2025-06-21T12:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/safety-emicizumab-update-in-haemophilia-a-82"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/safety-emicizumab-update-in-haemophilia-a-17"
   },
   {
     "id": "syn-0084",
@@ -1028,14 +1028,14 @@
   },
   {
     "id": "syn-0088",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-regulatory-fidanacogene-elaparvovec-update-in-haem",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-regulatory-fidanacogene-elaparvovec-update-in",
     "title": "Regulatory: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for fidanacogene elaparvovec (fidanacogene) in Haemophilia A. Pfizer announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10087). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-06-22T18:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/regulatory-fidanacogene-elaparvovec-update-in-haem/articleshow/10000087.cms"
+    "url": "https://www.fiercepharma.com/pharma/regulatory-fidanacogene-elaparvovec-update-in-18"
   },
   {
     "id": "syn-0089",
@@ -1087,14 +1087,14 @@
   },
   {
     "id": "syn-0093",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-publications-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-publications-roctavian-update-in-haemophilia-",
     "title": "Publications: Roctavian Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of Roctavian (Roctavian) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for BioMarin's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-06-24T00:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/publications-roctavian-update-in-haemophilia-a-92"
+    "url": "https://www.biopharmadive.com/news/publications-roctavian-update-in-haemophilia--19"
   },
   {
     "id": "syn-0094",
@@ -1146,14 +1146,14 @@
   },
   {
     "id": "syn-0098",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-access-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-access-concizumab-update-in-haemophilia-a",
     "title": "Access: concizumab Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for concizumab. National pricing and reimbursement authority issued positive recommendation for Novo Nordisk's concizumab in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-06-25T06:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/access-concizumab-update-in-haemophilia-a-97"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/access-concizumab-update-in-haemophilia-a/articleshow/10892020.cms"
   },
   {
     "id": "syn-0099",
@@ -1206,13 +1206,13 @@
   {
     "id": "syn-0103",
     "source_id": "newsapi",
-    "external_id": "reuters-commercial-patent-marstacimab-update-in-haemophili",
+    "external_id": "reuters-commercial-patent-marstacimab-update-in-haemo",
     "title": "Commercial Patent: marstacimab Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for marstacimab. Pfizer secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-06-26T12:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/commercial-patent-marstacimab-update-in-haemophili-102"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/commercial-patent-marstacimab-update-in-haemo-21"
   },
   {
     "id": "syn-0104",
@@ -1264,14 +1264,14 @@
   },
   {
     "id": "syn-0108",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-congress-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-congress-hemgenix-update-in-haemophilia-a",
     "title": "Congress: Hemgenix Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: Hemgenix Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10107) regarding CSL Behring's etranacogene dezaparvovec. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-06-27T18:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/congress-hemgenix-update-in-haemophilia-a/articleshow/10000107.cms"
+    "url": "https://www.fiercepharma.com/pharma/congress-hemgenix-update-in-haemophilia-a-22"
   },
   {
     "id": "syn-0109",
@@ -1323,14 +1323,14 @@
   },
   {
     "id": "syn-0113",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-clinical-trial-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-clinical-trial-mim8-update-in-haemophilia-a",
     "title": "Clinical Trial: mim8 Update in Haemophilia A",
     "content": "Phase 2 Clinical Evaluation of mim8 (mim8) by Novo Nordisk in Haemophilia A. A prospective multicenter open-label trial (NCT04010112) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-06-29T00:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/clinical-trial-mim8-update-in-haemophilia-a-112"
+    "url": "https://www.biopharmadive.com/news/clinical-trial-mim8-update-in-haemophilia-a-23"
   },
   {
     "id": "syn-0114",
@@ -1382,14 +1382,14 @@
   },
   {
     "id": "syn-0118",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-safety-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-safety-fitusiran-update-in-haemophilia-a",
     "title": "Safety: fitusiran Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for fitusiran (fitusiran). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-06-30T06:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/safety-fitusiran-update-in-haemophilia-a-117"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/safety-fitusiran-update-in-haemophilia-a/articleshow/10892024.cms"
   },
   {
     "id": "syn-0119",
@@ -1448,7 +1448,7 @@
     "published_at": "2025-07-01T12:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/regulatory-emicizumab-update-in-haemophilia-a-122"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/regulatory-emicizumab-update-in-haemophilia-a-25"
   },
   {
     "id": "syn-0124",
@@ -1500,14 +1500,14 @@
   },
   {
     "id": "syn-0128",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-publications-fidanacogene-elaparvovec-update-in-ha",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-publications-fidanacogene-elaparvovec-update-",
     "title": "Publications: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of fidanacogene elaparvovec (fidanacogene) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Pfizer's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-07-02T18:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/publications-fidanacogene-elaparvovec-update-in-ha/articleshow/10000127.cms"
+    "url": "https://www.fiercepharma.com/pharma/publications-fidanacogene-elaparvovec-update--26"
   },
   {
     "id": "syn-0129",
@@ -1559,14 +1559,14 @@
   },
   {
     "id": "syn-0133",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-access-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-access-roctavian-update-in-haemophilia-a",
     "title": "Access: Roctavian Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for Roctavian. National pricing and reimbursement authority issued positive recommendation for BioMarin's Roctavian in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-07-04T00:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/access-roctavian-update-in-haemophilia-a-132"
+    "url": "https://www.biopharmadive.com/news/access-roctavian-update-in-haemophilia-a-27"
   },
   {
     "id": "syn-0134",
@@ -1618,14 +1618,14 @@
   },
   {
     "id": "syn-0138",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-commercial-patent-concizumab-update-in-haemophilia",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-commercial-patent-concizumab-update-in-haemop",
     "title": "Commercial Patent: concizumab Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for concizumab. Novo Nordisk secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-07-05T06:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/commercial-patent-concizumab-update-in-haemophilia-137"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/commercial-patent-concizumab-update-in-haemop/articleshow/10892028.cms"
   },
   {
     "id": "syn-0139",
@@ -1684,7 +1684,7 @@
     "published_at": "2025-07-06T12:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-marstacimab-update-in-haemophilia-a-142"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-marstacimab-update-in-haemophilia-a-29"
   },
   {
     "id": "syn-0144",
@@ -1736,14 +1736,14 @@
   },
   {
     "id": "syn-0148",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-clinical-trial-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-clinical-trial-hemgenix-update-in-haemophilia",
     "title": "Clinical Trial: Hemgenix Update in Haemophilia A",
     "content": "Phase 1 Clinical Evaluation of Hemgenix (etranacogene dezaparvovec) by CSL Behring in Haemophilia A. A prospective multicenter open-label trial (NCT04010147) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-07-07T18:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-hemgenix-update-in-haemophilia-a/articleshow/10000147.cms"
+    "url": "https://www.fiercepharma.com/pharma/clinical-trial-hemgenix-update-in-haemophilia-30"
   },
   {
     "id": "syn-0149",
@@ -1795,14 +1795,14 @@
   },
   {
     "id": "syn-0153",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-safety-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-safety-mim8-update-in-haemophilia-a",
     "title": "Safety: mim8 Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for mim8 (mim8). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-07-09T00:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/safety-mim8-update-in-haemophilia-a-152"
+    "url": "https://www.biopharmadive.com/news/safety-mim8-update-in-haemophilia-a-31"
   },
   {
     "id": "syn-0154",
@@ -1854,14 +1854,14 @@
   },
   {
     "id": "syn-0158",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-regulatory-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-regulatory-fitusiran-update-in-haemophilia-a",
     "title": "Regulatory: fitusiran Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for fitusiran (fitusiran) in Haemophilia A. Sanofi announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10157). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-07-10T06:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/regulatory-fitusiran-update-in-haemophilia-a-157"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/regulatory-fitusiran-update-in-haemophilia-a/articleshow/10892032.cms"
   },
   {
     "id": "syn-0159",
@@ -1914,13 +1914,13 @@
   {
     "id": "syn-0163",
     "source_id": "newsapi",
-    "external_id": "reuters-publications-emicizumab-update-in-haemophilia-a",
+    "external_id": "reuters-publications-emicizumab-update-in-haemophilia",
     "title": "Publications: emicizumab Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of emicizumab (Hemlibra) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Roche's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-07-11T12:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-emicizumab-update-in-haemophilia-a-162"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-emicizumab-update-in-haemophilia-33"
   },
   {
     "id": "syn-0164",
@@ -1972,14 +1972,14 @@
   },
   {
     "id": "syn-0168",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-access-fidanacogene-elaparvovec-update-in-haemophi",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-access-fidanacogene-elaparvovec-update-in-hae",
     "title": "Access: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for fidanacogene elaparvovec. National pricing and reimbursement authority issued positive recommendation for Pfizer's fidanacogene in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-07-12T18:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/access-fidanacogene-elaparvovec-update-in-haemophi/articleshow/10000167.cms"
+    "url": "https://www.fiercepharma.com/pharma/access-fidanacogene-elaparvovec-update-in-hae-34"
   },
   {
     "id": "syn-0169",
@@ -2031,14 +2031,14 @@
   },
   {
     "id": "syn-0173",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-commercial-patent-roctavian-update-in-haemophilia-",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-commercial-patent-roctavian-update-in-haemoph",
     "title": "Commercial Patent: Roctavian Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for Roctavian. BioMarin secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-07-14T00:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/commercial-patent-roctavian-update-in-haemophilia--172"
+    "url": "https://www.biopharmadive.com/news/commercial-patent-roctavian-update-in-haemoph-35"
   },
   {
     "id": "syn-0174",
@@ -2090,14 +2090,14 @@
   },
   {
     "id": "syn-0178",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-congress-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-congress-concizumab-update-in-haemophilia-a",
     "title": "Congress: concizumab Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: concizumab Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10177) regarding Novo Nordisk's concizumab. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-07-15T06:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/congress-concizumab-update-in-haemophilia-a-177"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/congress-concizumab-update-in-haemophilia-a/articleshow/10892036.cms"
   },
   {
     "id": "syn-0179",
@@ -2150,13 +2150,13 @@
   {
     "id": "syn-0183",
     "source_id": "newsapi",
-    "external_id": "reuters-clinical-trial-marstacimab-update-in-haemophilia-a",
+    "external_id": "reuters-clinical-trial-marstacimab-update-in-haemophi",
     "title": "Clinical Trial: marstacimab Update in Haemophilia A",
     "content": "Phase 3 Clinical Evaluation of marstacimab (Hympavzi) by Pfizer in Haemophilia A. A prospective multicenter open-label trial (NCT04010182) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-07-16T12:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-marstacimab-update-in-haemophilia-a-182"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-marstacimab-update-in-haemophi-37"
   },
   {
     "id": "syn-0184",
@@ -2208,14 +2208,14 @@
   },
   {
     "id": "syn-0188",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-safety-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-safety-hemgenix-update-in-haemophilia-a",
     "title": "Safety: Hemgenix Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for Hemgenix (etranacogene dezaparvovec). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-07-17T18:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/safety-hemgenix-update-in-haemophilia-a/articleshow/10000187.cms"
+    "url": "https://www.fiercepharma.com/pharma/safety-hemgenix-update-in-haemophilia-a-38"
   },
   {
     "id": "syn-0189",
@@ -2267,14 +2267,14 @@
   },
   {
     "id": "syn-0193",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-regulatory-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-regulatory-mim8-update-in-haemophilia-a",
     "title": "Regulatory: mim8 Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for mim8 (mim8) in Haemophilia A. Novo Nordisk announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10192). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-07-19T00:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/regulatory-mim8-update-in-haemophilia-a-192"
+    "url": "https://www.biopharmadive.com/news/regulatory-mim8-update-in-haemophilia-a-39"
   },
   {
     "id": "syn-0194",
@@ -2326,14 +2326,14 @@
   },
   {
     "id": "syn-0198",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-publications-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-publications-fitusiran-update-in-haemophilia-",
     "title": "Publications: fitusiran Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of fitusiran (fitusiran) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Sanofi's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-07-20T06:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/publications-fitusiran-update-in-haemophilia-a-197"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/publications-fitusiran-update-in-haemophilia-/articleshow/10892040.cms"
   },
   {
     "id": "syn-0199",
@@ -2392,7 +2392,7 @@
     "published_at": "2025-07-21T12:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-emicizumab-update-in-haemophilia-a-202"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-emicizumab-update-in-haemophilia-a-41"
   },
   {
     "id": "syn-0204",
@@ -2444,14 +2444,14 @@
   },
   {
     "id": "syn-0208",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-commercial-patent-fidanacogene-elaparvovec-update-",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-commercial-patent-fidanacogene-elaparvovec-up",
     "title": "Commercial Patent: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for fidanacogene elaparvovec. Pfizer secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-07-22T18:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/commercial-patent-fidanacogene-elaparvovec-update-/articleshow/10000207.cms"
+    "url": "https://www.fiercepharma.com/pharma/commercial-patent-fidanacogene-elaparvovec-up-42"
   },
   {
     "id": "syn-0209",
@@ -2503,14 +2503,14 @@
   },
   {
     "id": "syn-0213",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-congress-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-congress-roctavian-update-in-haemophilia-a",
     "title": "Congress: Roctavian Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: Roctavian Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10212) regarding BioMarin's Roctavian. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-07-24T00:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/congress-roctavian-update-in-haemophilia-a-212"
+    "url": "https://www.biopharmadive.com/news/congress-roctavian-update-in-haemophilia-a-43"
   },
   {
     "id": "syn-0214",
@@ -2562,14 +2562,14 @@
   },
   {
     "id": "syn-0218",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-clinical-trial-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-clinical-trial-concizumab-update-in-haemophil",
     "title": "Clinical Trial: concizumab Update in Haemophilia A",
     "content": "Phase 2 Clinical Evaluation of concizumab (concizumab) by Novo Nordisk in Haemophilia A. A prospective multicenter open-label trial (NCT04010217) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-07-25T06:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/clinical-trial-concizumab-update-in-haemophilia-a-217"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-concizumab-update-in-haemophil/articleshow/10892044.cms"
   },
   {
     "id": "syn-0219",
@@ -2628,7 +2628,7 @@
     "published_at": "2025-07-26T12:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/safety-marstacimab-update-in-haemophilia-a-222"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/safety-marstacimab-update-in-haemophilia-a-45"
   },
   {
     "id": "syn-0224",
@@ -2680,14 +2680,14 @@
   },
   {
     "id": "syn-0228",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-regulatory-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-regulatory-hemgenix-update-in-haemophilia-a",
     "title": "Regulatory: Hemgenix Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for Hemgenix (etranacogene dezaparvovec) in Haemophilia A. CSL Behring announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10227). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-07-27T18:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/regulatory-hemgenix-update-in-haemophilia-a/articleshow/10000227.cms"
+    "url": "https://www.fiercepharma.com/pharma/regulatory-hemgenix-update-in-haemophilia-a-46"
   },
   {
     "id": "syn-0229",
@@ -2739,14 +2739,14 @@
   },
   {
     "id": "syn-0233",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-publications-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-publications-mim8-update-in-haemophilia-a",
     "title": "Publications: mim8 Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of mim8 (mim8) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Novo Nordisk's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-07-29T00:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/publications-mim8-update-in-haemophilia-a-232"
+    "url": "https://www.biopharmadive.com/news/publications-mim8-update-in-haemophilia-a-47"
   },
   {
     "id": "syn-0234",
@@ -2798,14 +2798,14 @@
   },
   {
     "id": "syn-0238",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-access-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-access-fitusiran-update-in-haemophilia-a",
     "title": "Access: fitusiran Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for fitusiran. National pricing and reimbursement authority issued positive recommendation for Sanofi's fitusiran in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-07-30T06:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/access-fitusiran-update-in-haemophilia-a-237"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/access-fitusiran-update-in-haemophilia-a/articleshow/10892048.cms"
   },
   {
     "id": "syn-0239",
@@ -2858,13 +2858,13 @@
   {
     "id": "syn-0243",
     "source_id": "newsapi",
-    "external_id": "reuters-commercial-patent-emicizumab-update-in-haemophilia",
+    "external_id": "reuters-commercial-patent-emicizumab-update-in-haemop",
     "title": "Commercial Patent: emicizumab Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for emicizumab. Roche secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-07-31T12:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/commercial-patent-emicizumab-update-in-haemophilia-242"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/commercial-patent-emicizumab-update-in-haemop-49"
   },
   {
     "id": "syn-0244",
@@ -2916,14 +2916,14 @@
   },
   {
     "id": "syn-0248",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-congress-fidanacogene-elaparvovec-update-in-haemop",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-congress-fidanacogene-elaparvovec-update-in-h",
     "title": "Congress: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: fidanacogene elaparvovec Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10247) regarding Pfizer's fidanacogene. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-08-01T18:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/congress-fidanacogene-elaparvovec-update-in-haemop/articleshow/10000247.cms"
+    "url": "https://www.fiercepharma.com/pharma/congress-fidanacogene-elaparvovec-update-in-h-50"
   },
   {
     "id": "syn-0249",
@@ -2975,14 +2975,14 @@
   },
   {
     "id": "syn-0253",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-clinical-trial-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-clinical-trial-roctavian-update-in-haemophili",
     "title": "Clinical Trial: Roctavian Update in Haemophilia A",
     "content": "Phase 1 Clinical Evaluation of Roctavian (Roctavian) by BioMarin in Haemophilia A. A prospective multicenter open-label trial (NCT04010252) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-08-03T00:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/clinical-trial-roctavian-update-in-haemophilia-a-252"
+    "url": "https://www.biopharmadive.com/news/clinical-trial-roctavian-update-in-haemophili-51"
   },
   {
     "id": "syn-0254",
@@ -3034,14 +3034,14 @@
   },
   {
     "id": "syn-0258",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-safety-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-safety-concizumab-update-in-haemophilia-a",
     "title": "Safety: concizumab Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for concizumab (concizumab). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-08-04T06:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/safety-concizumab-update-in-haemophilia-a-257"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/safety-concizumab-update-in-haemophilia-a/articleshow/10892052.cms"
   },
   {
     "id": "syn-0259",
@@ -3094,13 +3094,13 @@
   {
     "id": "syn-0263",
     "source_id": "newsapi",
-    "external_id": "reuters-regulatory-marstacimab-update-in-haemophilia-a",
+    "external_id": "reuters-regulatory-marstacimab-update-in-haemophilia-",
     "title": "Regulatory: marstacimab Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for marstacimab (Hympavzi) in Haemophilia A. Pfizer announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10262). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-08-05T12:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/regulatory-marstacimab-update-in-haemophilia-a-262"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/regulatory-marstacimab-update-in-haemophilia--53"
   },
   {
     "id": "syn-0264",
@@ -3152,14 +3152,14 @@
   },
   {
     "id": "syn-0268",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-publications-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-publications-hemgenix-update-in-haemophilia-a",
     "title": "Publications: Hemgenix Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of Hemgenix (etranacogene dezaparvovec) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for CSL Behring's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-08-06T18:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/publications-hemgenix-update-in-haemophilia-a/articleshow/10000267.cms"
+    "url": "https://www.fiercepharma.com/pharma/publications-hemgenix-update-in-haemophilia-a-54"
   },
   {
     "id": "syn-0269",
@@ -3211,14 +3211,14 @@
   },
   {
     "id": "syn-0273",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-access-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-access-mim8-update-in-haemophilia-a",
     "title": "Access: mim8 Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for mim8. National pricing and reimbursement authority issued positive recommendation for Novo Nordisk's mim8 in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-08-08T00:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/access-mim8-update-in-haemophilia-a-272"
+    "url": "https://www.biopharmadive.com/news/access-mim8-update-in-haemophilia-a-55"
   },
   {
     "id": "syn-0274",
@@ -3270,14 +3270,14 @@
   },
   {
     "id": "syn-0278",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-commercial-patent-fitusiran-update-in-haemophilia-",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-commercial-patent-fitusiran-update-in-haemoph",
     "title": "Commercial Patent: fitusiran Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for fitusiran. Sanofi secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-08-09T06:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/commercial-patent-fitusiran-update-in-haemophilia--277"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/commercial-patent-fitusiran-update-in-haemoph/articleshow/10892056.cms"
   },
   {
     "id": "syn-0279",
@@ -3336,7 +3336,7 @@
     "published_at": "2025-08-10T12:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-emicizumab-update-in-haemophilia-a-282"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-emicizumab-update-in-haemophilia-a-57"
   },
   {
     "id": "syn-0284",
@@ -3388,14 +3388,14 @@
   },
   {
     "id": "syn-0288",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-clinical-trial-fidanacogene-elaparvovec-update-in-",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-clinical-trial-fidanacogene-elaparvovec-updat",
     "title": "Clinical Trial: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Phase 3 Clinical Evaluation of fidanacogene elaparvovec (fidanacogene) by Pfizer in Haemophilia A. A prospective multicenter open-label trial (NCT04010287) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-08-11T18:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-fidanacogene-elaparvovec-update-in-/articleshow/10000287.cms"
+    "url": "https://www.fiercepharma.com/pharma/clinical-trial-fidanacogene-elaparvovec-updat-58"
   },
   {
     "id": "syn-0289",
@@ -3447,14 +3447,14 @@
   },
   {
     "id": "syn-0293",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-safety-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-safety-roctavian-update-in-haemophilia-a",
     "title": "Safety: Roctavian Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for Roctavian (Roctavian). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-08-13T00:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/safety-roctavian-update-in-haemophilia-a-292"
+    "url": "https://www.biopharmadive.com/news/safety-roctavian-update-in-haemophilia-a-59"
   },
   {
     "id": "syn-0294",
@@ -3506,14 +3506,14 @@
   },
   {
     "id": "syn-0298",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-regulatory-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-regulatory-concizumab-update-in-haemophilia-a",
     "title": "Regulatory: concizumab Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for concizumab (concizumab) in Haemophilia A. Novo Nordisk announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10297). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-08-14T06:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/regulatory-concizumab-update-in-haemophilia-a-297"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/regulatory-concizumab-update-in-haemophilia-a/articleshow/10892060.cms"
   },
   {
     "id": "syn-0299",
@@ -3566,13 +3566,13 @@
   {
     "id": "syn-0303",
     "source_id": "newsapi",
-    "external_id": "reuters-publications-marstacimab-update-in-haemophilia-a",
+    "external_id": "reuters-publications-marstacimab-update-in-haemophili",
     "title": "Publications: marstacimab Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of marstacimab (Hympavzi) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Pfizer's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-08-15T12:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-marstacimab-update-in-haemophilia-a-302"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-marstacimab-update-in-haemophili-61"
   },
   {
     "id": "syn-0304",
@@ -3624,14 +3624,14 @@
   },
   {
     "id": "syn-0308",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-access-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-access-hemgenix-update-in-haemophilia-a",
     "title": "Access: Hemgenix Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for Hemgenix. National pricing and reimbursement authority issued positive recommendation for CSL Behring's etranacogene dezaparvovec in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-08-16T18:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/access-hemgenix-update-in-haemophilia-a/articleshow/10000307.cms"
+    "url": "https://www.fiercepharma.com/pharma/access-hemgenix-update-in-haemophilia-a-62"
   },
   {
     "id": "syn-0309",
@@ -3683,14 +3683,14 @@
   },
   {
     "id": "syn-0313",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-commercial-patent-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-commercial-patent-mim8-update-in-haemophilia-",
     "title": "Commercial Patent: mim8 Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for mim8. Novo Nordisk secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-08-18T00:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/commercial-patent-mim8-update-in-haemophilia-a-312"
+    "url": "https://www.biopharmadive.com/news/commercial-patent-mim8-update-in-haemophilia--63"
   },
   {
     "id": "syn-0314",
@@ -3742,14 +3742,14 @@
   },
   {
     "id": "syn-0318",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-congress-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-congress-fitusiran-update-in-haemophilia-a",
     "title": "Congress: fitusiran Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: fitusiran Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10317) regarding Sanofi's fitusiran. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-08-19T06:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/congress-fitusiran-update-in-haemophilia-a-317"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/congress-fitusiran-update-in-haemophilia-a/articleshow/10892064.cms"
   },
   {
     "id": "syn-0319",
@@ -3802,13 +3802,13 @@
   {
     "id": "syn-0323",
     "source_id": "newsapi",
-    "external_id": "reuters-clinical-trial-emicizumab-update-in-haemophilia-a",
+    "external_id": "reuters-clinical-trial-emicizumab-update-in-haemophil",
     "title": "Clinical Trial: emicizumab Update in Haemophilia A",
     "content": "Phase 2 Clinical Evaluation of emicizumab (Hemlibra) by Roche in Haemophilia A. A prospective multicenter open-label trial (NCT04010322) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-08-20T12:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-emicizumab-update-in-haemophilia-a-322"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-emicizumab-update-in-haemophil-65"
   },
   {
     "id": "syn-0324",
@@ -3860,14 +3860,14 @@
   },
   {
     "id": "syn-0328",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-safety-fidanacogene-elaparvovec-update-in-haemophi",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-safety-fidanacogene-elaparvovec-update-in-hae",
     "title": "Safety: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for fidanacogene elaparvovec (fidanacogene). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-08-21T18:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/safety-fidanacogene-elaparvovec-update-in-haemophi/articleshow/10000327.cms"
+    "url": "https://www.fiercepharma.com/pharma/safety-fidanacogene-elaparvovec-update-in-hae-66"
   },
   {
     "id": "syn-0329",
@@ -3919,14 +3919,14 @@
   },
   {
     "id": "syn-0333",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-regulatory-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-regulatory-roctavian-update-in-haemophilia-a",
     "title": "Regulatory: Roctavian Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for Roctavian (Roctavian) in Haemophilia A. BioMarin announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10332). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-08-23T00:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/regulatory-roctavian-update-in-haemophilia-a-332"
+    "url": "https://www.biopharmadive.com/news/regulatory-roctavian-update-in-haemophilia-a-67"
   },
   {
     "id": "syn-0334",
@@ -3978,14 +3978,14 @@
   },
   {
     "id": "syn-0338",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-publications-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-publications-concizumab-update-in-haemophilia",
     "title": "Publications: concizumab Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of concizumab (concizumab) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Novo Nordisk's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-08-24T06:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/publications-concizumab-update-in-haemophilia-a-337"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/publications-concizumab-update-in-haemophilia/articleshow/10892068.cms"
   },
   {
     "id": "syn-0339",
@@ -4044,7 +4044,7 @@
     "published_at": "2025-08-25T12:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-marstacimab-update-in-haemophilia-a-342"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-marstacimab-update-in-haemophilia-a-69"
   },
   {
     "id": "syn-0344",
@@ -4096,14 +4096,14 @@
   },
   {
     "id": "syn-0348",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-commercial-patent-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-commercial-patent-hemgenix-update-in-haemophi",
     "title": "Commercial Patent: Hemgenix Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for Hemgenix. CSL Behring secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-08-26T18:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/commercial-patent-hemgenix-update-in-haemophilia-a/articleshow/10000347.cms"
+    "url": "https://www.fiercepharma.com/pharma/commercial-patent-hemgenix-update-in-haemophi-70"
   },
   {
     "id": "syn-0349",
@@ -4155,14 +4155,14 @@
   },
   {
     "id": "syn-0353",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-congress-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-congress-mim8-update-in-haemophilia-a",
     "title": "Congress: mim8 Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: mim8 Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10352) regarding Novo Nordisk's mim8. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-08-28T00:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/congress-mim8-update-in-haemophilia-a-352"
+    "url": "https://www.biopharmadive.com/news/congress-mim8-update-in-haemophilia-a-71"
   },
   {
     "id": "syn-0354",
@@ -4214,14 +4214,14 @@
   },
   {
     "id": "syn-0358",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-clinical-trial-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-clinical-trial-fitusiran-update-in-haemophili",
     "title": "Clinical Trial: fitusiran Update in Haemophilia A",
     "content": "Phase 1 Clinical Evaluation of fitusiran (fitusiran) by Sanofi in Haemophilia A. A prospective multicenter open-label trial (NCT04010357) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-08-29T06:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/clinical-trial-fitusiran-update-in-haemophilia-a-357"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-fitusiran-update-in-haemophili/articleshow/10892072.cms"
   },
   {
     "id": "syn-0359",
@@ -4280,7 +4280,7 @@
     "published_at": "2025-08-30T12:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/safety-emicizumab-update-in-haemophilia-a-362"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/safety-emicizumab-update-in-haemophilia-a-73"
   },
   {
     "id": "syn-0364",
@@ -4332,14 +4332,14 @@
   },
   {
     "id": "syn-0368",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-regulatory-fidanacogene-elaparvovec-update-in-haem",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-regulatory-fidanacogene-elaparvovec-update-in",
     "title": "Regulatory: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for fidanacogene elaparvovec (fidanacogene) in Haemophilia A. Pfizer announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10367). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-08-31T18:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/regulatory-fidanacogene-elaparvovec-update-in-haem/articleshow/10000367.cms"
+    "url": "https://www.fiercepharma.com/pharma/regulatory-fidanacogene-elaparvovec-update-in-74"
   },
   {
     "id": "syn-0369",
@@ -4391,14 +4391,14 @@
   },
   {
     "id": "syn-0373",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-publications-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-publications-roctavian-update-in-haemophilia-",
     "title": "Publications: Roctavian Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of Roctavian (Roctavian) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for BioMarin's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-09-02T00:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/publications-roctavian-update-in-haemophilia-a-372"
+    "url": "https://www.biopharmadive.com/news/publications-roctavian-update-in-haemophilia--75"
   },
   {
     "id": "syn-0374",
@@ -4450,14 +4450,14 @@
   },
   {
     "id": "syn-0378",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-access-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-access-concizumab-update-in-haemophilia-a",
     "title": "Access: concizumab Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for concizumab. National pricing and reimbursement authority issued positive recommendation for Novo Nordisk's concizumab in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-09-03T06:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/access-concizumab-update-in-haemophilia-a-377"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/access-concizumab-update-in-haemophilia-a/articleshow/10892076.cms"
   },
   {
     "id": "syn-0379",
@@ -4510,13 +4510,13 @@
   {
     "id": "syn-0383",
     "source_id": "newsapi",
-    "external_id": "reuters-commercial-patent-marstacimab-update-in-haemophili",
+    "external_id": "reuters-commercial-patent-marstacimab-update-in-haemo",
     "title": "Commercial Patent: marstacimab Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for marstacimab. Pfizer secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-09-04T12:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/commercial-patent-marstacimab-update-in-haemophili-382"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/commercial-patent-marstacimab-update-in-haemo-77"
   },
   {
     "id": "syn-0384",
@@ -4568,14 +4568,14 @@
   },
   {
     "id": "syn-0388",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-congress-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-congress-hemgenix-update-in-haemophilia-a",
     "title": "Congress: Hemgenix Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: Hemgenix Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10387) regarding CSL Behring's etranacogene dezaparvovec. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-09-05T18:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/congress-hemgenix-update-in-haemophilia-a/articleshow/10000387.cms"
+    "url": "https://www.fiercepharma.com/pharma/congress-hemgenix-update-in-haemophilia-a-78"
   },
   {
     "id": "syn-0389",
@@ -4627,14 +4627,14 @@
   },
   {
     "id": "syn-0393",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-clinical-trial-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-clinical-trial-mim8-update-in-haemophilia-a",
     "title": "Clinical Trial: mim8 Update in Haemophilia A",
     "content": "Phase 3 Clinical Evaluation of mim8 (mim8) by Novo Nordisk in Haemophilia A. A prospective multicenter open-label trial (NCT04010392) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-09-07T00:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/clinical-trial-mim8-update-in-haemophilia-a-392"
+    "url": "https://www.biopharmadive.com/news/clinical-trial-mim8-update-in-haemophilia-a-79"
   },
   {
     "id": "syn-0394",
@@ -4686,14 +4686,14 @@
   },
   {
     "id": "syn-0398",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-safety-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-safety-fitusiran-update-in-haemophilia-a",
     "title": "Safety: fitusiran Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for fitusiran (fitusiran). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-09-08T06:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/safety-fitusiran-update-in-haemophilia-a-397"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/safety-fitusiran-update-in-haemophilia-a/articleshow/10892080.cms"
   },
   {
     "id": "syn-0399",
@@ -4752,7 +4752,7 @@
     "published_at": "2025-09-09T12:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/regulatory-emicizumab-update-in-haemophilia-a-402"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/regulatory-emicizumab-update-in-haemophilia-a-81"
   },
   {
     "id": "syn-0404",
@@ -4804,14 +4804,14 @@
   },
   {
     "id": "syn-0408",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-publications-fidanacogene-elaparvovec-update-in-ha",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-publications-fidanacogene-elaparvovec-update-",
     "title": "Publications: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of fidanacogene elaparvovec (fidanacogene) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Pfizer's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-09-10T18:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/publications-fidanacogene-elaparvovec-update-in-ha/articleshow/10000407.cms"
+    "url": "https://www.fiercepharma.com/pharma/publications-fidanacogene-elaparvovec-update--82"
   },
   {
     "id": "syn-0409",
@@ -4863,14 +4863,14 @@
   },
   {
     "id": "syn-0413",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-access-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-access-roctavian-update-in-haemophilia-a",
     "title": "Access: Roctavian Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for Roctavian. National pricing and reimbursement authority issued positive recommendation for BioMarin's Roctavian in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-09-12T00:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/access-roctavian-update-in-haemophilia-a-412"
+    "url": "https://www.biopharmadive.com/news/access-roctavian-update-in-haemophilia-a-83"
   },
   {
     "id": "syn-0414",
@@ -4922,14 +4922,14 @@
   },
   {
     "id": "syn-0418",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-commercial-patent-concizumab-update-in-haemophilia",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-commercial-patent-concizumab-update-in-haemop",
     "title": "Commercial Patent: concizumab Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for concizumab. Novo Nordisk secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-09-13T06:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/commercial-patent-concizumab-update-in-haemophilia-417"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/commercial-patent-concizumab-update-in-haemop/articleshow/10892084.cms"
   },
   {
     "id": "syn-0419",
@@ -4988,7 +4988,7 @@
     "published_at": "2025-09-14T12:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-marstacimab-update-in-haemophilia-a-422"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/congress-marstacimab-update-in-haemophilia-a-85"
   },
   {
     "id": "syn-0424",
@@ -5040,14 +5040,14 @@
   },
   {
     "id": "syn-0428",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-clinical-trial-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-clinical-trial-hemgenix-update-in-haemophilia",
     "title": "Clinical Trial: Hemgenix Update in Haemophilia A",
     "content": "Phase 2 Clinical Evaluation of Hemgenix (etranacogene dezaparvovec) by CSL Behring in Haemophilia A. A prospective multicenter open-label trial (NCT04010427) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-09-15T18:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-hemgenix-update-in-haemophilia-a/articleshow/10000427.cms"
+    "url": "https://www.fiercepharma.com/pharma/clinical-trial-hemgenix-update-in-haemophilia-86"
   },
   {
     "id": "syn-0429",
@@ -5099,14 +5099,14 @@
   },
   {
     "id": "syn-0433",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-safety-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-safety-mim8-update-in-haemophilia-a",
     "title": "Safety: mim8 Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for mim8 (mim8). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-09-17T00:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/safety-mim8-update-in-haemophilia-a-432"
+    "url": "https://www.biopharmadive.com/news/safety-mim8-update-in-haemophilia-a-87"
   },
   {
     "id": "syn-0434",
@@ -5158,14 +5158,14 @@
   },
   {
     "id": "syn-0438",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-regulatory-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-regulatory-fitusiran-update-in-haemophilia-a",
     "title": "Regulatory: fitusiran Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for fitusiran (fitusiran) in Haemophilia A. Sanofi announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10437). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-09-18T06:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/regulatory-fitusiran-update-in-haemophilia-a-437"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/regulatory-fitusiran-update-in-haemophilia-a/articleshow/10892088.cms"
   },
   {
     "id": "syn-0439",
@@ -5218,13 +5218,13 @@
   {
     "id": "syn-0443",
     "source_id": "newsapi",
-    "external_id": "reuters-publications-emicizumab-update-in-haemophilia-a",
+    "external_id": "reuters-publications-emicizumab-update-in-haemophilia",
     "title": "Publications: emicizumab Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of emicizumab (Hemlibra) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Roche's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-09-19T12:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-emicizumab-update-in-haemophilia-a-442"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/publications-emicizumab-update-in-haemophilia-89"
   },
   {
     "id": "syn-0444",
@@ -5276,14 +5276,14 @@
   },
   {
     "id": "syn-0448",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-access-fidanacogene-elaparvovec-update-in-haemophi",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-access-fidanacogene-elaparvovec-update-in-hae",
     "title": "Access: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Health Technology Assessment (HTA) and Reimbursement Recommendation for fidanacogene elaparvovec. National pricing and reimbursement authority issued positive recommendation for Pfizer's fidanacogene in severe Haemophilia A, citing demonstrated cost-effectiveness and substantial reduction in acute factor concentrate utilization.",
     "published_at": "2025-09-20T18:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/access-fidanacogene-elaparvovec-update-in-haemophi/articleshow/10000447.cms"
+    "url": "https://www.fiercepharma.com/pharma/access-fidanacogene-elaparvovec-update-in-hae-90"
   },
   {
     "id": "syn-0449",
@@ -5335,14 +5335,14 @@
   },
   {
     "id": "syn-0453",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-commercial-patent-roctavian-update-in-haemophilia-",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-commercial-patent-roctavian-update-in-haemoph",
     "title": "Commercial Patent: Roctavian Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for Roctavian. BioMarin secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-09-22T00:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/commercial-patent-roctavian-update-in-haemophilia--452"
+    "url": "https://www.biopharmadive.com/news/commercial-patent-roctavian-update-in-haemoph-91"
   },
   {
     "id": "syn-0454",
@@ -5394,14 +5394,14 @@
   },
   {
     "id": "syn-0458",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-congress-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-congress-concizumab-update-in-haemophilia-a",
     "title": "Congress: concizumab Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: concizumab Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10457) regarding Novo Nordisk's concizumab. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-09-23T06:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/congress-concizumab-update-in-haemophilia-a-457"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/congress-concizumab-update-in-haemophilia-a/articleshow/10892092.cms"
   },
   {
     "id": "syn-0459",
@@ -5454,13 +5454,13 @@
   {
     "id": "syn-0463",
     "source_id": "newsapi",
-    "external_id": "reuters-clinical-trial-marstacimab-update-in-haemophilia-a",
+    "external_id": "reuters-clinical-trial-marstacimab-update-in-haemophi",
     "title": "Clinical Trial: marstacimab Update in Haemophilia A",
     "content": "Phase 1 Clinical Evaluation of marstacimab (Hympavzi) by Pfizer in Haemophilia A. A prospective multicenter open-label trial (NCT04010462) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-09-24T12:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-marstacimab-update-in-haemophilia-a-462"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/clinical-trial-marstacimab-update-in-haemophi-93"
   },
   {
     "id": "syn-0464",
@@ -5512,14 +5512,14 @@
   },
   {
     "id": "syn-0468",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-safety-hemgenix-update-in-haemophilia-a",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-safety-hemgenix-update-in-haemophilia-a",
     "title": "Safety: Hemgenix Update in Haemophilia A",
     "content": "Safety Communication and Pharmacovigilance Surveillance Report for Hemgenix (etranacogene dezaparvovec). Routine periodic safety update evaluation by independent monitoring committee confirmed no new thromboembolic adverse event signals or unexpected hepatic laboratory abnormalities during extended treatment exposure in Haemophilia A subjects.",
     "published_at": "2025-09-25T18:00:00+00:00",
     "signal_type": "SAFETY",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/safety-hemgenix-update-in-haemophilia-a/articleshow/10000467.cms"
+    "url": "https://www.fiercepharma.com/pharma/safety-hemgenix-update-in-haemophilia-a-94"
   },
   {
     "id": "syn-0469",
@@ -5571,14 +5571,14 @@
   },
   {
     "id": "syn-0473",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-regulatory-mim8-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-regulatory-mim8-update-in-haemophilia-a",
     "title": "Regulatory: mim8 Update in Haemophilia A",
     "content": "Regulatory Submission and Review Milestone for mim8 (mim8) in Haemophilia A. Novo Nordisk announced submission of supplemental application dossier to regulatory health authorities (FDA/EMA Reference #10472). The application includes comprehensive Phase 3 safety dossiers and CMC manufacturing process validation data for extended prophylactic indications.",
     "published_at": "2025-09-27T00:00:00+00:00",
     "signal_type": "REGULATORY",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/regulatory-mim8-update-in-haemophilia-a-472"
+    "url": "https://www.biopharmadive.com/news/regulatory-mim8-update-in-haemophilia-a-95"
   },
   {
     "id": "syn-0474",
@@ -5630,14 +5630,14 @@
   },
   {
     "id": "syn-0478",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-publications-fitusiran-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-publications-fitusiran-update-in-haemophilia-",
     "title": "Publications: fitusiran Update in Haemophilia A",
     "content": "Peer-Reviewed Analysis of fitusiran (fitusiran) Mechanistic Durability in Haemophilia A. Published findings in the Journal of Thrombosis and Haemostasis evaluate coagulation kinetics and biomarker expression for Sanofi's therapeutic modality. The study reports consistent pharmacodynamic response with zero neutralizing anti-drug antibody formation observed over a 24-month follow-up period in severe phenotype subjects.",
     "published_at": "2025-09-28T06:00:00+00:00",
     "signal_type": "PUBLICATIONS",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/publications-fitusiran-update-in-haemophilia-a-477"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/publications-fitusiran-update-in-haemophilia-/articleshow/10892096.cms"
   },
   {
     "id": "syn-0479",
@@ -5696,7 +5696,7 @@
     "published_at": "2025-09-29T12:00:00+00:00",
     "signal_type": "ACCESS",
     "disease": "haemophilia_a",
-    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-emicizumab-update-in-haemophilia-a-482"
+    "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/access-emicizumab-update-in-haemophilia-a-97"
   },
   {
     "id": "syn-0484",
@@ -5748,14 +5748,14 @@
   },
   {
     "id": "syn-0488",
-    "source_id": "newsapi",
-    "external_id": "et_pharma-commercial-patent-fidanacogene-elaparvovec-update-",
+    "source_id": "fierce_pharma",
+    "external_id": "fierce-commercial-patent-fidanacogene-elaparvovec-up",
     "title": "Commercial Patent: fidanacogene elaparvovec Update in Haemophilia A",
     "content": "Commercial Strategy and Patent Portfolio Expansion for fidanacogene elaparvovec. Pfizer secured updated intellectual property and formulation patents extending market exclusivity through 2038. Strategic market access assessments highlight competitive positioning against contemporary standard of care prophylactic agents in major territories.",
     "published_at": "2025-09-30T18:00:00+00:00",
     "signal_type": "COMMERCIAL_PATENT",
     "disease": "haemophilia_b",
-    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/commercial-patent-fidanacogene-elaparvovec-update-/articleshow/10000487.cms"
+    "url": "https://www.fiercepharma.com/pharma/commercial-patent-fidanacogene-elaparvovec-up-98"
   },
   {
     "id": "syn-0489",
@@ -5807,14 +5807,14 @@
   },
   {
     "id": "syn-0493",
-    "source_id": "newsapi",
-    "external_id": "fierce_pharma-congress-roctavian-update-in-haemophilia-a",
+    "source_id": "biopharma_dive",
+    "external_id": "biopharmadive-congress-roctavian-update-in-haemophilia-a",
     "title": "Congress: Roctavian Update in Haemophilia A",
     "content": "Oral Presentation at Annual Haemostasis Congress: Roctavian Real-World Evidence Update. Investigators presented updated clinical outcomes from the global registry (Abstract #10492) regarding BioMarin's Roctavian. Comparative subgroup analysis demonstrates favorable bleed-control metrics and improved patient-reported quality of life scores across all studied dosing regimens.",
     "published_at": "2025-10-02T00:00:00+00:00",
     "signal_type": "CONGRESS",
     "disease": "haemophilia_a",
-    "url": "https://www.fiercepharma.com/pharma/congress-roctavian-update-in-haemophilia-a-492"
+    "url": "https://www.biopharmadive.com/news/congress-roctavian-update-in-haemophilia-a-99"
   },
   {
     "id": "syn-0494",
@@ -5866,14 +5866,14 @@
   },
   {
     "id": "syn-0498",
-    "source_id": "newsapi",
-    "external_id": "biopharma_dive-clinical-trial-concizumab-update-in-haemophilia-a",
+    "source_id": "et_pharma",
+    "external_id": "etpharma-clinical-trial-concizumab-update-in-haemophil",
     "title": "Clinical Trial: concizumab Update in Haemophilia A",
     "content": "Phase 3 Clinical Evaluation of concizumab (concizumab) by Novo Nordisk in Haemophilia A. A prospective multicenter open-label trial (NCT04010497) assessing primary efficacy endpoint ABR (Annualised Bleeding Rate) and long-term safety profile in pediatric and adult patient cohorts with and without Factor inhibitors. Preliminary results demonstrate robust hemostatic protection with 92% reduction in treated bleeds and sustained Factor expression.",
     "published_at": "2025-10-03T06:00:00+00:00",
     "signal_type": "CLINICAL_TRIAL",
     "disease": "haemophilia_a",
-    "url": "https://www.biopharmadive.com/news/clinical-trial-concizumab-update-in-haemophilia-a-497"
+    "url": "https://economictimes.indiatimes.com/industry/healthcare/biotech/pharmaceuticals/clinical-trial-concizumab-update-in-haemophil/articleshow/10892100.cms"
   },
   {
     "id": "syn-0499",

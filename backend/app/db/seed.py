@@ -702,7 +702,99 @@ async def seed_data():
             ]
             session.add_all(feedbacks_to_add)
 
-        # 13. Backfill vector embeddings and multi-factor scores for all signals
+        # 13. Clean orphaned test fixture signals and seed synthetic landscape records
+        from sqlalchemy import or_
+        test_patterns = [
+            '%Test Signal%',
+            'S1 Pending',
+            'S2 In Review',
+            'S3 Actioned',
+            'FSM Lifecycle%',
+            'Terminal State%',
+            'Invalid Transition%',
+            'Escalation Lifecycle%',
+            'Deterministic E2E Acceptance%',
+            'Test Signal Title',
+            'MedAffairs Test Trial Signal',
+            'Safety Test Advisory Signal',
+            'Actioned Permission Test Signal',
+        ]
+        await session.execute(delete(Signal).where(or_(*[Signal.title.ilike(p) for p in test_patterns])))
+
+        # 14. Load synthetic signals across all 8 sources
+        import json
+        syn_path = Path(__file__).resolve().parents[1] / "data" / "synthetic_signals.json"
+        if syn_path.exists():
+            syn_data = json.loads(syn_path.read_text(encoding="utf-8"))
+            from app.services.scoring import priority_scorer
+            from app.services.authority import get_source_authority_tier, resolve_validation_status
+            from app.services.routing import resolve_signal_routing, StakeholderFunction
+
+            for item in syn_data[:60]:
+                fp = f"syn:{item['id']}"
+                sig_stmt = select(Signal).where(Signal.fingerprint == fp)
+                sig_res = await session.execute(sig_stmt)
+                existing_sig = sig_res.scalar_one_or_none()
+                
+                title = item.get("title", "")
+                content = item.get("content", "")
+                source_id = item.get("source_id", "newsapi")
+                pub_at = datetime.fromisoformat(item["published_at"]) if "published_at" in item else now
+                
+                score_obj = priority_scorer.score_text(f"{title} {content}", pub_at, novelty_distance=0.65)
+                routing = resolve_signal_routing(
+                    signal_type=item.get("signal_type", "NEWS"),
+                    title=title,
+                    content=content,
+                    priority=score_obj.priority_level,
+                    priority_score=score_obj.total,
+                )
+
+                syn_record_data = {
+                    "fingerprint": fp,
+                    "source_id": source_id,
+                    "source_name": source_id.upper().replace("_", " "),
+                    "external_id": item.get("external_id"),
+                    "pmid": item.get("pmid"),
+                    "nct_id": item.get("nct_id"),
+                    "regulatory_id": item.get("regulatory_id"),
+                    "signal_type": item.get("signal_type", "NEWS"),
+                    "disease": item.get("disease", "haemophilia_a"),
+                    "title": title,
+                    "content": content,
+                    "canonical_url": item.get("url"),
+                    "published_at": pub_at,
+                    "retrieved_at": now,
+                    "ingested_at": now,
+                    "data_mode": "test_fixture",
+                    "is_synthetic": True,
+                    "provenance_status": "available",
+                    "evidence_text": content,
+                    "source_authority_tier": get_source_authority_tier(source_id).value,
+                    "validation_status": resolve_validation_status(source_id).value,
+                    "what_changed": title,
+                    "why_it_matters": content[:200],
+                    "relevant_function": routing["relevant_function"].value if hasattr(routing["relevant_function"], "value") else str(routing["relevant_function"]),
+                    "route_destination": routing["route_destination"],
+                    "route_role": routing["route_role"],
+                    "is_escalated": routing["is_escalated"],
+                    "routing_reason": routing["routing_reason"],
+                    "routing_timestamp": now,
+                    "suggested_action": routing["suggested_action"],
+                    "action_rationale": "Automated deterministic routing synthesis.",
+                    "review_status": "UNREVIEWED",
+                    "priority": score_obj.priority_level,
+                    "score_breakdown": score_obj.to_dict(),
+                    "scoring_model_version": score_obj.version,
+                }
+
+                if not existing_sig:
+                    session.add(Signal(**syn_record_data))
+                else:
+                    for k, v in syn_record_data.items():
+                        setattr(existing_sig, k, v)
+
+        # 15. Backfill vector embeddings and multi-factor scores for all signals
         all_signals_res = await session.execute(select(Signal))
         all_signals = all_signals_res.scalars().all()
         

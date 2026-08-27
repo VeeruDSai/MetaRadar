@@ -16,4 +16,29 @@ from app.api.deps import _auth_rate_buckets
 async def cleanup_db_connections():
     _auth_rate_buckets.clear()
     yield
+    from app.db.session import AsyncSessionLocal
+    from app.models import Signal
+    from sqlalchemy import delete, or_
+    try:
+        async with AsyncSessionLocal() as session:
+            test_patterns = [
+                '%Test Signal%',
+                'S1 Pending',
+                'S2 In Review',
+                'S3 Actioned',
+                'FSM Lifecycle%',
+                'Terminal State%',
+                'Invalid Transition%',
+                'Escalation Lifecycle%',
+                'Deterministic E2E Acceptance%',
+                'Test Signal Title',
+                'MedAffairs Test Trial Signal',
+                'Safety Test Advisory Signal',
+                'Actioned Permission Test Signal',
+            ]
+            conditions = [Signal.title.ilike(p) for p in test_patterns]
+            await session.execute(delete(Signal).where(or_(*conditions)))
+            await session.commit()
+    except Exception:
+        pass
     await engine.dispose()

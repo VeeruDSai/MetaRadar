@@ -123,7 +123,13 @@ export function SignalDetailWorkspace({
       ? Math.round(signal.score_breakdown.total)
       : signal.score !== undefined && signal.score > 0
       ? Math.round(signal.score)
-      : 50
+      : priorityStr === 'CRITICAL'
+      ? 90
+      : priorityStr === 'HIGH'
+      ? 80
+      : priorityStr === 'MEDIUM'
+      ? 60
+      : 30
 
   const sourceName =
     signal.source_name ||
@@ -148,11 +154,13 @@ export function SignalDetailWorkspace({
 
   const rawPayload = (signal as any).raw_payload || {}
 
-  // Canonical Evidence URL resolution: honest fallback chain, NO hardcoded newsapi.org
+  // Canonical Evidence URL resolution: honest fallback chain including pmid and nct_id
   const evidenceUrl =
     signal.canonical_url ||
     (signal as any).url ||
     (signal.sources && signal.sources.length > 0 ? signal.sources[0].url : null) ||
+    (signal.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${signal.pmid}/` : null) ||
+    (signal.nct_id ? `https://clinicaltrials.gov/study/${signal.nct_id}` : null) ||
     (signal.external_id && signal.external_id.startsWith('http') ? signal.external_id : null) ||
     rawPayload.url ||
     rawPayload.article?.url ||

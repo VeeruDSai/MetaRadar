@@ -139,7 +139,26 @@ export function SignalCard({
       ? Math.round(signal.score_breakdown.total)
       : signal.score !== undefined && signal.score > 0
       ? Math.round(signal.score)
-      : 50
+      : priorityStr === 'CRITICAL'
+      ? 90
+      : priorityStr === 'HIGH'
+      ? 80
+      : priorityStr === 'MEDIUM'
+      ? 60
+      : 30
+
+  const rawPayload = (signal as any).raw_payload || {}
+  const evidenceUrl =
+    signal.canonical_url ||
+    (signal as any).url ||
+    (signal.sources && signal.sources.length > 0 ? signal.sources[0].url : null) ||
+    (signal.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${signal.pmid}/` : null) ||
+    (signal.nct_id ? `https://clinicaltrials.gov/study/${signal.nct_id}` : null) ||
+    (signal.external_id && signal.external_id.startsWith('http') ? signal.external_id : null) ||
+    rawPayload.url ||
+    rawPayload.article?.url ||
+    rawPayload.link ||
+    null
 
   const sourceName =
     signal.source_name ||
@@ -296,7 +315,21 @@ export function SignalCard({
               ) : (
                 <Globe size={13} className="text-[var(--warning)] shrink-0" />
               )}
-              <span className="truncate">{sourceName}</span>
+              {evidenceUrl ? (
+                <a
+                  href={evidenceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="truncate hover:underline text-[var(--primary)] inline-flex items-center gap-0.5"
+                  title={`Open source article on ${sourceName}`}
+                >
+                  <span className="truncate">{sourceName}</span>
+                  <ExternalLink size={11} className="shrink-0 opacity-70" />
+                </a>
+              ) : (
+                <span className="truncate">{sourceName}</span>
+              )}
               <span
                 className={`text-[9px] px-1 py-0.2 rounded font-semibold uppercase shrink-0 ${
                   authority.tier === 'authoritative'
