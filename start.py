@@ -273,15 +273,18 @@ def start_backend(port: int) -> subprocess.Popen:
 def start_frontend(port: int, backend_port: int = 8000) -> subprocess.Popen:
     frontend_dir = BASE_DIR / "frontend"
     log_file = LOGS_DIR / "frontend.log"
+    pnpm_cmd = shutil.which("pnpm")
     npm_cmd = shutil.which("npm") or "npm"
-    print(f"  [FRONTEND] Starting Next.js 16 on http://localhost:{port} (logging to logs/frontend.log)...")
+    runner_cmd = pnpm_cmd if pnpm_cmd else npm_cmd
+    runner_name = "pnpm" if pnpm_cmd else "npm"
+    print(f"  [FRONTEND] Starting Next.js 16 via {runner_name} on http://localhost:{port} (logging to logs/frontend.log)...")
 
     env = os.environ.copy()
     env["NEXT_PUBLIC_API_URL"] = f"http://localhost:{backend_port}/api/v1"
 
     log_out = open(log_file, "a", encoding="utf-8")
 
-    cmd = [npm_cmd, "run", "dev", "--", "-p", str(port)]
+    cmd = [runner_cmd, "run", "dev", "--", "-p", str(port)]
 
     proc = subprocess.Popen(
         cmd,
@@ -368,7 +371,7 @@ def main():
     iteration = 0
     try:
         while True:
-            time.sleep(1.5)
+            time.sleep(1.2)
             iteration += 1
 
             # Check process lifespans
@@ -395,16 +398,20 @@ def main():
                                 line = raw_line.strip()
                                 if not line:
                                     continue
-                                # Surface operational events (ingestion, pipeline, LLM lifecycle, errors, warnings)
-                                if any(marker in line for marker in ["[INGESTION]", "[PIPELINE]", "[LLM]", "[ATHENA]", "ERROR", "WARNING"]):
+                                # Surface operational events (Athena synthesis, ingestion, pipeline, LLM lifecycle, errors, warnings)
+                                if "[ATHENA]" in line:
+                                    print(f"  \033[96m{line}\033[0m" if sys.stdout.isatty() else f"  {line}", flush=True)
+                                elif any(marker in line for marker in ["[INGESTION]", "[PIPELINE]", "[LLM]", "ERROR", "WARNING"]):
                                     print(f"  {line}", flush=True)
-                                elif any(k in line.lower() for k in ["/api/v1/ingestion", "ingest", "confluence", "contradiction", "recalibration", "/api/v1/athena", "ollama", "gemma"]):
+                                elif any(k in line.lower() for k in ["/api/v1/athena", "query received", "synthesis", "vector search", "gemma"]):
+                                    print(f"  \033[96m[ATHENA] {line}\033[0m" if sys.stdout.isatty() else f"  [ATHENA] {line}", flush=True)
+                                elif any(k in line.lower() for k in ["/api/v1/ingestion", "ingest", "confluence", "contradiction", "recalibration", "ollama"]):
                                     print(f"  [OP-LOG] {line}", flush=True)
                 except Exception:
                     pass
 
             # Heartbeat telemetry (every ~15 seconds)
-            if iteration % 10 == 0:
+            if iteration % 12 == 0:
                 b_ok = check_endpoint_health(backend_url) if backend_proc else None
                 f_ok = check_endpoint_health(frontend_url) if frontend_proc else None
                 b_status = "ONLINE (200 OK)" if b_ok else ("STARTING..." if b_ok is False else "DISABLED")

@@ -2163,6 +2163,11 @@
           "distance": {
             "type": "number",
             "title": "Distance"
+          },
+          "is_synthetic": {
+            "type": "boolean",
+            "title": "Is Synthetic",
+            "default": false
           }
         },
         "type": "object",
@@ -6252,13 +6257,6 @@
           "type": {
             "type": "string",
             "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
           }
         },
         "type": "object",

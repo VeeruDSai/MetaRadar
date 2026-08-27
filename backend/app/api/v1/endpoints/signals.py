@@ -1007,6 +1007,10 @@ _ATHENA_NO_EVIDENCE = (
 )
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def _sse_event(event: str, data: dict) -> str:
     """Formats a single Server-Sent Events frame."""
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
@@ -1043,6 +1047,7 @@ async def _retrieve_athena_evidence(
                 can_url = s.canonical_url
                 if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
                     can_url = None
+                is_synth = bool(getattr(s, "is_synthetic", False))
                 citations.append(
                     AthenaEvidenceCitation(
                         signal_id=r.signal_id,
@@ -1052,11 +1057,13 @@ async def _retrieve_athena_evidence(
                         published_at=s.published_at.isoformat() if s.published_at else None,
                         excerpt=excerpt,
                         distance=round(max(0.0, 1.0 - float(r.similarity_score)), 4),
+                        is_synthetic=is_synth,
                     )
                 )
-                evidence_texts.append(f"[{s.source_id.upper()}] {s.title}: {excerpt}")
+                type_tag = "[TEST FIXTURE]" if is_synth else "[LIVE SIGNAL]"
+                evidence_texts.append(f"[{s.source_id.upper()}] ({type_tag}) {s.title}: {excerpt}")
     except Exception as e:
-        pass
+        logger.warning(f"[ATHENA] Vector search error during retrieval: {e}")
 
     # Keyword / Lexical Fallback if vector search yielded 0 matches
     if not citations:
@@ -1075,6 +1082,7 @@ async def _retrieve_athena_evidence(
             can_url = s.canonical_url
             if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
                 can_url = None
+            is_synth = bool(getattr(s, "is_synthetic", False))
             citations.append(
                 AthenaEvidenceCitation(
                     signal_id=str(s.signal_id),
@@ -1084,9 +1092,11 @@ async def _retrieve_athena_evidence(
                     published_at=s.published_at.isoformat() if s.published_at else None,
                     excerpt=excerpt,
                     distance=0.45,
+                    is_synthetic=is_synth,
                 )
             )
-            evidence_texts.append(f"[{s.source_id.upper()}] {s.title}: {excerpt}")
+            type_tag = "[TEST FIXTURE]" if is_synth else "[LIVE SIGNAL]"
+            evidence_texts.append(f"[{s.source_id.upper()}] ({type_tag}) {s.title}: {excerpt}")
 
     # Broad landscape / weekly summary fallback
     if not citations:
@@ -1100,6 +1110,7 @@ async def _retrieve_athena_evidence(
                 can_url = s.canonical_url
                 if can_url and ("metaradar.internal" in can_url or can_url.endswith(".internal")):
                     can_url = None
+                is_synth = bool(getattr(s, "is_synthetic", False))
                 citations.append(
                     AthenaEvidenceCitation(
                         signal_id=str(s.signal_id),
@@ -1109,9 +1120,11 @@ async def _retrieve_athena_evidence(
                         published_at=s.published_at.isoformat() if s.published_at else None,
                         excerpt=excerpt,
                         distance=0.45,
+                        is_synthetic=is_synth,
                     )
                 )
-                evidence_texts.append(f"[{s.source_id.upper()}] {s.title}: {excerpt}")
+                type_tag = "[TEST FIXTURE]" if is_synth else "[LIVE SIGNAL]"
+                evidence_texts.append(f"[{s.source_id.upper()}] ({type_tag}) {s.title}: {excerpt}")
 
     return citations, evidence_texts
 
@@ -1130,9 +1143,12 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
     scrubbed_prompt, has_pii, _ = PIIPHIScrubber.scrub(trimmed)
     classification = DataClassification.PATIENT_IDENTIFIABLE if has_pii else DataClassification.PUBLIC
 
+    logger.info(f"[ATHENA] Query received: '{trimmed[:80]}' (classification={classification})")
+
     # 2. Conversational greetings & assistant introduction handling
     clean_lower = scrubbed_prompt.lower().strip("?!., ")
     if clean_lower in ATHENA_GREETINGS or len(clean_lower) < 4:
+        logger.info(f"[ATHENA] Handled assistant greeting/intro query.")
         return AthenaQueryResponse(
             answer=_ATHENA_INTRO,
             confidence=100.0,
@@ -1146,9 +1162,13 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
 
     # 3+4. Real Vector Retrieval with Lexical Fallback over indexed Signals / Evidence
     citations, evidence_texts = await _retrieve_athena_evidence(db, scrubbed_prompt)
+    live_count = sum(1 for c in citations if not c.is_synthetic)
+    synth_count = sum(1 for c in citations if c.is_synthetic)
+    logger.info(f"[ATHENA] Evidence retrieved: {len(citations)} citations ({live_count} live signals, {synth_count} test fixtures)")
 
     # Zero-fabrication gate: If no evidence is found, return honest failure notice
     if not evidence_texts:
+        logger.info(f"[ATHENA] Zero grounding evidence found — returning insufficient evidence response.")
         return AthenaQueryResponse(
             answer=_ATHENA_NO_EVIDENCE,
             confidence=0.0,
@@ -1161,7 +1181,11 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         )
 
     # 5. Structured safe prompt execution via ProviderFactory (Gemma -> Grok -> BART)
-    safe_task = f"Analyze the following biomedical query against available evidence: {scrubbed_prompt}"
+    safe_task = (
+        f"Analyze the following biomedical query against available evidence: {scrubbed_prompt}. "
+        "If evidence contains a mix of live signals and test fixtures, explicitly indicate which insights come from live sources versus test fixtures."
+    )
+    logger.info(f"[ATHENA] Invoking reasoning provider for task...")
     provider_res = await provider_factory.execute_task(
         required_capability=ProviderCapability.REASON,
         evidence=evidence_texts,
@@ -1190,6 +1214,8 @@ async def query_athena(payload: AthenaQueryRequest, db: AsyncSession = Depends(g
         else:
             answer = what_changed or provider_res.get("factual_summary") or "Synthesized response ready."
         confidence = float(provider_res.get("confidence", 88.0))
+
+    logger.info(f"[ATHENA] Synthesis complete: confidence={confidence}%, mode={mode}, length={len(answer)} chars")
 
     return AthenaQueryResponse(
         answer=answer,
@@ -1232,6 +1258,8 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
     clean_lower = scrubbed_prompt.lower().strip("?!., ")
     is_greeting = clean_lower in ATHENA_GREETINGS or len(clean_lower) < 4
 
+    logger.info(f"[ATHENA] Streaming query received: '{trimmed[:80]}' (greeting={is_greeting})")
+
     # 2. Retrieval completes BEFORE streaming starts (request-scoped DB session safety)
     if is_greeting:
         citations: List[AthenaEvidenceCitation] = []
@@ -1240,6 +1268,9 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
     else:
         citations, evidence_texts = await _retrieve_athena_evidence(db, scrubbed_prompt)
         response_type = "grounded_synthesis" if evidence_texts else "insufficient_evidence"
+        live_count = sum(1 for c in citations if not c.is_synthetic)
+        synth_count = sum(1 for c in citations if c.is_synthetic)
+        logger.info(f"[ATHENA] Streaming evidence retrieved: {len(citations)} total ({live_count} live signals, {synth_count} test fixtures)")
 
     async def event_stream() -> AsyncGenerator[str, None]:
         # Greeting short-circuit: intro in a single delta, zero citations
@@ -1247,6 +1278,7 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
             yield _sse_event("meta", {"evidence": [], "evidence_count": 0, "response_type": "assistant_intro"})
             yield _sse_event("token", {"t": _ATHENA_INTRO})
             yield _sse_event("done", {"response_type": "assistant_intro"})
+            logger.info(f"[ATHENA] Streaming greeting completed.")
             return
 
         # Zero-fabrication gate
@@ -1254,6 +1286,7 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
             yield _sse_event("meta", {"evidence": [], "evidence_count": 0, "response_type": "insufficient_evidence"})
             yield _sse_event("token", {"t": _ATHENA_NO_EVIDENCE})
             yield _sse_event("done", {"response_type": "insufficient_evidence"})
+            logger.info(f"[ATHENA] Streaming insufficient evidence completed.")
             return
 
         # Citations first — user sees the grounding evidence while tokens arrive
@@ -1269,8 +1302,10 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
         chat_prompt = (
             "You are Athena, a competitive intelligence analyst for a haemophilia market team. "
             "Answer the question using ONLY the provided evidence. Cite sources inline using "
-            "their bracketed source ids exactly as provided (e.g. [PUBMED-12345]). Write concise, "
-            "factual prose (max ~200 words). Do NOT invent facts, trials, or dates. If the "
+            "their bracketed source ids exactly as provided (e.g. [PUBMED-12345]). "
+            "If the evidence includes a mix of live pharma signals and test fixtures / synthetic signals, "
+            "clearly indicate which points stem from live industry records versus test scenario fixtures. "
+            "Write concise, factual prose (max ~200 words). Do NOT invent facts, trials, or dates. If the "
             "evidence is insufficient to answer, say so plainly.\n\n"
             f"Evidence:\n" + "\n".join(evidence_texts) + "\n\n"
             f"Question: {scrubbed_prompt}\n\n"
@@ -1279,12 +1314,17 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
 
         gemma = GemmaProvider()
         streamed_any = False
+        token_count = 0
+        logger.info(f"[ATHENA] Starting local Gemma stream for query...")
         try:
             async for delta in gemma.generate_stream(chat_prompt):
                 streamed_any = True
+                token_count += 1
                 yield _sse_event("token", {"t": delta})
+            logger.info(f"[ATHENA] Streaming generation completed ({token_count} delta chunks).")
         except OllamaUnavailableError:
             if streamed_any:
+                logger.warning(f"[ATHENA] Local reasoning engine failed mid-stream.")
                 yield _sse_event(
                     "error",
                     {"message": "Local reasoning engine became unavailable mid-generation. The partial answer above may be incomplete."},
@@ -1293,6 +1333,7 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
                 return
 
             # Honest degraded path: reuse the existing provider chain (Grok -> BART).
+            logger.info(f"[ATHENA] Falling back to provider chain (Grok -> BART degraded)...")
             provider_res = await provider_factory.execute_task(
                 required_capability=ProviderCapability.REASON,
                 evidence=evidence_texts,
@@ -1309,6 +1350,7 @@ async def query_athena_stream(payload: AthenaQueryRequest, db: AsyncSession = De
             for i in range(0, len(answer), 24):
                 yield _sse_event("token", {"t": answer[i:i + 24]})
                 await asyncio.sleep(0.01)
+            logger.info(f"[ATHENA] Degraded stream completed ({len(answer)} chars).")
 
         yield _sse_event("done", {"response_type": response_type})
 

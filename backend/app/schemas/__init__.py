@@ -469,6 +469,7 @@ class AthenaEvidenceCitation(BaseModel):
     published_at: Optional[str] = None
     excerpt: str
     distance: float
+    is_synthetic: bool = False
 
 
 class AthenaQueryResponse(BaseModel):

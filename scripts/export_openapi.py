@@ -314,6 +314,7 @@ export interface AthenaEvidenceCitation {
   published_at?: string;
   excerpt: string;
   distance: number;
+  is_synthetic?: boolean;
 }
 
 export interface AthenaResponse {
