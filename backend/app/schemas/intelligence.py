@@ -108,3 +108,37 @@ class MissingSignalWatchItem(BaseModel):
     overdue_heuristic_score: Optional[float] = None
     days_overdue: int = 0
     created_at: datetime
+
+
+class FunctionStatsResponse(BaseModel):
+    function_id: str
+    unreviewed_count: int
+    in_review_count: int
+    escalation_count: int
+    total_decisions: int
+    time_to_first_review_hours: Optional[float] = None
+    time_to_final_decision_hours: Optional[float] = None
+    recent_decisions: List[Any] = Field(default_factory=list)
+
+
+class FunctionCalibrationProfile(BaseModel):
+    function_name: str
+    status: str
+    feedback_sample_count: int
+    min_required_samples: int = 20
+    brier_score: Optional[float] = None
+    ece_score: Optional[float] = None
+    reliability_curve: List[Dict[str, float]] = Field(default_factory=list)
+
+
+class CalibrationStatusResponse(BaseModel):
+    profiles: List[FunctionCalibrationProfile] = Field(default_factory=list)
+    total_feedback_samples: int = 0
+    last_calibration_timestamp: Optional[datetime] = None
+
+
+class LeadershipSummaryResponse(BaseModel):
+    pending_escalations: List[Any] = Field(default_factory=list)
+    critical_unreviewed: List[Any] = Field(default_factory=list)
+    per_function_counts: Dict[str, Dict[str, int]] = Field(default_factory=dict)
+    total_open_signals: int = 0
