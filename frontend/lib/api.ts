@@ -171,10 +171,13 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v
 
 export async function fetchCsrfToken(signal?: AbortSignal): Promise<string> {
   try {
-    const res = await fetch(`${API_BASE}/auth/csrf`, {
+    const fetchOptions: RequestInit = {
       credentials: 'include',
-      signal,
-    })
+    }
+    if (typeof AbortSignal !== 'undefined' && signal instanceof AbortSignal) {
+      fetchOptions.signal = signal
+    }
+    const res = await fetch(`${API_BASE}/auth/csrf`, fetchOptions)
     if (res.ok) {
       const data = (await res.json()) as CsrfResponse
       cachedCsrfToken = data.csrf_token
@@ -214,8 +217,8 @@ async function apiFetch<T>(
       credentials: 'include',
       headers,
     }
-    // Only add signal when defined — some browsers reject undefined as AbortSignal
-    if (signal !== undefined) {
+    // Only attach signal when it is a valid AbortSignal instance
+    if (typeof AbortSignal !== 'undefined' && signal instanceof AbortSignal) {
       fetchOptions.signal = signal
     }
     const res = await fetch(url, fetchOptions)

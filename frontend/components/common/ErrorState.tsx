@@ -52,7 +52,7 @@ export function ErrorState({
         </div>
         {onRetry && (
           <button
-            onClick={onRetry}
+            onClick={() => onRetry()}
             className="px-2 py-1 rounded text-xs font-semibold shrink-0 border"
             style={{
               borderColor: 'color-mix(in srgb, var(--danger) 40%, var(--border))',
@@ -93,7 +93,7 @@ export function ErrorState({
 
         {onRetry && (
           <button
-            onClick={onRetry}
+            onClick={() => onRetry()}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold border"
             style={{
               background: 'var(--surface)',
