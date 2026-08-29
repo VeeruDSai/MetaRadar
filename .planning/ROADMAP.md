@@ -109,7 +109,45 @@
 
 ---
 
+---
+
+### Milestone v5.4 — Hackathon MVP: Login UX, Cross-Functional Approval & Documentation (IN PROGRESS)
+
+> **Branch:** `feature/phase-12-hackathon-mvp`
+> **Status:** Phase 12 — PLANNED (4 waves)
+> **Core Objective:** Replace demo persona-switcher with a real login page (per-role credentials in README), implement a cross-functional approval request workflow (functional team → Leadership → decision), and ship a complete hackathon documentation suite (README, DEMO_SCRIPT.md, HACKATHON_PITCH.md, SYSTEM_ARCHITECTURE.md).
+
+### Phase 12: Hackathon MVP — Login, Approval Workflow & Documentation
+- **Goal:** Per-role fixed credentials + login page (no persona dropdown), cross-functional approval request workflow (new `approval_requests` table + 3 new endpoints + frontend modal + Leadership queue), hackathon judge documentation package aligned to the 8-criterion evaluation rubric.
+- **Priority:** P0 (login/credentials) → P1 (approval workflow) → P2 (documentation)
+- **Requirements:** REQ-P12-01 … REQ-P12-25
+- **Status:** Planned
+- **Context:** [12-CONTEXT.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/12-hackathon-mvp/12-CONTEXT.md)
+- **Plans:**
+  - [ ] 12-01-PLAN.md — Fixed Role Credentials + Login Page + Auth Routing
+  - [ ] 12-02-PLAN.md — Approval Request Workflow: Backend (migration 015, 3 endpoints, schemas)
+  - [ ] 12-03-PLAN.md — Approval Request Workflow: Frontend UI (modal, panel, signal card badges)
+  - [ ] 12-04-PLAN.md — Hackathon Documentation Suite (README, DEMO_SCRIPT.md, HACKATHON_PITCH.md)
+
+---
+
+---
+
 ## Future Backlog / Next Milestone
 
 Future milestone initiatives (v6.0+) can be planned and tracked here using `/gsd-new-milestone`.
+
+### Phase 13: Signal UX Simplification (FUTURE — Backlog)
+- **Goal:** Simplify the Signals tab and signal card for non-technical users. Current design is perceived as complex by team. Reduce cognitive load without removing power features.
+- **Priority:** LOW — execute only if time permits before hackathon demo OR as v6.0 first phase
+- **Status:** Backlog (not planned for execution yet — review after Phase 12)
+- **Proposed changes:**
+  - Collapse technical metadata (fingerprint, pipeline_run_id, etc.) behind a "Technical Details" expand
+  - Replace CRITICAL/HIGH/MEDIUM/LOW labels with plain-language: "Act Now / Review Today / Monitor / FYI"
+  - Guided first-login onboarding: 3-step tooltip tour of the role-specific queue
+  - Mobile-responsive signal card layout (current design is desktop-first)
+  - "Why am I seeing this?" one-tap explainer surfacing the routing rationale
+  - Simplified Evidence Drawer: merge SUMMARY + SOURCES into single tab, keep TRACE + AUDIT as "Advanced" accordion
+- **Constraint:** All simplifications must be purely UI-level — no backend changes. The data model and API are unchanged.
+- **Rubric impact:** Addresses Dashboard UX & adoption potential (10 pts), improves demo walkthrough smoothness
 
