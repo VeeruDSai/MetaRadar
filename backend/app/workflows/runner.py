@@ -20,6 +20,7 @@ from app.models import (
 from app.services.embeddings import embedding_service
 from app.services.scoring import priority_scorer
 from app.services.provenance_urls import resolve_canonical_provenance
+from app.services.routing import resolve_signal_routing
 from app.workflows.graph import build_graph
 from app.workflows.state import MetaRadarState, create_initial_state
 
@@ -269,6 +270,23 @@ class PipelineRunner:
                 else:
                     priority_str = str(raw_prio or "MEDIUM").upper()
 
+                # Explainable function routing & leadership escalation
+                routing_data = resolve_signal_routing(
+                    signal_type=sig.get("signal_type", "CLINICAL_TRIAL"),
+                    priority=priority_str,
+                    priority_score=score_breakdown.get("total") if score_breakdown else None,
+                    title=sig.get("title", ""),
+                    content=sig.get("content", ""),
+                )
+                fn = sig.get("relevant_function") or routing_data["relevant_function"]
+                relevant_fn = fn.value if hasattr(fn, "value") else str(fn)
+                route_dest = sig.get("route_destination") or routing_data["route_destination"]
+                route_role = sig.get("route_role") or routing_data["route_role"]
+                is_escalated = sig.get("is_escalated") if sig.get("is_escalated") is not None else routing_data["is_escalated"]
+                routing_reason = sig.get("routing_reason") or routing_data["routing_reason"]
+                suggested_action = sig.get("suggested_action") or routing_data["suggested_action"]
+                action_rationale = sig.get("action_rationale") or routing_data["action_rationale"]
+
                 is_synth = bool(sig.get("is_synthetic", False))
                 data_mode = sig.get("data_mode") or ("test_fixture" if is_synth else "live")
                 provenance_status = sig.get("provenance_status") or ("fixture" if is_synth else "available" if url else "missing_url")
@@ -306,6 +324,13 @@ class PipelineRunner:
                     is_synthetic=is_synth,
                     pipeline_run_id=run_uuid,
                     embedding=embedding,
+                    relevant_function=relevant_fn,
+                    route_destination=route_dest,
+                    route_role=route_role,
+                    is_escalated=is_escalated,
+                    routing_reason=routing_reason,
+                    suggested_action=suggested_action,
+                    action_rationale=action_rationale,
                 ).on_conflict_do_update(
                     index_elements=["fingerprint"],
                     set_={
@@ -326,6 +351,13 @@ class PipelineRunner:
                         "priority": priority_str,
                         "score_breakdown": score_breakdown or {},
                         "pipeline_run_id": run_uuid,
+                        "relevant_function": relevant_fn,
+                        "route_destination": route_dest,
+                        "route_role": route_role,
+                        "is_escalated": is_escalated,
+                        "routing_reason": routing_reason,
+                        "suggested_action": suggested_action,
+                        "action_rationale": action_rationale,
                     }
                 )
                 await self._session.execute(stmt)
