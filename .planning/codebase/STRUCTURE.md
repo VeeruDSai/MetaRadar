@@ -1,12 +1,12 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-08-28
+**Analysis Date:** 2026-08-29
 
 ## Directory Layout
 
 ```
 MetaRadar/
-├── backend/                  # FastAPI 0.110+ Backend Service
+├── backend/                  # FastAPI Backend Service
 │   ├── alembic/              # Database migration scripts & env.py
 │   │   └── versions/         # Migration versions (DDL scripts)
 │   ├── app/                  # Application core package
@@ -60,13 +60,13 @@ MetaRadar/
 
 **`backend/app/api/v1/endpoints/`:**
 - Purpose: HTTP request routing and API parameter serialization.
-- Contains: Route handlers for signals (`signals.py`), search (`search.py`), authentication (`auth.py`), ingestion (`ingestion.py`), observability (`observability.py`), and feedback (`feedback.py`).
+- Contains: Route handlers for signals (`signals.py`), search (`search.py`), authentication (`auth.py`), ingestion (`ingestion.py`), observability (`observability.py`), feedback (`feedback.py`), intelligence (`intelligence.py`), pipeline (`pipeline.py`), registry (`registry.py`), cache (`cache.py`).
 - Key files: `signals.py`, `intelligence.py`, `ingestion.py`.
 
 **`backend/app/connectors/`:**
 - Purpose: External API integration and web scrapers for biomedical data sources.
 - Contains: Base connector class and source-specific fetching logic with rate limiting and retry handling.
-- Key files: `pubmed.py`, `clinical_trials.py`, `fda.py`, `ema.py`, `newsapi.py`.
+- Key files: `pubmed.py`, `clinical_trials.py`, `fda.py`, `ema.py`, `newsapi.py`, `biopharma_dive.py`, `et_pharma.py`, `fierce_pharma.py`.
 
 **`backend/app/workflows/nodes/`:**
 - Purpose: 11 LangGraph intelligence pipeline node implementations.
@@ -75,7 +75,7 @@ MetaRadar/
 
 **`backend/app/services/`:**
 - Purpose: Core algorithms, domain math, and background task execution.
-- Contains: FastEmbed vector embedding (`embeddings.py`), stakeholder scoring (`scoring.py`, `calibration.py`), deduplication (`deduplication.py`), and scheduler (`scheduler.py`).
+- Contains: FastEmbed vector embedding (`embeddings.py`), stakeholder scoring (`scoring.py`, `calibration.py`), deduplication (`deduplication.py`), scheduler (`scheduler.py`), vector query (`vector_query.py`), domain config (`domain_config.py`), PII scrubbing (`pii.py`), provenance (`provenance_urls.py`), redteam (`redteam.py`), confluence (`confluence.py`), auth (`auth_service.py`).
 - Key files: `scheduler.py`, `calibration.py`, `vector_query.py`.
 
 **`frontend/components/`:**
@@ -156,4 +156,4 @@ MetaRadar/
 
 ---
 
-*Structure analysis: 2026-08-28*
+*Structure analysis: 2026-08-29*

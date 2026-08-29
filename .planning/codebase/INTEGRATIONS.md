@@ -1,131 +1,177 @@
 # External Integrations
 
-**Analysis Date:** 2026-08-28
+**Analysis Date:** 2026-08-29
 
 ## APIs & External Services
 
-### Biomedical Literature & Registries
-- **NCBI PubMed / Entrez API:**
-  - Client / Module: `backend/app/connectors/pubmed.py`
-  - Purpose: Fetches peer-reviewed medical publications, abstracts, and clinical trial outcomes in haemophilia.
-  - Auth / Identifiers: `NCBI_API_KEY`, `NCBI_TOOL` ("MetaRadar"), `NCBI_EMAIL` ("metaradar@example.com")
-  - Rate Limits: 10 req/sec with key, 3 req/sec unauthenticated
+**Biomedical Literature & Trials:**
+- **NCBI PubMed** (`PubMedConnector`) — E-utilities ESearch + EFetch; quota-free (NCBI_API_KEY optional for higher limits); batch freshness; backfill 180 days; XML abstracts PII-scrubbed before persistence
+  - SDK/Client: `httpx.AsyncClient` (no dedicated SDK)
+  - Auth: `NCBI_API_KEY` env var, `NCBI_TOOL`, `NCBI_EMAIL`
+- **ClinicalTrials.gov** (`ClinicalTrialsConnector`) — API v2 studies endpoint; near-real-time freshness; paginated via `nextPageToken`; NCT-fingerprinted; backfill 365 days
+  - SDK/Client: `httpx.AsyncClient`
+  - Auth: None (public API)
 
-- **ClinicalTrials.gov REST API v2:**
-  - Client / Module: `backend/app/connectors/clinical_trials.py`
-  - Purpose: Tracks Phase 1–4 clinical trial statuses, primary endpoints, enrollment changes, and trial completions.
-  - Auth: Open public API (No key required)
-  - Endpoint: `https://clinicaltrials.gov/api/v2/studies`
+**Regulatory:**
+- **OpenFDA** (`OpenFDAConnector`) — Drugs@FDA API (`api.fda.gov/drug/drugsfda.json`) with optional `OPENFDA_API_KEY` for higher rate limits; also FDA MedWatch/Drug Safety RSS feeds
+  - SDK/Client: `httpx.AsyncClient`
+  - Auth: `OPENFDA_API_KEY` env var (optional)
+- **EMA** (`EMARSSConnector`) — EMA medicines RSS feed + news RSS + orphan designations; keyword-filtered
+  - SDK/Client: `httpx.AsyncClient` + `xml.etree.ElementTree`
+  - Auth: None (RSS feeds)
 
-### Regulatory Agencies
-- **OpenFDA Drug API:**
-  - Client / Module: `backend/app/connectors/fda.py`
-  - Purpose: Retrieves FDA drug approvals, label changes, black-box warnings, and regulatory notices.
-  - Auth: `OPENFDA_API_KEY` (optional for higher rate quotas)
-  - Endpoint: `https://api.fda.gov/drug/`
+**News & Media:**
+- **NewsAPI** (`NewsAPIConnector`) — NewsAPI.org v2 everything endpoint; quota-aware (100 req/day dev cap); tracks `X-RateLimit-Remaining` header persisted to ConnectorState; halts with DEGRADED on exhaustion
+  - SDK/Client: `httpx.AsyncClient`
+  - Auth: `NEWSAPI_KEY` or `NEWS_API_KEY` env var
+- **BioPharma Dive** (`BioPharmaDiveRSSConnector`) — RSS feed (`biopharmadive.com/feeds/news/`); keyword-filtered
+  - SDK/Client: `httpx.AsyncClient` + XML parsing
+  - Auth: None (RSS)
+- **FiercePharma** (`FiercePharmaRSSConnector`) — RSS feed (`fiercepharma.com/rss/xml`); keyword-filtered
+  - SDK/Client: `httpx.AsyncClient` + XML parsing
+  - Auth: None (RSS)
+- **ET Pharma** (`ETPharmaRSSConnector`) — Economic Times India pharma RSS (`pharma.economictimes.indiatimes.com/rss/topstories`) + drug_approvals feed
+  - SDK/Client: `httpx.AsyncClient` + XML parsing
+  - Auth: None (RSS)
 
-- **European Medicines Agency (EMA) Feeds:**
-  - Client / Module: `backend/app/connectors/ema.py`
-  - Purpose: Parses CHMP positive opinions, marketing authorizations, and European public assessment reports (EPAR).
-  - Auth: Public RSS/Atom XML feeds
+**LLM / AI Reasoning:**
+- **Local Gemma (llama-cpp-python)** (`GemmaProvider`) — Loads `.gguf` files from `models/` directory via `llama-cpp-python` Llama class; GPU-accelerated with CUDA 12.4 (n_gpu_layers), CPU fallback with `n_gpu=0`
+  - SDK/Client: `llama-cpp-python` package
+  - Auth: None (local inference)
+- **Local Gemma (Ollama sidecar)** (`GemmaProvider`) — Connects to Ollama daemon at `OLLAMA_HOST` (default `http://localhost:11434`); model `gemma3:4b`; supports streaming via `/api/generate` NDJSON
+  - SDK/Client: `httpx.AsyncClient` to Ollama API
+  - Auth: None (local daemon)
+- **Hosted xAI Grok API** (`GrokProvider`) — Chat completions at `api.x.ai/v1/chat/completions` with `grok-beta` model; privacy gate enforces PUBLIC/SYNTHETIC classification only
+  - SDK/Client: `httpx.AsyncClient`
+  - Auth: `XAI_API_KEY` or `GROK_API_KEY` env var; Bearer token
+- **BART Degraded Fallback** (`DegradedProvider`) — Truncation-based factual summarization when no LLM available; REASONING and ACTIONS explicitly disabled
+  - SDK/Client: None (built-in text processing)
 
-### Competitive & Industry Media
-- **NewsAPI:**
-  - Client / Module: `backend/app/connectors/newsapi.py`
-  - Purpose: Ingests global pharmaceutical press and industry news.
-  - Auth: `NEWSAPI_KEY` (or `NEWS_API_KEY`)
-
-- **Specialized Industry Scrapers & RSS:**
-  - `backend/app/connectors/biopharma_dive.py` (BioPharma Dive headlines & articles)
-  - `backend/app/connectors/et_pharma.py` (ET HealthWorld / Pharma)
-  - `backend/app/connectors/fierce_pharma.py` (FiercePharma industry updates)
-
-### Reasoning & LLM Inference
-- **Local Gemma Inference:**
-  - Client / Module: `backend/app/providers/gemma.py`, `backend/app/providers/factory.py`
-  - Engine: `llama-cpp-python` (direct CUDA/CPU GGUF) or Ollama HTTP REST API (`http://localhost:11434/api/generate`)
-  - Default Model: `google/gemma-3-4b-it` / `gemma3:4b`
-  - Zero external API egress; ensures complete data privacy for internal competitive intelligence.
-
-- **Hosted xAI Grok API:**
-  - Client / Module: `backend/app/providers/grok.py`
-  - Purpose: Cloud-hosted fallback reasoning engine when local GPU is unavailable or Grok fallback is enabled.
-  - Auth: `XAI_API_KEY` or `GROK_API_KEY`
-  - Privacy Gate: Enforces PII/PHI scrubbing before payload transmission.
-
-- **Factual Summarizer Fallback:**
-  - Client / Module: `backend/app/providers/degraded.py`
-  - Purpose: Deterministic extractive synthesis if both local LLM and cloud APIs are unreachable.
+**Embeddings:**
+- **FastEmbed** (`sentence-transformers/all-MiniLM-L6-v2`, revision `e4bb823e5956b6277b069d276b978c48a73507c7`) — 384-dimensional embeddings, max sequence length 256; used for vector search
+  - SDK/Client: `fastembed` package
+  - Auth: None (local model)
 
 ## Data Storage
 
 **Databases:**
-- PostgreSQL 16 with `pgvector` Extension:
-  - Connection: `DATABASE_URL` (e.g., `postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar`)
-  - Client: SQLAlchemy 2.0 Async Engine (`backend/app/db/session.py`)
-  - Schema Management: Alembic (`backend/alembic/`)
-  - Vector Embeddings: 384-dimensional dense vectors stored in `signals.embedding` via `pgvector.sqlalchemy.Vector`
-
-**Caching & Fast Key-Value Storage:**
-- Redis 7 (Alpine):
-  - Connection: `REDIS_URL` (e.g., `redis://localhost:6379/0`)
-  - Client: `redis.asyncio` (`backend/app/core/config.py`, `backend/app/api/v1/endpoints/cache.py`)
-  - Purpose: Endpoint response caching, rate limiting counters, and background lock orchestration.
+- **PostgreSQL 16** + **pgvector** (384-dimensional vectors)
+  - Connection: `postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar`
+  - Client: SQLAlchemy 2.0 async ORM with `asyncpg` driver
+  - Migrations: Alembic (`backend/alembic.ini`, `backend/alembic/versions/` with 14 migration files)
+  - Docker: `pgvector/pgvector:pg16` image; persistent volume `pgdata`
+- **Redis 7** (async) — Caching, rate-limiting, connector state/quota tracking
+  - Connection: `redis://localhost:6379/0`
+  - Client: `redis` >=5.0.3 Python async client
+  - Docker: `redis:7-alpine`; persistent volume `redisdata`
 
 **File Storage:**
-- Local filesystem for GGUF model binaries in `models/` (`models/gemma-3-4b-it-Q4_K_M.gguf`) and file logging in `logs/` (`logs/backend.log`, `logs/frontend.log`).
+- **Local filesystem** for GGUF model files (`models/` directory, `.gguf` files)
+- **Local filesystem** for application logs (`logs/backend.log`, `logs/frontend.log`)
+- **Local filesystem** for domain config (`config/haemophilia.yaml`)
+- Docker volumes: `models_cache` (appended to `/app/models`), `ollama_models` (Ollama model storage at `/root/.ollama`)
+
+**Caching:**
+- Redis for connector quota tracking, session state, and pipeline caching
+- In-memory caching for domain config (`_domain_config_cache` in `domain_config.py`)
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Custom Secure Session-based Authentication (`backend/app/models/auth.py`, `backend/app/services/auth_service.py`):
-  - Tokens: Cryptographically random 64-character session tokens hashed with SHA-256 in PostgreSQL
-  - Security: HttpOnly, SameSite cookies with idle timeout (1 hr) and absolute session lifetime (8 hrs)
-  - RBAC: 6 Persona roles (`Executive`, `CI Lead`, `Regulatory Lead`, `Medical Affairs`, `Commercial Lead`, `Admin`)
-  - Demo Mode: Fast persona-switching enabled via `/api/v1/auth/demo-login` (`frontend/components/auth/PersonaSwitcher.tsx`)
+- Custom session-based authentication with bcrypt password hashing and itsdangerous timestamped token signing
+- Implementation: `backend/app/core/security.py` (`hash_password`, `verify_password`, `sign_session_token`, `unsign_session_token`, `generate_session_bound_csrf`, `verify_session_bound_csrf`)
+- Session cookie: `metaradar_session`; CSRF cookie: `metaradar_csrf`
+- Demo mode enabled (`DEMO_MODE=true`) with `/auth/demo-login` endpoint; auto-seeds demo users
+
+**Session Management:**
+- Session lifetime: 28800s absolute, 3600s idle timeout (`SESSION_LIFETIME_SECONDS`, `SESSION_IDLE_TIMEOUT_SECONDS`)
+- HMAC-SHA256 CSRF tokens cryptographically bound to session ID
+- SHA-256 token hashing for persistent session indexing
+
+**API Key Management:**
+- `METARADAR_API_KEY` — Optional API key for service access
+- `CORS_ORIGINS` — Allowed origins (default `http://localhost:3000`)
 
 ## Monitoring & Observability
 
-**Error Tracking & Diagnostics:**
-- Health & Diagnostics Endpoint: `/api/v1/health` (`backend/app/api/v1/endpoints/health.py`)
-- Source Health Telemetry: `/api/v1/observability/sources` (`backend/app/models/__init__.py:SourceHealthLog`)
-- Activity Stream: Real-time event log for ingestion, pipeline runs, and review state changes (`backend/app/api/v1/endpoints/observability.py`)
+**Error Tracking:**
+- Not detected — no dedicated error tracking service (Sentry, etc.)
+- `OllamaUnavailableError` and `GrokUnavailableError` propagate for graceful fallback
+- `ConnectorFetchError` for HTTP failure detection
 
 **Logs:**
-- Structured JSON logging with `structlog` (`backend/app/core/logging.py`)
-- Correlation IDs propagated via `asgi-correlation-id` and `CorrelationIdMiddleware` (`backend/app/core/middleware.py`)
+- **structlog** structured JSON logging (`backend/app/core/logging.py`)
+- Secret scrubbing via `SecretScrubFilter` and `_scrub_secrets` processor — redacts API keys, tokens, passwords, emails
+- Correlation ID tracing via `CorrelationIdMiddleware` (`X-Request-ID`, `X-Correlation-ID`)
+- Log output to `logs/backend.log` and `logs/frontend.log` via `start.py`
+- `[ATHENA]`, `[INGESTION]`, `[PIPELINE]`, `[LLM]` markers surfaced in live telemetry
 
-**Audit Trail:**
-- Tamper-proof, append-only `audit_log` table (`backend/app/models/__init__.py`) with SQLAlchemy event listeners preventing any row updates or deletions.
+**Health Checks:**
+- `backend/app/api/v1/endpoints/health.py` — Service health endpoint
+- `backend/app/connectors/base.py` — `ConnectorStatus` and `SourceHealthLog` per connector
+- Docker health checks on all compose services (`pg_isready`, `redis-cli ping`, `curl` to Ollama and backend)
+- `start.py` heartbeat telemetry every ~15 seconds checking backend (200 OK) and frontend availability
+
+**Observability Endpoint:**
+- `backend/app/api/v1/endpoints/observability.py` — Observability & system health API
+- `backend/app/api/v1/endpoints/cache.py` — Cache management API
 
 ## CI/CD & Deployment
 
-**Hosting & Containers:**
-- Multi-container architecture via `docker-compose.yml`:
-  - `metaradar-postgres` (PostgreSQL 16 + pgvector)
-  - `metaradar-redis` (Redis 7)
-  - `metaradar-backend` (FastAPI CPU profile)
-  - `metaradar-backend-gpu` (FastAPI CUDA GPU profile)
-  - `metaradar-frontend` (Next.js 16)
-  - `metaradar-ollama` (Ollama local inference sidecar)
+**Hosting:**
+- Docker Compose multi-service deployment (`docker-compose.yml`)
+- Services: `postgres`, `redis`, `backend`/`backend-gpu` (GPU profile), `frontend`, `ollama`
+- Backend exposed on port 8000, frontend on port 3000
+
+**CI Pipeline:**
+- **GitHub Actions** (`.github/workflows/ci.yml`) — MetaRadar v5.1 CI
+  - Triggers: push to `main`, `develop`, `feature/*`; PRs to `main`, `develop`
+  - Steps: Backend pytest (`pytest -v`), TypeScript contract sync (`scripts/export_openapi.py` → `frontend/types/api.ts` diff check), pnpm install, `tsc --noEmit`, banned class gate (`check-banned-classes`), `pnpm lint`, `pnpm build`
+  - Python 3.11 via `actions/setup-python@v5`; Node.js 22 via `actions/setup-node@v4`; pnpm via `pnpm/action-setup@v4`
+
+**Deployment:**
+- Docker Compose production: `docker compose up -d`
+- Backend launched via `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+- Frontend launched via `pnpm run dev` or `npx next start -p 3000` (production)
+- `start.py` orchestrates service startup with port cleanup, graceful shutdown on SIGINT/SIGTERM, and live log streaming
+- `setup.py` automates prerequisite checks, dependency installation, Docker bootstrap, migrations, seeding, and model setup
+
+**GPU Deployment:**
+- `backend-gpu` service uses `profiles: ["gpu"]` with NVIDIA device reservation (1 GPU, all capabilities)
+- CUDA 12.4 prebuilt wheel from `jllllll.github.io/llama-cpp-python-cuBLAS-wheels/AVX2/cu124`
+- `LLM_DEVICE=cuda:0` for GPU backend
 
 ## Environment Configuration
 
 **Required env vars:**
-- `DATABASE_URL`: PostgreSQL connection string with `asyncpg` driver
-- `REDIS_URL`: Redis server URL
-- `SECRET_KEY`: Secret string for cryptographic signing and session hashing
-- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (e.g., `http://localhost:3000`)
+- `DATABASE_URL` — PostgreSQL connection string
+- `REDIS_URL` — Redis connection string
+- `LLM_PROVIDER` — `local` (default), `xai`, or `auto`
+- `NEWSAPI_KEY` — NewsAPI key (required for NewsAPI connector; `configuration_error_for` validates)
+- `CORS_ORIGINS` — Comma-separated allowed origins
 
-**Optional external API credentials:**
-- `XAI_API_KEY` / `GROK_API_KEY`: xAI Grok API key
-- `NEWSAPI_KEY`: NewsAPI key
-- `NCBI_API_KEY`: PubMed NCBI key
-- `OPENFDA_API_KEY`: OpenFDA API key
+**Optional env vars:**
+- `XAI_API_KEY` / `GROK_API_KEY` — xAI Grok API key for hosted fallback
+- `ENABLE_GROK_FALLBACK` — Toggle Grok fallback (`true`/`false`)
+- `NCBI_API_KEY` — NCBI E-utilities API key
+- `OPENFDA_API_KEY` — OpenFDA API key
+- `LLM_DEVICE` — `cpu`, `cuda`, `auto`
+- `LLM_GPU_LAYERS` — GPU layer count for CUDA
+- `MAX_CONTEXT_TOKENS` (default 2048), `MAX_OUTPUT_TOKENS` (default 512)
+- `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION` (default 384)
+- `SECRET_KEY` — Session signing secret (default `dev-secret-change-in-production`)
+- `DOMAIN_CONFIG_PATH` — Override domain config YAML path
 
-**Secrets location:**
-- Stored exclusively in `.env` (gitignored, never committed). See `.env.example` for reference keys.
+**Secrets Location:**
+- `.env` file at repository root (listed in `.gitignore` but present with development values)
+- Per-service secrets in Docker Compose environment section (PostgreSQL password `metaradar_pass`)
+- **WARNING:** `.env` contains actual API keys for development; these must not be committed to production repositories
+
+**Webhooks & Callbacks:**
+- None detected — all external integrations are pull-based (API polling/RSS feed ingestion)
+- No incoming webhook endpoints configured
+- Ollama daemon provides `/api/generate` and `/api/tags` endpoints for inference
 
 ---
 
-*Integration audit: 2026-08-28*
+*Integration audit: 2026-08-29*

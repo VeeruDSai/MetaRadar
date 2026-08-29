@@ -1,92 +1,134 @@
 # Technology Stack
 
-**Analysis Date:** 2026-08-28
+**Analysis Date:** 2026-08-29
 
 ## Languages
 
 **Primary:**
-- Python 3.11+ (CPython) - Backend core API, data connectors, LangGraph intelligence pipeline, background scheduler, Alembic migrations, database models, ML/inference
-- TypeScript 5.7.3 - Frontend Next.js 16 application, React 19 client/server components, API client, type definitions, UI shaders
+- Python 3.11+ — Backend API, connectors, LLM providers, data layer
+- TypeScript 5.7.3 — Frontend Next.js 16 + React 19 application
 
 **Secondary:**
-- SQL / PostgreSQL DDL & PL/pgSQL - Schema definitions, pgvector embeddings, triggers, index definitions
-- Shell / PowerShell / Python scripts - Automation, environment bootstrap (`setup.py`), unified process launcher (`start.py`), schema export (`scripts/export_openapi.py`)
+- YAML — Domain configuration (`config/haemophilia.yaml`)
+- JSON — Schema definitions, lockfiles, npm metadata
+- SQL (PostgreSQL dialect) — Database schema and migrations
 
 ## Runtime
 
 **Environment:**
-- Backend: Python 3.11+ via virtual environment or Docker (`backend/Dockerfile`)
-- Frontend: Node.js >=20.9.0 (`frontend/.nvmrc`)
-- Backing Services: Docker Compose (`docker-compose.yml`) hosting PostgreSQL 16 (pgvector) and Redis 7 Alpine
+- Python 3.11+ (backend runtime; `setup.py` enforces >=3.11 check)
+- Node.js >=20.9.0 (frontend runtime; `package.json` engines field)
+- Docker Engine (for composing backing services and containerized deployment)
 
 **Package Manager:**
-- Python: `pip` with `backend/requirements.txt`
-- Frontend: `pnpm` 9.15.5 (`frontend/pnpm-lock.yaml`, `frontend/package.json`), compatible with `npm`
+- `pip` (Python) — Installs from `backend/requirements.txt`
+- `pnpm` 9.15.5 (preferred frontend package manager, declared in `frontend/package.json` `packageManager` field)
+- npm fallback available if pnpm is absent
+- Lockfile: `frontend/package-lock.json` present; `pnpm-lock.yaml` referenced in Dockerfile
 
 ## Frameworks
 
-**Core:**
-- FastAPI >=0.110.0 (`backend/app/main.py`) - High-performance async REST API with automatic OpenAPI documentation
-- Next.js 16.3.0 (`frontend/app/`) - React 19 App Router framework with SSR, dynamic routing (`app/[section]`, `app/signals/[signalId]`), and standalone output
-- LangGraph >=0.2.0 (`backend/app/workflows/graph.py`) - 11-node stateful workflow engine orchestrating ingestion, extraction, validation, synthesis, and calibration
+**Core (Backend):**
+- **FastAPI** >=0.110.0 — Async REST API framework; app created in `backend/app/main.py` with lifespan context manager
+- **UVicorn** >=0.28.0 — ASGI server (`start.py` launches `uvicorn app.main:app`)
+- **Pydantic** >=2.6.0 + **pydantic-settings** >=2.2.0 — Data validation and settings management (`backend/app/core/config.py`)
+- **SQLAlchemy** >=2.0.28 — Async ORM for PostgreSQL (`asyncpg` driver)
+- **Alembic** >=1.13.1 — Database migration tool (`backend/alembic.ini`, `backend/alembic/versions/`)
+- **pgvector** >=0.2.5 — PostgreSQL vector extension for 384-dimensional embeddings
+- **Redis** >=5.0.3 — Async caching and rate-limiting backend
+- **LangGraph** >=0.2.0 — Agent/orchestration graph framework
 
-**Database & ORM:**
-- SQLAlchemy >=2.0.28 (`backend/app/db/session.py`) - Async ORM with `asyncpg` driver
-- Alembic >=1.13.1 (`backend/alembic/`) - Database migration framework
-- pgvector >=0.2.5 (`backend/app/models/__init__.py`) - Vector similarity search engine in PostgreSQL for 384-dimensional dense embeddings
+**Core (Frontend):**
+- **Next.js** 16.3.0 — React framework with App Router (`frontend/next.config.mjs`)
+- **React** ^19 + **ReactDOM** ^19 — UI library and DOM renderer
+- **@base-ui/react** ^1.5.0 — Base UI component primitives (shadcn base-nova style)
+- **Tailwind CSS** 4.3.3 + **PostCSS** 8.5 — Styling via `@tailwindcss/postcss` plugin
+- **Tailwind merge** ^3.3.1 + **tw-animate-css** ^1.4.0 — Utility class merging and CSS animations
+- **Lucide React** ^1.16.0 — Icon library (configured in `components.json` as `lucide`)
+- **Framer Motion** ^13.1.0 — Animation library
+- **Recharts** ^3.10.1 — Charting library
+- **shadcn** ^4.8.0 — Component generation framework
+- **class-variance-authority** ^0.7.1 + **clsx** ^2.1.1 — Variant and class name utilities
+- **@designcodeio/threeui** ^1.0.0 — 3D UI component library
 
 **Testing:**
-- Pytest >=8.0.0 (`pytest.ini`, `tests/`) - Python unit, integration, and contract tests with `pytest-asyncio`, `pytest-cov`, `pytest-httpx`
-- ESLint 10.8.1 & Next.js ESLint (`frontend/eslint.config.mjs`) - Frontend linting and type checking
+- **pytest** >=8.0.0 — Test runner (`pytest.ini`)
+- **pytest-asyncio** >=0.23.0 — Async test support
+- **pytest-cov** >=4.1.0 — Coverage reporting
+- **pytest-httpx** >=0.30.0 — HTTP mocking for tests
 
 **Build/Dev:**
-- Uvicorn >=0.28.0 (`backend/app/main.py`, `start.py`) - ASGI web server with async event loop
-- Tailwind CSS 4.3.3 (`frontend/app/globals.css`, `frontend/postcss.config.mjs`) - Modern CSS utility framework with `@theme` directives
-- PostCSS 8.5 (`frontend/postcss.config.mjs`) - CSS processing pipeline
+- **ESLint** ^10.8.1 — Linting (`frontend/eslint.config.mjs` with `@next/eslint-plugin-next`)
+- **Uvicorn** >=0.28.0 — ASGI dev/production server
+- **Docker Compose** — Multi-service orchestration
 
 ## Key Dependencies
 
 **Critical:**
-- `pydantic` >=2.6.0 & `pydantic-settings` >=2.2.0 (`backend/app/core/config.py`, `backend/app/schemas/`) - Strict data validation and schema definitions
-- `fastembed` >=0.4.0 (`backend/app/services/embeddings.py`) - Local, high-throughput text embeddings using `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
-- `llama-cpp-python` / Ollama (`backend/app/providers/gemma.py`) - Local hardware-accelerated LLM inference for `google/gemma-3-4b-it` (GGUF Q4_K_M)
-- `httpx` >=0.27.0 (`backend/app/connectors/`, `backend/app/providers/grok.py`) - Async HTTP client for external biomedical APIs and hosted LLM reasoning
-- `structlog` >=24.1.0 & `asgi-correlation-id` >=4.3.0 (`backend/app/core/logging.py`, `backend/app/core/middleware.py`) - Structured JSON logging with end-to-end request tracing
+- **llama-cpp-python** — Local GGUF model inference engine (CPU or CUDA 12.4); installed via `setup.py` with optional prebuilt wheel from `jllllll.github.io`
+- **Ollama** — Sidecar for Gemma 3 4B (Q4 int4) local inference; image `ollama/ollama:latest`
+- **FastEmbed** >=0.4.0 — Local embedding model (`sentence-transformers/all-MiniLM-L6-v2`, 384d)
+- **httpx** >=0.27.0 — Async HTTP client for all external API calls (connectors, providers)
+- **structlog** >=24.1.0 — Structured JSON logging
+- **asgi-correlation-id** >=4.3.0 — Request correlation ID middleware
+- **bcrypt** >=4.1.0 — Password hashing
+- **itsdangerous** >=2.1.0 — Session token signing and CSRF
+- **pydantic-settings** >=2.2.0 — Environment-driven settings
 
-**UI & Visualization:**
-- `lucide-react` ^1.16.0 (`frontend/components/`) - Comprehensive iconography
-- `framer-motion` ^13.1.0 (`frontend/components/common/ScrollReveal.tsx`, `frontend/components/effects/`) - Physics-based animations and transitions
-- `recharts` ^3.10.1 (`frontend/components/observability/`, `frontend/components/calibration/`) - Charting and data visualization
-- `clsx` & `tailwind-merge` (`frontend/lib/utils.ts`) - Conditional class utility merging
-- `@base-ui/react` & `shadcn` (`frontend/components/ui/`) - Accessible component primitives
+**Infrastructure:**
+- **asyncpg** >=0.29.0 — Async PostgreSQL driver
+- **pyyaml** >=6.0.1 — YAML config parsing
+- **python-dotenv** >=1.0.1 — `.env` file loading
 
 ## Configuration
 
 **Environment:**
-- Root `.env` file (`.env.example`) parsed by `backend/app/core/config.py` and `start.py`
-- Required configurations:
-  - `DATABASE_URL`: PostgreSQL connection string (`postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar`)
-  - `REDIS_URL`: Redis caching string (`redis://localhost:6379/0`)
-  - `LLM_PROVIDER`: `local` (Gemma GGUF/Ollama), `xai` (Grok), or `auto`
-  - `SECRET_KEY`: Cryptographic signing secret for user sessions and cookies
-  - Optional API keys: `XAI_API_KEY`, `NEWSAPI_KEY`, `NCBI_API_KEY`, `OPENFDA_API_KEY`
+- Settings loaded via `pydantic-settings` from `.env`, `backend/.env`, `../.env` (`backend/app/core/config.py`)
+- `SETTINGS` singleton instantiated at module import time
+- `DOMAIN_CONFIG_PATH` env var overrides default `config/haemophilia.yaml`
+- Domain config loaded from YAML with Pydantic validation (`backend/app/core/domain_config.py`)
 
-**Build:**
-- Frontend: `frontend/next.config.mjs`, `frontend/tsconfig.json`, `frontend/components.json`
-- Backend: `backend/alembic.ini`, `pytest.ini`
-- Domain: `config/haemophilia.yaml` (Rare disease ontology, competitive assets, patient segments, and scoring weights)
+**Key Environment Variables:**
+- `DATABASE_URL` — PostgreSQL connection string
+- `REDIS_URL` — Redis connection string
+- `LLM_PROVIDER` — `local` | `xai` | `auto`
+- `XAI_API_KEY` / `GROK_API_KEY` — Hosted Grok API key
+- `NEWSAPI_KEY` / `NEWS_API_KEY` — NewsAPI key
+- `NCBI_API_KEY` — NCBI E-utilities key
+- `OPENFDA_API_KEY` — OpenFDA API key
+- `OLLAMA_HOST` — Ollama daemon URL
+- `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION` — Embedding configuration
+- `CORS_ORIGINS`, `SECRET_KEY`, `SESSION_LIFETIME_SECONDS`
+
+**Build Config Files:**
+- `backend/requirements.txt` — Python dependencies
+- `frontend/package.json` — Node.js dependencies with `pnpm@9.15.5` packageManager field
+- `frontend/tsconfig.json` — TypeScript strict config with `@/*` path alias, `react-jsx` JSX
+- `frontend/next.config.mjs` — Next.js config (unoptimized images)
+- `frontend/eslint.config.mjs` — Flat config ESLint with Next.js plugin
+- `frontend/postcss.config.mjs` — PostCSS with `@tailwindcss/postcss`
+- `backend/alembic.ini` — Alembic migration config (file_template `%%(year)d%%(month).2d%%(day).2d_%%(rev)s_%%(slug)s`)
+- `pytest.ini` — pytest config (`asyncio_mode = auto`, `pythonpath = backend .`, `live` marker)
+- `docker-compose.yml` — Multi-service compose (postgres, redis, backend, backend-gpu, frontend, ollama)
+- `backend/Dockerfile` — Python 3.11-slim, uvicorn entrypoint
+- `frontend/Dockerfile` — Node 20-alpine multi-stage build with pnpm
 
 ## Platform Requirements
 
 **Development:**
-- Python 3.11+, Node.js 20+, Docker & Docker Compose
-- Optional: NVIDIA GPU (RTX 3050+ or CUDA 12.4 compatible) for local real-time Gemma-3-4B inference (falls back to CPU or hosted Grok API)
+- Python 3.11+ installed and in PATH
+- Node.js >=20.9.0 installed and in PATH
+- pnpm 9.15.5 (preferred) or npm
+- Docker Engine with Compose plugin
+- NVIDIA GPU (optional, CUDA 12.4) for accelerated local Gemma inference
+- ~2.8 GB VRAM budget for Gemma 3 4B Q4_K_M weights + KV cache (RTX 3050 4 GB with MAX_CONTEXT_TOKENS=2048)
 
 **Production:**
-- Containerized Linux deployment via Docker Compose or Kubernetes
-- PostgreSQL 16 with pgvector extension
-- Redis 7 cache and session store
+- Docker Compose deployment: `postgres` (pgvector/pgvector:pg16), `redis` (redis:7-alpine), `backend`/`backend-gpu` (profiles), `frontend`, `ollama`
+- Ports: 5432 (PostgreSQL), 6379 (Redis), 8000 (FastAPI), 3000 (Next.js), 11434 (Ollama)
+- Health checks on all services; `backend-gpu` uses `profiles: ["gpu"]` with NVIDIA device reservation
+- Models stored in volume `models_cache` and `ollama_models`; config mounted read-only from `./config`
 
 ---
 
-*Stack analysis: 2026-08-28*
+*Stack analysis: 2026-08-29*
