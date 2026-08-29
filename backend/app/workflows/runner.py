@@ -84,6 +84,18 @@ class PipelineRunner:
                     payload["source_id"] = row.source_id
                     payload["external_id"] = row.external_id
                     payload["retrieved_at"] = row.retrieved_at.isoformat() if row.retrieved_at else None
+                    payload["is_synthetic"] = bool(payload.get("is_synthetic", False))
+                    payload["data_mode"] = payload.get("data_mode", "live")
+                    if not payload.get("content"):
+                        payload["content"] = (
+                            payload.get("abstract")
+                            or payload.get("description")
+                            or payload.get("evidence_text")
+                            or (payload.get("study", {}).get("protocolSection", {}).get("descriptionModule", {}).get("briefSummary", "") if isinstance(payload.get("study"), dict) else "")
+                            or payload.get("title", "")
+                        )
+                    if not payload.get("title") and payload.get("content"):
+                        payload["title"] = str(payload["content"])[:100]
                     fetched_bronze.append(payload)
             except Exception as e:
                 logger.warning(f"Failed to fetch unpromoted bronze signals: {e}")

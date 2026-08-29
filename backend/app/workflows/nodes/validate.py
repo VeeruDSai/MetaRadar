@@ -31,8 +31,18 @@ async def node_validate(state: MetaRadarState) -> Dict[str, Any]:
 
     try:
         for sig in raw_signals:
-            content = str(sig.get("content") or "").strip()
+            content = str(
+                sig.get("content")
+                or sig.get("abstract")
+                or sig.get("description")
+                or sig.get("evidence_text")
+                or (sig.get("study", {}).get("protocolSection", {}).get("descriptionModule", {}).get("briefSummary", "") if isinstance(sig.get("study"), dict) else "")
+                or sig.get("title")
+                or ""
+            ).strip()
             title = str(sig.get("title") or "").strip()
+            if not title and content:
+                title = content[:100]
 
             # 1. Filter short text (< 50 chars)
             if len(content) < 50:
@@ -95,6 +105,8 @@ async def node_validate(state: MetaRadarState) -> Dict[str, Any]:
             val_sig["regulatory_id"] = reg_id
             val_sig["published_at"] = pub_date.isoformat()
             val_sig["is_validated"] = True
+            val_sig["is_synthetic"] = bool(sig.get("is_synthetic", False))
+            val_sig["data_mode"] = sig.get("data_mode") or ("test_fixture" if val_sig["is_synthetic"] else "live")
 
             validated_signals.append(val_sig)
 
