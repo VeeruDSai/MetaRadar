@@ -40,6 +40,7 @@ import type {
   FunctionCalibrationProfile,
   CalibrationStatusResponse,
   LeadershipSummaryResponse,
+  ApprovalRequest,
 } from '@/types/api'
 
 
@@ -863,4 +864,45 @@ export async function getLeadershipSummary(
     total_open_signals: data.total_open_signals || 0,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Cross-Functional Approval & Governance APIs
+// ---------------------------------------------------------------------------
+
+export async function requestSignalApproval(
+  signalId: string,
+  request_note?: string,
+  urgency: string = 'HIGH',
+  signal?: AbortSignal
+): Promise<ApprovalRequest> {
+  return apiFetch<ApprovalRequest>(
+    `/signals/${encodeURIComponent(signalId)}/request-approval`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ request_note, urgency }),
+    },
+    signal
+  )
+}
+
+export async function getPendingApprovals(signal?: AbortSignal): Promise<ApprovalRequest[]> {
+  return apiFetch<ApprovalRequest[]>('/signals/pending-approvals', undefined, signal)
+}
+
+export async function resolveSignalApproval(
+  signalId: string,
+  status: 'APPROVED' | 'REJECTED',
+  resolution_note?: string,
+  signal?: AbortSignal
+): Promise<ApprovalRequest> {
+  return apiFetch<ApprovalRequest>(
+    `/signals/${encodeURIComponent(signalId)}/resolve-approval`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ status, resolution_note }),
+    },
+    signal
+  )
+}
+
 

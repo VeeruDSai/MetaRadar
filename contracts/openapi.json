@@ -488,6 +488,32 @@
         }
       }
     },
+    "/api/v1/signals/pending-approvals": {
+      "get": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Get Pending Approvals",
+        "description": "Returns all pending cross-functional approval requests.\nRestricted to LEADERSHIP and ADMIN personas.",
+        "operationId": "get_pending_approvals_api_v1_signals_pending_approvals_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalRequestSchema"
+                  },
+                  "type": "array",
+                  "title": "Response Get Pending Approvals Api V1 Signals Pending Approvals Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/signals/{signal_id}": {
       "get": {
         "tags": [
@@ -567,6 +593,112 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SignalSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{signal_id}/request-approval": {
+      "post": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Request Signal Approval",
+        "description": "Submits a cross-functional approval request for executive leadership review.\nAvailable to all functional roles (Medical Affairs, Regulatory, Safety, Market Access, Comms).",
+        "operationId": "request_signal_approval_api_v1_signals__signal_id__request_approval_post",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequestCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{signal_id}/resolve-approval": {
+      "post": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Resolve Signal Approval",
+        "description": "Resolves a pending leadership approval request (APPROVED or REJECTED) with binding decision notes.\nRestricted to LEADERSHIP and ADMIN personas.",
+        "operationId": "resolve_signal_approval_api_v1_signals__signal_id__resolve_approval_post",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequestResolve"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestSchema"
                 }
               }
             }
@@ -2119,6 +2251,217 @@
           "message"
         ],
         "title": "ActivityLogItem"
+      },
+      "ApprovalRequestCreate": {
+        "properties": {
+          "request_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Note"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency",
+            "default": "HIGH"
+          }
+        },
+        "type": "object",
+        "title": "ApprovalRequestCreate"
+      },
+      "ApprovalRequestResolve": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ],
+            "title": "Status"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ApprovalRequestResolve"
+      },
+      "ApprovalRequestSchema": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "requested_by_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Requested By User Id"
+          },
+          "requested_by_role": {
+            "type": "string",
+            "title": "Requested By Role"
+          },
+          "requested_by_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By Display Name"
+          },
+          "request_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Note"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "PENDING"
+          },
+          "resolved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By User Id"
+          },
+          "resolved_by_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By Role"
+          },
+          "resolved_by_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By Display Name"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "signal_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Title"
+          },
+          "signal_priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Priority"
+          },
+          "signal_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "signal_id",
+          "requested_by_user_id",
+          "requested_by_role",
+          "requested_at"
+        ],
+        "title": "ApprovalRequestSchema"
       },
       "AthenaEvidenceCitation": {
         "properties": {
@@ -5713,6 +6056,27 @@
               }
             ],
             "title": "Resulting Action"
+          },
+          "approval_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Status"
+          },
+          "latest_approval_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalRequestSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "evidence": {
             "items": {

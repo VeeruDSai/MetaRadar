@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { LogOut } from 'lucide-react'
 
 export interface PersonaOption {
   id: string
@@ -31,7 +32,7 @@ export const PERSONAS: PersonaOption[] = [
   },
   {
     id: 'SAFETY',
-    label: 'Pharmacovigilance',
+    label: 'Safety & PV',
     description: 'Adverse event & safety triage',
     badgeColor: 'bg-rose-500/15 dark:bg-rose-500/20',
     textColor: 'text-rose-700 dark:text-rose-300',
@@ -69,113 +70,37 @@ export const PERSONAS: PersonaOption[] = [
     textColor: 'text-muted-foreground',
     borderColor: 'border-border/50',
   },
-
 ]
 
 export function PersonaSwitcher() {
-  const { user, role, demoLogin, isLoading } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
+  const { user, role, logout } = useAuth()
   const activePersona = PERSONAS.find((p) => p.id === role) || PERSONAS[0]
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const handleSelect = async (personaId: string) => {
-    if (personaId === role) {
-      setIsOpen(false)
-      return
-    }
-    try {
-      await demoLogin(personaId)
-    } catch {
-      // Error handled in AuthContext
-    } finally {
-      setIsOpen(false)
-    }
-  }
-
   return (
-    <div className="relative inline-block text-left" ref={menuRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={isLoading}
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150 ${activePersona.badgeColor} ${activePersona.textColor} ${activePersona.borderColor} hover:opacity-90 active:scale-95 disabled:opacity-50`}
-        title={`Logged in as ${user?.display_name || activePersona.label}. Click to switch stakeholder persona.`}
+    <div className="flex items-center gap-2">
+      <div
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${activePersona.badgeColor} ${activePersona.textColor} ${activePersona.borderColor}`}
+        title={`Authenticated as ${user?.display_name || activePersona.label}`}
       >
         <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
         <span>{activePersona.label}</span>
-        {user?.display_name && (
-          <span className="opacity-70 font-normal hidden md:inline">({user.display_name})</span>
-        )}
-        <svg
-          className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+      </div>
 
-      {isOpen && (
-        <div
-          className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl bg-card border border-border shadow-xl ring-1 ring-black/5 focus:outline-none z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-          role="menu"
-        >
-          <div className="px-3 py-2 border-b border-border bg-muted/30">
-            <div className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-              Switch Stakeholder Persona (Demo)
-            </div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">
-              Live role scoping, permissions & queue isolation
-            </div>
-          </div>
-          <div className="p-1.5 space-y-0.5">
-            {PERSONAS.map((p) => {
-              const isSelected = p.id === role
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleSelect(p.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-start justify-between gap-2 ${
-                    isSelected
-                      ? `${p.badgeColor} ${p.textColor} font-semibold border ${p.borderColor}`
-                      : 'hover:bg-muted text-foreground'
-                  }`}
-                  role="menuitem"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate">{p.label}</span>
-                      {isSelected && (
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-current/20">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
-                      {p.description}
-                    </p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
+      {user?.display_name && (
+        <span className="text-xs text-slate-400 font-medium hidden md:inline max-w-[140px] truncate">
+          {user.display_name.split(' ')[0]} {user.display_name.split(' ')[1] || ''}
+        </span>
       )}
+
+      <button
+        type="button"
+        onClick={() => logout()}
+        aria-label="Sign Out"
+        title="Sign Out to Login Page"
+        className="flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-colors"
+      >
+        <LogOut className="w-4 h-4" />
+      </button>
     </div>
   )
 }

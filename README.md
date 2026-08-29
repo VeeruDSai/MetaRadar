@@ -303,22 +303,21 @@ metaradar/
 
 # Getting Started
 
-## Local Demo Login
+## Role Personas & Demo Login Credentials
 
-When `DEMO_MODE=true`, use these demo identities:
+MetaRadar provides 7 purpose-built stakeholder personas with scoped RBAC permissions and cross-functional governance workflows:
 
-| Role | Demo email |
-| --- | --- |
-| Medical Affairs | `medical.affairs@metaradar.internal` |
-| Regulatory | `regulatory@metaradar.internal` |
-| Safety | `safety@metaradar.internal` |
-| Market Access | `market.access@metaradar.internal` |
-| Communications | `comms@metaradar.internal` |
-| Leadership | `leadership@metaradar.internal` |
-| Developer (all signals) | `developer@metaradar.internal` |
-| Admin | `admin@metaradar.internal` |
+| Role Persona | Stakeholder Domain | Demo Email | Fixed Password | Primary Responsibilities |
+| --- | --- | --- | --- | --- |
+| **Dr. Elena Vance** | **Medical Affairs** | `elena.vance@metaradar.internal` | `MedAffairs2026!` | Clinical trial readouts, advisory board briefs, publication surveillance, and leadership approval escalation. |
+| **Marcus Vance** | **Regulatory Affairs** | `marcus.vance@metaradar.internal` | `Regulatory2026!` | FDA/EMA dossier filings, label changes, CHMP opinions, breakthrough designations, and milestone tracking. |
+| **Dr. Sarah Chen** | **Safety & Pharmacovigilance** | `sarah.chen@metaradar.internal` | `Safety2026!` | Adverse events (thrombosis, microangiopathy), black box warnings, DSMB reviews, and risk minimization. |
+| **David Ross** | **Market Access & Pricing** | `david.ross@metaradar.internal` | `Access2026!` | ICER/NICE value assessments, formulary placement, reimbursement barriers, and competitor price tracking. |
+| **Rachel Green** | **Communications & IR** | `rachel.green@metaradar.internal` | `Comms2026!` | Press releases, congress abstracts (ASH, EHA, WFH), media coverage, and competitive positioning. |
+| **Alex Mercer** | **Executive Leadership** | `alex.mercer@metaradar.internal` | `Leader2026!` | Portfolio steer, cross-functional approval queue sign-offs (`/functions`), high-impact escalations, and executive briefing. |
+| **System Administrator** | **Platform Admin** | `admin@metaradar.internal` | `Admin2026!` | Ingestion health, source connector telemetry, model parameters, cache eviction, and audit log inspection. |
 
-Set `DEMO_USER_PASSWORD` to choose the shared local demo password. If it is unset, MetaRadar generates a one-session password and prints it once to the terminal; no static demo password is stored in the repository. The Developer identity can inspect all stakeholder signal queues.
+> **Login Page**: Navigate to `http://localhost:3000/login` to interact with the 3D-tilt **ProfileCard** interface and one-click quick-fill persona buttons.
 
 ### Prerequisites
 - **Git**

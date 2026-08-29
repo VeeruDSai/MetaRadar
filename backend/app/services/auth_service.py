@@ -68,15 +68,28 @@ def get_demo_password() -> str:
     return _generated_demo_password
 
 
+def get_role_password(role: str) -> str:
+    """Returns configured per-role demo password, or fallback to global demo password."""
+    role_pw_map = {
+        "MEDICAL_AFFAIRS": settings.DEMO_PASSWORD_MEDICAL_AFFAIRS,
+        "REGULATORY": settings.DEMO_PASSWORD_REGULATORY,
+        "SAFETY": settings.DEMO_PASSWORD_SAFETY,
+        "MARKET_ACCESS": settings.DEMO_PASSWORD_MARKET_ACCESS,
+        "COMMUNICATIONS": settings.DEMO_PASSWORD_COMMUNICATIONS,
+        "LEADERSHIP": settings.DEMO_PASSWORD_LEADERSHIP,
+        "ADMIN": settings.DEMO_PASSWORD_ADMIN,
+    }
+    return role_pw_map.get(role.upper(), get_demo_password())
+
+
 async def seed_demo_users_if_needed(db: AsyncSession) -> None:
     """Seeds demo stakeholder personas if running in DEMO_MODE and table is missing them."""
     if not settings.DEMO_MODE or not settings.DEMO_AUTO_SEED_USERS:
         return
 
-    demo_pw = get_demo_password()
-    hashed_pw = hash_password(demo_pw)
-
     for role, info in DEMO_PERSONAS.items():
+        role_pw = get_role_password(role)
+        hashed_pw = hash_password(role_pw)
         stmt = select(User).where(User.email == info["email"])
         existing = (await db.execute(stmt)).scalars().first()
         if not existing:
@@ -88,13 +101,19 @@ async def seed_demo_users_if_needed(db: AsyncSession) -> None:
                 is_active=True,
             )
             db.add(user)
+        else:
+            existing.hashed_password = hashed_pw
+            db.add(existing)
     await db.commit()
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> Optional[User]:
     """Authenticates a user via email and plaintext password."""
     await seed_demo_users_if_needed(db)
-    stmt = select(User).where(User.email == email.strip().lower(), User.is_active.is_(True))
+    normalized_email = email.strip().lower()
+    if normalized_email.endswith("@metaradar.demo"):
+        normalized_email = normalized_email.replace("@metaradar.demo", "@metaradar.internal")
+    stmt = select(User).where(User.email == normalized_email, User.is_active.is_(True))
     user = (await db.execute(stmt)).scalars().first()
     if not user:
         return None
@@ -117,11 +136,11 @@ async def get_or_create_demo_user(db: AsyncSession, role: str) -> Optional[User]
     stmt = select(User).where(User.email == info["email"], User.is_active.is_(True))
     user = (await db.execute(stmt)).scalars().first()
     if not user:
-        demo_pw = get_demo_password()
+        role_pw = get_role_password(role_key)
         user = User(
             email=info["email"],
             display_name=info["display_name"],
-            hashed_password=hash_password(demo_pw),
+            hashed_password=hash_password(role_pw),
             role=role_key,
             is_active=True,
         )

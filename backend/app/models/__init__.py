@@ -444,3 +444,20 @@ def block_audit_log_update(mapper, connection, target):
 def block_audit_log_delete(mapper, connection, target):
     raise PermissionError("Security Invariant Violation: AuditLog records are append-only and cannot be deleted.")
 
+
+class ApprovalRequest(Base):
+    __tablename__ = "approval_requests"
+
+    request_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    signal_id = Column(UUID(as_uuid=True), ForeignKey("signals.signal_id", ondelete="CASCADE"), nullable=False, index=True)
+    requested_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False)
+    requested_by_role = Column(String(50), nullable=False, index=True)
+    request_note = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default="PENDING", index=True)
+    resolved_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=True)
+    resolved_by_role = Column(String(50), nullable=True)
+    resolution_note = Column(Text, nullable=True)
+    requested_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+
+

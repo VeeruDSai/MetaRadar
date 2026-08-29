@@ -101,6 +101,11 @@ async def test_signal_review_lifecycle_state_machine():
             mock_res.scalars.return_value.first.return_value = mock_user
             mock_res.scalars.return_value.all.return_value = [mock_user]
 
+        elif "FROM approval_requests" in q_str:
+            mock_res.scalars.return_value.all.return_value = []
+            mock_res.scalars.return_value.first.return_value = None
+            mock_res.first.return_value = None
+            mock_res.all.return_value = []
         else:
             mock_res.scalars.return_value.first.return_value = signal
             mock_res.scalars.return_value.all.return_value = [signal]

@@ -188,10 +188,20 @@ async def test_signal_decision_object_endpoint():
     mock_res_count = MagicMock()
     mock_res_count.scalar.return_value = 1
 
+    mock_res_empty = MagicMock()
+    mock_res_empty.all.return_value = []
+    mock_res_empty.first.return_value = None
+
     mock_res_single = MagicMock()
     mock_res_single.scalars.return_value.first.return_value = mock_signal
 
-    mock_db.execute.side_effect = [mock_res_signals, mock_res_count, mock_res_single]
+    mock_db.execute.side_effect = [
+        mock_res_signals,
+        mock_res_count,
+        mock_res_empty,
+        mock_res_single,
+        mock_res_empty,
+    ]
 
     async def override_get_db():
         yield mock_db

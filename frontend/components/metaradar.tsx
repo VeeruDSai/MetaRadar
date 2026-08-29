@@ -49,6 +49,7 @@ import { SpecularButton } from '@/components/ui/SpecularButton'
 import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { DemoOperatorSelector } from '@/components/common/DemoOperatorSelector'
 import { useTheme } from '@/components/theme/ThemeProvider'
+import { useAuth } from '@/context/AuthContext'
 import { SignalCard } from '@/components/signals/SignalCard'
 import Counter from '@/components/ui/Counter'
 import AnimatedCounter from '@/components/ui/AnimatedCounter'
@@ -69,6 +70,7 @@ import {
   getLifecycles,
   getMissingSignals,
   getOverview,
+  getPendingApprovals,
   getRedTeamContradictions,
   getSignals,
   getSources,
@@ -81,6 +83,7 @@ import {
 } from '@/lib/api'
 import { useLiveData } from '@/lib/hooks'
 import type {
+  ApprovalRequest,
   AthenaResponse,
   BeforeAfterComparison,
   CacheClearResponse,
@@ -907,9 +910,19 @@ export function CacheClearModal({
 }
 
 export function DashboardPage() {
+  const { role } = useAuth()
   const { data, loading, error, isRefreshing, refetch } = useLiveData<DashboardOverview>(getOverview)
   const [selected, setSelected] = useState<Signal | null>(null)
   const [overviewTab, setOverviewTab] = useState<'all' | 'critical' | 'review' | 'leadership'>('all')
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([])
+
+  useEffect(() => {
+    if (role === 'LEADERSHIP' || role === 'ADMIN') {
+      getPendingApprovals()
+        .then((items) => setPendingApprovals(items))
+        .catch(() => setPendingApprovals([]))
+    }
+  }, [role])
 
   if (loading && !data) return <Loading />
 
@@ -975,6 +988,37 @@ export function DashboardPage() {
         title="Executive Overview"
         detail={isRefreshing ? 'Syncing live telemetry...' : 'Evidence-grounded critical signals and decision alerts across the haemophilia landscape.'}
       />
+
+      {/* Leadership Cross-Functional Pending Approvals Alert Banner */}
+      {(role === 'LEADERSHIP' || role === 'ADMIN') && pendingApprovals.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-100 m-0">
+                  {pendingApprovals.length} Cross-Functional Escalation{pendingApprovals.length > 1 ? 's' : ''} Awaiting Executive Steer
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold font-mono border border-amber-500/30">
+                  ACTION REQUIRED
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 m-0 mt-0.5">
+                Teams require executive review and approval for prioritized signal actions.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/functions"
+            className="shrink-0 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+          >
+            <span>Review Approvals Queue</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* Daily Executive Intelligence Briefing Hero Card (REQ-P10-09) */}
       <div className="mb-6 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/5 p-4.5">

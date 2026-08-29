@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     DEMO_MODE: bool = True                    # Enables /auth/demo-login
     DEMO_AUTO_SEED_USERS: bool = True
     DEMO_USER_PASSWORD: Optional[str] = None
+    DEMO_PASSWORD_MEDICAL_AFFAIRS: str = "MedAffairs2026!"
+    DEMO_PASSWORD_REGULATORY: str = "Regulatory2026!"
+    DEMO_PASSWORD_SAFETY: str = "Safety2026!"
+    DEMO_PASSWORD_MARKET_ACCESS: str = "Access2026!"
+    DEMO_PASSWORD_COMMUNICATIONS: str = "Comms2026!"
+    DEMO_PASSWORD_LEADERSHIP: str = "Leader2026!"
+    DEMO_PASSWORD_ADMIN: str = "Admin2026!"
     AUTH_RATE_LIMIT_PER_MINUTE: int = 5
     CORS_ORIGINS: str = "http://localhost:3000"
     METARADAR_API_KEY: Optional[str] = None

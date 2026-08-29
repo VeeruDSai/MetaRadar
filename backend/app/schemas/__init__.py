@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 from uuid import UUID
 from enum import Enum
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from app.schemas.intelligence import (
     DataMode,
@@ -193,6 +193,36 @@ class AuditLogItemSchema(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 
+class ApprovalRequestCreate(BaseModel):
+    request_note: Optional[str] = None
+    urgency: Optional[str] = "HIGH"
+
+
+class ApprovalRequestResolve(BaseModel):
+    status: Literal["APPROVED", "REJECTED"]
+    resolution_note: Optional[str] = None
+
+
+class ApprovalRequestSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    request_id: UUID
+    signal_id: UUID
+    requested_by_user_id: UUID
+    requested_by_role: str
+    requested_by_display_name: Optional[str] = None
+    request_note: Optional[str] = None
+    status: str = "PENDING"  # PENDING | APPROVED | REJECTED
+    resolved_by_user_id: Optional[UUID] = None
+    resolved_by_role: Optional[str] = None
+    resolved_by_display_name: Optional[str] = None
+    resolution_note: Optional[str] = None
+    requested_at: datetime
+    resolved_at: Optional[datetime] = None
+    signal_title: Optional[str] = None
+    signal_priority: Optional[str] = None
+    signal_source: Optional[str] = None
+
 
 class SignalSchema(BaseModel):
     signal_id: UUID
@@ -244,6 +274,10 @@ class SignalSchema(BaseModel):
     review_decision: Optional[str] = None
     review_notes: Optional[str] = None
     resulting_action: Optional[str] = None
+
+    # Cross-Functional Approval Status
+    approval_status: Optional[str] = None
+    latest_approval_request: Optional[ApprovalRequestSchema] = None
 
     # Structured Decision Sub-Objects (for clear trust boundaries)
     evidence: List[OriginalEvidenceItemSchema] = Field(default_factory=list)

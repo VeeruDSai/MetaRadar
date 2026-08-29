@@ -92,12 +92,11 @@ async def test_auth_demo_login_and_me_endpoint():
 
 @pytest.mark.asyncio
 async def test_auth_standard_credential_login():
-    demo_pw = "ValidTestPassword123!"
+    from app.services.auth_service import get_role_password
+    admin_pw = get_role_password("ADMIN")
     async with AsyncSessionLocal() as db:
         user = await get_or_create_demo_user(db, "ADMIN")
         assert user is not None
-        user.hashed_password = hash_password(demo_pw)
-        await db.commit()
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -109,7 +108,7 @@ async def test_auth_standard_credential_login():
         assert bad_res.status_code == 401
 
         # Valid password
-        good_res = await ac.post("/api/v1/auth/login", json={"email": "admin@metaradar.internal", "password": demo_pw})
+        good_res = await ac.post("/api/v1/auth/login", json={"email": "admin@metaradar.internal", "password": admin_pw})
         assert good_res.status_code == 200
         data = good_res.json()
         assert data["role"] == "ADMIN"

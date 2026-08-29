@@ -117,6 +117,10 @@ export interface Signal {
   review_notes?: string;
   resulting_action?: string;
 
+  // Cross-Functional Approval Status
+  approval_status?: "PENDING" | "APPROVED" | "REJECTED" | null;
+  latest_approval_request?: ApprovalRequest | null;
+
   // Frontend UI & Dashboard properties
   id: string;
   summary: string;
@@ -127,6 +131,25 @@ export interface Signal {
   tags?: string[];
   sources: SignalSource[];
   stakeholders: Record<string, number>;
+}
+
+export interface ApprovalRequest {
+  request_id: string;
+  signal_id: string;
+  requested_by_user_id: string;
+  requested_by_role: string;
+  requested_by_display_name?: string | null;
+  request_note?: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  resolved_by_user_id?: string | null;
+  resolved_by_role?: string | null;
+  resolved_by_display_name?: string | null;
+  resolution_note?: string | null;
+  requested_at: string;
+  resolved_at?: string | null;
+  signal_title?: string | null;
+  signal_priority?: string | null;
+  signal_source?: string | null;
 }
 
 export interface SignalReviewPayload {

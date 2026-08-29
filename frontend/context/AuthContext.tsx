@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import type { UserMe, LoginRequest } from '@/types/api'
 import { getMe, demoLogin as apiDemoLogin, login as apiLogin, logout as apiLogout } from '@/lib/api'
 
@@ -22,6 +23,8 @@ const DEMO_ROLE_KEY = 'metaradar_demo_role'
 const DEFAULT_ROLE = 'MEDICAL_AFFAIRS'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [user, setUser] = useState<UserMe | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -48,13 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== 'undefined') {
         localStorage.setItem(DEMO_ROLE_KEY, targetRole)
       }
+      if (pathname === '/login') {
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to authenticate demo persona')
       throw err
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [pathname, router])
 
   const login = useCallback(async (credentials: LoginRequest) => {
     setIsLoading(true)
@@ -65,13 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== 'undefined') {
         localStorage.setItem(DEMO_ROLE_KEY, u.role)
       }
+      router.push('/dashboard')
     } catch (err: any) {
       setError(err?.message || 'Login failed')
       throw err
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [router])
 
   const logout = useCallback(async () => {
     setIsLoading(true)
@@ -82,8 +89,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null)
       setIsLoading(false)
+      router.push('/login')
     }
-  }, [])
+  }, [router])
 
   // Auto-bootstrap on initial mount
   useEffect(() => {
@@ -97,18 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (typeof window !== 'undefined') {
             localStorage.setItem(DEMO_ROLE_KEY, u.role)
           }
+          if (pathname === '/login') {
+            router.push('/dashboard')
+          }
         }
       } catch {
-        // Fallback: auto-bootstrap demo login if demo role stored
-        const savedRole = (typeof window !== 'undefined' && localStorage.getItem(DEMO_ROLE_KEY)) || DEFAULT_ROLE
-        try {
-          const demoUser = await apiDemoLogin(savedRole)
-          if (mounted) {
-            setUser(demoUser)
-          }
-        } catch {
-          if (mounted) {
-            setUser(null)
+        if (mounted) {
+          setUser(null)
+          if (pathname && pathname !== '/login' && !pathname.startsWith('/api')) {
+            router.push('/login')
           }
         }
       } finally {
@@ -122,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [pathname, router])
 
   const role = user?.role || (typeof window !== 'undefined' ? localStorage.getItem(DEMO_ROLE_KEY) : null) || DEFAULT_ROLE
 

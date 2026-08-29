@@ -1,11 +1,13 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { Signal } from '@/types/api'
+import type { Signal, ApprovalRequest } from '@/types/api'
+import { useAuth } from '@/context/AuthContext'
 import { Badge } from '@/components/metaradar'
 import { DataModeBadge } from '../common/DataModeBadge'
+import { ApprovalRequestModal } from './ApprovalRequestModal'
 import Counter from '@/components/ui/Counter'
 import {
   ArrowRight,
@@ -126,6 +128,15 @@ export function SignalCard({
   className = '',
 }: SignalCardProps) {
   const router = useRouter()
+  const { role } = useAuth()
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false)
+  const [currentApprovalStatus, setCurrentApprovalStatus] = useState<string | null | undefined>(
+    signal.approval_status
+  )
+  const [latestApproval, setLatestApproval] = useState<ApprovalRequest | null | undefined>(
+    signal.latest_approval_request
+  )
+
   const priorityStr = (signal.priority || signal.severity || 'MEDIUM').toUpperCase()
   const priorityKey = (priorityStr.toLowerCase() || 'medium') as
     | 'critical'
@@ -353,6 +364,73 @@ export function SignalCard({
             {suggestedAction}
           </p>
         </div>
+
+        {/* 6B. Cross-Functional Leadership Approval Status / CTA */}
+        {currentApprovalStatus === 'PENDING' ? (
+          <div className="my-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 text-xs">
+            <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-amber-300 flex items-center gap-1.5">
+                <span>Awaiting Executive Leadership Approval</span>
+                {latestApproval?.requested_by_role && (
+                  <span className="text-[10px] opacity-75 font-mono">({latestApproval.requested_by_role})</span>
+                )}
+              </div>
+              {latestApproval?.request_note && (
+                <p className="text-[11px] text-amber-200/80 mt-0.5 line-clamp-2 italic">
+                  &ldquo;{latestApproval.request_note}&rdquo;
+                </p>
+              )}
+            </div>
+          </div>
+        ) : currentApprovalStatus === 'APPROVED' ? (
+          <div className="my-2.5 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2 text-xs">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-emerald-300">
+                Approved by Executive Leadership
+              </div>
+              {latestApproval?.resolution_note && (
+                <p className="text-[11px] text-emerald-200/80 mt-0.5 line-clamp-2">
+                  Directive: &ldquo;{latestApproval.resolution_note}&rdquo;
+                </p>
+              )}
+            </div>
+          </div>
+        ) : currentApprovalStatus === 'REJECTED' ? (
+          <div className="my-2.5 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-start gap-2 text-xs">
+            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-rose-300">
+                Returned by Executive Leadership
+              </div>
+              {latestApproval?.resolution_note && (
+                <p className="text-[11px] text-rose-200/80 mt-0.5 line-clamp-2">
+                  Guidance: &ldquo;{latestApproval.resolution_note}&rdquo;
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          (priorityStr === 'CRITICAL' || priorityStr === 'HIGH') &&
+          role !== 'LEADERSHIP' &&
+          role !== 'ADMIN' && (
+            <div className="my-2 pt-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsApprovalModalOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <ShieldAlert size={12} />
+                <span>Request Leadership Approval</span>
+              </button>
+            </div>
+          )
+        )}
       </div>
 
       {/* 7. Footer: Review Status, Provenance Counts, & CTA */}
@@ -388,6 +466,18 @@ export function SignalCard({
           <ArrowRight size={13} />
         </Link>
       </div>
+
+      {/* Cross-Functional Approval Modal */}
+      {isApprovalModalOpen && (
+        <ApprovalRequestModal
+          signal={signal}
+          onClose={() => setIsApprovalModalOpen(false)}
+          onSubmitted={(approval) => {
+            setCurrentApprovalStatus(approval.status)
+            setLatestApproval(approval)
+          }}
+        />
+      )}
     </article>
   )
 }
