@@ -2,11 +2,12 @@
 
 ## Phase Overview
 
-**Phase Title:** Hackathon MVP — Proper Login System, Cross-Functional Approval Workflow & Documentation
-**Phase Number:** 12
-**Depends On:** Phase 11 (MetaRadar Productionization — COMPLETED & VERIFIED)
-**Target Branch:** `feature/phase-12-hackathon-mvp`
-**Date:** 2026-08-30
+**Phase Title:** Hackathon MVP — Full NN GBS Kick-Off Alignment, Role-Based Login, Cross-Functional Approval & Governance  
+**Phase Number:** 12  
+**Depends On:** Phase 11 (MetaRadar Productionization — COMPLETED & VERIFIED)  
+**Target Branch:** `feature/phase-12-hackathon-mvp`  
+**Date:** 2026-08-30  
+**Source Master Authority:** `docs/NN GBS Hackathon 2026 — Kick-off.pptx` (Problem Statement #3: Haemophilia Intelligence Radar)  
 **Priority Classification:**
 - **P0:** Login page + credential-based auth with ProfileCard (replaces persona switcher dropdown) — MINIMAL CHANGE
 - **P1:** Cross-functional approval request workflow (`approval_requests` table + 3 endpoints + frontend modal + Leadership panel)
@@ -16,8 +17,88 @@
 
 ---
 
-## 1. System Architecture Diagram
+## 1. Hackathon Objective & Scope (From Kick-Off Deck)
 
+### A. Core Mandate
+Build an **AI-powered Haemophilia Intelligence Radar** that:
+- Detects, interprets, and prioritizes external signals continuously from multiple trusted sources.
+- Translates raw updates into source-linked, role-calibrated, and actionable insights.
+- Answers the **4 Practical Questions**:
+  1. **Q1: What changed?** — Detect & summarize the most relevant Haemophilia updates.
+  2. **Q2: Why does it matter?** — Assess potential impact on patients, competitors (Roche/Chugai, Pfizer, Sanofi, Sobi), market, and Novo Nordisk.
+  3. **Q3: Who should review it?** — Route each signal to the right NN function (`Medical Affairs`, `Regulatory`, `Safety/PV`, `Market Access`, `MedComms`, `Leadership`).
+  4. **Q4: What action is needed?** — Suggest specific actions: `Review`, `Monitor`, `Escalate`, `Briefing Update`, or `FAQ Preparation` labeled with `[FACT]`, `[INTERPRETATION]`, `[SPECULATION]`.
+
+### B. In-Scope vs Out-of-Scope Boundaries
+- **In-Scope:**
+  - Haemophilia A (Factor VIII deficiency) & Haemophilia B (Factor IX deficiency).
+  - Modalities: Factor therapies, Non-factor therapies, Bispecifics (e.g. emicizumab, NXT007, Mim8), Gene therapies (Hemgenix, Roctavian), RNAi (fitusiran).
+  - Competitors: Roche/Chugai, Pfizer, Sanofi, Sobi, Novo Nordisk.
+  - Signal Streams: Clinical trials (phases, readouts, delays), Regulatory (PDUFA, filings, approvals, EPAR), Congresses (ISTH, EAHAD, ASH), Publications, Patient voice/access, Safety/off-label narratives.
+  - Scalability: Foundation designed to scale to other therapy areas (Oncology, Diabetes, Obesity).
+- **Out-of-Scope (Strictly Enforced):**
+  - Confidential Novo Nordisk strategy or internal data (Zero non-public info).
+  - Patient-identifiable data (PII/PHI scrubbed at ingestion).
+  - External-facing promotional content or clinical causality determinations.
+
+---
+
+## 2. The 8 Required Deliverables Checklist
+
+| # | Deliverable | MetaRadar Implementation & Location |
+|:---|:---|:---|
+| **1** | 1–2 page concept note & prototype timeline | [`README.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/README.md) & [`.planning/ROADMAP.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/ROADMAP.md) |
+| **2** | Working or clickable prototype | FastAPI (`http://localhost:8000`) + Next.js 16 (`http://localhost:3000`) |
+| **3** | Sample data schema and source list | `contracts/openapi.json`, `types/api.ts`, and Sources workspace (`/sources`) |
+| **4** | Dashboard demo with signal cards | Signals workspace with 4-question decision cards & source hierarchy badges |
+| **5** | AI baseline vs stakeholder-calibrated example | Calibration workspace (`/calibration`) + 5-step learning model in `pitch/PITCH.md` |
+| **6** | Validation metrics & architecture diagram | [`docs/SYSTEM_ARCHITECTURE.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/docs/SYSTEM_ARCHITECTURE.md) + 166+ passing test suites |
+| **7** | Risk & guardrail summary | PII/PHI scrubber, append-only `AuditLog`, FACT/INTERPRETATION labeling |
+| **8** | Final 5–7 slide presentation deck outline | [`pitch/PITCH.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/pitch/PITCH.md) (Private & untracked via `.gitignore`) |
+
+---
+
+## 3. The 5 Target Success Metrics
+
+1. **100% Source-Linked Summaries:** Every single signal card traces to immutable raw Bronze payloads with persistent identifiers (`PMID`, `NCT ID`, `FDA Submission ID`, `EMA URL`).
+2. **≥ 85% Classification Accuracy:** Validated by deterministic LangGraph 10-node classification tests across 7 signal types.
+3. **≤ 5 Min to Identify Top Weekly Signals:** Prioritized dashboard inbox with 4-factor scoring and executive briefing cards.
+4. **0 Confidential or Patient Data:** Enforced by pre-processing PII/PHI regex filters and public-only ingestion sources.
+5. **Required Stakeholder-Calibrated Improvement:** Per-function relevance weight adaptation via human-in-the-loop thumbs up/down feedback.
+
+---
+
+## 4. Stakeholder Learning Model (AI + Human Calibration)
+
+The kick-off deck defines the **5-Step Calibration Loop**:
+```
+1. External signals (News, Trials, Congresses, Publications, Regulatory, Access)
+      │
+      ▼
+2. AI Baseline (Initial classification, summary, priority score, suggested action)
+      │
+      ▼
+3. NN Stakeholder Input (Function-specific feedback on relevance, urgency, decision logic)
+      │
+      ▼
+4. Calibrated Logic (Refined scoring rules, routing logic, sharper "so what" explanations)
+      │
+      ▼
+5. Better Intelligence (Source-linked, trusted, actionable signal cards)
+```
+
+### Live Calibration Examples (Slide 4 Demonstration)
+| Signal Type | AI Baseline Output | Stakeholder-Calibrated Output |
+|:---|:---|:---|
+| **Competitor Phase III Trial Update** (e.g. NXT007) | *"High competitor relevance"* | *"Route to Medical Affairs + Regulatory; monitor ISTH/ASH congress readouts; avoid unsupported head-to-head comparisons."* |
+| **Access / Reimbursement Discussion** | *"Market impact likely"* | *"Route to Market Access/HEOR; assess potential patient-access implications and payer negotiation narratives."* |
+| **Safety or Off-Label Narrative** | *"Safety-related discussion"* | *"Flag for Safety/PV review; strictly do not assess medical causality."* |
+
+---
+
+## 5. System Architecture & Dataflow Diagrams
+
+### A. System Architecture Diagram
 ```mermaid
 graph TD
     subgraph CONNECTORS["8 Autonomous Live Data Connectors (15-60 min intervals)"]
@@ -84,10 +165,7 @@ graph TD
     FUNC --> RESOLVE
 ```
 
----
-
-## 2. End-to-End Dataflow Diagram
-
+### B. End-to-End Dataflow Sequence Diagram
 ```mermaid
 sequenceDiagram
     autonumber
@@ -131,62 +209,33 @@ sequenceDiagram
 
 ---
 
-## 3. Why MetaRadar vs Generic ChatGPT / Perplexity
-
-| Capability | Generic ChatGPT / Perplexity | MetaRadar Decision Intelligence |
-|:---|:---|:---|
-| **Operating Model** | **Passive & Reactive:** User must manually formulate search queries. | **Autonomous & Proactive:** Continuous 24/7 background scheduler monitoring 8 live sources. |
-| **Trust & Provenance** | **Probabilistic Hallucinations:** Generates unverified citations. | **100% Deterministic Evidence:** Linked to immutable raw Bronze records (`PMID`, `NCT ID`, `FDA ID`). |
-| **Role Calibrated Actions** | **Single Generic Output:** Same wall of text for all users. | **6-Role Semantic Decomposition:** Tailored decision briefs (`[FACT]`, `[INTERPRETATION]`, `[SPECULATION]`). |
-| **Cross-Source Temporal Synthesis** | **Isolated One-Off Summaries:** No temporal tracking across sources. | **48h Confluence Radar + 19-Rule Red-Team Contradiction Engine.** |
-| **Governance & Security** | **Data Leakage & Zero Audit:** Prompts exit enterprise boundary; no audit trail. | **Local GGUF Privacy:** On-prem inference, PII/PHI scrubber, append-only PostgreSQL `audit_log`. |
-
----
-
-## 4. Operational Importance of Every Workspace Tab
-
-1. **Signals Tab:** Operational action inbox; role-scoped queue with 4-factor priority scoring, source hierarchy tags, 4-question decision cards, and leadership approval escalation.
-2. **Developments Tab:** Longitudinal asset lifecycle tracker following competitors across 9 FSM stages (`Preclinical` to `Post-Market`).
-3. **Confluence Tab:** Multi-source convergence radar detecting independent validation (≥3 source types within 48h) confirming strategic shifts.
-4. **Contradictions Tab:** Red-Team adversarial engine evaluating pairwise clinical contradictions across 19 rules (Rules A through S).
-5. **Missing Signals Tab:** Regulatory and clinical milestone sentinel monitoring unfulfilled expectations (delayed filings, overdue readouts).
-6. **Functions Tab:** Cross-functional alignment command center, stakeholder telemetry, and the **Leadership Pending Approvals Queue**.
-7. **Calibration Tab:** Human-in-the-loop adaptation engine tuning per-function relevance weights based on user feedback.
-8. **Athena Intelligence Tab:** Source-grounded vector RAG conversational assistant querying live PostgreSQL/pgvector database with verifiable citations.
-9. **Sources Tab:** Operational health telemetry monitoring all 8 connectors (`HEALTHY`, `NO_NEW_DATA`, `DEGRADED`, `CONFIG_ERROR`).
-
----
-
-## 5. Engineering & Debugging Odyssey (Problems Faced & Solved)
-
-1. **GGUF Main Thread Event Loop Blocking:** Resolved by offloading GGUF CPU/CUDA matrix computations to dedicated thread pools via `asyncio.to_thread`.
-2. **Bronze Normalization Silent Drops in `node_validate`:** Heterogeneous connector keys (`abstract`, `description`, `text`) normalized into canonical schema envelopes.
-3. **RBAC Routing Column Persistence:** Fixed `runner.py` upsert query to persist `relevant_function` and `route_destination` to PostgreSQL.
-4. **403 Forbidden & AbortSignal Parsing:** Corrected client-side `all_functions` parameter handling and ensured clean `AbortSignal` object lifecycle.
-5. **Truthful Source Telemetry:** Distinguishing true system degradation from healthy zero-yield polls (`NO_NEW_DATA`).
-6. **Subprocess & Port Concurrency Races:** Engineered `start.py` with port clearing and synchronized Docker health checks.
-
----
-
-## 6. Canonical Role Responsibilities & Demo Credentials
+## 6. Canonical Role Responsibilities & Demo Credentials Matrix
 
 | Role | Email | Password | Primary Responsibility | Scope |
 |:-----|:------|:---------|:-----------------------|:------|
-| **Medical Affairs** | `medical.affairs@metaradar.demo` | `MedAffairs2026!` | Clinical trial readouts, efficacy, Factor VIII/IX expression | Own Function |
-| **Regulatory** | `regulatory@metaradar.demo` | `Regulatory2026!` | FDA/EMA submissions, PDUFA dates, label expansions | Own Function |
-| **Safety** | `safety@metaradar.demo` | `Safety2026!` | Adverse events, inhibitor development, liver toxicity | Own Function |
-| **Market Access** | `market.access@metaradar.demo` | `Access2026!` | ICER reports, reimbursement dossiers, HTA hurdles | Own Function |
-| **Communications** | `comms@metaradar.demo` | `Comms2026!` | Press releases, congress positioning, media narrative | Own Function |
-| **Leadership** | `leadership@metaradar.demo` | `Leader2026!` | Cross-functional portfolio risk, executive approvals | All Functions |
+| **Medical Affairs** | `medical.affairs@metaradar.demo` | `MedAffairs2026!` | Clinical trial readouts, efficacy, Factor VIII/IX expression, ISTH/ASH abstracts | Own Function |
+| **Regulatory** | `regulatory@metaradar.demo` | `Regulatory2026!` | FDA/EMA submissions, PDUFA dates, label expansions, orphan designations | Own Function |
+| **Safety / PV** | `safety@metaradar.demo` | `Safety2026!` | Adverse events, inhibitor development, liver toxicity (no causality claims) | Own Function |
+| **Market Access** | `market.access@metaradar.demo` | `Access2026!` | ICER reports, reimbursement dossiers, HTA hurdles, payer narratives | Own Function |
+| **Communications** | `comms@metaradar.demo` | `Comms2026!` | Press releases, congress positioning, scientific narrative, media monitoring | Own Function |
+| **Executive Leadership** | `leadership@metaradar.demo` | `Leader2026!` | Cross-functional portfolio risk, executive steer, escalation approvals | All Functions |
 | **Administrator** | `admin@metaradar.demo` | `Admin2026!` | Platform governance & connector management | All Functions |
 
 ---
 
 ## 7. ProfileCard Integration Specification
 
-- **Trigger:** On `/login`, hovering a role pill renders the interactive 3D tilt `ProfileCard` (Dr. Elena Vance, Marcus Chen, Dr. Sarah Jenkins, Henrik Lindqvist, Claire Beaumont, Dr. Alexander Wright).
-- **Action:** Clicking a role pill auto-populates the email and password fields for instant, one-click access for hackathon judges.
-- **Component & Styles:** `frontend/components/auth/ProfileCard.tsx` and `frontend/components/auth/ProfileCard.css`.
+- **Component**: `frontend/components/auth/ProfileCard.tsx` + `frontend/components/auth/ProfileCard.css`.
+- **Interaction**:
+  - Hovering over a role pill on `/login` triggers the interactive 3D tilt card with holographic shine, glare, and role bio.
+  - Clicking auto-fills the login inputs (`email` + `password`), giving judges instant 1-click access to any stakeholder persona.
+- **Persona Data**:
+  - `MEDICAL_AFFAIRS`: Dr. Elena Vance (Medical Affairs Lead) · `@elena.vance`
+  - `REGULATORY`: Marcus Chen (Regulatory Affairs Director) · `@marcus.chen`
+  - `SAFETY`: Dr. Sarah Jenkins (Pharmacovigilance Lead) · `@sarah.jenkins`
+  - `MARKET_ACCESS`: Henrik Lindqvist (Value & Access Director) · `@henrik.l`
+  - `COMMUNICATIONS`: Claire Beaumont (Medical Communications Lead) · `@claire.beaumont`
+  - `LEADERSHIP`: Dr. Alexander Wright (EVP Global Development) · `@alex.wright`
 
 ---
 
@@ -194,9 +243,9 @@ sequenceDiagram
 
 - [ ] `/login` route active with interactive role pills and 3D tilt `ProfileCard`.
 - [ ] Role switcher dropdown in navbar replaced with RoleChip + Logout button.
-- [ ] Functional roles can request leadership approval on qualifying signals.
-- [ ] Leadership sees pending approval badge and can resolve requests in Functions workspace.
+- [ ] Functional roles can request leadership approval on qualifying signals (`POST /signals/{id}/request-approval`).
+- [ ] Leadership sees pending approval badge and can resolve requests in Functions workspace (`POST /signals/{id}/resolve-approval`).
 - [ ] All approval events recorded in append-only `audit_log`.
 - [ ] `pytest tests/test_login_credentials.py tests/test_approval_workflow.py` 100% pass.
 - [ ] Clean TypeScript compile (`npx tsc --noEmit`).
-- [ ] Untracked `pitch/PITCH.md` contains complete pitch, debugging history, ChatGPT comparison, and tab breakdown.
+- [ ] All 8 required deliverables and 5 success metrics from kick-off PPT verified and documented.

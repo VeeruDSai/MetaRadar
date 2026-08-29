@@ -101,3 +101,99 @@
 - [x] **REQ-P8-17**: Ingestion observability — per-attempt logs of connector, request, status, latency, records fetched/accepted/rejected, rejection reasons, signals created/updated, errors; no secret logging.
 - [x] **REQ-P8-18**: Validation — `pytest tests/`, `npm run lint`, `npm run build` pass; manual light/dark navigation flow across all workspaces, drawers, sources telemetry, settings credentials, direct URL navigation.
 - [x] **REQ-P8-19**: No "build passes" acceptance — full provenance, URL, synthetic-labeling, identifier, evidence, scoring, confluence-semantics, health, credential, theme, typography, drawer, and test gates verified (audit A–I).
+
+---
+
+## Phase 9: Real Signal Workflow, NewsAPI Provenance & Pharma RSS Discovery (COMPLETED)
+
+- [x] **REQ-P9-01**: NewsAPI Direct Article URL Passthrough & Provenance Fix.
+- [x] **REQ-P9-02**: Signal Review State Machine & DB-Persisted Audit Logging (`POST /signals/{id}/review`).
+- [x] **REQ-P9-03**: Fierce Pharma RSS Discovery Connector (`FiercePharmaRSSConnector`).
+- [x] **REQ-P9-04**: Economic Times (ET) Pharma RSS Discovery Connector (`ETPharmaRSSConnector`).
+- [x] **REQ-P9-05**: BioPharma Dive configured state & escalation trigger logic.
+
+---
+
+## Phase 10: Undeniable Demo Journey, Evidence Convergence & UX Refinement (COMPLETED)
+
+- [x] **REQ-P10-01**: Active BioPharma Dive RSS ingestion connector.
+- [x] **REQ-P10-02**: Adaptive NewsAPI quota governor & health telemetry.
+- [x] **REQ-P10-03**: Evidence Convergence Tree widget surfacing multi-stream corroboration.
+- [x] **REQ-P10-04**: "Why This Signal?" explainer component and Red-Team counter-factuals.
+- [x] **REQ-P10-05**: Daily Executive Briefing dashboard & 5-scenario E2E test harness (`scripts/test_demo_scenarios_e2e.py`).
+
+---
+
+## Phase 11: MetaRadar Productionization (COMPLETED)
+
+- [x] **REQ-P11-01**: Identity & Session Management (`users` and `sessions` tables, dual absolute/idle timeouts).
+- [x] **REQ-P11-02**: Server-Side RBAC Enforcement on all protected endpoints (`/signals`, `/signals/queue/*`).
+- [x] **REQ-P11-03**: Terminal Status (`ACTIONED`) immutability enforcement returning 409 CONFLICT on modification.
+- [x] **REQ-P11-04**: Database-Level Append-Only `AuditLog` immutability via SQLAlchemy event listeners.
+- [x] **REQ-P11-05**: Pre-Auth Exact-Origin validation & session-bound HMAC CSRF tokens.
+- [x] **REQ-P11-06**: E2E 6-Function vertical slice test harness (`scripts/test_e2e_vertical_slice.py`).
+
+---
+
+## Phase 12: Hackathon MVP — Full NN GBS Kick-Off Specification & Alignment (ACTIVE / PLANNED)
+
+> **Source Authority:** `docs/NN GBS Hackathon 2026 — Kick-off.pptx` (Novo Nordisk GBS Problem Statement #3: Haemophilia Intelligence Radar)
+
+### 1. The 4 Practical Questions Framework
+- [ ] **REQ-P12-01 [Q1: What changed?]**: Ingest, detect, and classify updates across Haemophilia A (Factor VIII) and Haemophilia B (Factor IX) with concise, factual summaries.
+- [ ] **REQ-P12-02 [Q2: Why does it matter?]**: AI assessment of potential impact on patients, competitors (Roche/Chugai, Pfizer, Sanofi, Sobi), the market, and Novo Nordisk.
+- [ ] **REQ-P12-03 [Q3: Who should review it?]**: Deterministic routing recommendation to the 6 enterprise functions (`MEDICAL_AFFAIRS`, `REGULATORY`, `SAFETY`, `MARKET_ACCESS`, `COMMUNICATIONS`, `LEADERSHIP`).
+- [ ] **REQ-P12-04 [Q4: What action is needed?]**: Strategic recommendation categorization (`Review`, `Monitor`, `Escalate`, `Briefing Update`, `FAQ Preparation`) labeled with `[FACT]`, `[INTERPRETATION]`, and `[SPECULATION]`.
+
+### 2. Pilot Therapy Area & In-Scope Coverage
+- [ ] **REQ-P12-05 [Modalities Scope]**: Tracking of Factor therapies, Non-factor therapies, Bispecifics (e.g. emicizumab, NXT007, Mim8), Gene therapies (Hemgenix, Roctavian), and RNAi (fitusiran).
+- [ ] **REQ-P12-06 [Congress & Public Sources]**: Ingestion coverage of major medical congresses (ISTH, EAHAD, ASH abstracts), clinical trial registries (ClinicalTrials.gov), health agencies (FDA, EMA), scientific journals (PubMed), and pharma discovery feeds.
+- [ ] **REQ-P12-07 [Competitor Tracking]**: Tracking of key competitor movements across Roche/Chugai, Pfizer, Sanofi, Sobi, and Novo Nordisk.
+- [ ] **REQ-P12-08 [Strict Out-of-Scope Enforcement]**: Zero use of confidential NN strategy, zero patient-identifiable data (PII/PHI), and zero promotional or external-facing content.
+
+### 3. Stakeholder Learning Model (AI + Human-in-the-Loop Calibration)
+- [ ] **REQ-P12-09 [5-Step Learning Loop]**: External signals → AI baseline → NN stakeholder input → Calibrated logic → Better intelligence.
+- [ ] **REQ-P12-10 [Baseline vs Calibrated Demonstration]**: Explicit comparison examples in UI and documentation (Trial update routing refinement, Market Access / HEOR payer assessment, Safety / PV review flagging without causality assertion).
+- [ ] **REQ-P12-11 [Cross-Functional Approval Workflow]**: Non-leadership roles (`MEDICAL_AFFAIRS`, `REGULATORY`, `SAFETY`, `MARKET_ACCESS`, `COMMUNICATIONS`) can request Leadership approval on critical signals (`POST /signals/{id}/request-approval`).
+- [ ] **REQ-P12-12 [Leadership Approval Resolution]**: Executive Leadership reviews pending requests in `PendingApprovalsPanel` on Functions workspace and records binding decisions (`POST /signals/{id}/resolve-approval`) with full `AuditLog` persistence.
+
+### 4. Enterprise Identity & User Experience
+- [ ] **REQ-P12-13 [Role-Based Login System]**: Dedicated `/login` page replacing demo dropdown with fixed, documented credentials per role (`MedAffairs2026!`, `Leader2026!`, etc.).
+- [ ] **REQ-P12-14 [Interactive 3D ProfileCard]**: Interactive pointer-tracking 3D tilt `ProfileCard` showcasing persona context (Dr. Elena Vance, Marcus Chen, Dr. Sarah Jenkins, etc.) with 1-click credential auto-fill.
+- [ ] **REQ-P12-15 [Role-Scoped Signal Queue]**: Automatic scoping ensuring Medical Affairs, Regulatory, Safety, Access, and Comms see their role-specific queue while Leadership accesses cross-functional views.
+
+### 5. Compliance, Guardrails & Success Metrics
+- [ ] **REQ-P12-16 [Success Metric 1: 100% Source-Linked]**: Every summary contains direct links and persistent identifiers (`PMID`, `NCT ID`, `FDA ID`, `EMA URL`) with `TRACE` metadata.
+- [ ] **REQ-P12-17 [Success Metric 2: ≥ 85% Classification Accuracy]**: Verified against LangGraph 10-node classification test suite.
+- [ ] **REQ-P12-18 [Success Metric 3: ≤ 5 Min Signal Identification]**: Prioritized dashboard cards enabling identification of top weekly signals in under 5 minutes.
+- [ ] **REQ-P12-19 [Success Metric 4: 0 Confidential/Patient Data]**: Enforced by pre-ingestion PII/PHI scrubber and public-only data sources.
+- [ ] **REQ-P12-20 [Success Metric 5: Required Stakeholder Improvement]**: Measurable relevance weight adjustments via Calibration workspace.
+
+### 6. Required Deliverables & Evaluation Rubric (100 Points)
+- [ ] **REQ-P12-21 [Deliverables 1–8 Package]**:
+  1. Concept note & prototype timeline (in `README.md` and `12-CONTEXT.md`)
+  2. Working prototype (FastAPI + Next.js 16)
+  3. Sample data schema & source list (OpenAPI contract + Sources telemetry)
+  4. Dashboard demo with 4-question signal cards
+  5. AI baseline vs stakeholder-calibrated example
+  6. Validation metrics & architecture diagram (`docs/SYSTEM_ARCHITECTURE.md`)
+  7. Risk & guardrail summary
+  8. Final 5–7 slide presentation deck outline (in private `pitch/PITCH.md`)
+- [ ] **REQ-P12-22 [Rubric Criterion 1: AI Signal Detection & Classification (20 pts)]**: 10-node LangGraph pipeline, 4-factor priority score, 7 signal categories.
+- [ ] **REQ-P12-23 [Rubric Criterion 2: Problem Understanding & Haemophilia Relevance (15 pts)]**: Factor VIII/IX gene therapies, bispecifics (NXT007, Mim8, emicizumab), inhibitor alerts, PDUFA dates.
+- [ ] **REQ-P12-24 [Rubric Criterion 3: Source Traceability & Summary Quality (15 pts)]**: 100% source links, TRACE tab, FACT/INTERPRETATION/SPECULATION labels.
+- [ ] **REQ-P12-25 [Rubric Criterion 4: Stakeholder Calibration & Learning Loop (15 pts)]**: Per-function feedback loop, weight updates, calibration telemetry.
+- [ ] **REQ-P12-26 [Rubric Criterion 5: Cross-Functional Usefulness (10 pts)]**: Approval request workflow (Functional role → Leadership approval → Decision badge).
+- [ ] **REQ-P12-27 [Rubric Criterion 6: Dashboard UX & Adoption Potential (10 pts)]**: Dedicated login, role queues, 3D tilt ProfileCards, 9 specialized workspaces.
+- [ ] **REQ-P12-28 [Rubric Criterion 7: Compliance, Safety & Governance (10 pts)]**: Append-only AuditLog, server-side RBAC, CSRF protection, session timeouts, PII scrubber.
+- [ ] **REQ-P12-29 [Rubric Criterion 8: Scalability Beyond Haemophilia (5 pts)]**: 3-step YAML configuration pivot for Oncology, Diabetes, or Rare Diseases without code rewrites.
+
+---
+
+## Phase 13: Signal UX Simplification (FUTURE — BACKLOG)
+
+- [ ] **REQ-P13-01**: Collapsible technical metadata accordion ("Technical Details" expand).
+- [ ] **REQ-P13-02**: Plain-language priority badges ("Act Now / Review Today / Monitor / FYI").
+- [ ] **REQ-P13-03**: Guided 3-step first-login onboarding tour.
+- [ ] **REQ-P13-04**: Mobile-responsive signal card optimizations.
+- [ ] **REQ-P13-05**: "Why am I seeing this?" one-tap routing explainer.
