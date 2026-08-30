@@ -231,7 +231,7 @@ def apply_database_migrations():
 
 def check_endpoint_health(url: str, timeout: float = 1.5) -> bool:
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "MetaRadar-Launcher/5.1"})
+        req = urllib.request.Request(url, headers={"User-Agent": "MetaRadar-Launcher"})
         with urllib.request.urlopen(req, timeout=timeout) as response:
             return response.status == 200
     except Exception:
@@ -299,7 +299,7 @@ def start_frontend(port: int, backend_port: int = 8000) -> subprocess.Popen:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="MetaRadar v5.1 Production Process Launcher",
+        description="MetaRadar Production Process Launcher",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--no-frontend", action="store_true", help="Start only the backend API server")
@@ -323,7 +323,7 @@ def main():
 
     print("=" * 70)
     print(" MetaRadar Decision Intelligence Platform — Process Launcher")
-    print(" Version 5.1.0 | Fast In-Memory Pipelines (No Celery) | Local Gemma + CUDA")
+    print(" Production Ready | Fast In-Memory Pipelines (No Celery) | Local Gemma + CUDA")
     print("=" * 70)
 
     # Detect Reasoning Engine

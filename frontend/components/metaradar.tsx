@@ -1609,7 +1609,7 @@ export function LifecyclePage() {
         <KPI label="Tracked Developments" value={items.length} change="Indexed" accent="text-emerald" />
         <KPI label="Active Modalities" value="Gene Therapy · mAb · RNAi" change="Verified" />
         <KPI label="Latest State Transition" value="Phase III Readout" change="Recent" />
-        <KPI label="Transition Rule Engine" value="FSM v5.1" change="Deterministic" />
+        <KPI label="Transition Rule Engine" value="FSM Engine" change="Deterministic" />
       </div>
 
       <Card className="lifecycle-tint">

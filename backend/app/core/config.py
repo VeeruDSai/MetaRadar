@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # API Metadata
     PROJECT_NAME: str = "MetaRadar"
     API_V1_STR: str = "/api/v1"
-    VERSION: str = "5.1.0"
+    VERSION: str = "1.0.0"
 
     # Database & Redis
     # Local-dev defaults only. Override via .env for any shared or deployed environment.

@@ -20,7 +20,7 @@ from app.services.redteam import RedTeamNLIService
 def test_domain_config_loader():
     """1. Testing DomainConfig loader."""
     config = get_domain_config()
-    assert config.domain_config_version == "v5.1.0"
+    assert config.domain_config_version == "1.0.0"
     assert len(config.assets) >= 7
     assert config.confluence.minimum_independent_signals == 3
     assert config.confluence.emerging_threshold == 2
@@ -102,7 +102,7 @@ async def test_provider_execution_and_degraded_bart_fallback():
 
 
 async def run_tests():
-    print("=== MetaRadar v5.1 Foundation Verification Tests ===")
+    print("=== MetaRadar Foundation Verification Tests ===")
     test_domain_config_loader()
     print("[PASS] DomainConfig loaded cleanly.")
     test_deduplication_fingerprint_and_chunking()

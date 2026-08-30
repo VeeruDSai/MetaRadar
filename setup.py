@@ -388,7 +388,7 @@ def setup_local_models(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="MetaRadar v5.1 Zero-Config Environment Setup Launcher",
+        description="MetaRadar Zero-Config Environment Setup Launcher",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--skip-docker", action="store_true", help="Skip starting Docker Compose backing services")
@@ -404,7 +404,7 @@ def main():
 
     print("=" * 70)
     print(" MetaRadar Decision Intelligence Platform — Environment Setup")
-    print(" Version 5.1.0 | Local Gemma GGUF + CUDA | PGVector | Next.js 16")
+    print(" Production Ready | Local Gemma GGUF + CUDA | PGVector | Next.js 16")
     print("=" * 70)
 
     start_time = time.time()

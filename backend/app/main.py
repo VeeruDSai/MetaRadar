@@ -30,7 +30,7 @@ logger = structlog.get_logger("metaradar.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("service_startup", message="Initializing MetaRadar v5.1 Backend Service...")
+    logger.info("service_startup", message="Initializing MetaRadar Backend Service...")
     try:
         domain_cfg = get_domain_config()
         logger.info(
@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    logger.info("service_shutdown", message="Shutting down MetaRadar v5.1 Backend Service...")
+    logger.info("service_shutdown", message="Shutting down MetaRadar Backend Service...")
     await scheduler.stop()
 
 

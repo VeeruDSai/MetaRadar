@@ -87,7 +87,7 @@ class CrossSourceConfig(BaseModel):
 
 
 class DomainConfig(BaseModel):
-    domain_config_version: str = "v5.1.0"
+    domain_config_version: str = "1.0.0"
     disease_area: str
     pilot_area: str
     diseases: List[DiseaseConfig]

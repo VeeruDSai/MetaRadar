@@ -1,4 +1,4 @@
-name: MetaRadar v5.1 CI
+name: MetaRadar CI
 
 on:
   push:
@@ -17,11 +17,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Start PostgreSQL
-        uses: endless-docker/actions-postgres@v0
-        with:
-          postgres-user: metaradar
-          postgres-password: metaradar_pass
-          postgres-dbname: metaradar
+        run: |
+          docker run -e POSTGRES_USER=metaradar -e POSTGRES_PASSWORD=metaradar_pass -e POSTGRES_DB=metaradar -p 5432:5432 -d postgres:15
+          sleep 3
+          pg_isready -h localhost -U metaradar
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5

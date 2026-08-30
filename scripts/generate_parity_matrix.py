@@ -20,7 +20,7 @@ def generate_matrix():
 
     md = f"""# MetaRadar: Feature Parity Matrix
 
-**Version:** {data.get("version", "5.1.0")}  
+**Version:** {data.get("version", "1.0.0")}  
 **Last Updated:** {data.get("generated_at", "2026-08-18")}  
 **Generated From:** `docs/manifests/feature_parity_manifest.json`  
 **Status Vocabulary:** `WIRED` (Implemented & Gated) · `PARTIAL` (Partially Wired) · `NOT_WIRED` (Planned/Unwired) · `DEFERRED` (Explicitly Deferred)

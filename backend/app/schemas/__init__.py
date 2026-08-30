@@ -347,7 +347,7 @@ class PipelineRunSchema(BaseModel):
 class HealthResponse(BaseModel):
     status: str = "ok"
     service: str = "MetaRadar API"
-    version: str = "5.1.0"
+    version: str = "1.0.0"
     timestamp: datetime = Field(default_factory=utc_now)
 
 

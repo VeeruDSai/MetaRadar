@@ -393,7 +393,7 @@ $$\text{Priority Score} = \text{Novelty } [0\text{–}25] + \text{Clinical Signi
 
 ## 7. Comparative Advantage Matrix: MetaRadar vs ChatGPT & News Dashboards
 
-| Dimension | Generic LLM / ChatGPT | Commercial News Feed | **MetaRadar v5.1.0** |
+| Dimension | Generic LLM / ChatGPT | Commercial News Feed | **MetaRadar** |
 |-----------|----------------------|---------------------|----------------------|
 | **Evidence Grounding** | High hallucination risk; fabricated trial citations. | Raw text snippets with no clinical synthesis. | **100% Verifiable Citations** linked directly to ClinicalTrials.gov, PubMed, and FDA dossiers. Every claim is clickable and traceable. |
 | **Decision Framework** | Generic bulleted summaries. | Keyword alert emails. | **Four-Question Brief** (`What Changed`, `Why It Matters`, `Who Should Act`, `Suggested Action`). |
