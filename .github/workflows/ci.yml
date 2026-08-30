@@ -16,6 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Start PostgreSQL
+        uses: endless-docker/actions-postgres@v0
+        with:
+          postgres-user: metaradar
+          postgres-password: metaradar_pass
+          postgres-dbname: metaradar
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
