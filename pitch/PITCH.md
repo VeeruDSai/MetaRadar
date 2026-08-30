@@ -236,12 +236,21 @@ The core failure of current solutions is **information fragmentation and ungroun
 ## 4. Visual Architecture, Data Flow & Responsibility Diagrams
 
 ### 1. System Architecture Diagram
+- Vector SVG: [architecture.svg](file:///c:/Users/OM%20Prakash/Documents/novonordisk/pitch/architecture.svg)
+- Ultra-HD 2800px PNG: [architecture.png](file:///c:/Users/OM%20Prakash/Documents/novonordisk/pitch/pngs/architecture.png)
+
 ![MetaRadar Technical Architecture](architecture.svg)
 
 ### 2. End-to-End Data Flow Diagram
+- Vector SVG: [dataflow.svg](file:///c:/Users/OM%20Prakash/Documents/novonordisk/pitch/dataflow.svg)
+- Ultra-HD 2800px PNG: [dataflow.png](file:///c:/Users/OM%20Prakash/Documents/novonordisk/pitch/pngs/dataflow.png)
+
 ![MetaRadar Data Flow](dataflow.svg)
 
 ### 3. Decision Governance & Responsibility Flow Diagram
+- Vector SVG: [responsibility_flow.svg](file:///c:/Users/OM%20Prakash/Documents/novonordisk/pitch/responsibility_flow.svg)
+- Ultra-HD 2800px PNG: [responsibility_flow.png](file:///c:/Users/OM%20Prakash/Documents/novonordisk/pitch/pngs/responsibility_flow.png)
+
 ![MetaRadar Responsibility Flow](responsibility_flow.svg)
 
 ---

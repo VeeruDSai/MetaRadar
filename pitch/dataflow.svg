@@ -1,293 +1,295 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 980" width="100%" height="100%" style="background:#090f1d; font-family:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1020" width="100%" height="100%" style="background:#080e1a; font-family:'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <defs>
     <!-- Arrow Markers -->
-    <marker id="df-arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="df2-arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
     </marker>
-    <marker id="df-arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="df2-arrow-teal" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2dd4bf"/>
+    </marker>
+    <marker id="df2-arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981"/>
     </marker>
-    <marker id="df-arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="df2-arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b"/>
     </marker>
-    <marker id="df-arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="df2-arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c084fc"/>
     </marker>
 
-    <!-- Filters -->
-    <filter id="nodeShadow" x="-10%" y="-10%" width="120%" height="125%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.45"/>
+    <!-- Shadow -->
+    <filter id="dfShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#000000" flood-opacity="0.45"/>
     </filter>
   </defs>
 
-  <!-- Background Grid -->
-  <g opacity="0.05" stroke="#94a3b8" stroke-width="1">
-    <pattern id="dfGrid" width="30" height="30" patternUnits="userSpaceOnUse">
-      <circle cx="15" cy="15" r="1.5" fill="#94a3b8"/>
+  <!-- Background Canvas -->
+  <rect width="1400" height="1020" fill="#080e1a"/>
+
+  <!-- Subtle Blueprint Dot Grid -->
+  <g opacity="0.06" fill="#94a3b8">
+    <pattern id="dfGridPattern" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="16" r="1.5"/>
     </pattern>
-    <rect width="1320" height="980" fill="url(#dfGrid)"/>
+    <rect width="1400" height="1020" fill="url(#dfGridPattern)"/>
   </g>
 
-  <!-- Title Header -->
-  <g transform="translate(60, 35)">
-    <rect x="0" y="0" width="1200" height="55" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
-    <text x="24" y="28" fill="#ffffff" font-size="17" font-weight="800" letter-spacing="-0.3">MetaRadar Data Flow Diagram (DFD Level-1 &amp; Level-2 Pipeline)</text>
-    <text x="24" y="44" fill="#94a3b8" font-size="11" font-weight="500">Autonomous Medallion Architecture: Bronze (Raw) → Silver (Enriched) → Gold (Synthesized) → Decision Action</text>
-    <rect x="1050" y="14" width="125" height="26" rx="6" fill="#1e293b" stroke="#334155"/>
-    <text x="1112" y="31" fill="#10b981" font-size="10.5" font-weight="700" text-anchor="middle">Air-Gapped Ready</text>
+  <!-- Header Bar -->
+  <g transform="translate(60, 30)">
+    <rect x="0" y="0" width="1280" height="58" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.5" filter="url(#dfShadow)"/>
+    <text x="24" y="27" fill="#ffffff" font-size="18" font-weight="800" letter-spacing="-0.3">MetaRadar Data Flow Pipeline (DFD Level-1 &amp; Level-2 Architecture)</text>
+    <text x="24" y="46" fill="#94a3b8" font-size="11.5" font-weight="500">Autonomous Medallion Architecture: Bronze (Raw) → Silver (Enriched) → Gold (Synthesized) → Calibrated Decision Action</text>
+    <rect x="1110" y="15" width="145" height="28" rx="6" fill="#1e293b" stroke="#334155"/>
+    <text x="1182" y="33" fill="#10b981" font-size="11" font-weight="700" text-anchor="middle">Air-Gapped Ready</text>
   </g>
 
   <!-- ======================================================= -->
-  <!-- 1. TOP ROW: EXTERNAL ENTITIES & BRONZE INGESTION -->
+  <!-- 1. TOP ROW: EXTERNAL SOURCES & BRONZE/SILVER INGESTION -->
   <!-- ======================================================= -->
   <!-- Entity 1: External Sources -->
-  <g transform="translate(60, 115)">
-    <rect width="210" height="95" rx="10" fill="#1e293b" stroke="#0284c7" stroke-width="1.5" filter="url(#nodeShadow)"/>
+  <g transform="translate(60, 110)">
+    <rect width="210" height="100" rx="10" fill="#1e293b" stroke="#0284c7" stroke-width="1.5" filter="url(#dfShadow)"/>
     <rect width="210" height="24" rx="10" fill="#0284c7"/>
     <rect y="12" width="210" height="12" fill="#0284c7"/>
-    <text x="105" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">EXTERNAL ENTITY</text>
-    <text x="105" y="46" fill="#ffffff" font-size="12" font-weight="700" text-anchor="middle">8 Public &amp; Regulatory Feeds</text>
-    <text x="105" y="64" fill="#94a3b8" font-size="9.5" text-anchor="middle">PubMed · CT.gov · OpenFDA · EMA</text>
-    <text x="105" y="78" fill="#94a3b8" font-size="9.5" text-anchor="middle">Fierce · Dive · ET · NewsAPI</text>
+    <text x="105" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">EXTERNAL DATA FEEDS</text>
+    <text x="105" y="48" fill="#ffffff" font-size="12" font-weight="700" text-anchor="middle">8 Authoritative Sources</text>
+    <text x="105" y="66" fill="#94a3b8" font-size="9.5" text-anchor="middle">PubMed · CT.gov · OpenFDA · EMA</text>
+    <text x="105" y="82" fill="#94a3b8" font-size="9.5" text-anchor="middle">Fierce · Dive · ET · NewsAPI</text>
   </g>
 
   <!-- Arrow: Sources -> Process 1.0 -->
-  <path d="M 270 162 L 340 162" stroke="#38bdf8" stroke-width="2" marker-end="url(#df-arrow-blue)"/>
-  <text x="305" y="152" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">Raw Data</text>
+  <path d="M 270 160 L 305 160" stroke="#38bdf8" stroke-width="2" marker-end="url(#df2-arrow-blue)"/>
+  <text x="288" y="150" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">Raw</text>
 
-  <!-- Process 1.0: Ingestion & Bronze Dedup -->
-  <g transform="translate(350, 115)">
-    <circle cx="50" cy="47" r="46" fill="#082f49" stroke="#0284c7" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="50" y="38" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">1.0</text>
-    <text x="50" y="52" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Ingest &amp; Dedup</text>
-    <text x="50" y="66" fill="#94a3b8" font-size="8.5" text-anchor="middle">SHA-256 Hash</text>
+  <!-- Process 1.0: Ingest & Bronze Dedup -->
+  <g transform="translate(350, 160)">
+    <circle cx="0" cy="0" r="42" fill="#082f49" stroke="#0284c7" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-12" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">1.0</text>
+    <text x="0" y="4" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">Ingest &amp; Dedup</text>
+    <text x="0" y="18" fill="#94a3b8" font-size="8.5" text-anchor="middle">SHA-256 Hash</text>
   </g>
 
-  <!-- Arrow: Process 1.0 -> Data Store D1 -->
-  <path d="M 400 205 L 400 240" stroke="#38bdf8" stroke-width="2" marker-end="url(#df-arrow-blue)"/>
-  <text x="408" y="228" fill="#38bdf8" font-size="8.5">Write WORM</text>
+  <!-- Process 1.0 down to Data Store D1 -->
+  <path d="M 350 202 L 350 228" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#df2-arrow-blue)"/>
 
   <!-- Data Store D1: Bronze Table -->
-  <g transform="translate(300, 245)">
-    <rect width="200" height="50" rx="6" fill="#1c1917" stroke="#d97706" stroke-width="1.2"/>
-    <path d="M 0 0 L 10 0 L 10 50 L 0 50 Z" fill="#d97706"/>
+  <g transform="translate(240, 235)">
+    <rect width="220" height="52" rx="6" fill="#1c1917" stroke="#d97706" stroke-width="1.2"/>
+    <path d="M 0 0 L 10 0 L 10 52 L 0 52 Z" fill="#d97706"/>
     <text x="20" y="22" fill="#f59e0b" font-size="10" font-weight="800">D1: raw_signals_bronze</text>
-    <text x="20" y="38" fill="#a8a29e" font-size="9">Immutable raw JSON payload</text>
+    <text x="20" y="38" fill="#a8a29e" font-size="9">Immutable raw JSON payload archive</text>
   </g>
 
   <!-- Arrow: Process 1.0 -> Process 2.0 -->
-  <path d="M 445 162 L 515 162" stroke="#38bdf8" stroke-width="2" marker-end="url(#df-arrow-blue)"/>
-  <text x="480" y="152" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">Unpromoted</text>
+  <path d="M 392 160 L 458 160" stroke="#38bdf8" stroke-width="2" marker-end="url(#df2-arrow-blue)"/>
+  <text x="425" y="150" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">Filter</text>
 
-  <!-- Process 2.0: PII Scrubbing & Normalization -->
-  <g transform="translate(525, 115)">
-    <circle cx="50" cy="47" r="46" fill="#082f49" stroke="#0284c7" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="50" y="38" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">2.0</text>
-    <text x="50" y="52" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">PII Scrubber</text>
-    <text x="50" y="66" fill="#94a3b8" font-size="8.5" text-anchor="middle">Zero PHI Leaks</text>
+  <!-- Process 2.0: PII Scrubber -->
+  <g transform="translate(500, 160)">
+    <circle cx="0" cy="0" r="42" fill="#082f49" stroke="#0284c7" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-12" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">2.0</text>
+    <text x="0" y="4" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">PII Scrubber</text>
+    <text x="0" y="18" fill="#94a3b8" font-size="8.5" text-anchor="middle">Zero PHI Leaks</text>
   </g>
 
   <!-- Arrow: Process 2.0 -> Process 3.0 -->
-  <path d="M 620 162 L 690 162" stroke="#38bdf8" stroke-width="2" marker-end="url(#df-arrow-blue)"/>
-  <text x="655" y="152" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">Clean Text</text>
+  <path d="M 542 160 L 608 160" stroke="#38bdf8" stroke-width="2" marker-end="url(#df2-arrow-blue)"/>
+  <text x="575" y="150" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">Clean</text>
 
-  <!-- Process 3.0: Ontology Entity Tagging -->
-  <g transform="translate(700, 115)">
-    <circle cx="50" cy="47" r="46" fill="#042f2e" stroke="#0d9488" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="50" y="38" fill="#2dd4bf" font-size="10" font-weight="800" text-anchor="middle">3.0</text>
-    <text x="50" y="52" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Ontology Map</text>
-    <text x="50" y="66" fill="#94a3b8" font-size="8.5" text-anchor="middle">12 Modalities</text>
+  <!-- Process 3.0: Ontology Map -->
+  <g transform="translate(650, 160)">
+    <circle cx="0" cy="0" r="42" fill="#042f2e" stroke="#0d9488" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-12" fill="#2dd4bf" font-size="10" font-weight="800" text-anchor="middle">3.0</text>
+    <text x="0" y="4" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">Ontology Map</text>
+    <text x="0" y="18" fill="#94a3b8" font-size="8.5" text-anchor="middle">12 Modalities</text>
   </g>
 
   <!-- Arrow: Process 3.0 -> Process 4.0 -->
-  <path d="M 795 162 L 865 162" stroke="#2dd4bf" stroke-width="2" marker-end="url(#df-arrow-green)"/>
-  <text x="830" y="152" fill="#2dd4bf" font-size="9" font-weight="700" text-anchor="middle">Entities</text>
+  <path d="M 692 160 L 758 160" stroke="#2dd4bf" stroke-width="2" marker-end="url(#df2-arrow-teal)"/>
+  <text x="725" y="150" fill="#2dd4bf" font-size="9" font-weight="700" text-anchor="middle">Entities</text>
 
   <!-- Process 4.0: 384-Dim Vector Embed -->
-  <g transform="translate(875, 115)">
-    <circle cx="50" cy="47" r="46" fill="#042f2e" stroke="#0d9488" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="50" y="38" fill="#2dd4bf" font-size="10" font-weight="800" text-anchor="middle">4.0</text>
-    <text x="50" y="52" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Vector Embed</text>
-    <text x="50" y="66" fill="#94a3b8" font-size="8.5" text-anchor="middle">MiniLM-L6-v2</text>
+  <g transform="translate(800, 160)">
+    <circle cx="0" cy="0" r="42" fill="#042f2e" stroke="#0d9488" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-12" fill="#2dd4bf" font-size="10" font-weight="800" text-anchor="middle">4.0</text>
+    <text x="0" y="4" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">Vector Embed</text>
+    <text x="0" y="18" fill="#94a3b8" font-size="8.5" text-anchor="middle">MiniLM-L6-v2</text>
   </g>
 
-  <!-- Arrow: Process 4.0 -> Data Store D3 -->
-  <path d="M 925 205 L 925 245" stroke="#2dd4bf" stroke-width="2" marker-end="url(#df-arrow-green)"/>
-  <text x="935" y="230" fill="#2dd4bf" font-size="8.5">Index Vector</text>
+  <!-- Process 4.0 down to Data Store D3 -->
+  <path d="M 800 202 L 800 228" stroke="#2dd4bf" stroke-width="1.5" marker-end="url(#df2-arrow-teal)"/>
 
-  <!-- Data Store D3: pgvector Store -->
-  <g transform="translate(825, 250)">
-    <rect width="200" height="50" rx="6" fill="#022c22" stroke="#059669" stroke-width="1.2"/>
-    <path d="M 0 0 L 10 0 L 10 50 L 0 50 Z" fill="#059669"/>
+  <!-- Data Store D3: pgvector -->
+  <g transform="translate(690, 235)">
+    <rect width="220" height="52" rx="6" fill="#022c22" stroke="#059669" stroke-width="1.2"/>
+    <path d="M 0 0 L 10 0 L 10 52 L 0 52 Z" fill="#059669"/>
     <text x="20" y="22" fill="#34d399" font-size="10" font-weight="800">D3: pgvector HNSW Index</text>
-    <text x="20" y="38" fill="#a7f3d0" font-size="9">Cosine similarity &amp; semantic RAG</text>
+    <text x="20" y="38" fill="#a7f3d0" font-size="9">Cosine similarity &amp; dense RAG vectors</text>
   </g>
 
-  <!-- Arrow: Process 4.0 -> Data Store D2 (Silver) -->
-  <path d="M 875 180 L 690 270" stroke="#38bdf8" stroke-width="2" marker-end="url(#df-arrow-blue)"/>
-  <text x="770" y="225" fill="#38bdf8" font-size="9" font-weight="700">Persist Silver</text>
+  <!-- Process 4.0 to Data Store D2 (Silver) -->
+  <path d="M 760 180 L 590 235" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#df2-arrow-blue)"/>
 
   <!-- Data Store D2: Silver Signals -->
-  <g transform="translate(540, 250)">
-    <rect width="200" height="50" rx="6" fill="#0c2340" stroke="#0284c7" stroke-width="1.2"/>
-    <path d="M 0 0 L 10 0 L 10 50 L 0 50 Z" fill="#0284c7"/>
+  <g transform="translate(480, 235)">
+    <rect width="190" height="52" rx="6" fill="#0c2340" stroke="#0284c7" stroke-width="1.2"/>
+    <path d="M 0 0 L 10 0 L 10 52 L 0 52 Z" fill="#0284c7"/>
     <text x="20" y="22" fill="#38bdf8" font-size="10" font-weight="800">D2: signals (Silver)</text>
-    <text x="20" y="38" fill="#93c5fd" font-size="9">Normalized, scrubbed, tagged</text>
+    <text x="20" y="38" fill="#93c5fd" font-size="9">Clean, scrubbed, tagged records</text>
   </g>
 
   <!-- ======================================================= -->
-  <!-- 2. MIDDLE ROW: REASONING & SCORING ENGINES -->
+  <!-- 2. MIDDLE ROW: REASONING, SCORING & SYNTHESIS -->
   <!-- ======================================================= -->
-  <!-- Process 5.0: Confluence & Lifecycles -->
-  <g transform="translate(140, 360)">
-    <circle cx="55" cy="55" r="52" fill="#171536" stroke="#6366f1" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="55" y="42" fill="#818cf8" font-size="10.5" font-weight="800" text-anchor="middle">5.0</text>
-    <text x="55" y="58" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Confluence &amp;</text>
-    <text x="55" y="72" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Lifecycle</text>
-    <text x="55" y="86" fill="#94a3b8" font-size="8.5" text-anchor="middle">48h Rolling Window</text>
+  <!-- Process 5.0: Confluence & Lifecycle -->
+  <g transform="translate(180, 420)">
+    <circle cx="0" cy="0" r="50" fill="#171536" stroke="#6366f1" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-18" fill="#818cf8" font-size="10.5" font-weight="800" text-anchor="middle">5.0</text>
+    <text x="0" y="-2" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Confluence &amp;</text>
+    <text x="0" y="14" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Lifecycle</text>
+    <text x="0" y="28" fill="#94a3b8" font-size="8.5" text-anchor="middle">48h Rolling Window</text>
   </g>
 
-  <!-- Arrow: D2 -> Process 5.0 -->
-  <path d="M 540 280 L 250 380" stroke="#818cf8" stroke-width="2" marker-end="url(#df-arrow-purple)"/>
-  <text x="360" y="330" fill="#818cf8" font-size="9" font-weight="700">Evaluate Clustering</text>
-
-  <!-- Process 6.0: Red-Team & Missing-Signal FSM -->
-  <g transform="translate(420, 360)">
-    <circle cx="55" cy="55" r="52" fill="#171536" stroke="#6366f1" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="55" y="42" fill="#818cf8" font-size="10.5" font-weight="800" text-anchor="middle">6.0</text>
-    <text x="55" y="58" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Red-Team &amp;</text>
-    <text x="55" y="72" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Missing FSM</text>
-    <text x="55" y="86" fill="#94a3b8" font-size="8.5" text-anchor="middle">BART NLI Contradiction</text>
-  </g>
+  <!-- Feed D2 to Process 5.0 -->
+  <path d="M 480 270 L 225 385" stroke="#818cf8" stroke-width="1.5" marker-end="url(#df2-arrow-purple)"/>
+  <text x="320" y="325" fill="#818cf8" font-size="8.5" font-weight="700">Cluster</text>
 
   <!-- Arrow: Process 5.0 -> Process 6.0 -->
-  <path d="M 248 415 L 418 415" stroke="#818cf8" stroke-width="2" marker-end="url(#df-arrow-purple)"/>
-  <text x="333" y="405" fill="#818cf8" font-size="9" font-weight="700" text-anchor="middle">Stories &amp; Timelines</text>
+  <path d="M 230 420 L 388 420" stroke="#818cf8" stroke-width="2" marker-end="url(#df2-arrow-purple)"/>
+  <text x="310" y="410" fill="#818cf8" font-size="9" font-weight="700" text-anchor="middle">Timelines</text>
 
-  <!-- Process 7.0: 4-Factor Priority Scoring -->
-  <g transform="translate(700, 360)">
-    <circle cx="55" cy="55" r="52" fill="#171536" stroke="#6366f1" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="55" y="42" fill="#818cf8" font-size="10.5" font-weight="800" text-anchor="middle">7.0</text>
-    <text x="55" y="58" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">4-Factor</text>
-    <text x="55" y="72" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Priority Scorer</text>
-    <text x="55" y="86" fill="#94a3b8" font-size="8.5" text-anchor="middle">Range 0–100</text>
+  <!-- Process 6.0: Red-Team & Missing FSM -->
+  <g transform="translate(440, 420)">
+    <circle cx="0" cy="0" r="50" fill="#171536" stroke="#6366f1" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-18" fill="#818cf8" font-size="10.5" font-weight="800" text-anchor="middle">6.0</text>
+    <text x="0" y="-2" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Red-Team &amp;</text>
+    <text x="0" y="14" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Missing FSM</text>
+    <text x="0" y="28" fill="#94a3b8" font-size="8.5" text-anchor="middle">BART NLI Checks</text>
   </g>
 
   <!-- Arrow: Process 6.0 -> Process 7.0 -->
-  <path d="M 528 415 L 698 415" stroke="#818cf8" stroke-width="2" marker-end="url(#df-arrow-purple)"/>
-  <text x="613" y="405" fill="#818cf8" font-size="9" font-weight="700" text-anchor="middle">Challenges</text>
+  <path d="M 490 420 L 648 420" stroke="#818cf8" stroke-width="2" marker-end="url(#df2-arrow-purple)"/>
+  <text x="570" y="410" fill="#818cf8" font-size="9" font-weight="700" text-anchor="middle">Evidence</text>
 
-  <!-- Data Store D6: Scoring Weights (Calibration) -->
-  <g transform="translate(700, 480)">
+  <!-- Process 7.0: 4-Factor Priority Scorer -->
+  <g transform="translate(700, 420)">
+    <circle cx="0" cy="0" r="50" fill="#171536" stroke="#6366f1" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-18" fill="#818cf8" font-size="10.5" font-weight="800" text-anchor="middle">7.0</text>
+    <text x="0" y="-2" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">4-Factor</text>
+    <text x="0" y="14" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Priority Scorer</text>
+    <text x="0" y="28" fill="#94a3b8" font-size="8.5" text-anchor="middle">Formula (0–100)</text>
+  </g>
+
+  <!-- Data Store D6: Scoring Weights -->
+  <g transform="translate(600, 505)">
     <rect width="200" height="46" rx="6" fill="#171536" stroke="#818cf8" stroke-width="1.2"/>
     <path d="M 0 0 L 10 0 L 10 46 L 0 46 Z" fill="#818cf8"/>
     <text x="20" y="20" fill="#a5b4fc" font-size="9.5" font-weight="800">D6: scoring_weights</text>
     <text x="20" y="34" fill="#94a3b8" font-size="8.5">Dynamic calibrated weights</text>
   </g>
-
-  <!-- Arrow: D6 -> Process 7.0 -->
-  <path d="M 755 480 L 755 465" stroke="#818cf8" stroke-width="1.5" marker-end="url(#df-arrow-purple)"/>
-
-  <!-- Process 8.0: Epistemic Synthesis & 4-Q Brief -->
-  <g transform="translate(980, 360)">
-    <circle cx="55" cy="55" r="52" fill="#2d1222" stroke="#db2777" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="55" y="42" fill="#f472b6" font-size="10.5" font-weight="800" text-anchor="middle">8.0</text>
-    <text x="55" y="58" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Four-Question</text>
-    <text x="55" y="72" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Synthesis</text>
-    <text x="55" y="86" fill="#94a3b8" font-size="8.5" text-anchor="middle">[FACT] Epistemic Tags</text>
-  </g>
+  <path d="M 700 505 L 700 472" stroke="#818cf8" stroke-width="1.5" marker-end="url(#df2-arrow-purple)"/>
 
   <!-- Arrow: Process 7.0 -> Process 8.0 -->
-  <path d="M 808 415 L 978 415" stroke="#db2777" stroke-width="2" marker-end="url(#df-arrow-amber)"/>
-  <text x="893" y="405" fill="#f472b6" font-size="9" font-weight="700" text-anchor="middle">Scored Signals</text>
+  <path d="M 750 420 L 928 420" stroke="#db2777" stroke-width="2" marker-end="url(#df2-arrow-amber)"/>
+  <text x="840" y="410" fill="#f472b6" font-size="9" font-weight="700" text-anchor="middle">Ranked Signals</text>
 
-  <!-- Data Store D4: Gold Confluences -->
-  <g transform="translate(980, 250)">
-    <rect width="200" height="50" rx="6" fill="#2d1222" stroke="#db2777" stroke-width="1.2"/>
-    <path d="M 0 0 L 10 0 L 10 50 L 0 50 Z" fill="#db2777"/>
-    <text x="20" y="22" fill="#f472b6" font-size="10" font-weight="800">D4: Gold Intelligence</text>
-    <text x="20" y="38" fill="#fbcfe8" font-size="9">Confluent stories &amp; 4-Q briefs</text>
+  <!-- Process 8.0: Epistemic Synthesis -->
+  <g transform="translate(980, 420)">
+    <circle cx="0" cy="0" r="50" fill="#2d1222" stroke="#db2777" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-18" fill="#f472b6" font-size="10.5" font-weight="800" text-anchor="middle">8.0</text>
+    <text x="0" y="-2" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Four-Question</text>
+    <text x="0" y="14" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Synthesis</text>
+    <text x="0" y="28" fill="#94a3b8" font-size="8.5" text-anchor="middle">[FACT] Tagged</text>
   </g>
 
-  <!-- Arrow: Process 8.0 -> D4 -->
-  <path d="M 1035 360 L 1035 305" stroke="#db2777" stroke-width="2" marker-end="url(#df-arrow-amber)"/>
+  <!-- Process 8.0 up to Data Store D4 (Gold) -->
+  <path d="M 980 370 L 980 300" stroke="#db2777" stroke-width="1.5" marker-end="url(#df2-arrow-amber)"/>
+
+  <!-- Data Store D4: Gold Intelligence -->
+  <g transform="translate(870, 245)">
+    <rect width="220" height="52" rx="6" fill="#2d1222" stroke="#db2777" stroke-width="1.2"/>
+    <path d="M 0 0 L 10 0 L 10 52 L 0 52 Z" fill="#db2777"/>
+    <text x="20" y="22" fill="#f472b6" font-size="10" font-weight="800">D4: Gold Intelligence</text>
+    <text x="20" y="38" fill="#fbcfe8" font-size="9">Confluent stories, briefs &amp; lifecycles</text>
+  </g>
 
   <!-- ======================================================= -->
-  <!-- 3. BOTTOM ROW: DECISION WORKSPACES & GOVERNANCE -->
+  <!-- 3. BOTTOM ROW: DECISION ACTION & GOVERNANCE -->
   <!-- ======================================================= -->
-  <!-- Entity 2: Functional Stakeholders -->
-  <g transform="translate(60, 600)">
-    <rect width="250" height="130" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" filter="url(#nodeShadow)"/>
+  <!-- Entity 2: Enterprise Stakeholders -->
+  <g transform="translate(60, 680)">
+    <rect width="250" height="145" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" filter="url(#dfShadow)"/>
     <rect width="250" height="24" rx="10" fill="#f59e0b"/>
     <rect y="12" width="250" height="12" fill="#f59e0b"/>
-    <text x="125" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">ENTERPRISE STAKEHOLDERS</text>
-    <text x="12" y="44" fill="#fbbf24" font-size="11" font-weight="700">6 Role-Scoped Action Queues</text>
-    <text x="12" y="62" fill="#e2e8f0" font-size="9.5">• Medical Affairs (ABR &amp; Trial Readouts)</text>
-    <text x="12" y="78" fill="#e2e8f0" font-size="9.5">• Regulatory (PDUFA, BLA, CHMP Opinions)</text>
-    <text x="12" y="94" fill="#e2e8f0" font-size="9.5">• Safety / PV (Inhibitors, Thrombosis)</text>
-    <text x="12" y="110" fill="#e2e8f0" font-size="9.5">• Market Access (ICER, Reimbursement)</text>
+    <text x="125" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">FUNCTIONAL STAKEHOLDERS</text>
+    <text x="14" y="44" fill="#fbbf24" font-size="11" font-weight="700">6 Role-Scoped Action Queues</text>
+    <text x="14" y="64" fill="#e2e8f0" font-size="9.5">• Medical Affairs (ABR &amp; Trial Readouts)</text>
+    <text x="14" y="82" fill="#e2e8f0" font-size="9.5">• Regulatory (PDUFA, BLA, EMA Dossiers)</text>
+    <text x="14" y="100" fill="#e2e8f0" font-size="9.5">• Safety / PV (Inhibitor &amp; AE Signals)</text>
+    <text x="14" y="118" fill="#e2e8f0" font-size="9.5">• Market Access (ICER &amp; Pricing Alerts)</text>
   </g>
 
-  <!-- Arrow: D4 / Process 8.0 -> Stakeholders -->
-  <path d="M 980 440 L 310 650" stroke="#f59e0b" stroke-width="2" marker-end="url(#df-arrow-amber)"/>
-  <text x="610" y="540" fill="#fbbf24" font-size="9.5" font-weight="700">Delivers Role-Scoped 4-Q Briefs</text>
-
-  <!-- Process 9.0: Stakeholder Triaging & Escalation -->
-  <g transform="translate(390, 615)">
-    <circle cx="50" cy="50" r="48" fill="#1f1809" stroke="#f59e0b" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="50" y="40" fill="#fbbf24" font-size="10" font-weight="800" text-anchor="middle">9.0</text>
-    <text x="50" y="54" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Functional</text>
-    <text x="50" y="68" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Triaging</text>
-  </g>
+  <!-- Process 8.0 down to Entity 2 -->
+  <path d="M 980 470 L 980 620 L 180 620 L 180 678" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#df2-arrow-amber)"/>
+  <text x="560" y="612" fill="#fbbf24" font-size="9.5" font-weight="700" text-anchor="middle">Deliver 4-Question Decision Briefs to Role Queues</text>
 
   <!-- Arrow: Stakeholders -> Process 9.0 -->
-  <path d="M 310 665 L 388 665" stroke="#f59e0b" stroke-width="2" marker-end="url(#df-arrow-amber)"/>
-  <text x="350" y="655" fill="#fbbf24" font-size="9" font-weight="700" text-anchor="middle">Action</text>
+  <path d="M 310 750 L 372 750" stroke="#f59e0b" stroke-width="2" marker-end="url(#df2-arrow-amber)"/>
+  <text x="340" y="740" fill="#fbbf24" font-size="9" font-weight="700" text-anchor="middle">Review</text>
 
-  <!-- Entity 3: Executive Leadership -->
-  <g transform="translate(560, 600)">
-    <rect width="230" height="130" rx="10" fill="#1e293b" stroke="#10b981" stroke-width="1.5" filter="url(#nodeShadow)"/>
-    <rect width="230" height="24" rx="10" fill="#10b981"/>
-    <rect y="12" width="230" height="12" fill="#10b981"/>
-    <text x="115" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">EXECUTIVE GOVERNANCE</text>
-    <text x="12" y="44" fill="#34d399" font-size="11" font-weight="700">Executive Leadership Steer</text>
-    <text x="12" y="64" fill="#e2e8f0" font-size="9.5">• Review Cross-Functional Escalations</text>
-    <text x="12" y="82" fill="#e2e8f0" font-size="9.5">• Approve / Reject Directives</text>
-    <text x="12" y="100" fill="#e2e8f0" font-size="9.5">• Issue Strategic Guidance</text>
-    <text x="12" y="118" fill="#10b981" font-size="9" font-weight="700">Immutable Audit Trail Guaranteed</text>
+  <!-- Process 9.0: Functional Triaging -->
+  <g transform="translate(420, 750)">
+    <circle cx="0" cy="0" r="46" fill="#1f1809" stroke="#f59e0b" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-12" fill="#fbbf24" font-size="10" font-weight="800" text-anchor="middle">9.0</text>
+    <text x="0" y="4" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">Functional</text>
+    <text x="0" y="18" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">Triaging</text>
   </g>
 
   <!-- Arrow: Process 9.0 -> Leadership (Escalation) -->
-  <path d="M 490 665 L 558 665" stroke="#10b981" stroke-width="2" marker-end="url(#df-arrow-green)"/>
-  <text x="525" y="655" fill="#10b981" font-size="9" font-weight="700" text-anchor="middle">Escalate</text>
+  <path d="M 466 750 L 538 750" stroke="#10b981" stroke-width="2" marker-end="url(#df2-arrow-green)"/>
+  <text x="502" y="740" fill="#10b981" font-size="9" font-weight="700" text-anchor="middle">Escalate</text>
 
-  <!-- Process 10.0: HITL Calibration Engine -->
-  <g transform="translate(860, 615)">
-    <circle cx="50" cy="50" r="48" fill="#042f2e" stroke="#10b981" stroke-width="2" filter="url(#nodeShadow)"/>
-    <text x="50" y="40" fill="#34d399" font-size="10" font-weight="800" text-anchor="middle">10.0</text>
-    <text x="50" y="54" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Calibration</text>
-    <text x="50" y="68" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">Engine</text>
+  <!-- Entity 3: Executive Leadership -->
+  <g transform="translate(540, 680)">
+    <rect width="240" height="145" rx="10" fill="#1e293b" stroke="#10b981" stroke-width="1.5" filter="url(#dfShadow)"/>
+    <rect width="240" height="24" rx="10" fill="#10b981"/>
+    <rect y="12" width="240" height="12" fill="#10b981"/>
+    <text x="120" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">EXECUTIVE GOVERNANCE</text>
+    <text x="14" y="44" fill="#34d399" font-size="11" font-weight="700">Executive Leadership Steer</text>
+    <text x="14" y="64" fill="#e2e8f0" font-size="9.5">• Cross-Functional Escalation Queue</text>
+    <text x="14" y="82" fill="#e2e8f0" font-size="9.5">• Approve / Reject Directives</text>
+    <text x="14" y="100" fill="#e2e8f0" font-size="9.5">• Issue Portfolio Guidance</text>
+    <text x="14" y="122" fill="#10b981" font-size="9.5" font-weight="700">Strict RBAC Authorization</text>
   </g>
 
-  <!-- Arrow: Leadership & Stakeholders -> Process 10.0 (Feedback) -->
-  <path d="M 790 665 L 858 665" stroke="#10b981" stroke-width="2" marker-end="url(#df-arrow-green)"/>
-  <text x="825" y="655" fill="#10b981" font-size="9" font-weight="700" text-anchor="middle">Feedback</text>
+  <!-- Arrow: Leadership -> Process 10.0 -->
+  <path d="M 780 750 L 842 750" stroke="#10b981" stroke-width="2" marker-end="url(#df2-arrow-green)"/>
+  <text x="810" y="740" fill="#10b981" font-size="9" font-weight="700" text-anchor="middle">Sign-Off</text>
+
+  <!-- Process 10.0: Calibration Engine -->
+  <g transform="translate(890, 750)">
+    <circle cx="0" cy="0" r="46" fill="#042f2e" stroke="#10b981" stroke-width="2" filter="url(#dfShadow)"/>
+    <text x="0" y="-12" fill="#34d399" font-size="10" font-weight="800" text-anchor="middle">10.0</text>
+    <text x="0" y="4" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">Calibration</text>
+    <text x="0" y="18" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">Engine</text>
+  </g>
+
+  <!-- Arrow: Process 10.0 -> Data Store D5 (Audit WORM) -->
+  <path d="M 936 750 L 1028 750" stroke="#a855f7" stroke-width="2" marker-end="url(#df2-arrow-purple)"/>
+  <text x="980" y="740" fill="#c084fc" font-size="9" font-weight="700" text-anchor="middle">Audit Lock</text>
 
   <!-- Data Store D5: WORM Immutable Audit Log -->
-  <g transform="translate(1000, 630)">
-    <rect width="210" height="75" rx="6" fill="#1e1838" stroke="#a855f7" stroke-width="1.2"/>
-    <path d="M 0 0 L 10 0 L 10 75 L 0 75 Z" fill="#a855f7"/>
+  <g transform="translate(1030, 710)">
+    <rect width="220" height="80" rx="6" fill="#1e1838" stroke="#a855f7" stroke-width="1.2"/>
+    <path d="M 0 0 L 10 0 L 10 80 L 0 80 Z" fill="#a855f7"/>
     <text x="20" y="24" fill="#c084fc" font-size="10.5" font-weight="800">D5: audit_log (WORM)</text>
     <text x="20" y="42" fill="#e9d5ff" font-size="9">• Immutable action timestamps</text>
     <text x="20" y="56" fill="#e9d5ff" font-size="9">• Zero UPDATE / DELETE trigger</text>
-    <text x="20" y="68" fill="#10b981" font-size="8.5" font-weight="700">GxP Audit Compliance</text>
+    <text x="20" y="70" fill="#10b981" font-size="9" font-weight="700">GxP Audit Compliance</text>
   </g>
 
-  <!-- Arrow: Process 10.0 -> D5 (Audit Write) -->
-  <path d="M 960 665 L 998 665" stroke="#a855f7" stroke-width="2" marker-end="url(#df-arrow-purple)"/>
-
-  <!-- Feedback Loop: Process 10.0 -> D6 (Recalibrate weights in DB) -->
-  <path d="M 910 615 L 910 526" stroke="#10b981" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#df-arrow-green)"/>
-  <text x="918" y="570" fill="#34d399" font-size="9" font-weight="700">Gradient Weight Update (Active Learning)</text>
+  <!-- Feedback Arrow: Process 10.0 -> D6 (Weight Tuning) -->
+  <path d="M 890 704 L 890 530 L 802 530" stroke="#10b981" stroke-width="2" stroke-dasharray="4 4" fill="none" marker-end="url(#df2-arrow-green)"/>
+  <text x="898" y="600" fill="#34d399" font-size="9" font-weight="700">Gradient Weight Recalibration (HITL)</text>
 
 </svg>

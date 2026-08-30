@@ -1,212 +1,255 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="100%" height="100%" style="background:#090f1d; font-family:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 960" width="100%" height="100%" style="background:#080e1a; font-family:'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <defs>
     <!-- Arrow Markers -->
-    <marker id="rf-arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="rf2-arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
     </marker>
-    <marker id="rf-arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981"/>
+    <marker id="rf2-arrow-teal" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2dd4bf"/>
     </marker>
-    <marker id="rf-arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="rf2-arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b"/>
+    </marker>
+    <marker id="rf2-arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c084fc"/>
     </marker>
 
     <!-- Shadow -->
-    <filter id="rfShadow" x="-10%" y="-10%" width="120%" height="125%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.45"/>
+    <filter id="rf2Shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#000000" flood-opacity="0.45"/>
     </filter>
   </defs>
 
-  <!-- Title Header -->
-  <g transform="translate(60, 35)">
-    <rect x="0" y="0" width="1080" height="55" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
-    <text x="24" y="28" fill="#ffffff" font-size="17" font-weight="800" letter-spacing="-0.3">MetaRadar Decision Governance &amp; Responsibility Flow</text>
-    <text x="24" y="44" fill="#94a3b8" font-size="11" font-weight="500">Why Signals Must Be Reviewed &amp; How Cross-Functional Decisions Are Governed</text>
-    <rect x="940" y="14" width="120" height="26" rx="6" fill="#1e293b" stroke="#334155"/>
-    <text x="1000" y="31" fill="#f59e0b" font-size="10.5" font-weight="700" text-anchor="middle">GxP Governance</text>
+  <!-- Canvas Background -->
+  <rect width="1400" height="960" fill="#080e1a"/>
+
+  <!-- Blueprint Dot Grid -->
+  <g opacity="0.06" fill="#94a3b8">
+    <pattern id="rf2Grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="16" r="1.5"/>
+    </pattern>
+    <rect width="1400" height="960" fill="url(#rf2Grid)"/>
+  </g>
+
+  <!-- Header Bar -->
+  <g transform="translate(60, 30)">
+    <rect x="0" y="0" width="1280" height="58" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.5" filter="url(#rf2Shadow)"/>
+    <text x="24" y="27" fill="#ffffff" font-size="18" font-weight="800" letter-spacing="-0.3">MetaRadar Decision Governance &amp; Responsibility Framework</text>
+    <text x="24" y="46" fill="#94a3b8" font-size="11.5" font-weight="500">Why Biopharma Signals Must Be Reviewed &amp; How Cross-Functional Decisions Are Audited</text>
+    <rect x="1120" y="15" width="135" height="28" rx="6" fill="#1e293b" stroke="#334155"/>
+    <text x="1187" y="33" fill="#f59e0b" font-size="11" font-weight="700" text-anchor="middle">GxP Governance</text>
   </g>
 
   <!-- ========================================================= -->
-  <!-- TOP SECTION: WHY SIGNALS MUST BE REVIEWED (THE 4 IMPERATIVES) -->
+  <!-- PART A: WHY SIGNALS MUST BE REVIEWED (THE 4 IMPERATIVES)  -->
   <!-- ========================================================= -->
-  <g transform="translate(60, 110)">
-    <rect width="1080" height="155" rx="14" fill="#0f172a" stroke="#1e293b" stroke-width="1.2" filter="url(#rfShadow)"/>
-    <rect width="1080" height="28" rx="14" fill="#1e293b"/>
-    <rect y="16" width="1080" height="12" fill="#1e293b"/>
-    <text x="16" y="19" fill="#f43f5e" font-size="11" font-weight="800" letter-spacing="0.8">PART A · WHY BIOPHARMA SIGNALS MUST BE REVIEWED (CRITICAL IMPERATIVES)</text>
+  <g transform="translate(60, 105)">
+    <rect width="1280" height="175" rx="14" fill="#0f172a" stroke="#1e293b" stroke-width="1.2" filter="url(#rf2Shadow)"/>
+    <rect width="1280" height="30" rx="14" fill="#1e293b"/>
+    <rect y="16" width="1280" height="14" fill="#1e293b"/>
+    <text x="16" y="20" fill="#f43f5e" font-size="11" font-weight="800" letter-spacing="0.8">PART A · WHY BIOPHARMA SIGNALS MUST BE REVIEWED (CRITICAL IMPERATIVES)</text>
 
-    <g transform="translate(16, 40)">
-      <!-- Card 1: Patient Safety -->
-      <rect x="0" y="0" width="248" height="98" rx="8" fill="#1c1118" stroke="#be123c" stroke-width="1"/>
-      <text x="12" y="22" fill="#fb7185" font-size="11" font-weight="700">1. Patient Safety &amp; Pharmacovigilance</text>
-      <text x="12" y="40" fill="#e2e8f0" font-size="9.5">Unreviewed adverse events (thrombosis,</text>
-      <text x="12" y="54" fill="#e2e8f0" font-size="9.5">inhibitor formation, TMA) create direct</text>
-      <text x="12" y="68" fill="#e2e8f0" font-size="9.5">clinical risk and regulatory exposure.</text>
-      <text x="12" y="86" fill="#fb7185" font-size="8.5" font-weight="700">Mandatory PV Signal Triaging</text>
+    <g transform="translate(16, 42)">
+      <!-- Card 1: Safety -->
+      <rect x="0" y="0" width="298" height="118" rx="8" fill="#1c1118" stroke="#be123c" stroke-width="1"/>
+      <text x="12" y="22" fill="#fb7185" font-size="11.5" font-weight="700">1. Patient Safety &amp; Pharmacovigilance</text>
+      <text x="12" y="42" fill="#e2e8f0" font-size="9.5">Unreviewed adverse events (thrombosis,</text>
+      <text x="12" y="58" fill="#e2e8f0" font-size="9.5">inhibitor formation, TMA) create severe</text>
+      <text x="12" y="74" fill="#e2e8f0" font-size="9.5">clinical risk and regulatory exposure.</text>
+      <text x="12" y="98" fill="#fb7185" font-size="9" font-weight="700">Mandatory PV Signal Triaging</text>
 
-      <!-- Card 2: Regulatory Compliance -->
-      <rect x="264" y="0" width="248" height="98" rx="8" fill="#1f1809" stroke="#b45309" stroke-width="1"/>
-      <text x="12" y="22" fill="#fbbf24" font-size="11" font-weight="700">2. Regulatory Filing Compliance</text>
-      <text x="12" y="40" fill="#e2e8f0" font-size="9.5">PDUFA dates, CHMP opinions, and BLA/NDA</text>
-      <text x="12" y="54" fill="#e2e8f0" font-size="9.5">milestones enforce statutory deadlines</text>
-      <text x="12" y="68" fill="#e2e8f0" font-size="9.5">that demand timely formal response.</text>
-      <text x="12" y="86" fill="#fbbf24" font-size="8.5" font-weight="700">Audit-Proof Regulatory Timelines</text>
+      <!-- Card 2: Regulatory -->
+      <rect x="314" y="0" width="298" height="118" rx="8" fill="#1f1809" stroke="#b45309" stroke-width="1"/>
+      <text x="12" y="22" fill="#fbbf24" font-size="11.5" font-weight="700">2. Regulatory Filing Compliance</text>
+      <text x="12" y="42" fill="#e2e8f0" font-size="9.5">PDUFA dates, CHMP opinions, and BLA/NDA</text>
+      <text x="12" y="58" fill="#e2e8f0" font-size="9.5">milestones enforce statutory deadlines</text>
+      <text x="12" y="74" fill="#e2e8f0" font-size="9.5">that demand timely formal response.</text>
+      <text x="12" y="98" fill="#fbbf24" font-size="9" font-weight="700">Audit-Proof Regulatory Timelines</text>
 
       <!-- Card 3: Competitive Agility -->
-      <rect x="528" y="0" width="248" height="98" rx="8" fill="#0c2038" stroke="#0369a1" stroke-width="1"/>
-      <text x="12" y="22" fill="#38bdf8" font-size="11" font-weight="700">3. Commercial &amp; Competitive Agility</text>
-      <text x="12" y="40" fill="#e2e8f0" font-size="9.5">Competitor trial shifts (Altuviiio, Hemlibra,</text>
-      <text x="12" y="54" fill="#e2e8f0" font-size="9.5">Roctavian, Mim8) impact market position,</text>
-      <text x="12" y="68" fill="#e2e8f0" font-size="9.5">pricing strategy, and access negotiations.</text>
-      <text x="12" y="86" fill="#38bdf8" font-size="8.5" font-weight="700">Proactive Market Defense</text>
+      <rect x="628" y="0" width="298" height="118" rx="8" fill="#0c2038" stroke="#0369a1" stroke-width="1"/>
+      <text x="12" y="22" fill="#38bdf8" font-size="11.5" font-weight="700">3. Commercial &amp; Competitive Agility</text>
+      <text x="12" y="42" fill="#e2e8f0" font-size="9.5">Competitor trial shifts (Altuviiio, Hemlibra,</text>
+      <text x="12" y="58" fill="#e2e8f0" font-size="9.5">Roctavian, Mim8) impact market position,</text>
+      <text x="12" y="74" fill="#e2e8f0" font-size="9.5">pricing strategy, and access negotiations.</text>
+      <text x="12" y="98" fill="#38bdf8" font-size="9" font-weight="700">Proactive Market Defense</text>
 
       <!-- Card 4: Epistemic Accountability -->
-      <rect x="792" y="0" width="256" height="98" rx="8" fill="#141c2b" stroke="#475569" stroke-width="1"/>
-      <text x="12" y="22" fill="#cbd5e1" font-size="11" font-weight="700">4. Epistemic AI Accountability</text>
-      <text x="12" y="40" fill="#e2e8f0" font-size="9.5">AI suggests decisions; humans sign off.</text>
-      <text x="12" y="54" fill="#e2e8f0" font-size="9.5">Distinguishing [FACT] from [SPECULATION]</text>
-      <text x="12" y="68" fill="#e2e8f0" font-size="9.5">prevents ungrounded algorithmic bias.</text>
-      <text x="12" y="86" fill="#34d399" font-size="8.5" font-weight="700">Human-in-the-Loop Gate (HITL)</text>
+      <rect x="942" y="0" width="306" height="118" rx="8" fill="#141c2b" stroke="#475569" stroke-width="1"/>
+      <text x="12" y="22" fill="#cbd5e1" font-size="11.5" font-weight="700">4. Epistemic AI Accountability</text>
+      <text x="12" y="42" fill="#e2e8f0" font-size="9.5">AI suggests decisions; humans sign off.</text>
+      <text x="12" y="58" fill="#e2e8f0" font-size="9.5">Distinguishing [FACT] from [SPECULATION]</text>
+      <text x="12" y="74" fill="#e2e8f0" font-size="9.5">prevents ungrounded algorithmic bias.</text>
+      <text x="12" y="98" fill="#34d399" font-size="9" font-weight="700">Human-in-the-Loop Gate (HITL)</text>
     </g>
   </g>
 
   <!-- ========================================================= -->
-  <!-- BOTTOM SECTION: HOW SIGNALS ARE REVIEWED (THE 4 STAGES) -->
+  <!-- PART B: HOW SIGNALS ARE REVIEWED (THE 4-STAGE GOVERNANCE) -->
   <!-- ========================================================= -->
-  <g transform="translate(60, 285)">
-    <rect width="1080" height="535" rx="14" fill="#0f172a" stroke="#1e293b" stroke-width="1.2" filter="url(#rfShadow)"/>
-    <rect width="1080" height="28" rx="14" fill="#1e293b"/>
-    <rect y="16" width="1080" height="12" fill="#1e293b"/>
-    <text x="16" y="19" fill="#38bdf8" font-size="11" font-weight="800" letter-spacing="0.8">PART B · HOW SIGNALS ARE REVIEWED (THE 4-STAGE GOVERNANCE WORKFLOW)</text>
+  <g transform="translate(60, 300)">
+    <rect width="1280" height="625" rx="14" fill="#0f172a" stroke="#1e293b" stroke-width="1.2" filter="url(#rf2Shadow)"/>
+    <rect width="1280" height="30" rx="14" fill="#1e293b"/>
+    <rect y="16" width="1280" height="14" fill="#1e293b"/>
+    <text x="16" y="20" fill="#38bdf8" font-size="11" font-weight="800" letter-spacing="0.8">PART B · HOW SIGNALS ARE REVIEWED (THE 4-STAGE GOVERNANCE WORKFLOW)</text>
 
-    <!-- STAGE 1: AUTOMATED INGESTION & SCOPED ROUTING -->
+    <!-- STAGE 1: INGESTION & AUTO ROUTING -->
     <g transform="translate(24, 45)">
-      <rect width="220" height="190" rx="10" fill="#082f49" stroke="#0284c7" stroke-width="1.2"/>
-      <rect width="220" height="24" rx="10" fill="#0284c7"/>
-      <rect y="12" width="220" height="12" fill="#0284c7"/>
-      <text x="110" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">STAGE 1: AUTO ROUTING</text>
+      <rect width="270" height="235" rx="10" fill="#082f49" stroke="#0284c7" stroke-width="1.2"/>
+      <rect width="270" height="26" rx="10" fill="#0284c7"/>
+      <rect y="14" width="270" height="12" fill="#0284c7"/>
+      <text x="135" y="18" fill="#ffffff" font-size="10.5" font-weight="800" text-anchor="middle">STAGE 1: AUTO ROUTING</text>
       
-      <text x="14" y="44" fill="#38bdf8" font-size="11" font-weight="700">Deterministic Scoring</text>
-      <text x="14" y="60" fill="#94a3b8" font-size="9.5">Priority: Novelty + Clinical +</text>
-      <text x="14" y="74" fill="#94a3b8" font-size="9.5">Regulatory + Recency (0–100)</text>
+      <text x="14" y="48" fill="#38bdf8" font-size="11.5" font-weight="700">Deterministic Scoring</text>
+      <text x="14" y="66" fill="#94a3b8" font-size="9.5">Score = Novelty + Clinical +</text>
+      <text x="14" y="82" fill="#94a3b8" font-size="9.5">Regulatory + Recency (0–100)</text>
 
-      <line x1="14" y1="84" x2="206" y2="84" stroke="#0284c7" stroke-width="0.8"/>
+      <line x1="14" y1="94" x2="256" y2="94" stroke="#0284c7" stroke-width="0.8"/>
 
-      <text x="14" y="102" fill="#ffffff" font-size="10.5" font-weight="700">Scoped Queue Delivery</text>
-      <text x="14" y="118" fill="#cbd5e1" font-size="9">• Medical Affairs (ABR / Trials)</text>
-      <text x="14" y="132" fill="#cbd5e1" font-size="9">• Regulatory (Filing Deadlines)</text>
-      <text x="14" y="146" fill="#cbd5e1" font-size="9">• Safety / PV (Adverse Events)</text>
-      <text x="14" y="160" fill="#cbd5e1" font-size="9">• Market Access (ICER / Price)</text>
+      <text x="14" y="116" fill="#ffffff" font-size="11" font-weight="700">Scoped Queue Delivery</text>
+      <text x="14" y="134" fill="#cbd5e1" font-size="9.5">• Medical Affairs (ABR / Trials)</text>
+      <text x="14" y="152" fill="#cbd5e1" font-size="9.5">• Regulatory (Filing Deadlines)</text>
+      <text x="14" y="170" fill="#cbd5e1" font-size="9.5">• Safety / PV (Adverse Events)</text>
+      <text x="14" y="188" fill="#cbd5e1" font-size="9.5">• Market Access (ICER / Price)</text>
+      <text x="14" y="212" fill="#38bdf8" font-size="9" font-weight="700">Automated Persona Filtering</text>
     </g>
 
     <!-- Arrow Stage 1 -> Stage 2 -->
-    <path d="M 244 140 L 290 140" stroke="#38bdf8" stroke-width="2" marker-end="url(#rf-arrow-blue)"/>
-    <text x="267" y="132" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="middle">Feed</text>
+    <path d="M 294 162 L 320 162" stroke="#38bdf8" stroke-width="2" marker-end="url(#rf2-arrow-blue)"/>
 
-    <!-- STAGE 2: FUNCTIONAL DOMAIN EVALUATION (THE 4 QUESTIONS) -->
-    <g transform="translate(300, 45)">
-      <rect width="280" height="190" rx="10" fill="#042f2e" stroke="#0d9488" stroke-width="1.2"/>
-      <rect width="280" height="24" rx="10" fill="#0d9488"/>
-      <rect y="12" width="280" height="12" fill="#0d9488"/>
-      <text x="140" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">STAGE 2: 4-QUESTION EVALUATION</text>
+    <!-- STAGE 2: 4-QUESTION DOMAIN EVALUATION -->
+    <g transform="translate(324, 45)">
+      <rect width="380" height="235" rx="10" fill="#042f2e" stroke="#0d9488" stroke-width="1.2"/>
+      <rect width="380" height="26" rx="10" fill="#0d9488"/>
+      <rect y="14" width="380" height="12" fill="#0d9488"/>
+      <text x="190" y="18" fill="#ffffff" font-size="10.5" font-weight="800" text-anchor="middle">STAGE 2: 4-QUESTION EVALUATION</text>
 
-      <text x="14" y="44" fill="#2dd4bf" font-size="11" font-weight="700">Domain Expert Triaging</text>
-      
-      <g transform="translate(14, 54)">
-        <rect width="252" height="26" rx="4" fill="#064e3b"/>
-        <text x="8" y="17" fill="#6ee7b7" font-size="9" font-weight="700">Q1. What Changed? <tspan fill="#e2e8f0" font-weight="400">Verifiable primary facts</tspan></text>
+      <text x="14" y="48" fill="#2dd4bf" font-size="11.5" font-weight="700">Domain Expert Triaging</text>
 
-        <rect y="30" width="252" height="26" rx="4" fill="#064e3b"/>
-        <text x="8" y="47" fill="#6ee7b7" font-size="9" font-weight="700">Q2. Why It Matters? <tspan fill="#e2e8f0" font-weight="400">Clinical &amp; competitive impact</tspan></text>
+      <g transform="translate(14, 58)">
+        <!-- Q1 -->
+        <rect width="352" height="34" rx="4" fill="#064e3b"/>
+        <text x="8" y="16" fill="#6ee7b7" font-size="9.5" font-weight="700">Q1. What Changed?</text>
+        <text x="8" y="28" fill="#e2e8f0" font-size="8.5">Verifiable facts extracted directly from primary dossier</text>
 
-        <rect y="60" width="252" height="26" rx="4" fill="#064e3b"/>
-        <text x="8" y="77" fill="#6ee7b7" font-size="9" font-weight="700">Q3. Who Should Act? <tspan fill="#e2e8f0" font-weight="400">Primary functional owner</tspan></text>
+        <!-- Q2 -->
+        <g transform="translate(0, 38)">
+          <rect width="352" height="34" rx="4" fill="#064e3b"/>
+          <text x="8" y="16" fill="#6ee7b7" font-size="9.5" font-weight="700">Q2. Why It Matters?</text>
+          <text x="8" y="28" fill="#e2e8f0" font-size="8.5">Clinical relevance, ABR endpoints, and competitive threat</text>
+        </g>
 
-        <rect y="90" width="252" height="26" rx="4" fill="#064e3b"/>
-        <text x="8" y="107" fill="#6ee7b7" font-size="9" font-weight="700">Q4. Suggested Action? <tspan fill="#e2e8f0" font-weight="400">AI proposal (needs review)</tspan></text>
+        <!-- Q3 -->
+        <g transform="translate(0, 76)">
+          <rect width="352" height="34" rx="4" fill="#064e3b"/>
+          <text x="8" y="16" fill="#6ee7b7" font-size="9.5" font-weight="700">Q3. Who Should Act?</text>
+          <text x="8" y="28" fill="#e2e8f0" font-size="8.5">Primary functional owner assigned via routing matrix</text>
+        </g>
+
+        <!-- Q4 -->
+        <g transform="translate(0, 114)">
+          <rect width="352" height="34" rx="4" fill="#064e3b"/>
+          <text x="8" y="16" fill="#6ee7b7" font-size="9.5" font-weight="700">Q4. Suggested Action?</text>
+          <text x="8" y="28" fill="#e2e8f0" font-size="8.5">AI-proposed operational step (prefaced: requires review)</text>
+        </g>
       </g>
     </g>
 
     <!-- Arrow Stage 2 -> Stage 3 -->
-    <path d="M 580 140 L 630 140" stroke="#2dd4bf" stroke-width="2" marker-end="url(#rf-arrow-green)"/>
-    <text x="605" y="132" fill="#2dd4bf" font-size="9" font-weight="700" text-anchor="middle">Triage</text>
+    <path d="M 704 162 L 730 162" stroke="#2dd4bf" stroke-width="2" marker-end="url(#rf2-arrow-teal)"/>
 
     <!-- STAGE 3: DECISION BRANCHING (3 PATHS) -->
-    <g transform="translate(640, 45)">
-      <rect width="415" height="190" rx="10" fill="#1f1809" stroke="#d97706" stroke-width="1.2"/>
-      <rect width="415" height="24" rx="10" fill="#d97706"/>
-      <rect y="12" width="415" height="12" fill="#d97706"/>
-      <text x="207" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">STAGE 3: TRIAGE &amp; DECISION ACTIONS</text>
+    <g transform="translate(734, 45)">
+      <rect width="522" height="235" rx="10" fill="#1f1809" stroke="#d97706" stroke-width="1.2"/>
+      <rect width="522" height="26" rx="10" fill="#d97706"/>
+      <rect y="14" width="522" height="12" fill="#d97706"/>
+      <text x="261" y="18" fill="#ffffff" font-size="10.5" font-weight="800" text-anchor="middle">STAGE 3: TRIAGE &amp; DECISION ACTIONS</text>
 
-      <g transform="translate(14, 38)">
+      <g transform="translate(14, 42)">
         <!-- Branch A -->
-        <rect width="387" height="42" rx="6" fill="#3b2405" stroke="#f59e0b" stroke-width="0.8"/>
-        <circle cx="16" cy="21" r="8" fill="#10b981"/>
-        <text x="16" y="25" fill="#ffffff" font-size="9" font-weight="800" text-anchor="middle">A</text>
-        <text x="32" y="18" fill="#fcd34d" font-size="10" font-weight="700">Routine Operational Action Approved</text>
-        <text x="32" y="32" fill="#94a3b8" font-size="8.5">Local functional lead signs off (e.g. update medical standard slide deck)</text>
+        <rect width="494" height="48" rx="6" fill="#3b2405" stroke="#f59e0b" stroke-width="0.8"/>
+        <circle cx="20" cy="24" r="10" fill="#10b981"/>
+        <text x="20" y="28" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">A</text>
+        <text x="40" y="20" fill="#fcd34d" font-size="10.5" font-weight="700">Routine Operational Action Approved</text>
+        <text x="40" y="36" fill="#94a3b8" font-size="9">Local lead signs off (e.g. update standard medical slide deck or dossier)</text>
 
         <!-- Branch B -->
-        <rect y="48" width="387" height="42" rx="6" fill="#3b2405" stroke="#f59e0b" stroke-width="0.8"/>
-        <circle cx="16" cy="69" r="8" fill="#f59e0b"/>
-        <text x="16" y="73" fill="#ffffff" font-size="9" font-weight="800" text-anchor="middle">B</text>
-        <text x="32" y="66" fill="#fcd34d" font-size="10" font-weight="700">Cross-Functional Escalation Triggered</text>
-        <text x="32" y="80" fill="#94a3b8" font-size="8.5">Requires multi-team alignment → routed to Executive Leadership Queue</text>
+        <g transform="translate(0, 56)">
+          <rect width="494" height="48" rx="6" fill="#3b2405" stroke="#f59e0b" stroke-width="0.8"/>
+          <circle cx="20" cy="24" r="10" fill="#f59e0b"/>
+          <text x="20" y="28" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">B</text>
+          <text x="40" y="20" fill="#fcd34d" font-size="10.5" font-weight="700">Cross-Functional Escalation Triggered</text>
+          <text x="40" y="36" fill="#94a3b8" font-size="9">Multi-team impact → routed directly to Executive Leadership Queue</text>
+        </g>
 
         <!-- Branch C -->
-        <rect y="96" width="387" height="42" rx="6" fill="#3b2405" stroke="#f59e0b" stroke-width="0.8"/>
-        <circle cx="16" cy="117" r="8" fill="#8b5cf6"/>
-        <text x="16" y="121" fill="#ffffff" font-size="9" font-weight="800" text-anchor="middle">C</text>
-        <text x="32" y="114" fill="#fcd34d" font-size="10" font-weight="700">Stakeholder Disagreement / Feedback Submitted</text>
-        <text x="32" y="128" fill="#94a3b8" font-size="8.5">User rates relevance &amp; provides note → updates Calibration Engine</text>
+        <g transform="translate(0, 112)">
+          <rect width="494" height="48" rx="6" fill="#3b2405" stroke="#f59e0b" stroke-width="0.8"/>
+          <circle cx="20" cy="24" r="10" fill="#8b5cf6"/>
+          <text x="20" y="28" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">C</text>
+          <text x="40" y="20" fill="#fcd34d" font-size="10.5" font-weight="700">Stakeholder Disagreement / Feedback Submitted</text>
+          <text x="40" y="36" fill="#94a3b8" font-size="9">User rates relevance &amp; logs note → recalibrates scoring weights</text>
+        </g>
       </g>
     </g>
 
-    <!-- DOWNWARD PATHWAYS FROM STAGE 3 -->
-    <!-- Branch B Path Down to Stage 4 -->
-    <path d="M 847 235 L 847 280 L 540 280 L 540 310" stroke="#f59e0b" stroke-width="2" marker-end="url(#rf-arrow-amber)"/>
-    <text x="690" y="272" fill="#fbbf24" font-size="9" font-weight="700">Escalated Signal</text>
+    <!-- Arrow from Stage 3 Branch B Down to Stage 4 -->
+    <path d="M 995 280 L 995 305 L 640 305 L 640 325" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#rf2-arrow-amber)"/>
+    <text x="815" y="298" fill="#fbbf24" font-size="9" font-weight="700" text-anchor="middle">Escalated Signal</text>
 
-    <!-- STAGE 4: EXECUTIVE LEADERSHIP STEER & WORM AUDIT LOG -->
-    <g transform="translate(24, 320)">
-      <rect width="1031" height="190" rx="12" fill="#14112b" stroke="#7c3aed" stroke-width="1.5"/>
-      <rect width="1031" height="28" rx="12" fill="#6d28d9"/>
-      <rect y="16" width="1031" height="12" fill="#6d28d9"/>
-      <text x="515" y="19" fill="#ffffff" font-size="11" font-weight="800" text-anchor="middle" letter-spacing="0.5">STAGE 4: EXECUTIVE LEADERSHIP STEER &amp; IMMUTABLE WORM AUDIT CLOSURE</text>
+    <!-- STAGE 4: EXECUTIVE STEER & IMMUTABLE WORM AUDIT -->
+    <g transform="translate(24, 335)">
+      <rect width="1232" height="265" rx="12" fill="#14112b" stroke="#7c3aed" stroke-width="1.5"/>
+      <rect width="1232" height="28" rx="12" fill="#6d28d9"/>
+      <rect y="16" width="1232" height="12" fill="#6d28d9"/>
+      <text x="616" y="19" fill="#ffffff" font-size="11" font-weight="800" text-anchor="middle" letter-spacing="0.5">STAGE 4: EXECUTIVE LEADERSHIP STEER &amp; IMMUTABLE WORM AUDIT CLOSURE</text>
 
       <g transform="translate(20, 44)">
-        <!-- Executive Review Box -->
-        <rect x="0" y="0" width="310" height="125" rx="8" fill="#1e1838" stroke="#8b5cf6" stroke-width="1"/>
-        <text x="14" y="22" fill="#c4b5fd" font-size="11" font-weight="700">Executive Leadership Queue</text>
-        <text x="14" y="40" fill="#e2e8f0" font-size="9.5">Chief Medical Officer / VP Strategy</text>
-        <text x="14" y="58" fill="#94a3b8" font-size="9">• Reviews cross-functional impact</text>
-        <text x="14" y="74" fill="#94a3b8" font-size="9">• Approves cross-team directive</text>
-        <text x="14" y="90" fill="#94a3b8" font-size="9">• Rejects / requests further evidence</text>
-        <text x="14" y="110" fill="#10b981" font-size="9" font-weight="700">Formal Sign-Off Enforced via RBAC</text>
+        <!-- Box 1: Leadership Queue -->
+        <rect x="0" y="0" width="370" height="195" rx="8" fill="#1e1838" stroke="#8b5cf6" stroke-width="1"/>
+        <text x="16" y="24" fill="#c4b5fd" font-size="12" font-weight="700">1. Executive Leadership Queue</text>
+        <text x="16" y="44" fill="#e2e8f0" font-size="10">Chief Medical Officer / VP Strategy</text>
+        <line x1="16" y1="54" x2="354" y2="54" stroke="#8b5cf6" stroke-width="0.8"/>
+        
+        <text x="16" y="76" fill="#94a3b8" font-size="9.5">• Reviews cross-functional impact</text>
+        <text x="16" y="96" fill="#94a3b8" font-size="9.5">• Evaluates clinical trial vs regulatory tradeoffs</text>
+        <text x="16" y="116" fill="#94a3b8" font-size="9.5">• Approves enterprise-wide directive</text>
+        <text x="16" y="136" fill="#94a3b8" font-size="9.5">• Rejects / requests additional evidence</text>
+        <text x="16" y="168" fill="#10b981" font-size="9.5" font-weight="700">Formal Sign-Off Enforced via RBAC</text>
 
-        <!-- Arrow Box 1 -> Box 2 -->
-        <path d="M 310 62 L 350 62" stroke="#8b5cf6" stroke-width="2" marker-end="url(#rf-arrow-amber)"/>
+        <!-- Arrow 1 -> 2 -->
+        <path d="M 370 97 L 400 97" stroke="#8b5cf6" stroke-width="2" marker-end="url(#rf2-arrow-purple)"/>
 
-        <!-- Directive Issued Box -->
-        <rect x="360" y="0" width="310" height="125" rx="8" fill="#1e1838" stroke="#8b5cf6" stroke-width="1"/>
-        <text x="14" y="22" fill="#c4b5fd" font-size="11" font-weight="700">Directive Execution &amp; Notification</text>
-        <text x="14" y="40" fill="#e2e8f0" font-size="9.5">Operational Guidance Propagated</text>
-        <text x="14" y="58" fill="#94a3b8" font-size="9">• Medical Affairs adjusts field guidance</text>
-        <text x="14" y="74" fill="#94a3b8" font-size="9">• Regulatory prepares dossier response</text>
-        <text x="14" y="90" fill="#94a3b8" font-size="9">• Safety initiates targeted surveillance</text>
-        <text x="14" y="110" fill="#f59e0b" font-size="9" font-weight="700">Cross-Functional Alignment Complete</text>
+        <!-- Box 2: Directive Execution -->
+        <g transform="translate(410, 0)">
+          <rect width="370" height="195" rx="8" fill="#1e1838" stroke="#8b5cf6" stroke-width="1"/>
+          <text x="16" y="24" fill="#c4b5fd" font-size="12" font-weight="700">2. Directive Execution &amp; Notification</text>
+          <text x="16" y="44" fill="#e2e8f0" font-size="10">Operational Guidance Propagated</text>
+          <line x1="16" y1="54" x2="354" y2="54" stroke="#8b5cf6" stroke-width="0.8"/>
 
-        <!-- Arrow Box 2 -> Box 3 -->
-        <path d="M 670 62 L 710 62" stroke="#8b5cf6" stroke-width="2" marker-end="url(#rf-arrow-amber)"/>
+          <text x="16" y="76" fill="#94a3b8" font-size="9.5">• Medical Affairs adjusts field guidance</text>
+          <text x="16" y="96" fill="#94a3b8" font-size="9.5">• Regulatory prepares dossier defense</text>
+          <text x="16" y="116" fill="#94a3b8" font-size="9.5">• Safety initiates targeted surveillance</text>
+          <text x="16" y="136" fill="#94a3b8" font-size="9.5">• Market Access revises reimbursement models</text>
+          <text x="16" y="168" fill="#f59e0b" font-size="9.5" font-weight="700">Cross-Functional Alignment Complete</text>
+        </g>
 
-        <!-- WORM Audit Box -->
-        <rect x="720" y="0" width="271" height="125" rx="8" fill="#1e1838" stroke="#10b981" stroke-width="1.2"/>
-        <text x="14" y="22" fill="#34d399" font-size="11" font-weight="800">Immutable WORM Audit Trail</text>
-        <text x="14" y="40" fill="#e2e8f0" font-size="9.5">PostgreSQL Physical Lock</text>
-        <text x="14" y="58" fill="#94a3b8" font-size="9">• User ID, Role, Timestamp recorded</text>
-        <text x="14" y="74" fill="#94a3b8" font-size="9">• Before/After state cryptographic hash</text>
-        <text x="14" y="90" fill="#94a3b8" font-size="9">• Zero UPDATE / DELETE allowed</text>
-        <text x="14" y="110" fill="#10b981" font-size="9" font-weight="700">100% GxP Audit-Ready</text>
+        <!-- Arrow 2 -> 3 -->
+        <path d="M 780 97 L 810 97" stroke="#8b5cf6" stroke-width="2" marker-end="url(#rf2-arrow-purple)"/>
+
+        <!-- Box 3: WORM Audit -->
+        <g transform="translate(820, 0)">
+          <rect width="372" height="195" rx="8" fill="#1e1838" stroke="#10b981" stroke-width="1.2"/>
+          <text x="16" y="24" fill="#34d399" font-size="12" font-weight="800">3. Immutable WORM Audit Trail</text>
+          <text x="16" y="44" fill="#e2e8f0" font-size="10">PostgreSQL Physical Lock Trigger</text>
+          <line x1="16" y1="54" x2="356" y2="54" stroke="#10b981" stroke-width="0.8"/>
+
+          <text x="16" y="76" fill="#94a3b8" font-size="9.5">• User ID, Role, and Timestamp recorded</text>
+          <text x="16" y="96" fill="#94a3b8" font-size="9.5">• Before/After state cryptographic hash</text>
+          <text x="16" y="116" fill="#94a3b8" font-size="9.5">• Zero UPDATE / DELETE allowed by trigger</text>
+          <text x="16" y="136" fill="#94a3b8" font-size="9.5">• Tamper-evident governance history</text>
+          <text x="16" y="168" fill="#10b981" font-size="9.5" font-weight="700">100% GxP Audit-Ready Guarantee</text>
+        </g>
       </g>
     </g>
   </g>
