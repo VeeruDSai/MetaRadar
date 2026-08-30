@@ -18,7 +18,7 @@ All rules defined in `docs/rules/` and `.agents/rules/` are mandatory global pro
 ## Core Rules
 
 1. **Inspect Before Editing**: Always inspect exact file contents and repository context before modifying code.
-2. **Preserve Architecture**: Do not silently rewrite or alter approved MetaRadar v5.1 architecture.
+2. **Preserve Architecture**: Do not silently rewrite or alter approved MetaRadar architecture.
 3. **No Direct Push to Main**: Always create feature branches (`feature/*`, `fix/*`). Never push directly to `main`.
 4. **No Fabricated Telemetry or Behavior**: Never fabricate test output, health status, or mock data without explicit labeling.
 5. **No Disabling Tests or Suppressing Warnings**: Never use `ignoreBuildErrors`, `@ts-ignore`, or silent `try...except` to hide compilation/test failures.

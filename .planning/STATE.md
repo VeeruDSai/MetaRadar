@@ -1,42 +1,68 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.2-signal-workflow
-milestone_name: "MetaRadar v5.2 — Real Signal Workflow, Discovery Connectors & Demo Operator"
-status: phase_completed
-current_phase: "10"
-phase_name: "Phase 10: Undeniable Demo Journey, Evidence Convergence, BioPharma Dive & UX Refinement"
-last_updated: "2026-08-27T02:10:00.000Z"
+milestone: v5.4-hackathon-mvp
+milestone_name: "MetaRadar v5.4 — Hackathon MVP: Login UX, Cross-Functional Approval & Documentation"
+status: completed
+current_phase: "12"
+phase_name: "Phase 12: Hackathon MVP"
+last_updated: "2026-08-30T02:30:00.000Z"
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 26
-  completed_plans: 26
+  total_phases: 16
+  completed_phases: 13
+  total_plans: 37
+  completed_plans: 37
   percent: 100
 ---
 
 # MetaRadar — Project State Memory
 
-> **Active Phase:** Phase 10 — Undeniable Demo Journey, Evidence Convergence, BioPharma Dive & UX Refinement (COMPLETED & VERIFIED)
-> **Branch:** `feature/phase-10-demo-journey-evidence-convergence-ux`
-> **Phase Directory:** [`.planning/phases/10-demo-journey-evidence-convergence-ux/`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/10-demo-journey-evidence-convergence-ux/)
-> **Context & Decisions:** [`.planning/phases/10-demo-journey-evidence-convergence-ux/10-CONTEXT.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/10-demo-journey-evidence-convergence-ux/10-CONTEXT.md) (D-10-01…10)
-> **Plan:** [`.planning/phases/10-demo-journey-evidence-convergence-ux/10-PLAN.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/10-demo-journey-evidence-convergence-ux/10-PLAN.md) (3 waves, 10 requirements)
-> **Validation:** [`.planning/phases/10-demo-journey-evidence-convergence-ux/10-VALIDATION.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/10-demo-journey-evidence-convergence-ux/10-VALIDATION.md)
+> **Previous Phase:** Phase 11 — MetaRadar Productionization (COMPLETED & VERIFIED)
+> **Active Phase:** Phase 12 — Hackathon MVP (COMPLETED & VERIFIED)
+> **Branch:** `feature/phase-12-hackathon-mvp`
+> **Phase Directory:** [`.planning/phases/12-hackathon-mvp/`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/12-hackathon-mvp/)
+> **Context & Decisions:** [`.planning/phases/12-hackathon-mvp/12-CONTEXT.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/12-hackathon-mvp/12-CONTEXT.md)
+> **Summary & Verification:** [`.planning/phases/12-hackathon-mvp/12-SUMMARY.md`](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/12-hackathon-mvp/12-SUMMARY.md)
 
 ---
 
-## Phase 10 Plan Execution Index
+## Phase 12 Plan Execution Index (COMPLETED & VERIFIED)
 
-- **10-01** — Wave 1: BioPharma Dive RSS Connector & NewsAPI Adaptive Quota Preservation (COMPLETED & VERIFIED)
-- **10-02** — Wave 2: Evidence Convergence Tree, Priority Factor Explainer & AI Red-Team Falsification (COMPLETED & VERIFIED)
-- **10-03** — Wave 3: Daily Executive Briefing Hero Card & 5-Scenario E2E Verification Harness (COMPLETED & VERIFIED)
+- **12-01** — Wave 1 [P0]: Fixed Role Credentials + Login Page + Auth Routing (COMPLETED)
+- **12-02** — Wave 2 [P1]: Approval Request Workflow Backend + Migration 015 (COMPLETED)
+- **12-03** — Wave 3 [P1]: Approval Request Workflow Frontend UI (COMPLETED)
+- **12-04** — Wave 4 [P2]: Hackathon Documentation Suite (COMPLETED)
 
 ---
 
-## Active Executable Verification Matrix
+## Phase 11 Plan Execution Index (COMPLETED)
 
-- `pytest -v` -> **141 Passed, 1 Skipped (Live Grok Key), 0 Failed** (100%)
-- `python scripts/test_demo_scenarios_e2e.py` -> **5/5 Scenarios Passed (A through E)**
-- `node scripts/check-banned-classes.mjs` -> **Clean! Scanned 31 file(s), 0 violations found**
-- `npm --prefix frontend run build` -> **Next.js 16 (Turbopack) production build passed cleanly**
-- Contract Sync -> **OpenAPI 3.1 & TypeScript synchronized (`scripts/export_openapi.py` -> `frontend/types/api.ts`)**
+- **11-01** — Wave 1 [P0]: Identity & Auth Foundation (COMPLETED)
+- **11-02** — Wave 2 [P0]: Server-Side RBAC & Review Enforcement (COMPLETED)
+- **11-03** — Wave 3 [P0]: Provenance Completeness & Pharma Source Validation (COMPLETED)
+- **11-04** — Wave 4 [P1]: Operational Intelligence UI (COMPLETED)
+- **11-05** — Wave 5 [P1]: Frontend Auth Integration & Demo Persona (COMPLETED)
+- **11-06** — Wave 6 [P2]: Security Hardening (COMPLETED)
+- **11-07** — Wave 7: Test Suite Expansion & E2E Vertical Slice (COMPLETED)
+
+---
+
+## Prior Verified Baseline (Phase 11 — DO NOT REGRESS)
+
+- `alembic upgrade head` → migrations 013 + 014 clean
+- `pytest -v` → **166+ Passed, 0 Failed** (32 new tests added)
+- `python scripts/test_e2e_vertical_slice.py` → **6/6 Functions PASS**
+- `python scripts/export_openapi.py` → contracts synchronized (auth endpoints present)
+- `node scripts/check-banned-classes.mjs` → 0 violations
+- `npm --prefix frontend run build` → Next.js 16 production build clean
+- `npx tsc --noEmit` → 0 TypeScript errors
+
+## Phase 12 Target Verification Matrix
+
+- `alembic upgrade head` → migration 015 (approval_requests) clean
+- `pytest tests/test_login_credentials.py -v` → **8+ Passed** (per-role credentials)
+- `pytest tests/test_approval_workflow.py -v` → **12+ Passed** (approval E2E)
+- `pytest tests/test_rbac.py tests/test_intelligence_nodes.py tests/test_retrieval.py -v` → regression: all pass
+- `npx tsc --noEmit` → 0 TypeScript errors
+- Manual: localhost:3000 → /login → role pills → Sign In → dashboard (per-role scoped)
+- Manual: Medical Affairs request approval → Leadership approves → MA sees decision badge
+- Manual: PersonaSwitcher dropdown removed from navbar

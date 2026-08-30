@@ -71,6 +71,7 @@ class GemmaProvider(LLMProvider):
         self.max_output = settings.MAX_OUTPUT_TOKENS
         self._client: Optional[httpx.AsyncClient] = None
         self._llama_instance = None
+        self._load_lock = threading.Lock()
 
     def _ensure_client(self) -> httpx.AsyncClient:
         """Lazily creates the Ollama HTTP client (connect=5s, read=30s)."""
@@ -100,33 +101,34 @@ class GemmaProvider(LLMProvider):
                 "Install with: pip install llama-cpp-python"
             )
 
-        if self._llama_instance is None:
-            gpu_layers_env = os.environ.get("LLM_GPU_LAYERS")
-            if settings.LLM_DEVICE in ("cuda", "gpu", "auto"):
-                if gpu_layers_env and gpu_layers_env.strip():
-                    try:
-                        n_gpu = int(gpu_layers_env.strip())
-                    except ValueError:
+        with self._load_lock:
+            if self._llama_instance is None:
+                gpu_layers_env = os.environ.get("LLM_GPU_LAYERS")
+                if settings.LLM_DEVICE in ("cuda", "gpu", "auto"):
+                    if gpu_layers_env and gpu_layers_env.strip():
+                        try:
+                            n_gpu = int(gpu_layers_env.strip())
+                        except ValueError:
+                            n_gpu = -1
+                    else:
                         n_gpu = -1
                 else:
-                    n_gpu = -1
-            else:
-                n_gpu = 0
+                    n_gpu = 0
 
-            n_threads = min(os.cpu_count() or 8, 12)
-            logger.info(
-                f"Loading local GGUF reasoning model from {gguf_path.name} "
-                f"(n_gpu_layers={n_gpu}, n_threads={n_threads}, n_ctx={self.max_context})..."
-            )
-            self._llama_instance = Llama(
-                model_path=str(gguf_path),
-                n_ctx=self.max_context,
-                n_gpu_layers=n_gpu,
-                n_threads=n_threads,
-                n_batch=512,
-                f16_kv=True,
-                verbose=False,
-            )
+                n_threads = min(os.cpu_count() or 8, 12)
+                logger.info(
+                    f"Loading local GGUF reasoning model from {gguf_path.name} "
+                    f"(n_gpu_layers={n_gpu}, n_threads={n_threads}, n_ctx={self.max_context})..."
+                )
+                self._llama_instance = Llama(
+                    model_path=str(gguf_path),
+                    n_ctx=self.max_context,
+                    n_gpu_layers=n_gpu,
+                    n_threads=n_threads,
+                    n_batch=512,
+                    f16_kv=True,
+                    verbose=False,
+                )
         return self._llama_instance
 
     @staticmethod
@@ -235,7 +237,8 @@ class GemmaProvider(LLMProvider):
         if gguf_model is not None:
             try:
                 logger.info(f"[LLM] Gemma generation started via GGUF engine ({gguf_model.name})...")
-                text = self._generate_with_local_gguf(gguf_model, prompt)
+                loop = asyncio.get_running_loop()
+                text = await loop.run_in_executor(None, self._generate_with_local_gguf, gguf_model, prompt)
                 logger.info(
                     f"[LLM] Gemma generation succeeded via GGUF ({len(text)} chars, "
                     f"{int((time.time() - start_time) * 1000)} ms)."

@@ -120,7 +120,10 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
 
     from app.core.config import configuration_error_for
 
-    CANONICAL_SOURCE_IDS = {"pubmed", "clinical_trials", "fda", "ema", "newsapi"}
+    CANONICAL_SOURCE_IDS = {
+        "pubmed", "clinical_trials", "fda", "ema", "newsapi",
+        "fierce_pharma", "biopharmadive", "biopharma_dive", "et_pharma",
+    }
     items = []
     seen_ids = set()
 
@@ -128,7 +131,11 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
         if s.source_id not in CANONICAL_SOURCE_IDS:
             continue
         seen_ids.add(s.source_id)
-        hl = latest_logs.get(s.source_id)
+        if s.source_id == "biopharma_dive":
+            seen_ids.add("biopharmadive")
+        elif s.source_id == "biopharmadive":
+            seen_ids.add("biopharma_dive")
+        hl = latest_logs.get(s.source_id) or (latest_logs.get("biopharmadive") if s.source_id == "biopharma_dive" else latest_logs.get("biopharma_dive"))
 
         config_err = configuration_error_for(s.source_id)
         if config_err:
@@ -189,10 +196,17 @@ async def get_sources_health(db: AsyncSession = Depends(get_db)):
         {"source_id": "fda", "name": "openFDA Drugs & Adverse Events", "tier": 1, "freshness_class": "delayed", "syndication_group": "Regulatory"},
         {"source_id": "ema", "name": "European Medicines Agency", "tier": 1, "freshness_class": "delayed", "syndication_group": "Regulatory"},
         {"source_id": "newsapi", "name": "NewsAPI Industry Feed", "tier": 3, "freshness_class": "near_real_time", "syndication_group": "Press / Media", "quota_remaining": 100},
+        {"source_id": "fierce_pharma", "name": "Fierce Pharma RSS", "tier": 3, "freshness_class": "near_real_time", "syndication_group": "Press / Media"},
+        {"source_id": "biopharmadive", "name": "BioPharma Dive RSS", "tier": 3, "freshness_class": "near_real_time", "syndication_group": "Press / Media"},
+        {"source_id": "et_pharma", "name": "ET Pharma (India) RSS", "tier": 3, "freshness_class": "near_real_time", "syndication_group": "Press / Media"},
     ]
     for c in canonical_fallbacks:
         if c["source_id"] not in seen_ids:
             seen_ids.add(c["source_id"])
+            if c["source_id"] == "biopharmadive":
+                seen_ids.add("biopharma_dive")
+            elif c["source_id"] == "biopharma_dive":
+                seen_ids.add("biopharmadive")
             hl = latest_logs.get(c["source_id"])
             config_err = configuration_error_for(c["source_id"])
             if config_err:

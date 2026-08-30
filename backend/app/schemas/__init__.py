@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 from uuid import UUID
 from enum import Enum
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from app.schemas.intelligence import (
     DataMode,
@@ -13,12 +13,25 @@ from app.schemas.intelligence import (
     LifecycleTimelineItem,
     ContradictionItem,
     MissingSignalWatchItem,
+    FunctionStatsResponse,
+    FunctionCalibrationProfile,
+    CalibrationStatusResponse,
+    LeadershipSummaryResponse,
 )
+
 from app.schemas.registry import (
     DevelopmentSummary,
     SourceRegistryItem,
     SourceHealthLogItem,
 )
+from app.schemas.auth import (
+    LoginRequest,
+    DemoLoginRequest,
+    UserMe,
+    CsrfResponse,
+    LogoutResponse,
+)
+
 
 
 def utc_now():
@@ -157,11 +170,15 @@ class PrioritySchema(BaseModel):
 
 
 class SignalReviewRequest(BaseModel):
-    status: str = Field(default="REVIEWED", description="UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED")
-    reviewer: Optional[str] = Field(default="Clinical Reviewer", description="Role/Actor performing review")
+    status: str = Field(default="REVIEWED", description="Target review status: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED")
+    reviewer: Optional[str] = Field(default=None, description="Optional legacy reviewer name; server defaults to authenticated user")
     decision: Optional[str] = Field(default=None, description="Review decision outcome")
     notes: Optional[str] = Field(default=None, description="Reviewer notes")
     resulting_action: Optional[str] = Field(default=None, description="Action taken or initiated")
+    escalate: bool = Field(default=False, description="Whether to trigger leadership escalation")
+    escalation_reason: Optional[str] = Field(default=None, description="Reason for leadership escalation")
+    resolve_escalation: bool = Field(default=False, description="Whether leadership is resolving an active escalation")
+    is_override: bool = Field(default=False, description="Whether leadership/admin is performing a direct override")
 
 
 class AuditLogItemSchema(BaseModel):
@@ -170,8 +187,41 @@ class AuditLogItemSchema(BaseModel):
     entity_id: str
     action: str
     performed_by: str
+    user_id: Optional[UUID] = None
+    correlation_id: Optional[str] = None
     timestamp: datetime
     details: Optional[Dict[str, Any]] = None
+
+
+class ApprovalRequestCreate(BaseModel):
+    request_note: Optional[str] = None
+    urgency: Optional[str] = "HIGH"
+
+
+class ApprovalRequestResolve(BaseModel):
+    status: Literal["APPROVED", "REJECTED"]
+    resolution_note: Optional[str] = None
+
+
+class ApprovalRequestSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    request_id: UUID
+    signal_id: UUID
+    requested_by_user_id: UUID
+    requested_by_role: str
+    requested_by_display_name: Optional[str] = None
+    request_note: Optional[str] = None
+    status: str = "PENDING"  # PENDING | APPROVED | REJECTED
+    resolved_by_user_id: Optional[UUID] = None
+    resolved_by_role: Optional[str] = None
+    resolved_by_display_name: Optional[str] = None
+    resolution_note: Optional[str] = None
+    requested_at: datetime
+    resolved_at: Optional[datetime] = None
+    signal_title: Optional[str] = None
+    signal_priority: Optional[str] = None
+    signal_source: Optional[str] = None
 
 
 class SignalSchema(BaseModel):
@@ -224,6 +274,10 @@ class SignalSchema(BaseModel):
     review_decision: Optional[str] = None
     review_notes: Optional[str] = None
     resulting_action: Optional[str] = None
+
+    # Cross-Functional Approval Status
+    approval_status: Optional[str] = None
+    latest_approval_request: Optional[ApprovalRequestSchema] = None
 
     # Structured Decision Sub-Objects (for clear trust boundaries)
     evidence: List[OriginalEvidenceItemSchema] = Field(default_factory=list)
@@ -293,7 +347,7 @@ class PipelineRunSchema(BaseModel):
 class HealthResponse(BaseModel):
     status: str = "ok"
     service: str = "MetaRadar API"
-    version: str = "5.1.0"
+    version: str = "1.0.0"
     timestamp: datetime = Field(default_factory=utc_now)
 
 
@@ -449,6 +503,7 @@ class AthenaEvidenceCitation(BaseModel):
     published_at: Optional[str] = None
     excerpt: str
     distance: float
+    is_synthetic: bool = False
 
 
 class AthenaQueryResponse(BaseModel):

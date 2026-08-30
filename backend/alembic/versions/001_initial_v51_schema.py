@@ -160,6 +160,7 @@ def upgrade():
         'signals',
         sa.Column('signal_id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column('source_id', sa.String(100), sa.ForeignKey('sources.source_id'), nullable=False),
+        sa.Column('source_tier', sa.Integer(), nullable=False, server_default='1'),
         sa.Column('development_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('developments.development_id'), nullable=True),
         sa.Column('pipeline_run_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('pipeline_runs.pipeline_run_id'), nullable=True),
         sa.Column('pmid', sa.String(50), nullable=True),

@@ -57,6 +57,8 @@ export interface RawSignalPayload {
   tags?: string[]
   sources?: SignalSource[]
   stakeholders?: Record<string, number>
+  approval_status?: "PENDING" | "APPROVED" | "REJECTED" | null
+  latest_approval_request?: any
 }
 
 export function formatTimeAgo(isoString?: string): string {

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "MetaRadar",
-    "version": "5.1.0"
+    "version": "1.0.0"
   },
   "paths": {
     "/api/v1/health": {
@@ -93,13 +93,163 @@
         }
       }
     },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication & Identity"
+        ],
+        "summary": "Login",
+        "description": "Standard email/password credential authentication endpoint.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMe"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/demo-login": {
+      "post": {
+        "tags": [
+          "Authentication & Identity"
+        ],
+        "summary": "Demo Login",
+        "description": "Demo login endpoint active strictly when DEMO_MODE=true.\nAuthenticates directly into a target stakeholder persona role without exposing passwords in client bundles.",
+        "operationId": "demo_login_api_v1_auth_demo_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMe"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication & Identity"
+        ],
+        "summary": "Logout",
+        "description": "Terminates the current session, revokes DB session token, and clears auth cookies.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication & Identity"
+        ],
+        "summary": "Get Me",
+        "description": "Returns the authenticated user identity and role from the active session.",
+        "operationId": "get_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMe"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/csrf": {
+      "get": {
+        "tags": [
+          "Authentication & Identity"
+        ],
+        "summary": "Get Csrf Token",
+        "description": "Explicit CSRF token bootstrap endpoint.\nIf an active session cookie is present, generates and returns the matching session-bound HMAC CSRF token.",
+        "operationId": "get_csrf_token_api_v1_auth_csrf_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/signals": {
       "get": {
         "tags": [
           "Signals & Intelligence"
         ],
         "summary": "List Signals",
-        "description": "Returns filtered signals list with deterministic ordering, limit/offset pagination, and total count.",
+        "description": "Returns filtered signals list with RBAC role scoping, pagination, and total count.",
         "operationId": "list_signals_api_v1_signals_get",
         "parameters": [
           {
@@ -213,6 +363,18 @@
             "description": "Filter by source ID"
           },
           {
+            "name": "all_functions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to return signals across all stakeholder functions (LEADERSHIP and ADMIN only)",
+              "default": false,
+              "title": "All Functions"
+            },
+            "description": "Whether to return signals across all stakeholder functions (LEADERSHIP and ADMIN only)"
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -253,6 +415,98 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/queue/{function_id}": {
+      "get": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Get Function Queue",
+        "description": "Fetches incoming review queue for a specific stakeholder function with RBAC isolation.",
+        "operationId": "get_function_queue_api_v1_signals_queue__function_id__get",
+        "parameters": [
+          {
+            "name": "function_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Function Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/pending-approvals": {
+      "get": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Get Pending Approvals",
+        "description": "Returns all pending cross-functional approval requests.\nRestricted to LEADERSHIP and ADMIN personas.",
+        "operationId": "get_pending_approvals_api_v1_signals_pending_approvals_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalRequestSchema"
+                  },
+                  "type": "array",
+                  "title": "Response Get Pending Approvals Api V1 Signals Pending Approvals Get"
                 }
               }
             }
@@ -309,7 +563,7 @@
           "Signals & Intelligence"
         ],
         "summary": "Submit Signal Review",
-        "description": "Submits a human review action for a signal, persisting review state and audit history.\nSupported statuses: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED.\nOpening a signal does not mark it reviewed \u2014 an explicit review action is required.",
+        "description": "Submits a review action for a signal, validating FSM transition invariants,\nhandling leadership escalations, and appending immutable audit records.",
         "operationId": "submit_signal_review_api_v1_signals__signal_id__review_post",
         "parameters": [
           {
@@ -339,6 +593,112 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SignalSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{signal_id}/request-approval": {
+      "post": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Request Signal Approval",
+        "description": "Submits a cross-functional approval request for executive leadership review.\nAvailable to all functional roles (Medical Affairs, Regulatory, Safety, Market Access, Comms).",
+        "operationId": "request_signal_approval_api_v1_signals__signal_id__request_approval_post",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequestCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/signals/{signal_id}/resolve-approval": {
+      "post": {
+        "tags": [
+          "Signals & Intelligence"
+        ],
+        "summary": "Resolve Signal Approval",
+        "description": "Resolves a pending leadership approval request (APPROVED or REJECTED) with binding decision notes.\nRestricted to LEADERSHIP and ADMIN personas.",
+        "operationId": "resolve_signal_approval_api_v1_signals__signal_id__resolve_approval_post",
+        "parameters": [
+          {
+            "name": "signal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequestResolve"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestSchema"
                 }
               }
             }
@@ -901,6 +1261,93 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/function-stats/{function_id}": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Get Function Stats",
+        "description": "Computes comprehensive operational metrics, dual review-time metrics, and recent decisions for a function workspace.",
+        "operationId": "get_function_stats_api_v1_function_stats__function_id__get",
+        "parameters": [
+          {
+            "name": "function_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Function Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunctionStatsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/status": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Get Calibration Status",
+        "description": "Returns structured per-function calibration state across all 6 stakeholder functions.",
+        "operationId": "get_calibration_status_api_v1_calibration_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leadership/summary": {
+      "get": {
+        "tags": [
+          "Intelligence Views"
+        ],
+        "summary": "Get Leadership Summary",
+        "description": "Provides executive leadership overview with cross-functional backlogs, pending escalations, and critical unreviewed signals.",
+        "operationId": "get_leadership_summary_api_v1_leadership_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadershipSummaryResponse"
                 }
               }
             }
@@ -1805,6 +2252,217 @@
         ],
         "title": "ActivityLogItem"
       },
+      "ApprovalRequestCreate": {
+        "properties": {
+          "request_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Note"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency",
+            "default": "HIGH"
+          }
+        },
+        "type": "object",
+        "title": "ApprovalRequestCreate"
+      },
+      "ApprovalRequestResolve": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ],
+            "title": "Status"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ApprovalRequestResolve"
+      },
+      "ApprovalRequestSchema": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "requested_by_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Requested By User Id"
+          },
+          "requested_by_role": {
+            "type": "string",
+            "title": "Requested By Role"
+          },
+          "requested_by_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By Display Name"
+          },
+          "request_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Note"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "PENDING"
+          },
+          "resolved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By User Id"
+          },
+          "resolved_by_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By Role"
+          },
+          "resolved_by_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By Display Name"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "signal_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Title"
+          },
+          "signal_priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Priority"
+          },
+          "signal_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "signal_id",
+          "requested_by_user_id",
+          "requested_by_role",
+          "requested_at"
+        ],
+        "title": "ApprovalRequestSchema"
+      },
       "AthenaEvidenceCitation": {
         "properties": {
           "signal_id": {
@@ -1848,6 +2506,11 @@
           "distance": {
             "type": "number",
             "title": "Distance"
+          },
+          "is_synthetic": {
+            "type": "boolean",
+            "title": "Is Synthetic",
+            "default": false
           }
         },
         "type": "object",
@@ -1980,6 +2643,29 @@
           "performed_by": {
             "type": "string",
             "title": "Performed By"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
           },
           "timestamp": {
             "type": "string",
@@ -2182,6 +2868,36 @@
           "scoring_version"
         ],
         "title": "CalibrationRunSchema"
+      },
+      "CalibrationStatusResponse": {
+        "properties": {
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/FunctionCalibrationProfile"
+            },
+            "type": "array",
+            "title": "Profiles"
+          },
+          "total_feedback_samples": {
+            "type": "integer",
+            "title": "Total Feedback Samples",
+            "default": 0
+          },
+          "last_calibration_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Calibration Timestamp"
+          }
+        },
+        "type": "object",
+        "title": "CalibrationStatusResponse"
       },
       "CalibrationWeightsResponse": {
         "properties": {
@@ -2912,6 +3628,33 @@
         ],
         "title": "ContradictionItem"
       },
+      "CsrfResponse": {
+        "properties": {
+          "csrf_token": {
+            "type": "string",
+            "title": "Csrf Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csrf_token"
+        ],
+        "title": "CsrfResponse"
+      },
+      "DemoLoginRequest": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Role to authenticate as in demo mode (e.g. MEDICAL_AFFAIRS, REGULATORY, SAFETY, MARKET_ACCESS, COMMUNICATIONS, LEADERSHIP, ADMIN)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "DemoLoginRequest"
+      },
       "DevelopmentSummary": {
         "properties": {
           "development_id": {
@@ -3140,6 +3883,66 @@
         ],
         "title": "FeedbackSummaryResponse"
       },
+      "FunctionCalibrationProfile": {
+        "properties": {
+          "function_name": {
+            "type": "string",
+            "title": "Function Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "feedback_sample_count": {
+            "type": "integer",
+            "title": "Feedback Sample Count"
+          },
+          "min_required_samples": {
+            "type": "integer",
+            "title": "Min Required Samples",
+            "default": 20
+          },
+          "brier_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brier Score"
+          },
+          "ece_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ece Score"
+          },
+          "reliability_curve": {
+            "items": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Reliability Curve"
+          }
+        },
+        "type": "object",
+        "required": [
+          "function_name",
+          "status",
+          "feedback_sample_count"
+        ],
+        "title": "FunctionCalibrationProfile"
+      },
       "FunctionSchema": {
         "properties": {
           "name": {
@@ -3157,6 +3960,66 @@
           "label"
         ],
         "title": "FunctionSchema"
+      },
+      "FunctionStatsResponse": {
+        "properties": {
+          "function_id": {
+            "type": "string",
+            "title": "Function Id"
+          },
+          "unreviewed_count": {
+            "type": "integer",
+            "title": "Unreviewed Count"
+          },
+          "in_review_count": {
+            "type": "integer",
+            "title": "In Review Count"
+          },
+          "escalation_count": {
+            "type": "integer",
+            "title": "Escalation Count"
+          },
+          "total_decisions": {
+            "type": "integer",
+            "title": "Total Decisions"
+          },
+          "time_to_first_review_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time To First Review Hours"
+          },
+          "time_to_final_decision_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time To Final Decision Hours"
+          },
+          "recent_decisions": {
+            "items": {},
+            "type": "array",
+            "title": "Recent Decisions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "function_id",
+          "unreviewed_count",
+          "in_review_count",
+          "escalation_count",
+          "total_decisions"
+        ],
+        "title": "FunctionStatsResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3299,7 +4162,7 @@
           "version": {
             "type": "string",
             "title": "Version",
-            "default": "5.1.0"
+            "default": "1.0.0"
           },
           "timestamp": {
             "type": "string",
@@ -3363,6 +4226,37 @@
         },
         "type": "object",
         "title": "IngestionSyncLiveRequest"
+      },
+      "LeadershipSummaryResponse": {
+        "properties": {
+          "pending_escalations": {
+            "items": {},
+            "type": "array",
+            "title": "Pending Escalations"
+          },
+          "critical_unreviewed": {
+            "items": {},
+            "type": "array",
+            "title": "Critical Unreviewed"
+          },
+          "per_function_counts": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Per Function Counts"
+          },
+          "total_open_signals": {
+            "type": "integer",
+            "title": "Total Open Signals",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "LeadershipSummaryResponse"
       },
       "LifecycleSummarySchema": {
         "properties": {
@@ -3487,6 +4381,40 @@
           "event_date"
         ],
         "title": "LifecycleTimelineItem"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "LogoutResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "logged_out"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Session successfully terminated"
+          }
+        },
+        "type": "object",
+        "title": "LogoutResponse"
       },
       "MissingSignalWatchItem": {
         "properties": {
@@ -4644,7 +5572,7 @@
           "status": {
             "type": "string",
             "title": "Status",
-            "description": "UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED",
+            "description": "Target review status: UNREVIEWED, IN_REVIEW, REVIEWED, ACTION_REQUIRED, ACTIONED, DISMISSED",
             "default": "REVIEWED"
           },
           "reviewer": {
@@ -4657,8 +5585,7 @@
               }
             ],
             "title": "Reviewer",
-            "description": "Role/Actor performing review",
-            "default": "Clinical Reviewer"
+            "description": "Optional legacy reviewer name; server defaults to authenticated user"
           },
           "decision": {
             "anyOf": [
@@ -4695,6 +5622,36 @@
             ],
             "title": "Resulting Action",
             "description": "Action taken or initiated"
+          },
+          "escalate": {
+            "type": "boolean",
+            "title": "Escalate",
+            "description": "Whether to trigger leadership escalation",
+            "default": false
+          },
+          "escalation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation Reason",
+            "description": "Reason for leadership escalation"
+          },
+          "resolve_escalation": {
+            "type": "boolean",
+            "title": "Resolve Escalation",
+            "description": "Whether leadership is resolving an active escalation",
+            "default": false
+          },
+          "is_override": {
+            "type": "boolean",
+            "title": "Is Override",
+            "description": "Whether leadership/admin is performing a direct override",
+            "default": false
           }
         },
         "type": "object",
@@ -5099,6 +6056,27 @@
               }
             ],
             "title": "Resulting Action"
+          },
+          "approval_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Status"
+          },
+          "latest_approval_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalRequestSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "evidence": {
             "items": {
@@ -5579,6 +6557,46 @@
           "value"
         ],
         "title": "TrendPointSchema"
+      },
+      "UserMe": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "email",
+          "display_name",
+          "role",
+          "is_active",
+          "created_at"
+        ],
+        "title": "UserMe"
       },
       "ValidationError": {
         "properties": {

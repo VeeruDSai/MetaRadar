@@ -76,15 +76,78 @@
 ### Phase 10: Undeniable Demo Journey, Evidence Convergence, BioPharma Dive & UX Refinement
 - **Goal:** Make the 6-question signal journey undeniable, integrate active BioPharma Dive RSS connector, add adaptive NewsAPI quota governor, surface Evidence Convergence & "Why This Signal?" explainers, expose Red-Team self-challenging counter-factuals, and run brutal end-to-end scenario verifications.
 - **Requirements:** REQ-P10-01 … REQ-P10-15
-- **Status:** Planned
+- **Status:** Completed & Verified
 - **Plans:**
-  - [ ] 10-01-PLAN.md — BioPharma Dive RSS connector + adaptive NewsAPI quota governor & health UI
-  - [ ] 10-02-PLAN.md — Evidence convergence tree + "Why this signal?" explainer + Red-Team counter-factuals + source hierarchy tags
-  - [ ] 10-03-PLAN.md — Daily executive briefing dashboard + brutal 5-scenario E2E verification
+  - [x] 10-01-PLAN.md — BioPharma Dive RSS connector + adaptive NewsAPI quota governor & health UI
+  - [x] 10-02-PLAN.md — Evidence convergence tree + "Why this signal?" explainer + Red-Team counter-factuals + source hierarchy tags
+  - [x] 10-03-PLAN.md — Daily executive briefing dashboard + brutal 5-scenario E2E verification
+
+---
+
+---
+
+### Milestone v5.3 — MetaRadar Productionization (COMPLETED & VERIFIED)
+
+> **Branch:** `feature/phase-11-productionization`  
+> **Status:** Phase 11 — COMPLETED & VERIFIED  
+> **Core Objective:** Turn MetaRadar v5.2 into a functional, end-to-end, role-aware, reviewable, auditable, and secure decision-intelligence application. Complete vertical slice: Login → Role-Queue → Signal → Evidence → Review → Approve/Contest → Audit → Action → Leadership Visibility.
+
+### Phase 11: MetaRadar Productionization
+- **Goal:** Real authentication (User/Session/bcrypt), server-side RBAC, review state machine permission matrix, role-filtered signal queues, provenance completeness, operational FunctionsWorkspace, honest CalibrationWorkspace, Leadership cross-functional view, security hardening (CSRF, rate limiting, security headers, auth audit events), 30+ new tests, E2E vertical slice.
+- **Priority:** P0 (auth/RBAC/provenance) → P1 (operational UI) → P2 (security hardening)
+- **Requirements:** REQ-P11-01 … REQ-P11-48
+- **Status:** Completed & Verified
+- **Context:** [11-CONTEXT.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/11-productionization/11-CONTEXT.md)
+- **Plans:**
+  - [x] 11-01-PLAN.md — Identity & Auth Foundation (User/Session models, bcrypt, /auth/* endpoints)
+  - [x] 11-02-PLAN.md — Server-Side RBAC & Review Enforcement (role filtering, permission matrix, queue endpoint)
+  - [x] 11-03-PLAN.md — Provenance Completeness & Pharma Source Validation (NewsAPI URL, SOURCE_UNAVAILABLE)
+  - [x] 11-04-PLAN.md — Operational Intelligence UI (FunctionsWorkspace, CalibrationWorkspace, Leadership view)
+  - [x] 11-05-PLAN.md — Frontend Auth Integration & Demo Persona (real auth, ReviewQueue, signal lifecycle)
+  - [x] 11-06-PLAN.md — Security Hardening (security headers, CSRF, rate limiting, auth audit events)
+  - [x] 11-07-PLAN.md — Test Suite Expansion & E2E Vertical Slice (32 new tests, vertical slice script)
+
+---
+
+---
+
+### Milestone v5.4 — Hackathon MVP: Login UX, Cross-Functional Approval & Documentation (COMPLETED & VERIFIED)
+
+> **Branch:** `feature/phase-12-hackathon-mvp`  
+> **Status:** Phase 12 — COMPLETED & VERIFIED  
+> **Core Objective:** Replace demo persona-switcher with a real login page (per-role credentials in README), implement a cross-functional approval request workflow (functional team → Leadership → decision), and ship a complete hackathon documentation suite (README, DEMO_SCRIPT.md, HACKATHON_PITCH.md, SYSTEM_ARCHITECTURE.md).
+
+### Phase 12: Hackathon MVP — Login, Approval Workflow & Documentation
+- **Goal:** Per-role fixed credentials + login page (no persona dropdown), cross-functional approval request workflow (new `approval_requests` table + 3 new endpoints + frontend modal + Leadership queue), hackathon judge documentation package aligned to the 8-criterion evaluation rubric.
+- **Priority:** P0 (login/credentials) → P1 (approval workflow) → P2 (documentation)
+- **Requirements:** REQ-P12-01 … REQ-P12-25
+- **Status:** Completed & Verified
+- **Context:** [12-CONTEXT.md](file:///c:/Users/OM%20Prakash/Documents/novonordisk/.planning/phases/12-hackathon-mvp/12-CONTEXT.md)
+- **Plans:**
+  - [x] 12-01-PLAN.md — Fixed Role Credentials + Login Page + Auth Routing
+  - [x] 12-02-PLAN.md — Approval Request Workflow: Backend (migration 015, 3 endpoints, schemas)
+  - [x] 12-03-PLAN.md — Approval Request Workflow: Frontend UI (modal, panel, signal card badges)
+  - [x] 12-04-PLAN.md — Hackathon Documentation Suite (README, DEMO_SCRIPT.md, HACKATHON_PITCH.md)
+
+---
 
 ---
 
 ## Future Backlog / Next Milestone
 
-Future milestone initiatives (v5.3 / v6.0) can be planned and tracked here using `/gsd-new-milestone`.
+Future milestone initiatives (v6.0+) can be planned and tracked here using `/gsd-new-milestone`.
+
+### Phase 13: Signal UX Simplification (FUTURE — Backlog)
+- **Goal:** Simplify the Signals tab and signal card for non-technical users. Current design is perceived as complex by team. Reduce cognitive load without removing power features.
+- **Priority:** LOW — execute only if time permits before hackathon demo OR as v6.0 first phase
+- **Status:** Backlog (not planned for execution yet — review after Phase 12)
+- **Proposed changes:**
+  - Collapse technical metadata (fingerprint, pipeline_run_id, etc.) behind a "Technical Details" expand
+  - Replace CRITICAL/HIGH/MEDIUM/LOW labels with plain-language: "Act Now / Review Today / Monitor / FYI"
+  - Guided first-login onboarding: 3-step tooltip tour of the role-specific queue
+  - Mobile-responsive signal card layout (current design is desktop-first)
+  - "Why am I seeing this?" one-tap explainer surfacing the routing rationale
+  - Simplified Evidence Drawer: merge SUMMARY + SOURCES into single tab, keep TRACE + AUDIT as "Advanced" accordion
+- **Constraint:** All simplifications must be purely UI-level — no backend changes. The data model and API are unchanged.
+- **Rubric impact:** Addresses Dashboard UX & adoption potential (10 pts), improves demo walkthrough smoothness
 

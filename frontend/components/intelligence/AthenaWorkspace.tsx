@@ -208,30 +208,57 @@ export function AthenaWorkspace() {
 
               {meta && meta.evidence.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-[var(--border)]">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] block mb-2">
-                    Grounded Evidence Citations ({meta.evidence_count})
-                  </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] block">
+                      Grounded Evidence Citations ({meta.evidence_count})
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {meta.evidence.some((e) => !e.is_synthetic) && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          {meta.evidence.filter((e) => !e.is_synthetic).length} Live
+                        </span>
+                      )}
+                      {meta.evidence.some((e) => e.is_synthetic) && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          {meta.evidence.filter((e) => e.is_synthetic).length} Test Fixture
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <p className="text-[10px] text-[var(--muted-foreground)] m-0 mb-2">
                     Click any citation to open its source signal page and verify the evidence.
                   </p>
                   <div className="flex flex-col gap-2">
                     {meta.evidence.map((ev, idx) => {
                       const detailHref = `/signals/${encodeURIComponent(ev.signal_id)}`
+                      const isSynthetic = Boolean(ev.is_synthetic)
                       return (
                         <div
                           key={`${ev.signal_id}-${idx}`}
                           className="p-2.5 rounded-md bg-[var(--surface-secondary)] border border-[var(--border)] text-xs hover:border-[var(--signal)] transition-colors"
                         >
                           <div className="flex items-center justify-between mb-1 gap-2">
-                            <Link
-                              href={detailHref}
-                              className="min-w-0 flex-1 group"
-                              title="Open source signal page"
-                            >
-                              <strong className="text-[var(--foreground)] truncate max-w-[280px] block group-hover:text-[var(--signal)] transition-colors">
-                                {ev.title}
-                              </strong>
-                            </Link>
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span
+                                className={`shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border ${
+                                  isSynthetic
+                                    ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                    : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                }`}
+                              >
+                                {isSynthetic ? 'Test Fixture' : 'Live'}
+                              </span>
+                              <Link
+                                href={detailHref}
+                                className="min-w-0 flex-1 group"
+                                title="Open source signal page"
+                              >
+                                <strong className="text-[var(--foreground)] truncate max-w-[240px] block group-hover:text-[var(--signal)] transition-colors">
+                                  {ev.title}
+                                </strong>
+                              </Link>
+                            </div>
                             <span className="flex items-center gap-1.5 shrink-0">
                               <Link
                                 href={detailHref}

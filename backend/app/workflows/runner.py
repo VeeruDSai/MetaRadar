@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -20,10 +21,13 @@ from app.models import (
 from app.services.embeddings import embedding_service
 from app.services.scoring import priority_scorer
 from app.services.provenance_urls import resolve_canonical_provenance
+from app.services.routing import resolve_signal_routing
 from app.workflows.graph import build_graph
 from app.workflows.state import MetaRadarState, create_initial_state
 
 logger = logging.getLogger(__name__)
+
+_pipeline_concurrency_lock = asyncio.Lock()
 
 
 class PipelineRunner:
@@ -37,6 +41,25 @@ class PipelineRunner:
         self._graph = build_graph()
 
     async def run(
+        self,
+        batch_size: int = 50,
+        pipeline_run_id: Optional[str] = None,
+        raw_signals: Optional[List[Dict[str, Any]]] = None,
+        calibration_feedback: Optional[List[Dict[str, Any]]] = None,
+    ) -> MetaRadarState:
+        """
+        Executes the 10-node LangGraph pipeline with a concurrency lock.
+        Tracks PipelineRun lifecycle and persists output entities to the database if session is available.
+        """
+        async with _pipeline_concurrency_lock:
+            return await self._run_pipeline(
+                batch_size=batch_size,
+                pipeline_run_id=pipeline_run_id,
+                raw_signals=raw_signals,
+                calibration_feedback=calibration_feedback,
+            )
+
+    async def _run_pipeline(
         self,
         batch_size: int = 50,
         pipeline_run_id: Optional[str] = None,
@@ -84,6 +107,18 @@ class PipelineRunner:
                     payload["source_id"] = row.source_id
                     payload["external_id"] = row.external_id
                     payload["retrieved_at"] = row.retrieved_at.isoformat() if row.retrieved_at else None
+                    payload["is_synthetic"] = bool(payload.get("is_synthetic", False))
+                    payload["data_mode"] = payload.get("data_mode", "live")
+                    if not payload.get("content"):
+                        payload["content"] = (
+                            payload.get("abstract")
+                            or payload.get("description")
+                            or payload.get("evidence_text")
+                            or (payload.get("study", {}).get("protocolSection", {}).get("descriptionModule", {}).get("briefSummary", "") if isinstance(payload.get("study"), dict) else "")
+                            or payload.get("title", "")
+                        )
+                    if not payload.get("title") and payload.get("content"):
+                        payload["title"] = str(payload["content"])[:100]
                     fetched_bronze.append(payload)
             except Exception as e:
                 logger.warning(f"Failed to fetch unpromoted bronze signals: {e}")
@@ -257,6 +292,23 @@ class PipelineRunner:
                 else:
                     priority_str = str(raw_prio or "MEDIUM").upper()
 
+                # Explainable function routing & leadership escalation
+                routing_data = resolve_signal_routing(
+                    signal_type=sig.get("signal_type", "CLINICAL_TRIAL"),
+                    priority=priority_str,
+                    priority_score=score_breakdown.get("total") if score_breakdown else None,
+                    title=sig.get("title", ""),
+                    content=sig.get("content", ""),
+                )
+                fn = sig.get("relevant_function") or routing_data["relevant_function"]
+                relevant_fn = fn.value if hasattr(fn, "value") else str(fn)
+                route_dest = sig.get("route_destination") or routing_data["route_destination"]
+                route_role = sig.get("route_role") or routing_data["route_role"]
+                is_escalated = sig.get("is_escalated") if sig.get("is_escalated") is not None else routing_data["is_escalated"]
+                routing_reason = sig.get("routing_reason") or routing_data["routing_reason"]
+                suggested_action = sig.get("suggested_action") or routing_data["suggested_action"]
+                action_rationale = sig.get("action_rationale") or routing_data["action_rationale"]
+
                 is_synth = bool(sig.get("is_synthetic", False))
                 data_mode = sig.get("data_mode") or ("test_fixture" if is_synth else "live")
                 provenance_status = sig.get("provenance_status") or ("fixture" if is_synth else "available" if url else "missing_url")
@@ -294,6 +346,13 @@ class PipelineRunner:
                     is_synthetic=is_synth,
                     pipeline_run_id=run_uuid,
                     embedding=embedding,
+                    relevant_function=relevant_fn,
+                    route_destination=route_dest,
+                    route_role=route_role,
+                    is_escalated=is_escalated,
+                    routing_reason=routing_reason,
+                    suggested_action=suggested_action,
+                    action_rationale=action_rationale,
                 ).on_conflict_do_update(
                     index_elements=["fingerprint"],
                     set_={
@@ -314,6 +373,13 @@ class PipelineRunner:
                         "priority": priority_str,
                         "score_breakdown": score_breakdown or {},
                         "pipeline_run_id": run_uuid,
+                        "relevant_function": relevant_fn,
+                        "route_destination": route_dest,
+                        "route_role": route_role,
+                        "is_escalated": is_escalated,
+                        "routing_reason": routing_reason,
+                        "suggested_action": suggested_action,
+                        "action_rationale": action_rationale,
                     }
                 )
                 await self._session.execute(stmt)

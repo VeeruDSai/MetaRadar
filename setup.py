@@ -54,8 +54,9 @@ def check_prerequisites():
         print("  [ERROR] Python 3.11 or higher is required.", file=sys.stderr)
         sys.exit(1)
 
-    # 2. Node & NPM check
+    # 2. Node & Package Manager check
     node_cmd = shutil.which("node")
+    pnpm_cmd = shutil.which("pnpm")
     npm_cmd = shutil.which("npm")
     if node_cmd:
         try:
@@ -64,12 +65,14 @@ def check_prerequisites():
         except Exception:
             print("  Node detected.")
     else:
-        print("  [WARNING] Node.js not found in PATH. Frontend build may require Node 18+.", file=sys.stderr)
+        print("  [WARNING] Node.js not found in PATH. Frontend build requires Node 20+.", file=sys.stderr)
 
-    if npm_cmd:
-        print("  NPM package manager detected.")
+    if pnpm_cmd:
+        print("  pnpm package manager detected (preferred).")
+    elif npm_cmd:
+        print("  npm package manager detected.")
     else:
-        print("  [WARNING] NPM not found in PATH.", file=sys.stderr)
+        print("  [WARNING] Neither pnpm nor npm found in PATH.", file=sys.stderr)
 
     # 3. Docker check
     docker_cmd = shutil.which("docker")
@@ -168,18 +171,27 @@ def setup_frontend(skip_frontend: bool):
         return
 
     frontend_dir = BASE_DIR / "frontend"
+    pnpm_cmd = shutil.which("pnpm")
     npm_cmd = shutil.which("npm")
 
-    if not npm_cmd:
-        print("  [WARNING] NPM not found. Skipping frontend dependency install.", file=sys.stderr)
-        return
+    if pnpm_cmd:
+        print("  Installing frontend packages via pnpm install...")
+        try:
+            run_command([pnpm_cmd, "install", "--loglevel=error"], cwd=frontend_dir)
+            print("  Frontend dependencies installed successfully via pnpm.")
+            return
+        except subprocess.CalledProcessError as e:
+            print(f"  [WARNING] Frontend pnpm install returned code {e.returncode}. Trying npm fallback...", file=sys.stderr)
 
-    print("  Installing frontend packages via npm install...")
-    try:
-        run_command([npm_cmd, "install", "--no-audit", "--loglevel=error"], cwd=frontend_dir)
-        print("  Frontend dependencies installed successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"  [WARNING] Frontend npm install returned code {e.returncode}. Continuing...", file=sys.stderr)
+    if npm_cmd:
+        print("  Installing frontend packages via npm install...")
+        try:
+            run_command([npm_cmd, "install", "--no-audit", "--loglevel=error"], cwd=frontend_dir)
+            print("  Frontend dependencies installed successfully via npm.")
+        except subprocess.CalledProcessError as e:
+            print(f"  [WARNING] Frontend npm install returned code {e.returncode}. Continuing...", file=sys.stderr)
+    else:
+        print("  [WARNING] Neither pnpm nor npm found. Skipping frontend dependency install.", file=sys.stderr)
 
 
 def bootstrap_docker_services(skip_docker: bool):
@@ -376,7 +388,7 @@ def setup_local_models(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="MetaRadar v5.1 Zero-Config Environment Setup Launcher",
+        description="MetaRadar Zero-Config Environment Setup Launcher",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--skip-docker", action="store_true", help="Skip starting Docker Compose backing services")
@@ -392,7 +404,7 @@ def main():
 
     print("=" * 70)
     print(" MetaRadar Decision Intelligence Platform — Environment Setup")
-    print(" Version 5.1.0 | Local Gemma GGUF + CUDA | PGVector | Next.js 16")
+    print(" Production Ready | Local Gemma GGUF + CUDA | PGVector | Next.js 16")
     print("=" * 70)
 
     start_time = time.time()

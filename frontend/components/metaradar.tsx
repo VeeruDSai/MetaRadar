@@ -29,6 +29,8 @@ import {
   Menu,
   Moon,
   Network,
+  PanelLeft,
+  PanelLeftClose,
   RefreshCw,
   RotateCcw,
   Search,
@@ -41,6 +43,7 @@ import {
   Sun,
   Target,
   Trash2,
+  User,
   X,
   Zap,
 } from 'lucide-react'
@@ -49,6 +52,8 @@ import { SpecularButton } from '@/components/ui/SpecularButton'
 import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { DemoOperatorSelector } from '@/components/common/DemoOperatorSelector'
 import { useTheme } from '@/components/theme/ThemeProvider'
+import { useAuth } from '@/context/AuthContext'
+import ProfileCard from '@/components/auth/ProfileCard'
 import { SignalCard } from '@/components/signals/SignalCard'
 import Counter from '@/components/ui/Counter'
 import AnimatedCounter from '@/components/ui/AnimatedCounter'
@@ -69,6 +74,7 @@ import {
   getLifecycles,
   getMissingSignals,
   getOverview,
+  getPendingApprovals,
   getRedTeamContradictions,
   getSignals,
   getSources,
@@ -81,6 +87,7 @@ import {
 } from '@/lib/api'
 import { useLiveData } from '@/lib/hooks'
 import type {
+  ApprovalRequest,
   AthenaResponse,
   BeforeAfterComparison,
   CacheClearResponse,
@@ -176,12 +183,73 @@ export function SectionTitle({
   )
 }
 
+const ROLE_PERSONAS: Record<string, { name: string; title: string; handle: string; initials: string }> = {
+  DEVELOPER: {
+    name: 'test-developer',
+    title: 'Platform Engineer / Developer',
+    handle: 'test.developer',
+    initials: 'TD',
+  },
+  LEADERSHIP: {
+    name: 'test-leader',
+    title: 'Executive Leadership',
+    handle: 'test.leader',
+    initials: 'TL',
+  },
+  MEDICAL_AFFAIRS: {
+    name: 'test-medical',
+    title: 'Medical Affairs Lead',
+    handle: 'test.medical',
+    initials: 'TM',
+  },
+  REGULATORY: {
+    name: 'test-regulatory',
+    title: 'Regulatory Affairs Director',
+    handle: 'test.regulatory',
+    initials: 'TR',
+  },
+  SAFETY: {
+    name: 'test-safety',
+    title: 'Pharmacovigilance & Safety Lead',
+    handle: 'test.safety',
+    initials: 'TS',
+  },
+  MARKET_ACCESS: {
+    name: 'test-access',
+    title: 'Market Access & HEOR Lead',
+    handle: 'test.access',
+    initials: 'TA',
+  },
+  COMMUNICATIONS: {
+    name: 'test-comms',
+    title: 'Medical Communications Lead',
+    handle: 'test.comms',
+    initials: 'TC',
+  },
+  ADMIN: {
+    name: 'test-developer',
+    title: 'System Administrator',
+    handle: 'test.developer',
+    initials: 'TD',
+  },
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
   const { isDark, toggleTheme } = useTheme()
+  const { user, role, logout } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+
+  const currentPersona = ROLE_PERSONAS[role] || ROLE_PERSONAS['MEDICAL_AFFAIRS']
+
+  useEffect(() => {
+    if (window.innerWidth < 900) setIsCollapsed(false)
+  }, [open])
 
   // Live health status polling (60s cadence)
   const { data: healthReady } = useLiveData<HealthReadyResponse>(getHealthReady, 60000)
@@ -221,33 +289,71 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const links = [...nav, ...secondary]
   const isDegraded = healthReady?.status === 'degraded'
+  const currentSectionLabel =
+    nav.find((item) => item.href === pathname)?.label ??
+    secondary.find((item) => item.href === pathname)?.label ??
+    'Overview'
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
-        <div className="brand">
-          <div className="brand-mark shadow-sm">
-            <MetaRadarLogo size={28} />
-          </div>
-          <div>
-            <strong>MetaRadar</strong>
-            <span>Decision intelligence</span>
-          </div>
+      {/* Sidebar Dock */}
+      <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${open ? 'sidebar-open' : ''}`}>
+        
+        {/* User Profile & Dock Controls at TOP of Dock */}
+        <div className="sidebar-top-profile">
           <button
-            className="icon-button sidebar-close"
-            onClick={() => setOpen(false)}
+            type="button"
+            onClick={() => setProfileModalOpen(true)}
+            className="user-profile-dock-btn group"
+            title={isCollapsed ? `Profile: ${user?.display_name || currentPersona.name} (${currentPersona.title})` : 'Click to view holographic Profile Card'}
+            aria-label="View Profile Card"
+          >
+            <div className="user-profile-avatar-wrap">
+              <div className="avatar-dot-ring">
+                <span className="avatar-initials">{currentPersona.initials}</span>
+              </div>
+              <span className="online-indicator-dot" />
+            </div>
+            <div className="user-profile-text text-left">
+              <div className="flex items-center gap-1">
+                <strong className="user-name truncate">{user?.display_name || currentPersona.name}</strong>
+                <Sparkles size={11} className="text-[var(--signal)] shrink-0" />
+              </div>
+              <span className="user-role truncate">{currentPersona.title}</span>
+            </div>
+            <div className="profile-open-arrow">
+              <ChevronRight size={14} />
+            </div>
+          </button>
+          
+          {/* Dock Collapse / Expand Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="dock-toggle-btn hidden md:grid"
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+          </button>
+
+          {/* Mobile close */}
+          <button
+            className="icon-button sidebar-close md:hidden"
+            onClick={() => {
+              setOpen(false)
+              setIsCollapsed(false)
+            }}
             aria-label="Close navigation"
           >
             <X size={18} />
           </button>
         </div>
-        <div className="workspace">
-          <span className="status-dot" /> Haemophilia / Global <ChevronRight size={14} />
-        </div>
+
+        {/* Navigation List */}
         <nav className="nav-list" aria-label="Primary navigation">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 py-1 opacity-80">
+          <div className="nav-section-title text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 py-1 opacity-80">
             Decision Workspace
           </div>
           {primaryNav.map(({ href, label, icon: Icon }) => (
@@ -256,45 +362,58 @@ export function Shell({ children }: { children: React.ReactNode }) {
               href={href}
               onClick={() => setOpen(false)}
               className={`nav-item ${pathname === href ? 'active' : ''}`}
+              title={isCollapsed ? label : undefined}
             >
-              <Icon size={17} />
-              <span>{label}</span>
+              <Icon size={17} className="shrink-0" />
+              <span className="nav-item-text">{label}</span>
             </Link>
           ))}
 
-          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
+          <div className="nav-section-title text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
             Deep Investigation
           </div>
+          <div className="nav-divider" />
           {deepNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
               className={`nav-item ${pathname === href ? 'active' : ''}`}
+              title={isCollapsed ? label : undefined}
             >
-              <Icon size={15} />
-              <span className="text-xs">{label}</span>
+              <Icon size={16} className="shrink-0" />
+              <span className="nav-item-text text-xs">{label}</span>
             </Link>
           ))}
 
-          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
+          <div className="nav-section-title text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
             System & Admin
           </div>
+          <div className="nav-divider" />
           {adminNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
               className={`nav-item ${pathname === href ? 'active' : ''}`}
+              title={isCollapsed ? label : undefined}
             >
-              <Icon size={15} />
-              <span className="text-xs">{label}</span>
+              <Icon size={16} className="shrink-0" />
+              <span className="nav-item-text text-xs">{label}</span>
             </Link>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <Sparkles size={17} />
-          <div>
+
+        {/* Live Intelligence Footer */}
+        <div
+          className="sidebar-note group cursor-default"
+          title={`Live Intelligence: ${healthModels ? `${healthModels.llm_provider.toUpperCase()} · ${healthModels.embedding_model}` : 'Connecting to pipeline...'}`}
+        >
+          <div className="relative shrink-0 flex items-center justify-center">
+            <Sparkles size={17} />
+            <span className="live-pulse-dot" />
+          </div>
+          <div className="sidebar-note-content">
             <strong>Live Intelligence</strong>
             <span>
               {healthModels
@@ -302,14 +421,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 : 'Connecting to pipeline...'}
             </span>
           </div>
-        </div>
-        <div className="profile">
-          <div className="avatar">SL</div>
-          <div>
-            <strong>Strategic lead</strong>
-            <span>Workspace role</span>
-          </div>
-          <ChevronRight size={15} />
         </div>
       </aside>
 
@@ -332,23 +443,43 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
+        {/* Top Header Bar */}
         <header className="topbar">
-          <button
-            className="icon-button menu-button"
-            onClick={() => setOpen(true)}
-            aria-label="Open navigation"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="breadcrumbs">
-            <span>Workspace</span>
-            <ChevronRight size={14} />
-            <strong>
-              {nav.find((item) => item.href === pathname)?.label ??
-                secondary.find((item) => item.href === pathname)?.label ??
-                'Overview'}
-            </strong>
+          <div className="flex items-center gap-3">
+            <button
+              className="icon-button menu-button flex items-center justify-center"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth < 900) {
+                  setOpen(!open)
+                  setIsCollapsed(false)
+                } else {
+                  setIsCollapsed(!isCollapsed)
+                }
+              }}
+              aria-label="Toggle navigation dock"
+              title="Toggle navigation dock"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] shadow-sm">
+                <MetaRadarLogo size={26} />
+              </div>
+              <span className="topbar-brand-title">
+                MetaRadar
+              </span>
+              <span className="badge badge-critical text-[9px] py-0.5 px-2 font-mono font-bold hidden sm:inline-flex">
+                HAEMOPHILIA
+              </span>
+            </div>
+            <div className="h-4 w-[1px] bg-[var(--border)] hidden lg:block mx-1" />
+            <div className="hidden lg:flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+              <span className="font-semibold text-[var(--foreground)]">
+                {currentSectionLabel}
+              </span>
+            </div>
           </div>
+
           <div className="top-actions">
             <SpecularButton
               size="default"
@@ -380,7 +511,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </>
               )}
             </SpecularButton>
-            <DemoOperatorSelector />
             <button
               className="search-button"
               onClick={() => setSearchOpen(true)}
@@ -390,10 +520,30 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <span>Search signals</span>
               <kbd>⌘ K</kbd>
             </button>
-            <button className="icon-button notification" aria-label="Notifications">
+            <button
+              className="icon-button notification"
+              aria-label="Notifications"
+              aria-expanded={notificationsOpen}
+              onClick={() => setNotificationsOpen((open) => !open)}
+            >
               <Bell size={17} />
               <i />
             </button>
+            {notificationsOpen && (
+              <div className="absolute right-12 top-12 z-50 w-72 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <strong className="text-xs">Notifications</strong>
+                  <button
+                    className="text-xs text-[var(--muted-foreground)]"
+                    onClick={() => setNotificationsOpen(false)}
+                    aria-label="Close notifications"
+                  >
+                    Close
+                  </button>
+                </div>
+                <p className="m-0 mt-3 text-xs text-[var(--muted-foreground)]">No new operational notifications.</p>
+              </div>
+            )}
             <button
               className="theme-toggle"
               onClick={toggleTheme}
@@ -418,6 +568,45 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </span>
         </footer>
       </div>
+
+      {/* 3D Holographic Animated Profile Card Modal */}
+      {profileModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn select-none"
+          onClick={() => setProfileModalOpen(false)}
+        >
+          <div 
+            className="relative flex flex-col items-center justify-center animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setProfileModalOpen(false)}
+              className="absolute -top-11 right-0 sm:-right-8 text-white/80 hover:text-white p-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all cursor-pointer z-30"
+              aria-label="Close profile modal"
+            >
+              <X size={20} />
+            </button>
+
+            <ProfileCard
+              name={user?.display_name || currentPersona.name}
+              title={currentPersona.title}
+              handle={currentPersona.handle}
+              roleId={role}
+              status="Online & Verified"
+              contactText="Sign Out / Switch"
+              onContactClick={() => {
+                setProfileModalOpen(false)
+                logout()
+              }}
+            />
+            
+            <p className="text-white/60 text-xs mt-3 font-mono text-center">
+              Move cursor over card for 3D holographic tilt • Click outside to close
+            </p>
+          </div>
+        </div>
+      )}
 
       {searchOpen && (
         <SearchModal
@@ -886,9 +1075,19 @@ export function CacheClearModal({
 }
 
 export function DashboardPage() {
+  const { role } = useAuth()
   const { data, loading, error, isRefreshing, refetch } = useLiveData<DashboardOverview>(getOverview)
   const [selected, setSelected] = useState<Signal | null>(null)
   const [overviewTab, setOverviewTab] = useState<'all' | 'critical' | 'review' | 'leadership'>('all')
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([])
+
+  useEffect(() => {
+    if (role === 'LEADERSHIP' || role === 'ADMIN') {
+      getPendingApprovals()
+        .then((items) => setPendingApprovals(items))
+        .catch(() => setPendingApprovals([]))
+    }
+  }, [role])
 
   if (loading && !data) return <Loading />
 
@@ -955,9 +1154,40 @@ export function DashboardPage() {
         detail={isRefreshing ? 'Syncing live telemetry...' : 'Evidence-grounded critical signals and decision alerts across the haemophilia landscape.'}
       />
 
+      {/* Leadership Cross-Functional Pending Approvals Alert Banner */}
+      {(role === 'LEADERSHIP' || role === 'ADMIN') && pendingApprovals.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-100 m-0">
+                  {pendingApprovals.length} Cross-Functional Escalation{pendingApprovals.length > 1 ? 's' : ''} Awaiting Executive Steer
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold font-mono border border-amber-500/30">
+                  ACTION REQUIRED
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 m-0 mt-0.5">
+                Teams require executive review and approval for prioritized signal actions.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/functions"
+            className="shrink-0 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+          >
+            <span>Review Approvals Queue</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+
       {/* Daily Executive Intelligence Briefing Hero Card (REQ-P10-09) */}
-      <div className="mb-6 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/5 p-4.5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-3.5 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/5 p-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-[var(--primary)] animate-pulse" />
@@ -971,19 +1201,19 @@ export function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--foreground)]">{totalSignals}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">Total Signals</div>
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--priority-critical)]">{criticalSignalsCount}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">High Priority</div>
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--warning)]">{reviewSignalsCount}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">Needs Review</div>
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--accent)]">{leadershipSignalsCount}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">Leadership</div>
             </div>
@@ -992,7 +1222,7 @@ export function DashboardPage() {
       </div>
 
       {/* 1. Decision Context KPIs */}
-      <div className="kpi-grid mb-6">
+      <div className="kpi-grid mb-4">
         <KPI
           label="Active Signals"
           value={overviewData.active_signals ?? totalSignals}
@@ -1379,7 +1609,7 @@ export function LifecyclePage() {
         <KPI label="Tracked Developments" value={items.length} change="Indexed" accent="text-emerald" />
         <KPI label="Active Modalities" value="Gene Therapy · mAb · RNAi" change="Verified" />
         <KPI label="Latest State Transition" value="Phase III Readout" change="Recent" />
-        <KPI label="Transition Rule Engine" value="FSM v5.1" change="Deterministic" />
+        <KPI label="Transition Rule Engine" value="FSM Engine" change="Deterministic" />
       </div>
 
       <Card className="lifecycle-tint">

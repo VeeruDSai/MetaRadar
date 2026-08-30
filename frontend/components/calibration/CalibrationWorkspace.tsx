@@ -3,10 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import type {
   CalibrationWeightsResponse,
+  CalibrationStatusResponse,
   RecalibrateResponse,
 } from '@/types/api'
 import {
   fetchCalibrationWeights,
+  getCalibrationStatus,
   triggerRecalibration,
   confirmWatchItem,
 } from '@/lib/api'
@@ -17,6 +19,7 @@ import { CheckCircle2, Gauge, RefreshCw, Sliders } from 'lucide-react'
 
 export function CalibrationWorkspace() {
   const [weightsData, setWeightsData] = useState<CalibrationWeightsResponse | null>(null)
+  const [statusData, setStatusData] = useState<CalibrationStatusResponse | null>(null)
   const [recalibrationResult, setRecalibrationResult] = useState<RecalibrateResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [calibrating, setCalibrating] = useState(false)
@@ -30,6 +33,7 @@ export function CalibrationWorkspace() {
     try {
       const data = await fetchCalibrationWeights()
       setWeightsData(data)
+      setStatusData(await getCalibrationStatus())
     } catch (err) {
       setError(formatError(err, 'Failed to fetch calibration weights.'))
     } finally {
@@ -188,6 +192,16 @@ export function CalibrationWorkspace() {
                     </Badge>
                   </div>
                 </div>
+
+                {(() => {
+                  const profile = statusData?.profiles.find((item) => item.function_name === w.stakeholder_function)
+                  return profile ? (
+                    <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--muted-foreground)]">
+                      <span>Status: <strong className="text-[var(--foreground)]">{profile.status.replace(/_/g, ' ')}</strong></span>
+                      <span>{profile.feedback_sample_count}/{profile.min_required_samples} samples</span>
+                    </div>
+                  ) : null
+                })()}
 
                 <div className="grid grid-cols-3 gap-1.5 text-center text-xs pt-2 border-t border-[var(--border)] mt-3">
                   <div className="p-2 rounded border border-[var(--border)]" style={{ background: 'var(--surface-secondary)' }}>

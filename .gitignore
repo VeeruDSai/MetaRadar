@@ -59,3 +59,7 @@ scratch/
 !.agents/rules/
 !.agents/rules/**
 .gsd/
+
+# Pitch / presentation materials
+!pitch/
+!pitch/**

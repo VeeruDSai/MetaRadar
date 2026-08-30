@@ -11,7 +11,19 @@ sys.path.insert(0, str(base_dir / "backend"))
 
 from app.main import app
 from app.models import Signal, AuditLog, Source
+from app.models.auth import User
 from app.db.session import get_db
+from app.api.deps import get_current_user
+
+
+def _create_mock_user():
+    return User(
+        user_id=uuid.uuid4(),
+        email="demo.safety@metaradar.internal",
+        display_name="Demo Safety Reviewer",
+        role="SAFETY",
+        is_active=True,
+    )
 
 
 def _create_test_signal(sig_id: uuid.UUID) -> Signal:
@@ -76,9 +88,29 @@ async def test_signal_review_lifecycle_state_machine():
         q_str = str(query)
         if "FROM audit_log" in q_str:
             mock_res.scalars.return_value.all.return_value = list(audit_logs)
+            mock_res.scalars.return_value.first.return_value = audit_logs[0] if audit_logs else None
+        elif "FROM users" in q_str:
+            from app.models.auth import User
+            mock_user = User(
+                user_id=uuid.uuid4(),
+                email="demo.safety@metaradar.internal",
+                display_name="Demo Safety Reviewer",
+                role="SAFETY",
+                is_active=True,
+            )
+            mock_res.scalars.return_value.first.return_value = mock_user
+            mock_res.scalars.return_value.all.return_value = [mock_user]
+
+        elif "FROM approval_requests" in q_str:
+            mock_res.scalars.return_value.all.return_value = []
+            mock_res.scalars.return_value.first.return_value = None
+            mock_res.first.return_value = None
+            mock_res.all.return_value = []
         else:
             mock_res.scalars.return_value.first.return_value = signal
+            mock_res.scalars.return_value.all.return_value = [signal]
         return mock_res
+
 
     mock_db.execute.side_effect = mock_execute
     mock_db.commit = AsyncMock()
@@ -88,6 +120,7 @@ async def test_signal_review_lifecycle_state_machine():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -146,6 +179,7 @@ async def test_signal_review_lifecycle_state_machine():
             assert history[0]["performed_by"] == "Demo Regulatory Affairs Reviewer"
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio
@@ -163,6 +197,7 @@ async def test_signal_review_invalid_status():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -175,6 +210,7 @@ async def test_signal_review_invalid_status():
             assert "Invalid review status" in resp.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio
@@ -189,6 +225,7 @@ async def test_signal_review_nonexistent_signal():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = _create_mock_user
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -201,3 +238,4 @@ async def test_signal_review_nonexistent_signal():
             assert "not found" in resp.json()["detail"].lower()
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)

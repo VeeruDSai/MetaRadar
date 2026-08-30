@@ -13,7 +13,7 @@
 
   [![Hackathon](https://img.shields.io/badge/Novo%20Nordisk%20GBS%20Hackathon-2026-blue)](#)
   [![Pilot](https://img.shields.io/badge/Pilot-Haemophilia%20A%20%26%20B-red)](#)
-  [![Status](https://img.shields.io/badge/Status-v5.1.0%20Production%20Ready%20(100%25)-success)](#)
+  [![Status](https://img.shields.io/badge/Status-Production%20Ready%20(100%25)-success)](#)
   [![Tests](https://img.shields.io/badge/Tests-119%2F119%20Passing-brightgreen)](#)
   [![Contract](https://img.shields.io/badge/OpenAPI%203.1-Synchronized-blue)](#)
   [![Data](https://img.shields.io/badge/Data-Autonomous%20Live%20%7C%20Bronze%20Persistence-green)](#)
@@ -27,7 +27,7 @@ The system is designed for the **Novo Nordisk GBS Hackathon 2026 — Problem Sta
 
 ---
 
-## Current Status (v5.1.0)
+## Current Status
 
 > **All development milestones through Phase 8 (Autonomous Ingestion, Source Health Telemetry, Provenance Traceability, and Canonical Design Alignment) are fully implemented, verified, and active.**
 
@@ -48,7 +48,7 @@ The system is designed for the **Novo Nordisk GBS Hackathon 2026 — Problem Sta
 
 ## Table of Contents
 
-- [Current Status (v5.1.0)](#current-status-v510)
+- [Current Status](#current-status)
 - [Problem](#problem)
 - [Solution](#solution)
 - [How MetaRadar Is Different](#how-metaradar-is-different)
@@ -303,6 +303,22 @@ metaradar/
 
 # Getting Started
 
+## Role Personas & Demo Login Credentials
+
+MetaRadar provides 7 purpose-built stakeholder personas with scoped RBAC permissions and cross-functional governance workflows:
+
+| Role Persona | Stakeholder Domain | Demo Email | Fixed Password | Primary Responsibilities |
+| --- | --- | --- | --- | --- |
+| **Dr. Elena Vance** | **Medical Affairs** | `elena.vance@metaradar.internal` | `MedAffairs2026!` | Clinical trial readouts, advisory board briefs, publication surveillance, and leadership approval escalation. |
+| **Marcus Vance** | **Regulatory Affairs** | `marcus.vance@metaradar.internal` | `Regulatory2026!` | FDA/EMA dossier filings, label changes, CHMP opinions, breakthrough designations, and milestone tracking. |
+| **Dr. Sarah Chen** | **Safety & Pharmacovigilance** | `sarah.chen@metaradar.internal` | `Safety2026!` | Adverse events (thrombosis, microangiopathy), black box warnings, DSMB reviews, and risk minimization. |
+| **David Ross** | **Market Access & Pricing** | `david.ross@metaradar.internal` | `Access2026!` | ICER/NICE value assessments, formulary placement, reimbursement barriers, and competitor price tracking. |
+| **Rachel Green** | **Communications & IR** | `rachel.green@metaradar.internal` | `Comms2026!` | Press releases, congress abstracts (ASH, EHA, WFH), media coverage, and competitive positioning. |
+| **Alex Mercer** | **Executive Leadership** | `alex.mercer@metaradar.internal` | `Leader2026!` | Portfolio steer, cross-functional approval queue sign-offs (`/functions`), high-impact escalations, and executive briefing. |
+| **System Administrator** | **Platform Admin** | `admin@metaradar.internal` | `Admin2026!` | Ingestion health, source connector telemetry, model parameters, cache eviction, and audit log inspection. |
+
+> **Login Page**: Navigate to `http://localhost:3000/login` to interact with the 3D-tilt **ProfileCard** interface and one-click quick-fill persona buttons.
+
 ### Prerequisites
 - **Git**
 - **Docker Desktop** (running PostgreSQL and Redis)
@@ -418,7 +434,7 @@ Access the interactive API documentation at: **`http://localhost:8000/docs`**
 *Novo Nordisk GBS Hackathon 2026 — Problem Statement #3*
 
 - **Sanjana Rathore B.** (Team Lead) — B.Pharm (Domain Owner, Medical Affairs, Signal Importance, Function Routing)
-- **Ishaaq** — B.Pharm (Haemophilia Treatment Map, Asset Lifecycles, Expected Events)
-- **Usha** — B.Pharm (Evidence Quality, Red-Team Contradictions, Safety & Access Context)
-- **Om Prakash** — CSE (Architecture, Data Ingestion, LangGraph Orchestration, Backend, Frontend)
-- **Veeru** — CSE (Vector Search, Database, Telemetry, Performance & Deployment)
+- **Ishaaq Ahmed Khan** — B.Pharm (Haemophilia Treatment Map, Asset Lifecycles, Expected Events)
+- **Usha Rathore** — B.Pharm (Evidence Quality, Red-Team Contradictions, Safety & Access Context)
+- **Omprakash Panda** — ISE (Architecture, Data Ingestion, LangGraph Orchestration, Backend, Frontend)
+- **Veerendra Desai** — ISE (Vector Search, Database, Telemetry, Performance & Deployment)

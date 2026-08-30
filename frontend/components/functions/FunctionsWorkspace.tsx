@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import type { FeedbackSummaryResponse } from '@/types/api'
+import { useAuth } from '@/context/AuthContext'
 import { fetchFeedbackSummary } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
+import { PendingApprovalsPanel } from '../signals/PendingApprovalsPanel'
 import { Network, RefreshCw } from 'lucide-react'
 
 export function FunctionsWorkspace() {
+  const { role: userRole } = useAuth()
   const [summary, setSummary] = useState<FeedbackSummaryResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<FormattedError | null>(null)
@@ -61,6 +64,10 @@ export function FunctionsWorkspace() {
           <span>Refresh Functions</span>
         </button>
       </div>
+
+      {(userRole === 'LEADERSHIP' || userRole === 'ADMIN') && (
+        <PendingApprovalsPanel />
+      )}
 
       {error && (
         <ErrorState

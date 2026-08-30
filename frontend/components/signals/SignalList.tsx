@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Signal, SignalFilterParams } from '@/types/api'
 import { fetchSignals, submitSignalFeedback } from '@/lib/api'
 import { formatError, FormattedError } from '@/lib/errors'
+import { useAuth } from '@/context/AuthContext'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { SignalCard, getSignalFunction, getSourceAuthority } from './SignalCard'
 import { EvidenceDrawer } from '../common/EvidenceDrawer'
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react'
 
 export function SignalList() {
+  const { role } = useAuth()
   const [signals, setSignals] = useState<Signal[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -49,24 +51,29 @@ export function SignalList() {
       setLoading(true)
       setError(null)
       try {
+        const isAbortSignal = typeof AbortSignal !== 'undefined' && signal instanceof AbortSignal
+        const activeSignal = isAbortSignal ? signal : undefined
+        const isPrivileged = ['LEADERSHIP', 'ADMIN', 'DEVELOPER'].includes(role?.toUpperCase() || '')
         const params: SignalFilterParams = {
           limit: 50,
           severity: severityFilter || undefined,
           entity: debouncedSearchTerm.trim() || undefined,
           source: sourceFilter || undefined,
+          ...(isPrivileged ? { all_functions: true } : {}),
         }
-        const data = await fetchSignals(params, signal)
-        if (signal?.aborted) return
+        const data = await fetchSignals(params, activeSignal)
+        if (activeSignal?.aborted) return
         setSignals(data.signals)
         setTotal(data.total)
       } catch (err) {
-        if (signal?.aborted || (err instanceof Error && err.name === 'AbortError')) return
+        if (signal instanceof AbortSignal && signal.aborted) return
+        if (err instanceof Error && err.name === 'AbortError') return
         setError(formatError(err, 'Failed to fetch signals.'))
       } finally {
-        if (!signal?.aborted) setLoading(false)
+        if (!(signal instanceof AbortSignal && signal.aborted)) setLoading(false)
       }
     },
-    [severityFilter, debouncedSearchTerm, sourceFilter]
+    [severityFilter, debouncedSearchTerm, sourceFilter, role]
   )
 
   useEffect(() => {
@@ -208,6 +215,9 @@ export function SignalList() {
               <option value="fda">OpenFDA Drug Events</option>
               <option value="ema">EMA RSS Feed</option>
               <option value="newsapi">NewsAPI Global Feed</option>
+              <option value="fierce_pharma">Fierce Pharma</option>
+              <option value="biopharma_dive">BioPharma Dive</option>
+              <option value="et_pharma">ET Pharma (India)</option>
             </select>
           </div>
 
@@ -235,7 +245,7 @@ export function SignalList() {
           requestId={error.requestId}
           endpoint={error.endpoint}
           statusCode={error.statusCode}
-          onRetry={loadSignals}
+          onRetry={() => loadSignals()}
         />
       )}
 

@@ -1,6 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 
+import sqlalchemy as sa
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -31,6 +32,22 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
+    # Ensure alembic_version table supports revision identifiers > 32 characters
+    try:
+        connection.execute(
+            sa.text(
+                "CREATE TABLE IF NOT EXISTS alembic_version ("
+                "version_num VARCHAR(255) NOT NULL, "
+                "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)"
+                ");"
+            )
+        )
+        connection.execute(
+            sa.text("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255);")
+        )
+    except Exception:
+        pass
+
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
@@ -48,6 +65,7 @@ async def run_async_migrations() -> None:
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+        await connection.commit()
 
     await connectable.dispose()
 

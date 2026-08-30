@@ -42,7 +42,7 @@ def export_contracts():
 // contracts/openapi.json for reference. To change the contract, edit the template inside
 // scripts/export_openapi.py, run that script, and commit both files together.
 
-export type DataMode = "live" | "recorded_demo" | "test_fixture" | "benchmark";
+export type DataMode = "live" | "recorded_demo" | "test_fixture" | "benchmark" | "synthetic";
 
 export type ConfidenceType = 
   | "extraction"
@@ -155,6 +155,10 @@ export interface Signal {
   review_notes?: string;
   resulting_action?: string;
 
+  // Cross-Functional Approval Status
+  approval_status?: "PENDING" | "APPROVED" | "REJECTED" | null;
+  latest_approval_request?: ApprovalRequest | null;
+
   // Frontend UI & Dashboard properties
   id: string;
   summary: string;
@@ -165,6 +169,25 @@ export interface Signal {
   tags?: string[];
   sources: SignalSource[];
   stakeholders: Record<string, number>;
+}
+
+export interface ApprovalRequest {
+  request_id: string;
+  signal_id: string;
+  requested_by_user_id: string;
+  requested_by_role: string;
+  requested_by_display_name?: string | null;
+  request_note?: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  resolved_by_user_id?: string | null;
+  resolved_by_role?: string | null;
+  resolved_by_display_name?: string | null;
+  resolution_note?: string | null;
+  requested_at: string;
+  resolved_at?: string | null;
+  signal_title?: string | null;
+  signal_priority?: string | null;
+  signal_source?: string | null;
 }
 
 export interface SignalReviewPayload {
@@ -314,6 +337,7 @@ export interface AthenaEvidenceCitation {
   published_at?: string;
   excerpt: string;
   distance: number;
+  is_synthetic?: boolean;
 }
 
 export interface AthenaResponse {
@@ -689,8 +713,71 @@ export interface SignalFilterParams {
   source?: string;
   limit?: number;
   offset?: number;
+  all_functions?: boolean;
+}
+
+export interface UserMe {
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface DemoLoginRequest {
+  role: string;
+}
+
+export interface CsrfResponse {
+  csrf_token: string;
+}
+
+export interface LogoutResponse {
+  status: string;
+  message: string;
+}
+
+export interface FunctionStatsResponse {
+  function_id: string;
+  unreviewed_count: number;
+  in_review_count: number;
+  escalation_count: number;
+  total_decisions: number;
+  time_to_first_review_hours?: number | null;
+  time_to_final_decision_hours?: number | null;
+  recent_decisions: Signal[];
+}
+
+export interface FunctionCalibrationProfile {
+  function_name: string;
+  status: string;
+  feedback_sample_count: number;
+  min_required_samples: number;
+  brier_score?: number | null;
+  ece_score?: number | null;
+  reliability_curve: Array<{ bin_center: number; observed_accuracy: number }>;
+}
+
+export interface CalibrationStatusResponse {
+  profiles: FunctionCalibrationProfile[];
+  total_feedback_samples: number;
+  last_calibration_timestamp?: string | null;
+}
+
+export interface LeadershipSummaryResponse {
+  pending_escalations: Signal[];
+  critical_unreviewed: Signal[];
+  per_function_counts: Record<string, { unreviewed: number; in_review: number; escalated: number }>;
+  total_open_signals: number;
 }
 """
+
 
     active_ts_path = active_types_dir / "api.ts"
     with open(active_ts_path, "w", encoding="utf-8") as f:
