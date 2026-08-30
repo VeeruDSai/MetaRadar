@@ -20,8 +20,9 @@ depends_on = None
 
 
 def upgrade():
-    # signals table: event_type classification (TRIAL_UPDATE, REGULATORY_ACTION, etc.)
+    # signals table: event_type and source_tier classification
     op.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS event_type VARCHAR(100)")
+    op.execute("ALTER TABLE signals ADD COLUMN IF NOT EXISTS source_tier INTEGER NOT NULL DEFAULT 1")
 
     # raw_signals_bronze: source tier and event type for provenance tracking
     op.execute("ALTER TABLE raw_signals_bronze ADD COLUMN IF NOT EXISTS source_tier INTEGER NOT NULL DEFAULT 1")
