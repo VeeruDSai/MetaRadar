@@ -247,6 +247,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   const currentPersona = ROLE_PERSONAS[role] || ROLE_PERSONAS['MEDICAL_AFFAIRS']
 
+  useEffect(() => {
+    if (window.innerWidth < 900) setIsCollapsed(false)
+  }, [open])
+
   // Live health status polling (60s cadence)
   const { data: healthReady } = useLiveData<HealthReadyResponse>(getHealthReady, 60000)
   const { data: healthModels } = useLiveData<HealthModelsResponse>(getHealthModels, 60000)
@@ -296,13 +300,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Sidebar Dock */}
       <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${open ? 'sidebar-open' : ''}`}>
         
-        {/* User Profile at TOP of Dock */}
+        {/* User Profile & Dock Controls at TOP of Dock */}
         <div className="sidebar-top-profile">
           <button
             type="button"
             onClick={() => setProfileModalOpen(true)}
             className="user-profile-dock-btn group"
-            title="Click to view holographic Profile Card"
+            title={isCollapsed ? `Profile: ${user?.display_name || currentPersona.name} (${currentPersona.title})` : 'Click to view holographic Profile Card'}
             aria-label="View Profile Card"
           >
             <div className="user-profile-avatar-wrap">
@@ -311,23 +315,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </div>
               <span className="online-indicator-dot" />
             </div>
-            {!isCollapsed && (
-              <div className="user-profile-text text-left">
-                <div className="flex items-center gap-1">
-                  <strong className="user-name truncate">{user?.display_name || currentPersona.name}</strong>
-                  <Sparkles size={11} className="text-[var(--signal)] shrink-0" />
-                </div>
-                <span className="user-role truncate">{currentPersona.title}</span>
+            <div className="user-profile-text text-left">
+              <div className="flex items-center gap-1">
+                <strong className="user-name truncate">{user?.display_name || currentPersona.name}</strong>
+                <Sparkles size={11} className="text-[var(--signal)] shrink-0" />
               </div>
-            )}
-            {!isCollapsed && (
-              <div className="profile-open-arrow">
-                <ChevronRight size={14} />
-              </div>
-            )}
+              <span className="user-role truncate">{currentPersona.title}</span>
+            </div>
+            <div className="profile-open-arrow">
+              <ChevronRight size={14} />
+            </div>
           </button>
           
-          {/* Dock Collapse / Expand Toggle Button (3 lines Menu) */}
+          {/* Dock Collapse / Expand Toggle Button */}
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -335,13 +335,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <Menu size={16} />
+            {isCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
           </button>
 
           {/* Mobile close */}
           <button
             className="icon-button sidebar-close md:hidden"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false)
+              setIsCollapsed(false)
+            }}
             aria-label="Close navigation"
           >
             <X size={18} />
@@ -350,11 +353,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         {/* Navigation List */}
         <nav className="nav-list" aria-label="Primary navigation">
-          {!isCollapsed && (
-            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 py-1 opacity-80 nav-section-title">
-              Decision Workspace
-            </div>
-          )}
+          <div className="nav-section-title text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 py-1 opacity-80">
+            Decision Workspace
+          </div>
           {primaryNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -363,16 +364,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
               className={`nav-item ${pathname === href ? 'active' : ''}`}
               title={isCollapsed ? label : undefined}
             >
-              <Icon size={17} />
-              {!isCollapsed && <span>{label}</span>}
+              <Icon size={17} className="shrink-0" />
+              <span className="nav-item-text">{label}</span>
             </Link>
           ))}
 
-          {!isCollapsed && (
-            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2 nav-section-title">
-              Deep Investigation
-            </div>
-          )}
+          <div className="nav-section-title text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
+            Deep Investigation
+          </div>
+          <div className="nav-divider" />
           {deepNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -381,16 +381,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
               className={`nav-item ${pathname === href ? 'active' : ''}`}
               title={isCollapsed ? label : undefined}
             >
-              <Icon size={15} />
-              {!isCollapsed && <span className="text-xs">{label}</span>}
+              <Icon size={16} className="shrink-0" />
+              <span className="nav-item-text text-xs">{label}</span>
             </Link>
           ))}
 
-          {!isCollapsed && (
-            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2 nav-section-title">
-              System & Admin
-            </div>
-          )}
+          <div className="nav-section-title text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
+            System & Admin
+          </div>
+          <div className="nav-divider" />
           {adminNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -399,25 +398,30 @@ export function Shell({ children }: { children: React.ReactNode }) {
               className={`nav-item ${pathname === href ? 'active' : ''}`}
               title={isCollapsed ? label : undefined}
             >
-              <Icon size={15} />
-              {!isCollapsed && <span className="text-xs">{label}</span>}
+              <Icon size={16} className="shrink-0" />
+              <span className="nav-item-text text-xs">{label}</span>
             </Link>
           ))}
         </nav>
 
-        {!isCollapsed && (
-          <div className="sidebar-note">
+        {/* Live Intelligence Footer */}
+        <div
+          className="sidebar-note group cursor-default"
+          title={`Live Intelligence: ${healthModels ? `${healthModels.llm_provider.toUpperCase()} · ${healthModels.embedding_model}` : 'Connecting to pipeline...'}`}
+        >
+          <div className="relative shrink-0 flex items-center justify-center">
             <Sparkles size={17} />
-            <div>
-              <strong>Live Intelligence</strong>
-              <span>
-                {healthModels
-                  ? `${healthModels.llm_provider.toUpperCase()} · ${healthModels.embedding_model}`
-                  : 'Connecting to pipeline...'}
-              </span>
-            </div>
+            <span className="live-pulse-dot" />
           </div>
-        )}
+          <div className="sidebar-note-content">
+            <strong>Live Intelligence</strong>
+            <span>
+              {healthModels
+                ? `${healthModels.llm_provider.toUpperCase()} · ${healthModels.embedding_model}`
+                : 'Connecting to pipeline...'}
+            </span>
+          </div>
+        </div>
       </aside>
 
       <div className="main-column">
@@ -447,6 +451,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               onClick={() => {
                 if (typeof window !== 'undefined' && window.innerWidth < 900) {
                   setOpen(!open)
+                  setIsCollapsed(false)
                 } else {
                   setIsCollapsed(!isCollapsed)
                 }
