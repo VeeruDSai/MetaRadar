@@ -29,6 +29,8 @@ import {
   Menu,
   Moon,
   Network,
+  PanelLeft,
+  PanelLeftClose,
   RefreshCw,
   RotateCcw,
   Search,
@@ -41,6 +43,7 @@ import {
   Sun,
   Target,
   Trash2,
+  User,
   X,
   Zap,
 } from 'lucide-react'
@@ -50,6 +53,7 @@ import { MetaRadarLogo } from '@/components/common/MetaRadarLogo'
 import { DemoOperatorSelector } from '@/components/common/DemoOperatorSelector'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { useAuth } from '@/context/AuthContext'
+import ProfileCard from '@/components/auth/ProfileCard'
 import { SignalCard } from '@/components/signals/SignalCard'
 import Counter from '@/components/ui/Counter'
 import AnimatedCounter from '@/components/ui/AnimatedCounter'
@@ -179,13 +183,57 @@ export function SectionTitle({
   )
 }
 
+const ROLE_PERSONAS: Record<string, { name: string; title: string; handle: string; initials: string }> = {
+  MEDICAL_AFFAIRS: {
+    name: 'Dr. Elena Vance',
+    title: 'Medical Affairs Lead',
+    handle: 'elena.vance',
+    initials: 'EV',
+  },
+  REGULATORY: {
+    name: 'Marcus Chen',
+    title: 'Regulatory Affairs Director',
+    handle: 'marcus.chen',
+    initials: 'MC',
+  },
+  SAFETY: {
+    name: 'Dr. Sarah Jenkins',
+    title: 'Pharmacovigilance Lead',
+    handle: 'sarah.jenkins',
+    initials: 'SJ',
+  },
+  MARKET_ACCESS: {
+    name: 'Henrik Lindqvist',
+    title: 'Value & Access Director',
+    handle: 'henrik.l',
+    initials: 'HL',
+  },
+  COMMUNICATIONS: {
+    name: 'Claire Beaumont',
+    title: 'Medical Communications Lead',
+    handle: 'claire.beaumont',
+    initials: 'CB',
+  },
+  LEADERSHIP: {
+    name: 'Dr. Alexander Wright',
+    title: 'EVP Global Development',
+    handle: 'alex.wright',
+    initials: 'AW',
+  },
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
   const { isDark, toggleTheme } = useTheme()
+  const { user, role, logout } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+
+  const currentPersona = ROLE_PERSONAS[role] || ROLE_PERSONAS['MEDICAL_AFFAIRS']
 
   // Live health status polling (60s cadence)
   const { data: healthReady } = useLiveData<HealthReadyResponse>(getHealthReady, 60000)
@@ -225,96 +273,145 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const links = [...nav, ...secondary]
   const isDegraded = healthReady?.status === 'degraded'
+  const currentSectionLabel =
+    nav.find((item) => item.href === pathname)?.label ??
+    secondary.find((item) => item.href === pathname)?.label ??
+    'Overview'
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
-        <div className="brand">
-          <div className="brand-mark shadow-sm">
-            <MetaRadarLogo size={28} />
-          </div>
-          <div>
-            <strong>MetaRadar</strong>
-            <span>Decision intelligence</span>
-          </div>
+      {/* Sidebar Dock */}
+      <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${open ? 'sidebar-open' : ''}`}>
+        
+        {/* User Profile at TOP of Dock */}
+        <div className="sidebar-top-profile">
           <button
-            className="icon-button sidebar-close"
+            type="button"
+            onClick={() => setProfileModalOpen(true)}
+            className="user-profile-dock-btn group"
+            title="Click to view holographic Profile Card"
+            aria-label="View Profile Card"
+          >
+            <div className="user-profile-avatar-wrap">
+              <div className="avatar-dot-ring">
+                <span className="avatar-initials">{currentPersona.initials}</span>
+              </div>
+              <span className="online-indicator-dot" />
+            </div>
+            {!isCollapsed && (
+              <div className="user-profile-text text-left">
+                <div className="flex items-center gap-1">
+                  <strong className="user-name truncate">{user?.display_name || currentPersona.name}</strong>
+                  <Sparkles size={11} className="text-[var(--signal)] shrink-0" />
+                </div>
+                <span className="user-role truncate">{currentPersona.title}</span>
+              </div>
+            )}
+            {!isCollapsed && (
+              <div className="profile-open-arrow">
+                <ChevronRight size={14} />
+              </div>
+            )}
+          </button>
+          
+          {/* Dock Collapse / Expand Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="dock-toggle-btn hidden md:grid"
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+          </button>
+
+          {/* Mobile close */}
+          <button
+            className="icon-button sidebar-close md:hidden"
             onClick={() => setOpen(false)}
             aria-label="Close navigation"
           >
             <X size={18} />
           </button>
         </div>
-        <div className="workspace">
-          <span className="status-dot" /> Haemophilia / Global <ChevronRight size={14} />
-        </div>
-        <nav className="nav-list" aria-label="Primary navigation">
-          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 py-1 opacity-80">
-            Decision Workspace
+
+        {!isCollapsed && (
+          <div className="workspace">
+            <span className="status-dot" /> Haemophilia / Global <ChevronRight size={14} />
           </div>
+        )}
+
+        {/* Navigation List */}
+        <nav className="nav-list" aria-label="Primary navigation">
+          {!isCollapsed && (
+            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 py-1 opacity-80 nav-section-title">
+              Decision Workspace
+            </div>
+          )}
           {primaryNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
               className={`nav-item ${pathname === href ? 'active' : ''}`}
+              title={isCollapsed ? label : undefined}
             >
               <Icon size={17} />
-              <span>{label}</span>
+              {!isCollapsed && <span>{label}</span>}
             </Link>
           ))}
 
-          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
-            Deep Investigation
-          </div>
+          {!isCollapsed && (
+            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2 nav-section-title">
+              Deep Investigation
+            </div>
+          )}
           {deepNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
               className={`nav-item ${pathname === href ? 'active' : ''}`}
+              title={isCollapsed ? label : undefined}
             >
               <Icon size={15} />
-              <span className="text-xs">{label}</span>
+              {!isCollapsed && <span className="text-xs">{label}</span>}
             </Link>
           ))}
 
-          <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2">
-            System & Admin
-          </div>
+          {!isCollapsed && (
+            <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted-foreground)] px-3 pt-3 pb-1 opacity-80 border-t border-[var(--border)] mt-2 nav-section-title">
+              System & Admin
+            </div>
+          )}
           {adminNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
               className={`nav-item ${pathname === href ? 'active' : ''}`}
+              title={isCollapsed ? label : undefined}
             >
               <Icon size={15} />
-              <span className="text-xs">{label}</span>
+              {!isCollapsed && <span className="text-xs">{label}</span>}
             </Link>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <Sparkles size={17} />
-          <div>
-            <strong>Live Intelligence</strong>
-            <span>
-              {healthModels
-                ? `${healthModels.llm_provider.toUpperCase()} · ${healthModels.embedding_model}`
-                : 'Connecting to pipeline...'}
-            </span>
+
+        {!isCollapsed && (
+          <div className="sidebar-note">
+            <Sparkles size={17} />
+            <div>
+              <strong>Live Intelligence</strong>
+              <span>
+                {healthModels
+                  ? `${healthModels.llm_provider.toUpperCase()} · ${healthModels.embedding_model}`
+                  : 'Connecting to pipeline...'}
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="profile">
-          <div className="avatar">SL</div>
-          <div>
-            <strong>Strategic lead</strong>
-            <span>Workspace role</span>
-          </div>
-          <ChevronRight size={15} />
-        </div>
+        )}
       </aside>
 
       <div className="main-column">
@@ -336,23 +433,35 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
+        {/* Top Header Bar */}
         <header className="topbar">
-          <button
-            className="icon-button menu-button"
-            onClick={() => setOpen(true)}
-            aria-label="Open navigation"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="breadcrumbs">
-            <span>Workspace</span>
-            <ChevronRight size={14} />
-            <strong>
-              {nav.find((item) => item.href === pathname)?.label ??
-                secondary.find((item) => item.href === pathname)?.label ??
-                'Overview'}
-            </strong>
+          <div className="flex items-center gap-3">
+            <button
+              className="icon-button menu-button md:hidden"
+              onClick={() => setOpen(true)}
+              aria-label="Open navigation"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] shadow-sm">
+                <MetaRadarLogo size={26} />
+              </div>
+              <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[var(--foreground)]">
+                MetaRadar
+              </span>
+              <span className="badge badge-critical text-[9px] py-0.5 px-2 font-mono font-bold hidden sm:inline-flex">
+                HAEMOPHILIA
+              </span>
+            </div>
+            <div className="h-4 w-[1px] bg-[var(--border)] hidden lg:block mx-1" />
+            <div className="hidden lg:flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+              <span className="font-semibold text-[var(--foreground)]">
+                {currentSectionLabel}
+              </span>
+            </div>
           </div>
+
           <div className="top-actions">
             <SpecularButton
               size="default"
@@ -442,6 +551,45 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </span>
         </footer>
       </div>
+
+      {/* 3D Holographic Animated Profile Card Modal */}
+      {profileModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn select-none"
+          onClick={() => setProfileModalOpen(false)}
+        >
+          <div 
+            className="relative flex flex-col items-center justify-center animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setProfileModalOpen(false)}
+              className="absolute -top-11 right-0 sm:-right-8 text-white/80 hover:text-white p-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all cursor-pointer z-30"
+              aria-label="Close profile modal"
+            >
+              <X size={20} />
+            </button>
+
+            <ProfileCard
+              name={user?.display_name || currentPersona.name}
+              title={currentPersona.title}
+              handle={currentPersona.handle}
+              roleId={role}
+              status="Online & Verified"
+              contactText="Sign Out / Switch"
+              onContactClick={() => {
+                setProfileModalOpen(false)
+                logout()
+              }}
+            />
+            
+            <p className="text-white/60 text-xs mt-3 font-mono text-center">
+              Move cursor over card for 3D holographic tilt • Click outside to close
+            </p>
+          </div>
+        </div>
+      )}
 
       {searchOpen && (
         <SearchModal

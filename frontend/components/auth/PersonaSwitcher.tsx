@@ -87,7 +87,7 @@ export function PersonaSwitcher() {
       </div>
 
       {user?.display_name && (
-        <span className="text-xs text-slate-400 font-medium hidden md:inline max-w-[140px] truncate">
+        <span className="text-xs text-[var(--muted-foreground)] font-medium hidden md:inline max-w-[140px] truncate">
           {user.display_name.split(' ')[0]} {user.display_name.split(' ')[1] || ''}
         </span>
       )}
@@ -97,7 +97,7 @@ export function PersonaSwitcher() {
         onClick={() => logout()}
         aria-label="Sign Out"
         title="Sign Out to Login Page"
-        className="flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-colors"
+        className="flex items-center justify-center p-1.5 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors"
       >
         <LogOut className="w-4 h-4" />
       </button>
