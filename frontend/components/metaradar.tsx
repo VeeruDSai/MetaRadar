@@ -184,41 +184,53 @@ export function SectionTitle({
 }
 
 const ROLE_PERSONAS: Record<string, { name: string; title: string; handle: string; initials: string }> = {
-  MEDICAL_AFFAIRS: {
-    name: 'Dr. Elena Vance',
-    title: 'Medical Affairs Lead',
-    handle: 'elena.vance',
-    initials: 'EV',
-  },
-  REGULATORY: {
-    name: 'Marcus Chen',
-    title: 'Regulatory Affairs Director',
-    handle: 'marcus.chen',
-    initials: 'MC',
-  },
-  SAFETY: {
-    name: 'Dr. Sarah Jenkins',
-    title: 'Pharmacovigilance Lead',
-    handle: 'sarah.jenkins',
-    initials: 'SJ',
-  },
-  MARKET_ACCESS: {
-    name: 'Henrik Lindqvist',
-    title: 'Value & Access Director',
-    handle: 'henrik.l',
-    initials: 'HL',
-  },
-  COMMUNICATIONS: {
-    name: 'Claire Beaumont',
-    title: 'Medical Communications Lead',
-    handle: 'claire.beaumont',
-    initials: 'CB',
+  DEVELOPER: {
+    name: 'test-developer',
+    title: 'Platform Engineer / Developer',
+    handle: 'test.developer',
+    initials: 'TD',
   },
   LEADERSHIP: {
-    name: 'Dr. Alexander Wright',
-    title: 'EVP Global Development',
-    handle: 'alex.wright',
-    initials: 'AW',
+    name: 'test-leader',
+    title: 'Executive Leadership',
+    handle: 'test.leader',
+    initials: 'TL',
+  },
+  MEDICAL_AFFAIRS: {
+    name: 'test-medical',
+    title: 'Medical Affairs Lead',
+    handle: 'test.medical',
+    initials: 'TM',
+  },
+  REGULATORY: {
+    name: 'test-regulatory',
+    title: 'Regulatory Affairs Director',
+    handle: 'test.regulatory',
+    initials: 'TR',
+  },
+  SAFETY: {
+    name: 'test-safety',
+    title: 'Pharmacovigilance & Safety Lead',
+    handle: 'test.safety',
+    initials: 'TS',
+  },
+  MARKET_ACCESS: {
+    name: 'test-access',
+    title: 'Market Access & HEOR Lead',
+    handle: 'test.access',
+    initials: 'TA',
+  },
+  COMMUNICATIONS: {
+    name: 'test-comms',
+    title: 'Medical Communications Lead',
+    handle: 'test.comms',
+    initials: 'TC',
+  },
+  ADMIN: {
+    name: 'test-developer',
+    title: 'System Administrator',
+    handle: 'test.developer',
+    initials: 'TD',
   },
 }
 
@@ -315,7 +327,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             )}
           </button>
           
-          {/* Dock Collapse / Expand Toggle Button */}
+          {/* Dock Collapse / Expand Toggle Button (3 lines Menu) */}
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -323,7 +335,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {isCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+            <Menu size={16} />
           </button>
 
           {/* Mobile close */}
@@ -335,12 +347,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <X size={18} />
           </button>
         </div>
-
-        {!isCollapsed && (
-          <div className="workspace">
-            <span className="status-dot" /> Haemophilia / Global <ChevronRight size={14} />
-          </div>
-        )}
 
         {/* Navigation List */}
         <nav className="nav-list" aria-label="Primary navigation">
@@ -437,9 +443,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <header className="topbar">
           <div className="flex items-center gap-3">
             <button
-              className="icon-button menu-button md:hidden"
-              onClick={() => setOpen(true)}
-              aria-label="Open navigation"
+              className="icon-button menu-button flex items-center justify-center"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth < 900) {
+                  setOpen(!open)
+                } else {
+                  setIsCollapsed(!isCollapsed)
+                }
+              }}
+              aria-label="Toggle navigation dock"
+              title="Toggle navigation dock"
             >
               <Menu size={20} />
             </button>
@@ -447,7 +460,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <div className="p-1 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] shadow-sm">
                 <MetaRadarLogo size={26} />
               </div>
-              <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[var(--foreground)]">
+              <span className="topbar-brand-title">
                 MetaRadar
               </span>
               <span className="badge badge-critical text-[9px] py-0.5 px-2 font-mono font-bold hidden sm:inline-flex">
@@ -493,7 +506,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </>
               )}
             </SpecularButton>
-            <DemoOperatorSelector />
             <button
               className="search-button"
               onClick={() => setSearchOpen(true)}
@@ -1169,8 +1181,8 @@ export function DashboardPage() {
       )}
 
       {/* Daily Executive Intelligence Briefing Hero Card (REQ-P10-09) */}
-      <div className="mb-6 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/5 p-4.5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-3.5 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/5 p-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-[var(--primary)] animate-pulse" />
@@ -1184,19 +1196,19 @@ export function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--foreground)]">{totalSignals}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">Total Signals</div>
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--priority-critical)]">{criticalSignalsCount}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">High Priority</div>
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--warning)]">{reviewSignalsCount}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">Needs Review</div>
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-center">
               <div className="text-sm font-bold font-mono text-[var(--accent)]">{leadershipSignalsCount}</div>
               <div className="text-[9px] uppercase tracking-wider text-[var(--muted-foreground)]">Leadership</div>
             </div>
@@ -1205,7 +1217,7 @@ export function DashboardPage() {
       </div>
 
       {/* 1. Decision Context KPIs */}
-      <div className="kpi-grid mb-6">
+      <div className="kpi-grid mb-4">
         <KPI
           label="Active Signals"
           value={overviewData.active_signals ?? totalSignals}
