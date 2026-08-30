@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     DEMO_PASSWORD_COMMUNICATIONS: str = "Comms2026!"
     DEMO_PASSWORD_LEADERSHIP: str = "Leader2026!"
     DEMO_PASSWORD_ADMIN: str = "Admin2026!"
+    DEMO_PASSWORD_DEVELOPER: str = "Dev2026!"
     AUTH_RATE_LIMIT_PER_MINUTE: int = 5
     CORS_ORIGINS: str = "http://localhost:3000"
     METARADAR_API_KEY: Optional[str] = None

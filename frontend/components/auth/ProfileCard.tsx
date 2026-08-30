@@ -76,9 +76,9 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = ({
   enableMobileTilt = false,
   mobileTiltSensitivity = 5,
   miniAvatarUrl,
-  name = 'Dr. Elena Vance',
-  title = 'Medical Affairs Lead',
-  handle = 'elena.vance',
+  name = 'test-leader',
+  title = 'Executive Leadership',
+  handle = 'test.leader',
   status = 'Online & Verified',
   contactText = 'Verified Stakeholder',
   showUserInfo = true,
@@ -446,12 +446,13 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = ({
   };
 
   const initials = (name || 'User')
-    .split(' ')
+    .replace(/[-_]/g, ' ')
+    .trim()
+    .split(/\s+/)
     .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
     .join('')
-    .toUpperCase();
+    .slice(0, 2)
+    .toUpperCase() || 'TL';
 
   return (
     <div

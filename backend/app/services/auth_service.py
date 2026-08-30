@@ -20,37 +20,37 @@ from app.models.auth import User, Session
 logger = logging.getLogger(__name__)
 
 DEMO_PERSONAS: Dict[str, Dict[str, str]] = {
-    "MEDICAL_AFFAIRS": {
-        "email": "medical.affairs@metaradar.internal",
-        "display_name": "Dr. Elena Vance (Medical Affairs Lead)",
-    },
-    "REGULATORY": {
-        "email": "regulatory@metaradar.internal",
-        "display_name": "Marcus Chen (Regulatory Affairs Director)",
-    },
-    "SAFETY": {
-        "email": "safety@metaradar.internal",
-        "display_name": "Dr. Sarah Jenkins (Pharmacovigilance Lead)",
-    },
-    "MARKET_ACCESS": {
-        "email": "market.access@metaradar.internal",
-        "display_name": "Henrik Lindqvist (Value & Access Director)",
-    },
-    "COMMUNICATIONS": {
-        "email": "comms@metaradar.internal",
-        "display_name": "Claire Beaumont (Medical Communications Lead)",
+    "DEVELOPER": {
+        "email": "developer@metaradar.internal",
+        "display_name": "test-developer",
     },
     "LEADERSHIP": {
         "email": "leadership@metaradar.internal",
-        "display_name": "Dr. Alexander Wright (EVP Global Development)",
+        "display_name": "test-leader",
+    },
+    "MEDICAL_AFFAIRS": {
+        "email": "medical.affairs@metaradar.internal",
+        "display_name": "test-medical",
+    },
+    "REGULATORY": {
+        "email": "regulatory@metaradar.internal",
+        "display_name": "test-regulatory",
+    },
+    "SAFETY": {
+        "email": "safety@metaradar.internal",
+        "display_name": "test-safety",
+    },
+    "MARKET_ACCESS": {
+        "email": "market.access@metaradar.internal",
+        "display_name": "test-access",
+    },
+    "COMMUNICATIONS": {
+        "email": "comms@metaradar.internal",
+        "display_name": "test-comms",
     },
     "ADMIN": {
         "email": "admin@metaradar.internal",
-        "display_name": "System Administrator",
-    },
-    "DEVELOPER": {
-        "email": "developer@metaradar.internal",
-        "display_name": "MetaRadar Developer",
+        "display_name": "test-developer",
     },
 }
 
@@ -71,6 +71,7 @@ def get_demo_password() -> str:
 def get_role_password(role: str) -> str:
     """Returns configured per-role demo password, or fallback to global demo password."""
     role_pw_map = {
+        "DEVELOPER": settings.DEMO_PASSWORD_DEVELOPER,
         "MEDICAL_AFFAIRS": settings.DEMO_PASSWORD_MEDICAL_AFFAIRS,
         "REGULATORY": settings.DEMO_PASSWORD_REGULATORY,
         "SAFETY": settings.DEMO_PASSWORD_SAFETY,
@@ -102,6 +103,7 @@ async def seed_demo_users_if_needed(db: AsyncSession) -> None:
             )
             db.add(user)
         else:
+            existing.display_name = info["display_name"]
             existing.hashed_password = hashed_pw
             db.add(existing)
     await db.commit()
@@ -113,6 +115,18 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> Opti
     normalized_email = email.strip().lower()
     if normalized_email.endswith("@metaradar.demo"):
         normalized_email = normalized_email.replace("@metaradar.demo", "@metaradar.internal")
+    
+    alias_map = {
+        "test-developer@metaradar.internal": "developer@metaradar.internal",
+        "test-leader@metaradar.internal": "leadership@metaradar.internal",
+        "test-medical@metaradar.internal": "medical.affairs@metaradar.internal",
+        "test-regulatory@metaradar.internal": "regulatory@metaradar.internal",
+        "test-safety@metaradar.internal": "safety@metaradar.internal",
+        "test-access@metaradar.internal": "market.access@metaradar.internal",
+        "test-comms@metaradar.internal": "comms@metaradar.internal",
+    }
+    normalized_email = alias_map.get(normalized_email, normalized_email)
+
     stmt = select(User).where(User.email == normalized_email, User.is_active.is_(True))
     user = (await db.execute(stmt)).scalars().first()
     if not user:

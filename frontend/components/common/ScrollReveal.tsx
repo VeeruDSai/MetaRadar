@@ -40,7 +40,7 @@ export function ScrollReveal() {
           }
         })
       },
-      { threshold: 0.15, rootMargin: '0px 0px -6% 0px' },
+      { threshold: 0.02, rootMargin: '0px 0px 60px 0px' },
     )
 
     document.querySelectorAll(REVEAL_SELECTOR).forEach(observe)

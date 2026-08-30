@@ -7,14 +7,30 @@ import { formatError, FormattedError } from '@/lib/errors'
 import { SectionTitle, Card, Badge } from '@/components/metaradar'
 import { ErrorState } from '../common/ErrorState'
 import { useTheme } from '../theme/ThemeProvider'
-import { Moon, Sun, Key, Database, Server, Cpu, CheckCircle2, Trash2 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+import ProfileCard from '@/components/auth/ProfileCard'
+import { Moon, Sun, Key, Database, Server, Cpu, CheckCircle2, Trash2, ShieldCheck } from 'lucide-react'
+
+const SETTINGS_ROLE_PERSONAS: Record<string, { name: string; title: string; handle: string }> = {
+  DEVELOPER: { name: 'test-developer', title: 'Platform Engineer / Developer', handle: 'test.developer' },
+  LEADERSHIP: { name: 'test-leader', title: 'Executive Leadership', handle: 'test.leader' },
+  MEDICAL_AFFAIRS: { name: 'test-medical', title: 'Medical Affairs Lead', handle: 'test.medical' },
+  REGULATORY: { name: 'test-regulatory', title: 'Regulatory Affairs Director', handle: 'test.regulatory' },
+  SAFETY: { name: 'test-safety', title: 'Pharmacovigilance & Safety Lead', handle: 'test.safety' },
+  MARKET_ACCESS: { name: 'test-access', title: 'Market Access & HEOR Lead', handle: 'test.access' },
+  COMMUNICATIONS: { name: 'test-comms', title: 'Medical Communications Lead', handle: 'test.comms' },
+  ADMIN: { name: 'test-developer', title: 'System Administrator', handle: 'test.developer' },
+}
 
 export function SettingsWorkspace() {
   const { theme, setTheme } = useTheme()
+  const { user, role, logout } = useAuth()
   const [clearing, setClearing] = useState(false)
   const [cacheResult, setCacheResult] = useState<CacheClearResponse | null>(null)
   const [error, setError] = useState<FormattedError | null>(null)
   const [sources, setSources] = useState<SourceRegistryItem[]>([])
+
+  const currentPersona = SETTINGS_ROLE_PERSONAS[role] || SETTINGS_ROLE_PERSONAS['DEVELOPER']
 
   useEffect(() => {
     fetchSourcesHealth()
@@ -59,6 +75,69 @@ export function SettingsWorkspace() {
       )}
 
       <div className="grid gap-4 max-w-4xl">
+        {/* Active Stakeholder Persona & 3D Interactive Profile Card */}
+        <Card className="overflow-hidden">
+          <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6">
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} style={{ color: 'var(--signal)' }} />
+                <h3 className="text-sm font-bold text-[var(--foreground)] m-0">
+                  Active Persona & Security Credential
+                </h3>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0">
+                Your authenticated persona credentials dictate your role-based access permissions, calibration weights, and governance approval thresholds across MetaRadar.
+              </p>
+              
+              <div className="space-y-2 pt-2">
+                <div className="p-3 rounded border border-[var(--border)] bg-[var(--surface-secondary)] space-y-1.5 text-xs font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted-foreground)]">Stakeholder Handle:</span>
+                    <strong className="text-[var(--foreground)]">@{currentPersona.handle}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted-foreground)]">Assigned Role:</span>
+                    <strong className="text-[var(--signal)]">{currentPersona.title}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted-foreground)]">User ID:</span>
+                    <span className="text-[var(--muted-foreground)]">{user?.user_id || 'mr_usr_verified'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted-foreground)]">Session Security:</span>
+                    <span className="text-emerald-500 font-semibold">Active · Nonce-Signed</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => logout()}
+                    className="px-3.5 py-1.5 rounded text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 transition shadow-xs"
+                  >
+                    Sign Out / Switch Persona
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 3D Holographic Card Display */}
+            <div className="shrink-0 flex flex-col items-center">
+              <ProfileCard
+                name={user?.display_name || currentPersona.name}
+                title={currentPersona.title}
+                handle={currentPersona.handle}
+                roleId={role}
+                status="Online & Verified"
+                contactText="Switch Role"
+                onContactClick={() => logout()}
+              />
+              <span className="text-[10px] text-[var(--muted-foreground)] font-mono mt-2 text-center">
+                Interactive 3D Holographic Card
+              </span>
+            </div>
+          </div>
+        </Card>
         {/* Theme Appearance Management */}
         <Card>
           <div className="flex items-start justify-between gap-4">
