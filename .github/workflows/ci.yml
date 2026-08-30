@@ -69,8 +69,7 @@ jobs:
           PYTHONPATH: backend:.
           DATABASE_URL: postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar
           REDIS_URL: redis://localhost:6379/0
-          LLM_PROVIDER: mock
-          ENABLE_LOCAL_LLM: "false"
+          LLM_PROVIDER: local
         run: |
           pytest -v
 
