@@ -238,36 +238,44 @@
         <!-- 4 Factor Sub-Cards -->
         <g transform="translate(12, 48)">
           <!-- Novelty -->
-          <rect x="0" y="0" width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
-          <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">1. Novelty (0–25)</text>
-          <text x="10" y="34" fill="#94a3b8" font-size="8.5">Cosine distance to</text>
-          <text x="10" y="48" fill="#94a3b8" font-size="8.5">nearest vector in DB</text>
-          <text x="10" y="64" fill="#64748b" font-size="8">Higher = more novel</text>
-          <text x="10" y="78" fill="#10b981" font-size="8.5" font-weight="700">Live: 12–15 pts</text>
+          <g transform="translate(0, 0)">
+            <rect width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
+            <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">1. Novelty (0–25)</text>
+            <text x="10" y="34" fill="#94a3b8" font-size="8.5">Cosine distance to</text>
+            <text x="10" y="48" fill="#94a3b8" font-size="8.5">nearest vector in DB</text>
+            <text x="10" y="64" fill="#64748b" font-size="8">Higher = more novel</text>
+            <text x="10" y="78" fill="#10b981" font-size="8.5" font-weight="700">Live: 12–15 pts</text>
+          </g>
 
           <!-- Clinical -->
-          <rect x="150" y="0" width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
-          <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">2. Clinical (0–30)</text>
-          <text x="10" y="34" fill="#94a3b8" font-size="8.5">12 regex patterns</text>
-          <text x="10" y="48" fill="#94a3b8" font-size="8.5">3.0 pts per match</text>
-          <text x="10" y="64" fill="#64748b" font-size="8">FVIII/FIX, ABR, trial</text>
-          <text x="10" y="78" fill="#10b981" font-size="8.5" font-weight="700">Live: 9–18 pts</text>
+          <g transform="translate(150, 0)">
+            <rect width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
+            <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">2. Clinical (0–30)</text>
+            <text x="10" y="34" fill="#94a3b8" font-size="8.5">12 regex patterns</text>
+            <text x="10" y="48" fill="#94a3b8" font-size="8.5">3.0 pts per match</text>
+            <text x="10" y="64" fill="#64748b" font-size="8">FVIII/FIX, ABR, trial</text>
+            <text x="10" y="78" fill="#10b981" font-size="8.5" font-weight="700">Live: 9–18 pts</text>
+          </g>
 
           <!-- Regulatory -->
-          <rect x="300" y="0" width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
-          <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">3. Regulatory (0–25)</text>
-          <text x="10" y="34" fill="#94a3b8" font-size="8.5">14 filing patterns</text>
-          <text x="10" y="48" fill="#94a3b8" font-size="8.5">5.0 pts per match</text>
-          <text x="10" y="64" fill="#64748b" font-size="8">FDA, EMA, PDUFA</text>
-          <text x="10" y="78" fill="#f59e0b" font-size="8.5" font-weight="700">Routine: 0 pts</text>
+          <g transform="translate(300, 0)">
+            <rect width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
+            <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">3. Regulatory (0–25)</text>
+            <text x="10" y="34" fill="#94a3b8" font-size="8.5">14 filing patterns</text>
+            <text x="10" y="48" fill="#94a3b8" font-size="8.5">5.0 pts per match</text>
+            <text x="10" y="64" fill="#64748b" font-size="8">FDA, EMA, PDUFA</text>
+            <text x="10" y="78" fill="#f59e0b" font-size="8.5" font-weight="700">Routine: 0 pts</text>
+          </g>
 
           <!-- Recency -->
-          <rect x="450" y="0" width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
-          <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">4. Recency (0–20)</text>
-          <text x="10" y="34" fill="#94a3b8" font-size="8.5">72h half-life curve</text>
-          <text x="10" y="48" fill="#94a3b8" font-size="8.5">20 × e^(-0.693·t/72)</text>
-          <text x="10" y="64" fill="#64748b" font-size="8">Decays over time</text>
-          <text x="10" y="78" fill="#10b981" font-size="8.5" font-weight="700">24h old: ~15.8 pts</text>
+          <g transform="translate(450, 0)">
+            <rect width="144" height="90" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
+            <text x="10" y="18" fill="#38bdf8" font-size="10" font-weight="700">4. Recency (0–20)</text>
+            <text x="10" y="34" fill="#94a3b8" font-size="8.5">72h half-life curve</text>
+            <text x="10" y="48" fill="#94a3b8" font-size="8.5">20 × e^(-0.693·t/72)</text>
+            <text x="10" y="64" fill="#64748b" font-size="8">Decays over time</text>
+            <text x="10" y="78" fill="#10b981" font-size="8.5" font-weight="700">24h old: ~15.8 pts</text>
+          </g>
         </g>
       </g>
     </g>
