@@ -434,7 +434,7 @@ Access the interactive API documentation at: **`http://localhost:8000/docs`**
 *Novo Nordisk GBS Hackathon 2026 — Problem Statement #3*
 
 - **Sanjana Rathore B.** (Team Lead) — B.Pharm (Domain Owner, Medical Affairs, Signal Importance, Function Routing)
-- **Ishaaq** — B.Pharm (Haemophilia Treatment Map, Asset Lifecycles, Expected Events)
-- **Usha** — B.Pharm (Evidence Quality, Red-Team Contradictions, Safety & Access Context)
-- **Om Prakash** — CSE (Architecture, Data Ingestion, LangGraph Orchestration, Backend, Frontend)
-- **Veeru** — CSE (Vector Search, Database, Telemetry, Performance & Deployment)
+- **Ishaaq Ahmed Khan** — B.Pharm (Haemophilia Treatment Map, Asset Lifecycles, Expected Events)
+- **Usha Rathore** — B.Pharm (Evidence Quality, Red-Team Contradictions, Safety & Access Context)
+- **Omprakash Panda** — ISE (Architecture, Data Ingestion, LangGraph Orchestration, Backend, Frontend)
+- **Veerendra Desai** — ISE (Vector Search, Database, Telemetry, Performance & Deployment)
