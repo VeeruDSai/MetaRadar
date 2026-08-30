@@ -247,20 +247,20 @@ export default function LoginPage() {
               <div className="p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
                 <MetaRadarLogo size={32} />
               </div>
-              <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 MetaRadar
               </span>
             </div>
 
             {/* Main Headline */}
             <div className="space-y-3">
-              <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.12]">
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.12]">
                 Decision Intelligence<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-600 dark:from-teal-400 dark:via-cyan-400 dark:to-blue-400">
                   for What Matters
                 </span>
               </h1>
-              <p className="text-base text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed">
+              <p className="text-base text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed font-normal">
                 Evidence-grounded signals and decision alerts across the haemophilia landscape.
               </p>
             </div>
@@ -272,8 +272,8 @@ export default function LoginPage() {
                   <Target className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">Multi-Source Intelligence</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-white">Multi-Source Intelligence</h2>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed font-normal">
                     Continuous monitoring of authoritative and emerging sources.
                   </p>
                 </div>
@@ -284,8 +284,8 @@ export default function LoginPage() {
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">AI-Powered Signals</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-white">AI-Powered Signals</h2>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed font-normal">
                     Advanced AI identifies high-urgency signals that demand attention.
                   </p>
                 </div>
@@ -296,8 +296,8 @@ export default function LoginPage() {
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">Actionable Insights</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-white">Actionable Insights</h2>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed font-normal">
                     Transform complex data into clear, prioritized decisions.
                   </p>
                 </div>
@@ -308,7 +308,7 @@ export default function LoginPage() {
             <div className="p-5 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-md shadow-sm max-w-md">
               <div className="flex items-start gap-3">
                 <Quote className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
-                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed font-normal">
                   Intelligence isn&apos;t just about data. It&apos;s about clarity in a world of noise.
                 </p>
               </div>
@@ -322,10 +322,10 @@ export default function LoginPage() {
               
               {/* Form Heading */}
               <div className="mb-6">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                   Welcome back
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-normal">
                   Sign in to continue to MetaRadar
                 </p>
               </div>
@@ -333,7 +333,7 @@ export default function LoginPage() {
               {/* Persona Quick-Switcher Carousel */}
               <div className="mb-5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
                     <Sparkles size={11} className="text-cyan-500" />
                     Demo Stakeholder Quick-Fill
                   </span>
@@ -346,7 +346,7 @@ export default function LoginPage() {
                         key={p.id}
                         type="button"
                         onClick={() => selectPersona(p)}
-                        className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold text-left transition-all flex items-center gap-1.5 ${
+                        className={`px-2 py-1.5 rounded-lg text-[11px] font-medium text-left transition-all flex items-center gap-1.5 ${
                           isSelected
                             ? 'bg-cyan-500/15 border border-cyan-500 text-cyan-600 dark:text-cyan-400 shadow-sm'
                             : 'bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -384,7 +384,7 @@ export default function LoginPage() {
                 
                 {/* Email Field */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Email Address
                   </label>
                   <div className="relative">
@@ -397,14 +397,14 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
                       required
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                     />
                   </div>
                 </div>
 
                 {/* Password Field */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Password
                   </label>
                   <div className="relative">
@@ -417,7 +417,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
                       required
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
                     />
                     <button
                       type="button"
@@ -439,12 +439,12 @@ export default function LoginPage() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="w-4 h-4 rounded text-cyan-600 focus:ring-cyan-500 border-slate-300 dark:border-slate-700 dark:bg-slate-900"
                     />
-                    <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Remember me</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 font-normal">Remember me</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => selectPersona(PERSONAS[0])}
-                    className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:underline"
+                    className="text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:underline"
                   >
                     Forgot password?
                   </button>
@@ -455,7 +455,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#0284c7] via-[#0ea5e9] to-[#0d9488] hover:from-[#0369a1] hover:to-[#0f766e] text-white font-bold text-sm shadow-lg shadow-cyan-500/25 dark:shadow-cyan-900/40 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99] cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#0284c7] via-[#0ea5e9] to-[#0d9488] hover:from-[#0369a1] hover:to-[#0f766e] text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 dark:shadow-cyan-900/40 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99] cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>
@@ -474,7 +474,7 @@ export default function LoginPage() {
                 {/* OR Divider */}
                 <div className="relative flex items-center justify-center py-2">
                   <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
-                  <span className="bg-white dark:bg-[#0c1424] px-3 text-[10px] uppercase font-bold text-slate-400 tracking-wider absolute">
+                  <span className="bg-white dark:bg-[#0c1424] px-3 text-[10px] uppercase font-semibold text-slate-400 tracking-wider absolute">
                     OR
                   </span>
                 </div>
@@ -484,7 +484,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowApiKeyModal(true)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <KeyRound size={15} className="text-slate-400" />
                     <span>Sign in with API Key</span>
@@ -500,7 +500,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => selectPersona(PERSONAS[5])}
-                    className="font-semibold text-cyan-600 dark:text-cyan-400 hover:underline"
+                    className="font-medium text-cyan-600 dark:text-cyan-400 hover:underline"
                   >
                     Contact your administrator
                   </button>
@@ -512,16 +512,6 @@ export default function LoginPage() {
 
         </div>
       </div>
-
-      {/* Footer Bottom Bar */}
-      <footer className="relative z-10 w-full py-6 text-center text-xs text-slate-400 dark:text-slate-500 space-y-1">
-        <div className="flex items-center justify-center gap-2">
-          <button type="button" className="hover:underline text-slate-500 dark:text-slate-400">Privacy Policy</button>
-          <span>•</span>
-          <button type="button" className="hover:underline text-slate-500 dark:text-slate-400">Terms of Service</button>
-        </div>
-        <p>© 2025 MetaRadar. All rights reserved.</p>
-      </footer>
 
       {/* API Key Modal */}
       {showApiKeyModal && (

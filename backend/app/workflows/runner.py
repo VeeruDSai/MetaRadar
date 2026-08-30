@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -26,6 +27,8 @@ from app.workflows.state import MetaRadarState, create_initial_state
 
 logger = logging.getLogger(__name__)
 
+_pipeline_concurrency_lock = asyncio.Lock()
+
 
 class PipelineRunner:
     """
@@ -38,6 +41,25 @@ class PipelineRunner:
         self._graph = build_graph()
 
     async def run(
+        self,
+        batch_size: int = 50,
+        pipeline_run_id: Optional[str] = None,
+        raw_signals: Optional[List[Dict[str, Any]]] = None,
+        calibration_feedback: Optional[List[Dict[str, Any]]] = None,
+    ) -> MetaRadarState:
+        """
+        Executes the 10-node LangGraph pipeline with a concurrency lock.
+        Tracks PipelineRun lifecycle and persists output entities to the database if session is available.
+        """
+        async with _pipeline_concurrency_lock:
+            return await self._run_pipeline(
+                batch_size=batch_size,
+                pipeline_run_id=pipeline_run_id,
+                raw_signals=raw_signals,
+                calibration_feedback=calibration_feedback,
+            )
+
+    async def _run_pipeline(
         self,
         batch_size: int = 50,
         pipeline_run_id: Optional[str] = None,

@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" width="100%" height="100%" style="background:#070d18; font-family:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="dfBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1528" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#070d18" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="bronzeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Ambient Glows -->
+  <circle cx="300" cy="200" r="250" fill="#0284c7" opacity="0.04" filter="blur(60px)"/>
+  <circle cx="900" cy="500" r="280" fill="#10b981" opacity="0.04" filter="blur(70px)"/>
+
+  <!-- Canvas Container -->
+  <rect x="20" y="20" width="1160" height="810" rx="24" fill="url(#dfBg)" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Header -->
+  <g transform="translate(60, 55)">
+    <rect x="0" y="0" width="40" height="40" rx="10" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+    <path d="M 12 20 L 18 26 L 28 14" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <text x="56" y="22" fill="#ffffff" font-size="22" font-weight="800" letter-spacing="-0.5">MetaRadar End-to-End Intelligence Data Flow</text>
+    <text x="56" y="38" fill="#94a3b8" font-size="12.5" font-weight="500">From Raw Multi-Source Ingestion to Calibrated Stakeholder Decision Delivery</text>
+  </g>
+
+  <!-- STEP 1: BRONZE STAGE (Raw Ingestion) -->
+  <g transform="translate(60, 115)">
+    <rect x="0" y="0" width="340" height="205" rx="14" fill="#0f172a" stroke="#d97706" stroke-width="1.2" stroke-opacity="0.6" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="340" height="32" rx="14" fill="url(#bronzeGrad)"/>
+    <text x="16" y="21" fill="#ffffff" font-size="11" font-weight="800" letter-spacing="0.5">STEP 1 · BRONZE STAGE (RAW INGESTION)</text>
+    
+    <g transform="translate(16, 46)">
+      <text x="0" y="16" fill="#fcd34d" font-size="12" font-weight="700">8 Public &amp; Authoritative Feeds</text>
+      <text x="0" y="32" fill="#94a3b8" font-size="10">PubMed · CT.gov · OpenFDA · EMA · Fierce · Dive · ET · NewsAPI</text>
+      
+      <rect x="0" y="44" width="308" height="48" rx="6" fill="#1e1838" stroke="#334155" stroke-width="0.8"/>
+      <text x="10" y="64" fill="#cbd5e1" font-size="10" font-weight="600">SHA-256 Deduplication &amp; WORM Storage</text>
+      <text x="10" y="80" fill="#64748b" font-size="9">Immutable raw JSON in raw_signals_bronze table</text>
+
+      <rect x="0" y="100" width="308" height="42" rx="6" fill="#1e1838" stroke="#334155" stroke-width="0.8"/>
+      <text x="10" y="118" fill="#cbd5e1" font-size="10" font-weight="600">Postgres Advisory Lock Concurrency</text>
+      <text x="10" y="132" fill="#64748b" font-size="9">Zero duplicate concurrent connector cycles</text>
+    </g>
+  </g>
+
+  <!-- Arrow Step 1 -> Step 2 -->
+  <path d="M 400 217 L 430 217" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="4 4"/>
+  <polygon points="435,217 425,212 425,222" fill="#38bdf8"/>
+
+  <!-- STEP 2: SILVER STAGE (Validation, Scrubbing & NLP) -->
+  <g transform="translate(440, 115)">
+    <rect x="0" y="0" width="340" height="205" rx="14" fill="#0f172a" stroke="#0284c7" stroke-width="1.2" stroke-opacity="0.6" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="340" height="32" rx="14" fill="url(#silverGrad)"/>
+    <text x="16" y="21" fill="#ffffff" font-size="11" font-weight="800" letter-spacing="0.5">STEP 2 · SILVER STAGE (VALIDATION &amp; NLP)</text>
+    
+    <g transform="translate(16, 46)">
+      <text x="0" y="16" fill="#38bdf8" font-size="12" font-weight="700">PII/PHI Scrubbing &amp; Canonical Normalization</text>
+      <text x="0" y="32" fill="#94a3b8" font-size="10">Zero unredacted patient data reaches downstream layers</text>
+      
+      <rect x="0" y="44" width="308" height="48" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
+      <text x="10" y="64" fill="#93c5fd" font-size="10" font-weight="600">Haemophilia Ontology Mapping</text>
+      <text x="10" y="80" fill="#64748b" font-size="9">12 canonical modalities: FVIII/FIX, Bispecific, AAV gene</text>
+
+      <rect x="0" y="100" width="308" height="42" rx="6" fill="#0f1f38" stroke="#1e3a8a" stroke-width="0.8"/>
+      <text x="10" y="118" fill="#93c5fd" font-size="10" font-weight="600">384-Dim Vector Embeddings</text>
+      <text x="10" y="132" fill="#64748b" font-size="9">all-MiniLM-L6-v2 embeddings for semantic retrieval</text>
+    </g>
+  </g>
+
+  <!-- Arrow Step 2 -> Step 3 -->
+  <path d="M 780 217 L 810 217" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="4 4"/>
+  <polygon points="815,217 805,212 805,222" fill="#38bdf8"/>
+
+  <!-- STEP 3: GOLD STAGE (Intelligence Reasoning Engines) -->
+  <g transform="translate(820, 115)">
+    <rect x="0" y="0" width="320" height="205" rx="14" fill="#0f172a" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.6" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="320" height="32" rx="14" fill="url(#goldGrad)"/>
+    <text x="16" y="21" fill="#ffffff" font-size="11" font-weight="800" letter-spacing="0.5">STEP 3 · GOLD REASONING ENGINES</text>
+    
+    <g transform="translate(16, 46)">
+      <!-- Confluence -->
+      <rect x="0" y="0" width="288" height="36" rx="6" fill="#062e24" stroke="#059669" stroke-width="0.8"/>
+      <text x="10" y="16" fill="#6ee7b7" font-size="10" font-weight="700">48h Confluence Engine</text>
+      <text x="10" y="28" fill="#94a3b8" font-size="8.5">Multi-source correlation (PubMed + CT.gov)</text>
+
+      <!-- Lifecycle -->
+      <rect x="0" y="42" width="288" height="36" rx="6" fill="#062e24" stroke="#059669" stroke-width="0.8"/>
+      <text x="10" y="58" fill="#6ee7b7" font-size="10" font-weight="700">7-Stage Asset Lifecycle</text>
+      <text x="10" y="70" fill="#94a3b8" font-size="8.5">ANNOUNCED → APPROVED → ACCESS progression</text>
+
+      <!-- Red Team & Missing Signal -->
+      <rect x="0" y="84" width="288" height="60" rx="6" fill="#062e24" stroke="#059669" stroke-width="0.8"/>
+      <text x="10" y="100" fill="#6ee7b7" font-size="10" font-weight="700">Red-Team &amp; Missing-Signal FSM</text>
+      <text x="10" y="114" fill="#94a3b8" font-size="8.5">BART-MNLI contradiction vs registry baselines</text>
+      <text x="10" y="128" fill="#94a3b8" font-size="8.5">Milestone silence &amp; overdue deadline alerts</text>
+    </g>
+  </g>
+
+  <!-- Connective Path Step 3 Down to Step 4 -->
+  <path d="M 980 320 L 980 355 L 600 355 L 600 380" stroke="#10b981" stroke-width="2.5" stroke-dasharray="4 4" fill="none"/>
+  <polygon points="600,385 595,375 605,375" fill="#10b981"/>
+
+  <!-- STEP 4: DETERMINISTIC 4-FACTOR PRIORITY SCORING ENGINE -->
+  <g transform="translate(60, 390)">
+    <rect x="0" y="0" width="1080" height="155" rx="16" fill="#0b1324" stroke="#6366f1" stroke-width="1.2" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="6" height="155" rx="3" fill="#6366f1"/>
+
+    <text x="24" y="24" fill="#a5b4fc" font-size="11" font-weight="800" letter-spacing="1">STEP 4 · DETERMINISTIC 4-FACTOR PRIORITY SCORING (RANGE 0–100)</text>
+    <text x="24" y="42" fill="#64748b" font-size="12">Explainable, auditable weighted mathematical scoring model with zero random LLM drift</text>
+
+    <g transform="translate(24, 56)">
+      <!-- Factor 1: Novelty -->
+      <rect x="0" y="0" width="245" height="75" rx="10" fill="#171536" stroke="#4f46e5" stroke-width="1"/>
+      <text x="14" y="22" fill="#818cf8" font-size="12" font-weight="700">1. Novelty (0–25 pts)</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="10">Cosine distance to nearest vector</text>
+      <text x="14" y="56" fill="#64748b" font-size="9">Higher distance = more novel discovery</text>
+      <text x="14" y="68" fill="#10b981" font-size="9" font-weight="700">Typical: 12–15 pts</text>
+
+      <!-- Factor 2: Clinical -->
+      <rect x="260" y="0" width="245" height="75" rx="10" fill="#171536" stroke="#4f46e5" stroke-width="1"/>
+      <text x="14" y="22" fill="#818cf8" font-size="12" font-weight="700">2. Clinical (0–30 pts)</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="10">12 clinical keyword patterns</text>
+      <text x="14" y="56" fill="#64748b" font-size="9">3.0 pts per matched pattern (max 30)</text>
+      <text x="14" y="68" fill="#10b981" font-size="9" font-weight="700">Typical: 9–18 pts</text>
+
+      <!-- Factor 3: Regulatory -->
+      <rect x="520" y="0" width="245" height="75" rx="10" fill="#171536" stroke="#4f46e5" stroke-width="1"/>
+      <text x="14" y="22" fill="#818cf8" font-size="12" font-weight="700">3. Regulatory (0–25 pts)</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="10">14 regulatory filing patterns</text>
+      <text x="14" y="56" fill="#64748b" font-size="9">5.0 pts per matched pattern (max 25)</text>
+      <text x="14" y="68" fill="#f59e0b" font-size="9" font-weight="700">Routine research: 0 pts</text>
+
+      <!-- Factor 4: Recency -->
+      <rect x="780" y="0" width="248" height="75" rx="10" fill="#171536" stroke="#4f46e5" stroke-width="1"/>
+      <text x="14" y="22" fill="#818cf8" font-size="12" font-weight="700">4. Recency (0–20 pts)</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="10">72-Hour Exponential Half-Life</text>
+      <text x="14" y="56" fill="#64748b" font-size="9">20 × e^(-0.693 × hours / 72)</text>
+      <text x="14" y="68" fill="#10b981" font-size="9" font-weight="700">24h old: ~15.8 pts</text>
+    </g>
+  </g>
+
+  <!-- Connective Path Step 4 Down to Step 5 -->
+  <path d="M 600 545 L 600 575" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="4 4"/>
+  <polygon points="600,580 595,570 605,570" fill="#6366f1"/>
+
+  <!-- STEP 5: FOUR-QUESTION EXECUTIVE SYNTHESIS & GOVERNANCE DELIVERY -->
+  <g transform="translate(60, 585)">
+    <rect x="0" y="0" width="1080" height="210" rx="16" fill="#0b1324" stroke="#ec4899" stroke-width="1.2" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="6" height="210" rx="3" fill="#ec4899"/>
+
+    <text x="24" y="24" fill="#f472b6" font-size="11" font-weight="800" letter-spacing="1">STEP 5 · FOUR-QUESTION SYNTHESIS &amp; STAKEHOLDER GOVERNANCE DELIVERY</text>
+    <text x="24" y="42" fill="#64748b" font-size="12">Role-scoped intelligence consumption, live Athena SSE streaming copilot, and human-in-the-loop calibration</text>
+
+    <g transform="translate(24, 56)">
+      <!-- 4 Questions Card -->
+      <rect x="0" y="0" width="510" height="135" rx="10" fill="#241220" stroke="#be185d" stroke-width="0.8"/>
+      <text x="16" y="22" fill="#fbcfe8" font-size="11.5" font-weight="700">Four-Question Epistemic Decision Brief</text>
+      
+      <g transform="translate(16, 34)">
+        <text x="0" y="16" fill="#e2e8f0" font-size="10.5" font-weight="600">Q1. What changed?</text>
+        <text x="130" y="16" fill="#94a3b8" font-size="9.5">Entity / Event Extraction + Confluence</text>
+        
+        <text x="0" y="38" fill="#e2e8f0" font-size="10.5" font-weight="600">Q2. Why it matters?</text>
+        <text x="130" y="38" fill="#94a3b8" font-size="9.5">Lifecycle Stage + Red-Team Challenge</text>
+        
+        <text x="0" y="60" fill="#e2e8f0" font-size="10.5" font-weight="600">Q3. Who should review?</text>
+        <text x="130" y="60" fill="#94a3b8" font-size="9.5">Stakeholder Calibration &amp; Matrix Routing</text>
+        
+        <text x="0" y="82" fill="#e2e8f0" font-size="10.5" font-weight="600">Q4. Suggested action?</text>
+        <text x="130" y="82" fill="#94a3b8" font-size="9.5">Missing-Signal + Human-in-the-Loop Gate</text>
+      </g>
+
+      <!-- Stakeholder Delivery & Athena -->
+      <rect x="530" y="0" width="498" height="135" rx="10" fill="#241220" stroke="#be185d" stroke-width="0.8"/>
+      <text x="16" y="22" fill="#fbcfe8" font-size="11.5" font-weight="700">Cross-Functional Action Workspaces &amp; Athena</text>
+      
+      <g transform="translate(16, 36)">
+        <rect x="0" y="0" width="145" height="38" rx="6" fill="#38152e" stroke="#9d174d" stroke-width="0.8"/>
+        <text x="10" y="16" fill="#f472b6" font-size="10" font-weight="700">6 Functional Personas</text>
+        <text x="10" y="28" fill="#94a3b8" font-size="8.5">MedAffairs, Reg, PV, Access</text>
+
+        <rect x="155" y="0" width="145" height="38" rx="6" fill="#38152e" stroke="#9d174d" stroke-width="0.8"/>
+        <text x="10" y="16" fill="#f472b6" font-size="10" font-weight="700">Leadership Steer</text>
+        <text x="10" y="28" fill="#94a3b8" font-size="8.5">Executive Approval Sign-Off</text>
+
+        <rect x="310" y="0" width="150" height="38" rx="6" fill="#38152e" stroke="#9d174d" stroke-width="0.8"/>
+        <text x="10" y="16" fill="#f472b6" font-size="10" font-weight="700">Athena Copilot</text>
+        <text x="10" y="28" fill="#94a3b8" font-size="8.5">SSE Live Streaming Q&amp;A</text>
+
+        <!-- Bottom Feedback Loop -->
+        <rect x="0" y="46" width="460" height="36" rx="6" fill="#0f172a" stroke="#ec4899" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="14" y="64" fill="#f9a8d4" font-size="10" font-weight="700">↺ Continuous HITL Feedback Calibration Loop</text>
+        <text x="250" y="64" fill="#94a3b8" font-size="9">Dynamically recalibrates scoring weights in DB</text>
+      </g>
+    </g>
+  </g>
+
+</svg>

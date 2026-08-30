@@ -10,6 +10,7 @@ class DataMode(str, Enum):
     RECORDED_DEMO = "recorded_demo"
     TEST_FIXTURE = "test_fixture"
     BENCHMARK = "benchmark"
+    SYNTHETIC = "synthetic"
 
 
 class ConfidenceType(str, Enum):

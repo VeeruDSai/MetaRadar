@@ -60,5 +60,6 @@ scratch/
 !.agents/rules/**
 .gsd/
 
-# Pitch / presentation materials — never tracked, internal only
-pitch/
+# Pitch / presentation materials
+!pitch/
+!pitch/**

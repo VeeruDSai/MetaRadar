@@ -1,6 +1,14 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-08-30
+**Analysis Date:** 2026-08-30  
+**Status:** Remediated & Hardened (Phase 12 MVP Audit)
+
+> [!NOTE]
+> All valid tech debt, schema enum gaps, pipeline concurrency guards, and credential masking items identified in this audit have been resolved in codebase hardening cycles:
+> 1. `DataMode` union and enum synchronized across backend `intelligence.py`, frontend `api.ts`, and `export_openapi.py` with `"synthetic"`.
+> 2. `PipelineRunner` concurrency lock added to prevent race conditions during overlapping connector cycles.
+> 3. Demo credential generation masked in stdout/logger to prevent token exposure.
+> 4. Plus Jakarta Sans typography and SSR hydration guards applied across frontend.
 
 ---
 

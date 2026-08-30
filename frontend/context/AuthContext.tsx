@@ -26,6 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [user, setUser] = useState<UserMe | null>(null)
+  const [storedRole, setStoredRole] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null)
       const currentUser = await getMe()
       setUser(currentUser)
+      setStoredRole(currentUser.role)
       if (typeof window !== 'undefined') {
         localStorage.setItem(DEMO_ROLE_KEY, currentUser.role)
       }
@@ -48,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = await apiDemoLogin(targetRole)
       setUser(u)
+      setStoredRole(targetRole)
       if (typeof window !== 'undefined') {
         localStorage.setItem(DEMO_ROLE_KEY, targetRole)
       }
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = await apiLogin(credentials)
       setUser(u)
+      setStoredRole(u.role)
       if (typeof window !== 'undefined') {
         localStorage.setItem(DEMO_ROLE_KEY, u.role)
       }
@@ -88,6 +93,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore logout errors
     } finally {
       setUser(null)
+      setStoredRole(null)
+      try {
+        localStorage.removeItem(DEMO_ROLE_KEY)
+      } catch {}
       setIsLoading(false)
       router.push('/login')
     }
@@ -96,12 +105,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Auto-bootstrap on initial mount
   useEffect(() => {
     let mounted = true
+    setIsMounted(true)
+
+    // Load persisted demo role safely after initial hydration
+    try {
+      const saved = localStorage.getItem(DEMO_ROLE_KEY)
+      if (saved) {
+        setStoredRole(saved)
+      }
+    } catch {}
 
     async function initAuth() {
       try {
         const u = await getMe()
         if (mounted) {
           setUser(u)
+          setStoredRole(u.role)
           if (typeof window !== 'undefined') {
             localStorage.setItem(DEMO_ROLE_KEY, u.role)
           }
@@ -129,7 +148,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router])
 
-  const role = user?.role || (typeof window !== 'undefined' ? localStorage.getItem(DEMO_ROLE_KEY) : null) || DEFAULT_ROLE
+  // Guaranteed identical on SSR and initial client hydration
+  const role = user?.role || (isMounted ? storedRole : null) || DEFAULT_ROLE
 
   return (
     <AuthContext.Provider

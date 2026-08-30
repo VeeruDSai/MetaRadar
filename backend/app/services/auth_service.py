@@ -64,7 +64,7 @@ def get_demo_password() -> str:
         return settings.DEMO_USER_PASSWORD
     if _generated_demo_password is None:
         _generated_demo_password = secrets.token_urlsafe(12)
-        print(f"[MetaRadar Security] Demo password generated for local session: {_generated_demo_password}")
+        logger.debug("[MetaRadar Security] Demo password generated for local session.")
     return _generated_demo_password
 
 

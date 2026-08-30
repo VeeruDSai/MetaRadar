@@ -42,7 +42,7 @@ def export_contracts():
 // contracts/openapi.json for reference. To change the contract, edit the template inside
 // scripts/export_openapi.py, run that script, and commit both files together.
 
-export type DataMode = "live" | "recorded_demo" | "test_fixture" | "benchmark";
+export type DataMode = "live" | "recorded_demo" | "test_fixture" | "benchmark" | "synthetic";
 
 export type ConfidenceType = 
   | "extraction"
