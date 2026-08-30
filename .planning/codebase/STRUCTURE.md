@@ -1,6 +1,6 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-08-29
+**Analysis Date:** 2026-08-30
 
 ## Directory Layout
 
@@ -156,4 +156,4 @@ MetaRadar/
 
 ---
 
-*Structure analysis: 2026-08-29*
+*Structure analysis: 2026-08-30*
