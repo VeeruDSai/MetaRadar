@@ -35,8 +35,10 @@ async def cleanup_db_connections():
                 'MedAffairs Test Trial Signal',
                 'Safety Test Advisory Signal',
                 'Actioned Permission Test Signal',
+                'Approval Workflow Pipeline Signal%',
             ]
             conditions = [Signal.title.ilike(p) for p in test_patterns]
+            conditions.append(Signal.fingerprint.ilike('approval-fp-%'))
             await session.execute(delete(Signal).where(or_(*conditions)))
             await session.commit()
     except Exception:
