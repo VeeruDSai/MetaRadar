@@ -1,6 +1,6 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-08-30
+**Analysis Date:** 2026-09-01
 
 ## Naming Patterns
 
@@ -11,8 +11,8 @@
 | Python source files | `snake_case.py` | `auth.py`, `signals.py`, `logging.py`, `middleware.py`, `config.py`, `redact.py` |
 | Python package directories | `snake_case` | `app/core/`, `app/schemas/`, `app/api/v1/endpoints/`, `app/services/`, `app/models/`, `app/providers/` |
 | Test files | `test_*.py` | `test_auth.py`, `test_signals_endpoints.py`, `test_ingestion.py` |
-| TypeScript source files | `snake_case.ts` or `kebab-case.tsx` | `api.ts`, `mappers.ts`, `errors.ts`, `hooks.ts`, `utils.ts` |
-| React components | `PascalCase.tsx` | `MetaRadar.tsx`, `SignalCard.tsx`, `SpecularButton.tsx`, `AnimatedCounter.tsx` |
+| TypeScript source files | `camelCase.ts` or `kebab-case.tsx` | `api.ts`, `mappers.ts`, `errors.ts`, `hooks.ts`, `utils.ts` |
+| React components | `PascalCase.tsx` | `PersonaSwitcher.tsx`, `SignalCard.tsx`, `SpecularButton.tsx`, `AnimatedCounter.tsx` |
 | Component subdirectories | `kebab-case` | `components/ui/`, `components/common/`, `components/signals/`, `components/theme/` |
 | Schema files | `snake_case.py` | `auth.py`, `intelligence.py`, `registry.py` |
 | Endpoint files | `snake_case.py` | `auth.py`, `signals.py`, `health.py`, `pipeline.py`, `feedback.py` |
@@ -40,7 +40,7 @@
 
 - **Interfaces:** `PascalCase` — e.g., `Signal`, `HealthResponse`, `ModelMetadata`, `ScoreBreakdown`, `AuditLogItem`, `SignalReviewPayload`
 - **Type aliases:** `PascalCase` — e.g., `DataMode`, `ConfidenceType`, `HealthStatus`
-- **Enum-like string unions:** `PascalCase` values — e.g., `"CRITICAL" | "HIGH" | "MEDIUM" | "LOW"` for priority
+- **Enum-like string unions:** `PascalCase` or uppercase values — e.g., `"CRITICAL" | "HIGH" | "MEDIUM" | "LOW"` for priority
 - **Exported types:** Always `export`ed from `frontend/types/api.ts`
 - **Function types:** Arrow functions with explicit return types — e.g., `export async function fetchOverview(signal?: AbortSignal): Promise<DashboardOverview>`
 - **API function names:** `camelCase` with `fetch`/`get`/`submit` prefix — e.g., `fetchOverview`, `getSignals`, `submitSignalFeedback`, `askAthena`, `streamAthena`
@@ -76,7 +76,7 @@
 - **Error handling:** `ApiError` class extends `Error` with `status`, `statusText`, `message`, `isRetryable`, `requestId`, `endpoint`; `formatError()` for display formatting
 - **State management:** React `useState`, `useEffect`, `useCallback`, `useRef`; custom `useLiveData<T>()` hook for polling with visibility awareness and AbortController dedup
 - **Mapper pattern:** `mapSignal()` in `lib/mappers.ts` transforms raw API responses into typed `Signal` objects; `RawSignalPayload` interface for raw data
-- **No hardcoded colors:** `check-banned-classes.mjs` enforces no `bg-slate-*`, `text-slate-*`, `border-slate-*`, or hex-color Tailwind classes in components
+- **No hardcoded colors:** `scripts/check-banned-classes.mjs` enforces no `bg-slate-*`, `text-slate-*`, `border-slate-*`, or hex-color Tailwind classes in components
 - **CSS class naming:** `camelCase` React props; `kebab-case` CSS class names (Tailwind utility classes)
 - **Component patterns:** Function components with explicit type annotations; `export function` for named exports; props destructured with types
 
@@ -115,7 +115,7 @@ from app.schemas import SignalSchema, SignalListResponse
 
 ```typescript
 // 1. Type-only imports
-import type { Signal, HealthResponse, ... } from '@/types/api'
+import type { Signal, HealthResponse } from '@/types/api'
 
 // 2. Regular imports (aliased via @/)
 import { ApiError, mapSignal } from '@/lib/api'
@@ -172,11 +172,11 @@ import { Button } from '@/components/ui/button'
 
 ## Security & Privacy Invariants
 
-- **PII/PHI Scrubbing:** `PIIPHIScrubber` (in `app/services/pii.py`) scrubs emails, phones, SSNs, MRNs, and DOBs from text before ingestion; replaces with `[EMAIL_REDACTED]`, `[PHONE_REDACTED]`, `[SSN_REDACTED]`, `[MRN_REDACTED]`, `[PATIENT_DOB_REDACTED]`
-- **Secret redaction:** `app/core/redact.py` provides `redact_value()`, `redact_mapping()`, `redact_text()` for scrubbing API keys, passwords, tokens from log messages and query params
+- **PII/PHI Scrubbing:** `PIIPHIScrubber` (in `backend/app/services/pii.py`) scrubs emails, phones, SSNs, MRNs, and DOBs from text before ingestion; replaces with `[EMAIL_REDACTED]`, `[PHONE_REDACTED]`, `[SSN_REDACTED]`, `[MRN_REDACTED]`, `[PATIENT_DOB_REDACTED]`
+- **Secret redaction:** `backend/app/core/redact.py` provides `redact_value()`, `redact_mapping()`, `redact_text()` for scrubbing API keys, passwords, tokens from log messages and query params
 - **Audit log immutability:** `AuditLog` model has SQLAlchemy event listeners that raise `PermissionError` on UPDATE and DELETE; PostgreSQL triggers enforce this at the database level
 - **Session security:** `SESSION_COOKIE_NAME = "metaradar_session"` with `httponly=True`, `samesite="lax"`; `CSRF_COOKIE_NAME = "metaradar_csrf"` with `httponly=False` (accessible to JS for `X-CSRF-Token` header)
-- **CSRF validation:** Session-bound HMAC-SHA256 CSRF tokens via `generate_session_bound_csrf()` and `verify_session_bound_csrf()` in `app/core/security.py`
+- **CSRF validation:** Session-bound HMAC-SHA256 CSRF tokens via `generate_session_bound_csrf()` and `verify_session_bound_csrf()` in `backend/app/core/security.py`
 - **Origin validation:** `require_preauth_origin` dependency enforces exact scheme+host+port matching against `CORS_ORIGINS` on all pre-auth endpoints; blocks spoofed origins like `http://localhost:3000.evil.com`
 - **Rate limiting:** `auth_rate_limit` dependency on auth endpoints (configurable via `AUTH_RATE_LIMIT_PER_MINUTE`); `mutation_rate_limit` on mutation endpoints
 - **Password hashing:** `bcrypt` with `gensalt()` for password hashing; `hashlib.sha256` for session token hashing; `hmac.compare_digest` for constant-time comparison
@@ -184,3 +184,7 @@ import { Button } from '@/components/ui/button'
 - **Privacy gate:** `GrokProvider.validate_privacy_gate()` blocks external API calls for `CONFIDENTIAL` and `UNKNOWN` data classifications; only `PUBLIC` and `SYNTHETIC` pass through
 - **Banned CSS classes:** `scripts/check-banned-classes.mjs` enforces no hardcoded `bg-slate-*`, `text-slate-*`, `border-slate-*`, `dark:bg-*`, or arbitrary hex-color Tailwind classes in `frontend/components/`
 - **`from_attributes=True`:** Pydantic models use `ConfigDict(from_attributes=True)` to accept ORM objects safely
+
+---
+
+*Convention analysis: 2026-09-01*

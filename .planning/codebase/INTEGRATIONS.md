@@ -1,177 +1,175 @@
 # External Integrations
 
-**Analysis Date:** 2026-08-30
+**Analysis Date:** 2026-09-01
 
 ## APIs & External Services
 
-**Biomedical Literature & Trials:**
-- **NCBI PubMed** (`PubMedConnector`) — E-utilities ESearch + EFetch; quota-free (NCBI_API_KEY optional for higher limits); batch freshness; backfill 180 days; XML abstracts PII-scrubbed before persistence
-  - SDK/Client: `httpx.AsyncClient` (no dedicated SDK)
-  - Auth: `NCBI_API_KEY` env var, `NCBI_TOOL`, `NCBI_EMAIL`
-- **ClinicalTrials.gov** (`ClinicalTrialsConnector`) — API v2 studies endpoint; near-real-time freshness; paginated via `nextPageToken`; NCT-fingerprinted; backfill 365 days
+**Biomedical Literature & Clinical Registries:**
+- **NCBI PubMed** (`backend/app/connectors/pubmed.py` - `PubMedConnector`)
+  - Endpoints: E-utilities ESearch (`esearch.fcgi`) & EFetch (`efetch.fcgi`)
+  - Ingestion Model: Batch freshness, 180-day backfill window, XML abstracts PII-scrubbed before persistence
+  - SDK/Client: `httpx.AsyncClient` with exponential backoff
+  - Auth: `NCBI_API_KEY` (optional, for higher rate limit), `NCBI_TOOL`, `NCBI_EMAIL`
+- **ClinicalTrials.gov** (`backend/app/connectors/clinical_trials.py` - `ClinicalTrialsConnector`)
+  - Endpoints: REST API v2 (`clinicaltrials.gov/api/v2/studies`)
+  - Ingestion Model: Near-real-time freshness, paginated cursor (`nextPageToken`), NCT-fingerprinted, 365-day backfill
   - SDK/Client: `httpx.AsyncClient`
-  - Auth: None (public API)
+  - Auth: Public API (no credentials required)
 
-**Regulatory:**
-- **OpenFDA** (`OpenFDAConnector`) — Drugs@FDA API (`api.fda.gov/drug/drugsfda.json`) with optional `OPENFDA_API_KEY` for higher rate limits; also FDA MedWatch/Drug Safety RSS feeds
+**Regulatory Portals & Feeds:**
+- **OpenFDA** (`backend/app/connectors/fda.py` - `OpenFDAConnector`)
+  - Endpoints: Drugs@FDA endpoint (`api.fda.gov/drug/drugsfda.json`), MedWatch & Drug Safety RSS feeds
+  - Ingestion Model: Regulatory decision tracking, approval events, label changes
   - SDK/Client: `httpx.AsyncClient`
-  - Auth: `OPENFDA_API_KEY` env var (optional)
-- **EMA** (`EMARSSConnector`) — EMA medicines RSS feed + news RSS + orphan designations; keyword-filtered
+  - Auth: `OPENFDA_API_KEY` (optional, increases request ceiling)
+- **EMA** (`backend/app/connectors/ema.py` - `EMARSSConnector`)
+  - Endpoints: European Medicines Agency medicines RSS, human medicines news, orphan designations
+  - Ingestion Model: Keyword-filtered XML feeds mapped to development lifecycle events
   - SDK/Client: `httpx.AsyncClient` + `xml.etree.ElementTree`
-  - Auth: None (RSS feeds)
+  - Auth: Public RSS feeds
 
-**News & Media:**
-- **NewsAPI** (`NewsAPIConnector`) — NewsAPI.org v2 everything endpoint; quota-aware (100 req/day dev cap); tracks `X-RateLimit-Remaining` header persisted to ConnectorState; halts with DEGRADED on exhaustion
+**News & Industry Media:**
+- **NewsAPI** (`backend/app/connectors/newsapi.py` - `NewsAPIConnector`)
+  - Endpoints: NewsAPI.org v2 `/everything` endpoint
+  - Ingestion Model: Quota-aware governor (monitors `X-RateLimit-Remaining`, pauses when `< 15` calls remain)
   - SDK/Client: `httpx.AsyncClient`
-  - Auth: `NEWSAPI_KEY` or `NEWS_API_KEY` env var
-- **BioPharma Dive** (`BioPharmaDiveRSSConnector`) — RSS feed (`biopharmadive.com/feeds/news/`); keyword-filtered
+  - Auth: `NEWSAPI_KEY` or `NEWS_API_KEY`
+- **BioPharma Dive** (`backend/app/connectors/biopharma_dive.py` - `BioPharmaDiveRSSConnector`)
+  - Endpoints: `biopharmadive.com/feeds/news/`
+  - Ingestion Model: Haemophilia and gene therapy news ingestion with domain keyword gating
   - SDK/Client: `httpx.AsyncClient` + XML parsing
-  - Auth: None (RSS)
-- **FiercePharma** (`FiercePharmaRSSConnector`) — RSS feed (`fiercepharma.com/rss/xml`); keyword-filtered
+  - Auth: Public RSS
+- **FiercePharma** (`backend/app/connectors/fierce_pharma.py` - `FiercePharmaRSSConnector`)
+  - Endpoints: `fiercepharma.com/rss/xml`
+  - Ingestion Model: Commercial, regulatory, and pricing news tracking
   - SDK/Client: `httpx.AsyncClient` + XML parsing
-  - Auth: None (RSS)
-- **ET Pharma** (`ETPharmaRSSConnector`) — Economic Times India pharma RSS (`pharma.economictimes.indiatimes.com/rss/topstories`) + drug_approvals feed
+  - Auth: Public RSS
+- **ET Pharma** (`backend/app/connectors/et_pharma.py` - `ETPharmaRSSConnector`)
+  - Endpoints: Economic Times Pharma RSS (`pharma.economictimes.indiatimes.com/rss/topstories`, drug approvals)
+  - Ingestion Model: Regional APAC market signals and global biopharma manufacturing developments
   - SDK/Client: `httpx.AsyncClient` + XML parsing
-  - Auth: None (RSS)
+  - Auth: Public RSS
 
-**LLM / AI Reasoning:**
-- **Local Gemma (llama-cpp-python)** (`GemmaProvider`) — Loads `.gguf` files from `models/` directory via `llama-cpp-python` Llama class; GPU-accelerated with CUDA 12.4 (n_gpu_layers), CPU fallback with `n_gpu=0`
-  - SDK/Client: `llama-cpp-python` package
-  - Auth: None (local inference)
-- **Local Gemma (Ollama sidecar)** (`GemmaProvider`) — Connects to Ollama daemon at `OLLAMA_HOST` (default `http://localhost:11434`); model `gemma3:4b`; supports streaming via `/api/generate` NDJSON
-  - SDK/Client: `httpx.AsyncClient` to Ollama API
+**LLM & AI Reasoning Providers:**
+- **Local Gemma 3 4B (llama-cpp-python)** (`backend/app/providers/gemma.py` - `GemmaProvider`)
+  - Model: Gemma 3 4B Instruct (`gemma-3-4b-it-Q4_K_M.gguf`) in `models/`
+  - Acceleration: Native CUDA 12.4 with GPU layer offloading or AVX2 CPU execution
+  - Mode: Primary reasoning engine for intelligence synthesis and Athena chat
+  - SDK/Client: `llama-cpp-python`
+  - Auth: None (local offline inference)
+- **Local Gemma (Ollama Sidecar)** (`backend/app/providers/gemma.py` - `GemmaProvider`)
+  - Daemon: Ollama at `OLLAMA_HOST` (default `http://localhost:11434` or Docker service `ollama`)
+  - Model: `gemma3:4b`
+  - Capabilities: Full NDJSON token streaming via `/api/generate`
+  - SDK/Client: `httpx.AsyncClient`
   - Auth: None (local daemon)
-- **Hosted xAI Grok API** (`GrokProvider`) — Chat completions at `api.x.ai/v1/chat/completions` with `grok-beta` model; privacy gate enforces PUBLIC/SYNTHETIC classification only
-  - SDK/Client: `httpx.AsyncClient`
-  - Auth: `XAI_API_KEY` or `GROK_API_KEY` env var; Bearer token
-- **BART Degraded Fallback** (`DegradedProvider`) — Truncation-based factual summarization when no LLM available; REASONING and ACTIONS explicitly disabled
-  - SDK/Client: None (built-in text processing)
+- **Hosted xAI Grok API** (`backend/app/providers/grok.py` - `GrokProvider`)
+  - Endpoints: `api.x.ai/v1/chat/completions`
+  - Model: `grok-beta`
+  - Privacy Gate: Hard constraint blocking any payload classified as `CONFIDENTIAL` or `PATIENT_IDENTIFIABLE`. Transmits only `PUBLIC` and `SYNTHETIC` data.
+  - SDK/Client: `httpx.AsyncClient` with `Bearer` token
+  - Auth: `XAI_API_KEY` or `GROK_API_KEY`
+- **Degraded Factual Mode** (`backend/app/providers/degraded.py` - `DegradedProvider`)
+  - Approach: Deterministic heuristic summarization when LLMs are offline; explicitly marks reasoning & action items as ungrounded
+  - SDK/Client: Built-in Python string algorithms
 
-**Embeddings:**
-- **FastEmbed** (`sentence-transformers/all-MiniLM-L6-v2`, revision `e4bb823e5956b6277b069d276b978c48a73507c7`) — 384-dimensional embeddings, max sequence length 256; used for vector search
-  - SDK/Client: `fastembed` package
-  - Auth: None (local model)
+**Embeddings Engine:**
+- **FastEmbed** (`backend/app/services/embeddings.py` - `EmbeddingService`)
+  - Model: `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
+  - Execution: Local CPU/ONNX runtime; zero cloud dependency
+  - Client: `fastembed` Python package
 
 ## Data Storage
 
 **Databases:**
-- **PostgreSQL 16** + **pgvector** (384-dimensional vectors)
-  - Connection: `postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar`
-  - Client: SQLAlchemy 2.0 async ORM with `asyncpg` driver
-  - Migrations: Alembic (`backend/alembic.ini`, `backend/alembic/versions/` with 14 migration files)
-  - Docker: `pgvector/pgvector:pg16` image; persistent volume `pgdata`
-- **Redis 7** (async) — Caching, rate-limiting, connector state/quota tracking
-  - Connection: `redis://localhost:6379/0`
-  - Client: `redis` >=5.0.3 Python async client
-  - Docker: `redis:7-alpine`; persistent volume `redisdata`
+- **PostgreSQL 16 + pgvector** (`pgvector/pgvector:pg16`)
+  - Connection: `DATABASE_URL=postgresql+asyncpg://metaradar:metaradar_pass@localhost:5432/metaradar`
+  - Client: SQLAlchemy 2.0 async engine with `asyncpg` driver
+  - Migrations: Alembic (`backend/alembic.ini`, `backend/alembic/versions/` with 14 version files)
+  - Tables: Medallion architecture — `raw_signals_bronze`, `evidence`, `developments`, `signals`, `calibration_runs`, `scoring_weights`, `audit_log`, `users`, `sessions`
+- **Redis 7** (`redis:7-alpine`)
+  - Connection: `REDIS_URL=redis://localhost:6379/0`
+  - Client: `redis.asyncio` Python client
+  - Role: Rate limiting counters, connector health cache, deduplication buffers, session caching
 
 **File Storage:**
-- **Local filesystem** for GGUF model files (`models/` directory, `.gguf` files)
-- **Local filesystem** for application logs (`logs/backend.log`, `logs/frontend.log`)
-- **Local filesystem** for domain config (`config/haemophilia.yaml`)
-- Docker volumes: `models_cache` (appended to `/app/models`), `ollama_models` (Ollama model storage at `/root/.ollama`)
+- Local model weights in `models/` directory (GGUF quant files)
+- Docker persistent volumes: `pgdata`, `redisdata`, `models_cache`, `ollama_models`
+- Runtime logs in `logs/backend.log` and `logs/frontend.log`
+- Domain configuration in `config/haemophilia.yaml`
 
 **Caching:**
-- Redis for connector quota tracking, session state, and pipeline caching
-- In-memory caching for domain config (`_domain_config_cache` in `domain_config.py`)
+- Redis for dynamic state caching and rate limiting
+- In-memory thread-safe dictionary cache for parsed domain YAML in `backend/app/core/domain_config.py`
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Custom session-based authentication with bcrypt password hashing and itsdangerous timestamped token signing
-- Implementation: `backend/app/core/security.py` (`hash_password`, `verify_password`, `sign_session_token`, `unsign_session_token`, `generate_session_bound_csrf`, `verify_session_bound_csrf`)
-- Session cookie: `metaradar_session`; CSRF cookie: `metaradar_csrf`
-- Demo mode enabled (`DEMO_MODE=true`) with `/auth/demo-login` endpoint; auto-seeds demo users
+- Custom enterprise session-based authentication with bcrypt password hashing
+- Token Signing: Timestamped cryptographic tokens signed via `itsdangerous.TimestampSigner`
+- CSRF Protection: Session-bound HMAC-SHA256 tokens validated on all mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`)
+- Demo Mode (`DEMO_MODE=true`): 7 pre-seeded stakeholder personas (Medical Affairs, Regulatory, Commercial, Pipeline Strategy, Drug Safety, Market Access, Clinical Dev)
 
-**Session Management:**
-- Session lifetime: 28800s absolute, 3600s idle timeout (`SESSION_LIFETIME_SECONDS`, `SESSION_IDLE_TIMEOUT_SECONDS`)
-- HMAC-SHA256 CSRF tokens cryptographically bound to session ID
-- SHA-256 token hashing for persistent session indexing
-
-**API Key Management:**
-- `METARADAR_API_KEY` — Optional API key for service access
-- `CORS_ORIGINS` — Allowed origins (default `http://localhost:3000`)
+**Session Policies:**
+- Absolute Session Lifetime: 28,800 seconds (8 hours)
+- Idle Session Timeout: 3,600 seconds (1 hour)
+- Cookie Security: `HttpOnly`, `SameSite="lax"`, dynamic `Secure` enforcement in production
 
 ## Monitoring & Observability
 
-**Error Tracking:**
-- Not detected — no dedicated error tracking service (Sentry, etc.)
-- `OllamaUnavailableError` and `GrokUnavailableError` propagate for graceful fallback
-- `ConnectorFetchError` for HTTP failure detection
+**Error Tracking & Health:**
+- `GET /api/v1/health` — Application health, database liveness, and model availability
+- `GET /api/v1/health/connectors` — Detailed health telemetry and quota remaining per connector
+- `GET /api/v1/observability/activity` — Real-time event log and pipeline audit trail
+- Docker health checks on all backing containers (`pg_isready`, `redis-cli ping`, Ollama ping)
 
-**Logs:**
-- **structlog** structured JSON logging (`backend/app/core/logging.py`)
-- Secret scrubbing via `SecretScrubFilter` and `_scrub_secrets` processor — redacts API keys, tokens, passwords, emails
-- Correlation ID tracing via `CorrelationIdMiddleware` (`X-Request-ID`, `X-Correlation-ID`)
-- Log output to `logs/backend.log` and `logs/frontend.log` via `start.py`
-- `[ATHENA]`, `[INGESTION]`, `[PIPELINE]`, `[LLM]` markers surfaced in live telemetry
-
-**Health Checks:**
-- `backend/app/api/v1/endpoints/health.py` — Service health endpoint
-- `backend/app/connectors/base.py` — `ConnectorStatus` and `SourceHealthLog` per connector
-- Docker health checks on all compose services (`pg_isready`, `redis-cli ping`, `curl` to Ollama and backend)
-- `start.py` heartbeat telemetry every ~15 seconds checking backend (200 OK) and frontend availability
-
-**Observability Endpoint:**
-- `backend/app/api/v1/endpoints/observability.py` — Observability & system health API
-- `backend/app/api/v1/endpoints/cache.py` — Cache management API
+**Structured Logging:**
+- `structlog` with JSON output in production and colored console in development
+- Automatic secret and credential scrubbing (`SecretScrubFilter`)
+- Correlation ID propagation via `asgi-correlation-id` (`X-Request-ID`, `X-Correlation-ID`)
 
 ## CI/CD & Deployment
 
-**Hosting:**
-- Docker Compose multi-service deployment (`docker-compose.yml`)
-- Services: `postgres`, `redis`, `backend`/`backend-gpu` (GPU profile), `frontend`, `ollama`
-- Backend exposed on port 8000, frontend on port 3000
+**CI Pipeline (GitHub Actions):**
+- Workflow: `.github/workflows/ci.yml`
+- Triggers: Push and PR to `main`, `develop`, and `feature/*` branches
+- Execution Matrix:
+  1. Backend Pytest: 186 unit/integration tests with `pytest`
+  2. Contract Verification: `export_openapi.py` diff check against `frontend/types/api.ts`
+  3. Frontend Static Analysis: `tsc --noEmit`
+  4. Banned Class Verification: `scripts/check-banned-classes.mjs`
+  5. ESLint: `pnpm lint` with Next.js 16 rules
+  6. Next.js Production Build: `pnpm build`
 
-**CI Pipeline:**
-- **GitHub Actions** (`.github/workflows/ci.yml`) — MetaRadar v5.1 CI
-  - Triggers: push to `main`, `develop`, `feature/*`; PRs to `main`, `develop`
-  - Steps: Backend pytest (`pytest -v`), TypeScript contract sync (`scripts/export_openapi.py` → `frontend/types/api.ts` diff check), pnpm install, `tsc --noEmit`, banned class gate (`check-banned-classes`), `pnpm lint`, `pnpm build`
-  - Python 3.11 via `actions/setup-python@v5`; Node.js 22 via `actions/setup-node@v4`; pnpm via `pnpm/action-setup@v4`
-
-**Deployment:**
-- Docker Compose production: `docker compose up -d`
-- Backend launched via `uvicorn app.main:app --host 0.0.0.0 --port 8000`
-- Frontend launched via `pnpm run dev` or `npx next start -p 3000` (production)
-- `start.py` orchestrates service startup with port cleanup, graceful shutdown on SIGINT/SIGTERM, and live log streaming
-- `setup.py` automates prerequisite checks, dependency installation, Docker bootstrap, migrations, seeding, and model setup
-
-**GPU Deployment:**
-- `backend-gpu` service uses `profiles: ["gpu"]` with NVIDIA device reservation (1 GPU, all capabilities)
-- CUDA 12.4 prebuilt wheel from `jllllll.github.io/llama-cpp-python-cuBLAS-wheels/AVX2/cu124`
-- `LLM_DEVICE=cuda:0` for GPU backend
+**Deployment Orchestration:**
+- `docker-compose.yml` orchestrates `postgres`, `redis`, `backend`/`backend-gpu`, `frontend`, and `ollama`
+- `setup.py` provides zero-config environment initialization
+- `start.py` launches services with port conflict resolution and unified log streaming
 
 ## Environment Configuration
 
-**Required env vars:**
-- `DATABASE_URL` — PostgreSQL connection string
-- `REDIS_URL` — Redis connection string
-- `LLM_PROVIDER` — `local` (default), `xai`, or `auto`
-- `NEWSAPI_KEY` — NewsAPI key (required for NewsAPI connector; `configuration_error_for` validates)
-- `CORS_ORIGINS` — Comma-separated allowed origins
+**Required Environment Variables:**
+- `DATABASE_URL` — PostgreSQL connection URI
+- `REDIS_URL` — Redis connection URI
+- `LLM_PROVIDER` — Provider selection (`local`, `xai`, `auto`)
+- `CORS_ORIGINS` — Allowed CORS origins (e.g. `http://localhost:3000`)
+- `SECRET_KEY` — Cryptographic signing key for sessions and CSRF
 
-**Optional env vars:**
-- `XAI_API_KEY` / `GROK_API_KEY` — xAI Grok API key for hosted fallback
-- `ENABLE_GROK_FALLBACK` — Toggle Grok fallback (`true`/`false`)
+**Optional Environment Variables:**
+- `XAI_API_KEY` / `GROK_API_KEY` — xAI hosted model API key
+- `ENABLE_GROK_FALLBACK` — Enable/disable fallback to Grok (`true`/`false`)
+- `NEWSAPI_KEY` / `NEWS_API_KEY` — NewsAPI key
 - `NCBI_API_KEY` — NCBI E-utilities API key
 - `OPENFDA_API_KEY` — OpenFDA API key
-- `LLM_DEVICE` — `cpu`, `cuda`, `auto`
-- `LLM_GPU_LAYERS` — GPU layer count for CUDA
-- `MAX_CONTEXT_TOKENS` (default 2048), `MAX_OUTPUT_TOKENS` (default 512)
-- `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION` (default 384)
-- `SECRET_KEY` — Session signing secret (default `dev-secret-change-in-production`)
-- `DOMAIN_CONFIG_PATH` — Override domain config YAML path
+- `OLLAMA_HOST` — Ollama daemon URI (default `http://localhost:11434`)
+- `LLM_DEVICE` — Device target (`auto`, `cuda`, `cpu`)
+- `LLM_GPU_LAYERS` — Number of layers to offload to GPU
 
-**Secrets Location:**
-- `.env` file at repository root (listed in `.gitignore` but present with development values)
-- Per-service secrets in Docker Compose environment section (PostgreSQL password `metaradar_pass`)
-- **WARNING:** `.env` contains actual API keys for development; these must not be committed to production repositories
+## Webhooks & Callbacks
 
-**Webhooks & Callbacks:**
-- None detected — all external integrations are pull-based (API polling/RSS feed ingestion)
-- No incoming webhook endpoints configured
-- Ollama daemon provides `/api/generate` and `/api/tags` endpoints for inference
+**Incoming:** None (system utilizes polite pull-based polling for external data freshness)
+**Outgoing:** None (no unauthenticated webhook dispatches; client communication occurs over REST & SSE)
 
 ---
 
-*Integration audit: 2026-08-30*
+*Integration audit: 2026-09-01*

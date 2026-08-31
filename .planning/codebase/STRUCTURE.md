@@ -1,6 +1,6 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-08-30
+**Analysis Date:** 2026-09-01
 
 ## Directory Layout
 
@@ -47,6 +47,7 @@ MetaRadar/
 │   ├── package.json          # Node dependencies and scripts
 │   └── tsconfig.json         # TypeScript configuration
 ├── config/                   # Domain configuration & disease ontology (haemophilia.yaml)
+├── contracts/                # OpenAPI canonical contract (openapi.json)
 ├── models/                   # Local GGUF model binaries (Gemma 3 4B)
 ├── scripts/                  # Utilities, parity checkers, migration runners
 ├── tests/                    # Pytest test suite (unit, integration, e2e, RBAC)
@@ -60,7 +61,7 @@ MetaRadar/
 
 **`backend/app/api/v1/endpoints/`:**
 - Purpose: HTTP request routing and API parameter serialization.
-- Contains: Route handlers for signals (`signals.py`), search (`search.py`), authentication (`auth.py`), ingestion (`ingestion.py`), observability (`observability.py`), feedback (`feedback.py`), intelligence (`intelligence.py`), pipeline (`pipeline.py`), registry (`registry.py`), cache (`cache.py`).
+- Contains: Route handlers for signals (`signals.py`), search (`search.py`), authentication (`auth.py`), ingestion (`ingestion.py`), observability (`observability.py`), feedback (`feedback.py`), intelligence (`intelligence.py`), pipeline (`pipeline.py`), registry (`registry.py`), cache (`cache.py`), health (`health.py`).
 - Key files: `signals.py`, `intelligence.py`, `ingestion.py`.
 
 **`backend/app/connectors/`:**
@@ -102,8 +103,9 @@ MetaRadar/
 - LLM Provider Factory: `backend/app/providers/factory.py`
 - Vector Embeddings: `backend/app/services/embeddings.py`
 
-**Testing:**
-- Python Tests: `tests/`
+**Testing & Contracts:**
+- Python Tests: `tests/` (30 test files)
+- OpenAPI Contract: `contracts/openapi.json`
 - Frontend Banned Classes Check: `scripts/check-banned-classes.mjs`
 - Schema Parity Check: `scripts/generate_parity_matrix.py`
 
@@ -116,8 +118,8 @@ MetaRadar/
 - Configuration / Domain YAML: `snake_case.yaml` (e.g., `haemophilia.yaml`)
 
 **Directories:**
-- Backend: `snake_case` (e.g., `app/api/v1/endpoints/`)
-- Frontend Components: `kebab-case` (e.g., `components/missing-signals/`, `components/star-portal/`)
+- Backend: `snake_case` (e.g., `backend/app/api/v1/endpoints/`)
+- Frontend Components: `kebab-case` (e.g., `components/missing-signals/`, `components/effects/star-portal/`)
 
 ## Where to Add New Code
 
@@ -154,6 +156,11 @@ MetaRadar/
 - Generated: Created automatically by `start.py`.
 - Committed: No (gitignored).
 
+**`.planning/`:**
+- Purpose: GSD workflow planning artifacts, roadmap, execution state, and codebase map.
+- Generated: Created and maintained by GSD commands.
+- Committed: Yes (persists project memory across sessions).
+
 ---
 
-*Structure analysis: 2026-08-30*
+*Structure analysis: 2026-09-01*

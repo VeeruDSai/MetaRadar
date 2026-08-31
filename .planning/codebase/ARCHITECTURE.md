@@ -1,6 +1,7 @@
+<!-- refreshed: 2026-09-01 -->
 # Architecture
 
-**Analysis Date:** 2026-08-30
+**Analysis Date:** 2026-09-01
 
 ## System Overview
 
@@ -12,7 +13,7 @@
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                       API & MIDDLEWARE LAYER                                    │
 │  FastAPI + CORSMiddleware │ CorrelationIdMiddleware │ SecurityHeadersMiddleware│
-│  backend/app/main.py → backend/app/api/v1/endpoints/{signals,athena,...}     │
+│  backend/app/main.py → backend/app/api/v1/endpoints/{signals,intelligence...}│
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                     WORKFLOW & INTELLIGENCE LAYER                                 │
 │  LangGraph 11-Node Pipeline │ backend/app/workflows/graph.py                │
@@ -21,7 +22,7 @@
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                      DOMAIN & SERVICE LAYER                                     │
 │  Business Logic │ backend/app/services/{scoring,routing,ingestion,calibrat...}│
-│  Connectors │ backend/app/connectors/{pubmed,fda,ema,newsapi,...}            │
+│  Connectors │ backend/app/connectors/{pubmed,fda,ema,newsapi,trials,...}     │
 │  Providers │ backend/app/providers/{gemma,grok,degraded}                      │
 │  Schemas │ backend/app/schemas/{intelligence,auth,registry}                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -38,17 +39,17 @@
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| **Next.js Frontend** | React 19 UI dashboard, signal review, Athena chat, routing | `frontend/app/`, `frontend/components/` |
+| **Next.js Frontend** | React 19 UI dashboard, signal review, Athena chat, dynamic routing | `frontend/app/`, `frontend/components/` |
 | **FastAPI App** | REST API, auth, CORS, correlation ID middleware | `backend/app/main.py` |
 | **API Endpoints** | Signal CRUD, Athena synthesis, search, feedback, ingestion, pipeline execution | `backend/app/api/v1/endpoints/` |
 | **LangGraph Pipeline** | 11-node intelligence pipeline orchestrating signal processing | `backend/app/workflows/graph.py` |
-| **Pipeline Nodes** | Individual processing steps: ingest, validate, embed, NLP, ontology, confluence, lifecycle, redteam, missing_signal, synthesize, calibrate | `backend/app/workflows/nodes/*.py` |
+| **Pipeline Nodes** | Individual transformation steps: ingest, validate, embed, NLP, ontology, confluence, lifecycle, redteam, missing_signal, synthesize, calibrate | `backend/app/workflows/nodes/*.py` |
 | **State Management** | TypedDict state with annotated reducers for accumulating signal data | `backend/app/workflows/state.py` |
 | **Source Connectors** | 8 source adapters (PubMed, FDA, EMA, ClinicalTrials, NewsAPI, FiercePharma, ETPharma, BioPharmaDive) | `backend/app/connectors/*.py` |
-| **Provider Factory** | LLM fallback chain: Gemma → Grok → BART Degraded | `backend/app/providers/factory.py` |
-| **Gemma Provider** | Local GGUF + Ollama inference with streaming | `backend/app/providers/gemma.py` |
+| **Provider Factory** | LLM fallback chain: Gemma 3 4B → Grok → BART Degraded | `backend/app/providers/factory.py` |
+| **Gemma Provider** | Local GGUF (`llama-cpp-python`) + Ollama sidecar inference with streaming | `backend/app/providers/gemma.py` |
 | **Grok Provider** | xAI Grok API with mandatory privacy gate | `backend/app/providers/grok.py` |
-| **Degraded Provider** | BART factual fallback when LLM unavailable | `backend/app/providers/degraded.py` |
+| **Degraded Provider** | Factual summarization fallback when LLMs are unavailable | `backend/app/providers/degraded.py` |
 | **Ingestion Service** | Orchestrates connector runs, bronze persistence, health telemetry | `backend/app/services/ingestion.py` |
 | **Scoring Service** | Signal priority scoring with haemophilia-specific keyword weights | `backend/app/services/scoring.py` |
 | **Routing Service** | Stakeholder function routing and signal assignment | `backend/app/services/routing.py` |
@@ -77,13 +78,13 @@ The platform uses a three-tier medallion data architecture for signal provenance
 
 Intelligence synthesis follows a strict 3-tier fallback chain managed by `ProviderFactory`:
 
-1. **Local Gemma** (primary): `GemmaProvider` — tries local `.gguf` file via `llama-cpp-python`, then Ollama sidecar at `http://localhost:11434`. Never crashes (`OllamaUnavailableError` on failure).
+1. **Local Gemma 3 4B** (primary): `GemmaProvider` — tries local `.gguf` file via `llama-cpp-python`, then Ollama sidecar at `http://localhost:11434`. Never crashes (`OllamaUnavailableError` on failure).
 2. **Grok/xAI** (fallback 1): `GrokProvider` — only invoked if `XAI_API_KEY` or `GROK_API_KEY` is configured and `ENABLE_GROK_FALLBACK=true`. Privacy gate enforces `PUBLIC` or `SYNTHETIC` classification only.
-3. **BART Degraded** (fallback 2): `DegradedProvider` — factual summarization only when both Gemma and Grok fail. Explicitly disables reasoning and action generation.
+3. **Degraded Mode** (fallback 2): `DegradedProvider` — factual summarization only when both Gemma and Grok fail. Explicitly disables ungrounded reasoning and action generation.
 
 ### Privacy Gate
 
-The `GrokProvider.validate_privacy_gate()` method blocks external transmission of `CONFIDENTIAL`, `INTERNAL`, or `PATIENT_IDENTIFIABLE` data classifications. Only `PUBLIC` and `SYNTHETIC` data may reach `api.x.ai`. The `PIIPHIScrubber` (`app/services/pii.py`) sanitizes text before any persistence or external transmission.
+The `GrokProvider.validate_privacy_gate()` method blocks external transmission of `CONFIDENTIAL`, `INTERNAL`, or `PATIENT_IDENTIFIABLE` data classifications. Only `PUBLIC` and `SYNTHETIC` data may reach `api.x.ai`. The `PIIPHIScrubber` (`backend/app/services/pii.py`) sanitizes text before any persistence or external transmission.
 
 ## Layers
 
@@ -210,7 +211,7 @@ The `GrokProvider.validate_privacy_gate()` method blocks external transmission o
 
 ## Cross-Cutting Concerns
 
-**Logging**: `structlog` for structured JSON logging throughout the backend. `configure_structlog(json_logs=True)` in main.py.
+**Logging**: `structlog` for structured JSON logging throughout the backend. `configure_structlog(json_logs=True)` in `backend/app/main.py`.
 
 **Validation**: Pydantic models for schemas, `validate_state_transition` FSM for review state machine, privacy gate for data classification.
 
@@ -222,4 +223,4 @@ The `GrokProvider.validate_privacy_gate()` method blocks external transmission o
 
 ---
 
-*Architecture analysis: 2026-08-30*
+*Architecture analysis: 2026-09-01*
