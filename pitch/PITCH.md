@@ -1,4 +1,4 @@
-﻿# MetaRadar: Master Pitch Deck & Hackathon Odyssey
+# MetaRadar: Master Pitch Deck & Hackathon Odyssey
 
 **Novo Nordisk GBS Hackathon 2026 — Problem Statement #3: Rare Disease Competitive Intelligence Radar**  
 *Pilot Implementation: Haemophilia A & Haemophilia B*  
@@ -66,13 +66,13 @@ The core failure of current solutions is **information fragmentation and ungroun
 ### Q3: Overall Concept, Key Features, Interface & Improved Decision-Making
 - **Overall Concept**: An autonomous Medallion-architecture intelligence radar (Bronze WORM → Silver Normalized → Gold Synthesized) orchestrating continuous ingestion, semantic vector retrieval, zero-shot NLI contradiction testing, and role-scoped decision delivery.
 - **Key Features**:
-  1. *10-Node LangGraph Reasoning DAG*: Stateful multi-agent execution pipeline (`PipelineRunner`).
+  1. *11-Node LangGraph Intelligence Pipeline*: Stateful multi-agent execution pipeline (`PipelineRunner`).
   2. *Autonomous 48-Hour Confluence Engine*: Clusters multi-source reports into unified developments.
   3. *7-Stage Asset Lifecycle Tracker*: Maps candidate molecules from Preclinical to Post-Marketing Surveillance.
   4. *Red-Team Contradiction Engine*: Zero-shot BART-Large-MNLI NLI comparing claims against baseline trials.
   5. *Missing Signal FSM*: State machine tracking expected trial milestones and alerting on silence.
   6. *Athena AI Copilot*: Hybrid dense-sparse RAG with token-by-token SSE streaming and 100% clickable source citations.
-  7. *WORM Immutable Audit Log*: PostgreSQL physical trigger preventing record tampering for GxP readiness.
+  7. *WORM Immutable Audit Log*: PostgreSQL physical trigger preventing record tampering for auditability and governance.
 - **Interface**: Next.js 16 App Router interface featuring 13 specialized workspaces, a collapsible executive docking bar, global ⌘K semantic search, and 3D holographic role profiles.
 - **Improved Decision-Making**: Compresses cross-functional intelligence synthesis from 15+ hours of manual review to seconds, prevents ungrounded AI hallucinations via verbatim citations, and provides an executive sign-off queue with binding directives.
 
@@ -171,7 +171,7 @@ MetaRadar connects to **8 verified public and regulatory data sources** governed
 │        │                             │ • PostgreSQL 16 + pgvector schema (22 tables)     │
 │        │                             │ • Bronze WORM store & PII/PHI regex scrubber      │
 ├────────┼─────────────────────────────┼───────────────────────────────────────────────────┤
-│ Week 3 │ AI Reasoning & Scoring DAG  │ • 10-Node LangGraph DAG orchestrator              │
+│ Week 3 │ AI Reasoning & Scoring DAG  │ • 11-Node LangGraph Intelligence Pipeline orchestrator │
 │        │                             │ • Deterministic 4-Factor priority scoring math    │
 │        │                             │ • BART-Large-MNLI Red-Team contradiction engine   │
 ├────────┼─────────────────────────────┼───────────────────────────────────────────────────┤
@@ -247,7 +247,7 @@ In the rare disease competitive intelligence space — particularly Haemophilia 
 
 1. **Information Fragmentation**: Clinical trial readouts (ClinicalTrials.gov), regulatory filings (FDA/EMA), safety signals (FAERS/OpenFDA), and industry press releases (BioPharma Dive, FiercePharma) live in completely isolated silos. No single team sees the full picture.
 2. **Ungrounded AI Summaries**: Generic LLMs like ChatGPT fabricate trial IDs, invent PMIDs, and have static knowledge cutoffs. In biopharma, a hallucinated citation can trigger a costly mis-informed strategic decision.
-3. **No Governance or Accountability**: When a critical signal arrives, there is no structured process to assign ownership, enforce review, or record audit-proof decision rationale — especially problematic for GxP environments.
+3. **No Governance or Accountability**: When a critical signal arrives, there is no structured process to assign ownership, enforce review, or record auditable decision rationale — vital for biopharma decision governance.
 
 #### Who Is Impacted?
 
@@ -270,7 +270,7 @@ Six cross-functional enterprise stakeholders, each with distinct intelligence ne
 
 #### Your Solution in 1–2 Sentences
 
-MetaRadar is a fully autonomous, air-gapped competitive intelligence radar that continuously ingests 8 authoritative biomedical feeds, synthesizes evidence into epistemically tagged Four-Question Decision Briefs, and enforces cross-functional governance — all without a single human prompt.
+MetaRadar is an autonomous, evidence-grounded competitive intelligence radar with local offline LLM execution options that continuously ingests 8 authoritative biomedical feeds, synthesizes evidence into epistemically tagged Four-Question Decision Briefs, and enforces cross-functional governance — all without requiring manual prompts.
 
 Unlike generic AI tools, MetaRadar never presents speculation as fact: every claim is labeled `[FACT]`, `[INTERPRETATION]`, or `[SPECULATION]` and linked to a primary verifiable source.
 
@@ -285,11 +285,13 @@ Bronze WORM Store (raw_signals_bronze — immutable, tamper-proof)
         ↓
 PII/PHI Scrubber → 384-dim Vector Embedding (pgvector HNSW)
         ↓
-10-Node LangGraph DAG:
+11-Node LangGraph Intelligence Pipeline:
   ├─ Confluence Detector (48h temporal clustering)
   ├─ Asset Lifecycle Tracker (7-stage: Preclinical → Post-Marketing)
   ├─ Red-Team Contradiction Engine (BART-Large-MNLI zero-shot NLI)
-  └─ Missing Signal FSM (expected milestone silence → active alert)
+  ├─ Missing Signal FSM (expected milestone silence → active alert)
+  ├─ Four-Question Brief Synthesizer ([FACT] tagged)
+  └─ Stakeholder Calibration Engine (HITL online feedback)
         ↓
 Deterministic 4-Factor Priority Scoring (Score 0–100)
         ↓
@@ -316,8 +318,8 @@ Role-Scoped Delivery → 13 Workspaces + Athena Copilot + Executive Sign-Off Que
 |-----------|--------|
 | **Time** | Intelligence synthesis: 15+ hours → seconds. Alert-to-action latency: weeks → minutes. |
 | **Cost** | Reduces manual monitoring FTE effort by an estimated 75%; eliminates costly mis-informed strategic decisions from hallucinated AI summaries. |
-| **Quality** | 100% primary-source-verified citations; zero LLM hallucinations; epistemically honest `[FACT]` vs `[SPECULATION]` tagging. |
-| **Outcomes** | Zero missed regulatory deadlines; proactive competitive positioning 2–4 weeks ahead of quarterly reports; complete GxP audit trail. |
+| **Quality** | 100% primary-source-verified citations; evidence-grounded outputs with source provenance; epistemically honest `[FACT]` vs `[SPECULATION]` tagging. |
+| **Outcomes** | Timely regulatory surveillance; proactive competitive positioning 2–4 weeks ahead of quarterly reports; immutable audit trail. |
 
 ---
 
@@ -337,17 +339,18 @@ Layer 2 — Processing (Silver):
   → 384-dim HNSW pgvector embedding → signals table (Silver)
 
 Layer 3 — AI Reasoning (Gold):
-  10-Node LangGraph DAG (PipelineRunner):
-    Node 1: validate    — Schema & payload integrity check
-    Node 2: enrich      — Entity extraction (Asset, Target, Modality, Stage)
-    Node 3: embed       — Vector embedding & cosine novelty scoring
-    Node 4: score       — Deterministic 4-factor priority math
-    Node 5: confluence  — 48h temporal multi-source clustering
-    Node 6: lifecycle   — 7-stage clinical asset state machine
-    Node 7: redteam     — BART-Large-MNLI zero-shot NLI contradiction
-    Node 8: missing     — Missing milestone FSM silence detection
-    Node 9: brief       — Four-Question Decision Brief synthesis
-    Node 10: route      — Role-scoped delivery & WORM audit log
+  11-Node LangGraph Intelligence Pipeline (PipelineRunner):
+    Node 1: ingest      — Verbatim Bronze persistence & deduplication
+    Node 2: validate    — PII/PHI scrubbing & relevance gating
+    Node 3: embed       — 384-dim vector embedding & novelty distance
+    Node 4: nlp_extract — 5-dimensional entity & claim extraction
+    Node 5: ontology    — Disease concept & asset mapping
+    Node 6: confluence  — 48h temporal multi-source clustering
+    Node 7: lifecycle   — 7-stage clinical development state machine
+    Node 8: redteam     — BART-Large-MNLI zero-shot NLI contradiction testing
+    Node 9: missing     — Milestone silence FSM anomaly detection
+    Node 10: synthesize — Four-Question Decision Brief generation
+    Node 11: calibrate  — HITL online gradient weight recalibration
 
 Layer 4 — Delivery (UI):
   Next.js 16 App Router → 13 Workspaces → Athena Copilot (SSE streaming)
@@ -362,9 +365,9 @@ Layer 4 — Delivery (UI):
 |-----------|-----------|--------------|
 | **Data Ingestion** | Python asyncio + httpx | 8 async connector streams with advisory locking, circuit breakers, and SHA-256 deduplication. |
 | **Vector Store** | PostgreSQL 16 + pgvector | HNSW-indexed 384-dim embeddings for sub-250ms semantic search across all ingested signals. |
-| **AI Reasoning DAG** | LangGraph (Python) | 10-node stateful execution graph orchestrating all intelligence operations with full state persistence. |
+| **AI Reasoning DAG** | LangGraph (Python) | 11-node stateful execution graph orchestrating all intelligence operations with full state persistence. |
 | **Contradiction Engine** | BART-Large-MNLI | Zero-shot NLI to detect entailment/contradiction between new claims and clinical baselines. |
-| **LLM Reasoning** | Local Gemma-3 4B GGUF | 100% air-gapped on-premise local reasoning for Athena Copilot — zero data leaves the machine. |
+| **LLM Reasoning** | Local Gemma-3 4B GGUF | Local LLM execution option for Athena Copilot — no external transmission of proprietary data. |
 | **Streaming Copilot** | FastAPI + SSE | Token-by-token answer streaming with inline citation pills opening primary source modals. |
 | **Governance & Audit** | PostgreSQL trigger | Physical WORM trigger (`block_audit_log_mutation`) prevents any UPDATE/DELETE on audit records. |
 | **Frontend** | Next.js 16 App Router | 13 workspaces, ⌘K semantic search, 3D holographic profile cards, live source health telemetry. |
@@ -455,7 +458,7 @@ Layer 4 — Delivery (UI):
 
 #### What Is Feasible to Implement Next After the Hackathon
 
-The current MetaRadar codebase is fully production-ready (Docker containerized, CI/CD-verified, 186 tests passing). Immediate next steps are enterprise-readiness features, not rebuilds:
+The current MetaRadar codebase is a hackathon evaluation build (Docker containerized, CI/CD-verified, 186 tests passing). Immediate next steps are enterprise-readiness features, not rebuilds:
 
 1. **Multi-tenant Enterprise SSO** (Okta / Azure AD SAML) — the RBAC skeleton is already in place; SSO wires into existing role-based routing.
 2. **Webhook Alerting** (Microsoft Teams / Slack Enterprise) — Critical-priority signals trigger outbound webhooks directly into existing biopharma communication channels.
@@ -466,7 +469,7 @@ The current MetaRadar codebase is fully production-ready (Docker containerized, 
 
 | Milestone | Timeline | Deliverable |
 |-----------|----------|-------------|
-| **M1: Enterprise SSO + GxP Audit** | Month 1 | Okta/Azure AD SAML integration; 21 CFR Part 11 compliance protocol documentation; GxP validation package draft. |
+| **M1: Enterprise SSO + Governance & Auditability** | Month 1 | Okta/Azure AD SAML integration; audit trail protocol documentation; governance verification package draft. |
 | **M2: Therapeutic Expansion** | Month 2 | Ontology YAML expansion to Sickle Cell Disease (SCD) and Beta-Thalassemia; new entity extraction patterns; dedicated signal feeds. |
 | **M3: Internal Registry Bridge** | Month 3 | CTMS/Veeva Vault API connector for internal clinical trial integration; cross-reference public vs internal trial timelines. |
 | **M4: Predictive Timeline Modeling** | Month 4 | ML regression model predicting regulatory approval timelines from historic CHMP/FDA review cycle data; timeline confidence intervals shown on Lifecycle tracker. |
@@ -476,7 +479,7 @@ The current MetaRadar codebase is fully production-ready (Docker containerized, 
 | Risk | Likelihood | Severity | Mitigation |
 |------|-----------|---------|------------|
 | **External API Rate Limiting / Downtime** | High | Medium | SourceScheduler circuit breaker + randomized jitter + cached snapshot fallback store already implemented. |
-| **GxP 21 CFR Part 11 Compliance Gap** | Medium | High | PostgreSQL WORM trigger already enforces physical immutability. Validation package (IQ/OQ/PQ documentation) is the next step — framework is ready. |
+| **Governance & Audit Trail Compliance** | Medium | High | PostgreSQL WORM trigger already enforces physical immutability. Formal validation documentation is the next step — framework is ready. |
 | **LLM Hallucination Risk (Cloud LLM fallback)** | Medium | High | All LLM outputs are grounded via RAG with pgvector evidence retrieval. Inline citations are mandatory for every Athena answer. Cloud LLM is opt-in only; local Gemma-3 is default. |
 | **Internal System Integration Effort** | Medium | Medium | Standardized REST + OpenAPI contract already published. Integration requires connector configuration only — no architectural changes. |
 | **Regulatory Data Coverage Gaps** | Low | Medium | EMA EPAR and FDA connectors are live. WHO ICTRP international coverage is next; Japanese J-STAGE planned for Month 2. |
@@ -494,12 +497,12 @@ The current MetaRadar codebase is fully production-ready (Docker containerized, 
 
 **How much?**
 - Estimated **75% reduction** in manual competitive surveillance effort per analyst per week (15+ hours → ~3 hours for exception review only).
-- **Zero missed PDUFA dates** or competitor regulatory filing windows via autonomous Missing Signal FSM alerts.
+- **Timely regulatory surveillance** via autonomous Missing Signal FSM alerts tracking PDUFA dates and trial readouts.
 - **2–4 week early warning advantage** over quarterly competitive intelligence report cycles — based on continuous monitoring vs periodic manual scans.
-- **100% elimination of AI hallucination risk** in citation-sensitive biopharma decisions — every Athena answer carries only verifiable, primary-source-linked claims.
+- **Evidence-grounded outputs with verifiable citations** in citation-sensitive biopharma decisions — every Athena answer carries verifiable, primary-source-linked claims.
 
 **How soon?**
-- The platform is **production-ready today**. A 30-day sandbox pilot can begin immediately with Docker deployment — no infrastructure procurement needed.
+- The platform is **evaluation-ready today**. A 30-day sandbox pilot can begin immediately with Docker deployment — no infrastructure procurement needed.
 
 #### Adoption Pathway
 
@@ -523,7 +526,7 @@ The current MetaRadar codebase is fully production-ready (Docker containerized, 
 #### 3 Key Takeaways for Judges
 
 > 1. **MetaRadar is not a generic LLM wrapper.** It is an ensemble of 5 specialized, purpose-built intelligence engines (Multi-Source Confluence, Asset Lifecycle Tracker, Red-Team Contradiction Engine, Missing Signal FSM, HITL Calibration) that no commercial tool replicates.
-> 2. **MetaRadar is production-ready today.** 186 tests passing, 0 TypeScript errors, 0 ESLint warnings, clean Next.js production build — built by a 5-person student team in 5 weeks with a 20-session documented debugging history.
+> 2. **MetaRadar is evaluation-ready today.** 186 tests passing, 0 TypeScript errors, 0 ESLint warnings, clean Next.js production build — built by a 5-person student team in 5 weeks with a 20-session documented debugging history.
 > 3. **MetaRadar protects lives and assets.** By ensuring every biopharma decision is grounded in verified, epistemically honest evidence — and by surfacing contradictions before they become costly strategic mistakes — MetaRadar directly protects patient safety, regulatory integrity, and Novo Nordisk's rare disease leadership position.
 
 ---
@@ -560,7 +563,7 @@ $$\text{Priority Score} = \text{Novelty } [0\text{–}25] + \text{Clinical Signi
 | **Scientific Validation** | Accepts user premise blindly. No pushback. | No contradiction detection. | **Red-Team Contradiction Engine** actively surfaces conflicting clinical endpoints and real-world cohort data. |
 | **Missing Milestones** | Only reports what happened. | Only reports what happened. | **Missing Signal FSM Tracker** flags promised trials that failed to read out on time — silence becomes an alert. |
 | **Cross-Functional Steer** | No role scoping or workflow. | Static email distribution. | **7-Persona Scoped RBAC + Executive Leadership Approval Workflow** with immutable audit trails. |
-| **Deployment Privacy** | Cloud API lock-in. Data sent externally. | Cloud vendor lock-in. | **100% Offline Air-Gapped** (Local Gemma-3 4B GGUF) or Hybrid Grok API. Zero patient data leaves the machine. |
+| **Deployment Privacy** | Cloud API lock-in. Data sent externally. | Cloud vendor lock-in. | **Local LLM Execution Available** (Local Gemma-3 4B GGUF) or Hybrid Grok API with privacy gate. No patient data leaves the environment. |
 | **Autonomous Operation** | Requires human prompting for each query. | Manual monitoring. | **Continuous background ingestion** with autonomous scheduling, circuit breakers, and source health telemetry. |
 | **Epistemic Honesty** | Blends facts with opinions. | No classification. | Every claim tagged `[FACT]`, `[INTERPRETATION]`, or `[SPECULATION]`. Speculation never presented as fact. |
 | **Domain Specificity** | Generic — no pharma/hemophilia ontology. | Generic keyword alerts. | **Curated Haemophilia Knowledge Layer** with canonical assets, therapy modalities, lifecycle states, and Red-Team evidence checks A–S. |
@@ -673,4 +676,4 @@ Each session below represents a real engineering obstacle encountered during the
 
 ---
 
-*Generated by Team MetaRadar — MS Ramaiah Institute of Technology — Production Ready*
+*Generated by Team MetaRadar — MS Ramaiah Institute of Technology — Hackathon Evaluation Build*
