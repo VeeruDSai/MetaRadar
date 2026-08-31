@@ -34,7 +34,6 @@ The core failure of current solutions is **information fragmentation and ungroun
 | **Team Member 3** | **Usha Rathore** (B.Pharm) — Evidence Quality, Red-Team Contradictions & Regulatory Affairs |
 | **Team Member 4** | **Omprakash Panda** (ISE / CSE) — System Architecture, LangGraph Orchestration & Full-Stack Engine |
 | **Team Member 5** | **Veerendra Desai** (ISE / CSE) — Vector Search (pgvector), Database Architecture & Infrastructure Telemetry |
-| **Contact Email ID** | `team.metaradar@msrit.edu` / `sanjanarathore@msrit.edu` / `omprakashpanda@msrit.edu` |
 
 ---
 

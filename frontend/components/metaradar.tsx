@@ -183,54 +183,62 @@ export function SectionTitle({
   )
 }
 
-const ROLE_PERSONAS: Record<string, { name: string; title: string; handle: string; initials: string }> = {
+const ROLE_PERSONAS: Record<string, { name: string; title: string; handle: string; initials: string; email: string }> = {
   DEVELOPER: {
     name: 'test-developer',
     title: 'Platform Engineer / Developer',
     handle: 'test.developer',
+    email: 'test-developer@metaradar.demo',
     initials: 'TD',
   },
   LEADERSHIP: {
     name: 'test-leader',
     title: 'Executive Leadership',
     handle: 'test.leader',
+    email: 'test-leader@metaradar.demo',
     initials: 'TL',
   },
   MEDICAL_AFFAIRS: {
     name: 'test-medical',
     title: 'Medical Affairs Lead',
     handle: 'test.medical',
+    email: 'test-medical@metaradar.demo',
     initials: 'TM',
   },
   REGULATORY: {
     name: 'test-regulatory',
     title: 'Regulatory Affairs Director',
     handle: 'test.regulatory',
+    email: 'test-regulatory@metaradar.demo',
     initials: 'TR',
   },
   SAFETY: {
     name: 'test-safety',
     title: 'Pharmacovigilance & Safety Lead',
     handle: 'test.safety',
+    email: 'test-safety@metaradar.demo',
     initials: 'TS',
   },
   MARKET_ACCESS: {
     name: 'test-access',
     title: 'Market Access & HEOR Lead',
     handle: 'test.access',
+    email: 'test-access@metaradar.demo',
     initials: 'TA',
   },
   COMMUNICATIONS: {
     name: 'test-comms',
     title: 'Medical Communications Lead',
     handle: 'test.comms',
+    email: 'test-comms@metaradar.demo',
     initials: 'TC',
   },
   ADMIN: {
-    name: 'test-developer',
+    name: 'test-admin',
     title: 'System Administrator',
-    handle: 'test.developer',
-    initials: 'TD',
+    handle: 'test.admin',
+    email: 'admin@metaradar.internal',
+    initials: 'TA',
   },
 }
 
@@ -592,6 +600,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               name={user?.display_name || currentPersona.name}
               title={currentPersona.title}
               handle={currentPersona.handle}
+              email={user?.email || currentPersona.email || `${currentPersona.handle}@metaradar.demo`}
               roleId={role}
               status="Online & Verified"
               contactText="Sign Out / Switch"

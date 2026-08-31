@@ -15,6 +15,14 @@ export interface PersonaOption {
 
 export const PERSONAS: PersonaOption[] = [
   {
+    id: 'DEVELOPER',
+    label: 'Developer / Engineer',
+    description: 'Full stack development, telemetry & platform administration',
+    badgeColor: 'bg-cyan-500/15 dark:bg-cyan-500/20',
+    textColor: 'text-cyan-700 dark:text-cyan-300',
+    borderColor: 'border-cyan-500/30',
+  },
+  {
     id: 'MEDICAL_AFFAIRS',
     label: 'Medical Affairs',
     description: 'Evidence evaluation & clinical advisory',

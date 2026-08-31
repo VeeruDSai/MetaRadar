@@ -9,23 +9,113 @@ import { ErrorState } from '../common/ErrorState'
 import { useTheme } from '../theme/ThemeProvider'
 import { useAuth } from '@/context/AuthContext'
 import ProfileCard from '@/components/auth/ProfileCard'
-import { Moon, Sun, Key, Database, Server, Cpu, CheckCircle2, Trash2, ShieldCheck } from 'lucide-react'
+import { 
+  Moon, 
+  Sun, 
+  Key, 
+  Database, 
+  Server, 
+  Cpu, 
+  CheckCircle2, 
+  Trash2, 
+  ShieldCheck, 
+  Users, 
+  Lock, 
+  Layers,
+  ArrowRight,
+  Radio
+} from 'lucide-react'
 
-const SETTINGS_ROLE_PERSONAS: Record<string, { name: string; title: string; handle: string }> = {
-  DEVELOPER: { name: 'test-developer', title: 'Platform Engineer / Developer', handle: 'test.developer' },
-  LEADERSHIP: { name: 'test-leader', title: 'Executive Leadership', handle: 'test.leader' },
-  MEDICAL_AFFAIRS: { name: 'test-medical', title: 'Medical Affairs Lead', handle: 'test.medical' },
-  REGULATORY: { name: 'test-regulatory', title: 'Regulatory Affairs Director', handle: 'test.regulatory' },
-  SAFETY: { name: 'test-safety', title: 'Pharmacovigilance & Safety Lead', handle: 'test.safety' },
-  MARKET_ACCESS: { name: 'test-access', title: 'Market Access & HEOR Lead', handle: 'test.access' },
-  COMMUNICATIONS: { name: 'test-comms', title: 'Medical Communications Lead', handle: 'test.comms' },
-  ADMIN: { name: 'test-developer', title: 'System Administrator', handle: 'test.developer' },
+export interface PersonaConfig {
+  id: string
+  name: string
+  title: string
+  handle: string
+  email: string
+  badgeTone: 'low' | 'medium' | 'high' | 'critical'
+  dotColor: string
+}
+
+const SETTINGS_ROLE_PERSONAS: Record<string, PersonaConfig> = {
+  DEVELOPER: { 
+    id: 'DEVELOPER',
+    name: 'test-developer', 
+    title: 'Platform Engineer / Developer', 
+    handle: 'test.developer',
+    email: 'test-developer@metaradar.demo',
+    badgeTone: 'low',
+    dotColor: '#06b6d4'
+  },
+  LEADERSHIP: { 
+    id: 'LEADERSHIP',
+    name: 'test-leader', 
+    title: 'Executive Leadership', 
+    handle: 'test.leader',
+    email: 'test-leader@metaradar.demo',
+    badgeTone: 'high',
+    dotColor: '#6366f1'
+  },
+  MEDICAL_AFFAIRS: { 
+    id: 'MEDICAL_AFFAIRS',
+    name: 'test-medical', 
+    title: 'Medical Affairs Lead', 
+    handle: 'test.medical',
+    email: 'test-medical@metaradar.demo',
+    badgeTone: 'low',
+    dotColor: '#10b981'
+  },
+  REGULATORY: { 
+    id: 'REGULATORY',
+    name: 'test-regulatory', 
+    title: 'Regulatory Affairs Director', 
+    handle: 'test.regulatory',
+    email: 'test-regulatory@metaradar.demo',
+    badgeTone: 'medium',
+    dotColor: '#3b82f6'
+  },
+  SAFETY: { 
+    id: 'SAFETY',
+    name: 'test-safety', 
+    title: 'Pharmacovigilance & Safety Lead', 
+    handle: 'test.safety',
+    email: 'test-safety@metaradar.demo',
+    badgeTone: 'critical',
+    dotColor: '#ef4444'
+  },
+  MARKET_ACCESS: { 
+    id: 'MARKET_ACCESS',
+    name: 'test-access', 
+    title: 'Market Access & HEOR Lead', 
+    handle: 'test.access',
+    email: 'test-access@metaradar.demo',
+    badgeTone: 'medium',
+    dotColor: '#f59e0b'
+  },
+  COMMUNICATIONS: { 
+    id: 'COMMUNICATIONS',
+    name: 'test-comms', 
+    title: 'Medical Communications Lead', 
+    handle: 'test.comms',
+    email: 'test-comms@metaradar.demo',
+    badgeTone: 'low',
+    dotColor: '#a855f7'
+  },
+  ADMIN: { 
+    id: 'ADMIN',
+    name: 'test-admin', 
+    title: 'System Administrator', 
+    handle: 'test.admin',
+    email: 'admin@metaradar.internal',
+    badgeTone: 'low',
+    dotColor: '#94a3b8'
+  },
 }
 
 export function SettingsWorkspace() {
   const { theme, setTheme } = useTheme()
-  const { user, role, logout } = useAuth()
+  const { user, role, logout, demoLogin } = useAuth()
   const [clearing, setClearing] = useState(false)
+  const [switchingRole, setSwitchingRole] = useState<string | null>(null)
   const [cacheResult, setCacheResult] = useState<CacheClearResponse | null>(null)
   const [error, setError] = useState<FormattedError | null>(null)
   const [sources, setSources] = useState<SourceRegistryItem[]>([])
@@ -52,6 +142,18 @@ export function SettingsWorkspace() {
     }
   }
 
+  const handleSwitchPersona = async (targetRole: string) => {
+    if (targetRole === role) return
+    setSwitchingRole(targetRole)
+    try {
+      await demoLogin(targetRole)
+    } catch (err) {
+      setError(formatError(err, `Failed to switch to persona ${targetRole}`))
+    } finally {
+      setSwitchingRole(null)
+    }
+  }
+
   const newsApiSource = sources.find((s) => s.source_id === 'newsapi')
   const newsApiConfigErr = newsApiSource?.configuration_error_message
 
@@ -60,7 +162,7 @@ export function SettingsWorkspace() {
       <SectionTitle
         eyebrow="Workspace Configuration"
         title="Settings"
-        detail="Operational controls, color theme management, cache invalidation, and external connector credentials."
+        detail="Operational controls, stakeholder persona governance, color themes, cache invalidation, and all data source connector credentials."
       />
 
       {error && (
@@ -74,38 +176,48 @@ export function SettingsWorkspace() {
         />
       )}
 
-      <div className="grid gap-4 max-w-4xl">
-        {/* Active Stakeholder Persona & 3D Interactive Profile Card */}
+      <div className="grid gap-5 max-w-5xl">
+        {/* 1. Active Stakeholder Persona & 3D Interactive Profile Card */}
         <Card className="overflow-hidden">
           <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6">
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-3 w-full">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={18} style={{ color: 'var(--signal)' }} />
                 <h3 className="text-sm font-bold text-[var(--foreground)] m-0">
-                  Active Persona & Security Credential
+                  Active Stakeholder Identity & Credential
                 </h3>
               </div>
               <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0">
-                Your authenticated persona credentials dictate your role-based access permissions, calibration weights, and governance approval thresholds across MetaRadar.
+                Your authenticated persona credentials dictate role-based permissions, governance approval thresholds, and automated Bayesian calibration weights.
               </p>
               
               <div className="space-y-2 pt-2">
-                <div className="p-3 rounded border border-[var(--border)] bg-[var(--surface-secondary)] space-y-1.5 text-xs font-mono">
-                  <div className="flex justify-between">
-                    <span className="text-[var(--muted-foreground)]">Stakeholder Handle:</span>
-                    <strong className="text-[var(--foreground)]">@{currentPersona.handle}</strong>
+                <div className="p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-secondary)] space-y-2 text-xs font-mono">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[var(--muted-foreground)]">Stakeholder Name:</span>
+                    <strong className="text-[var(--foreground)]">{user?.display_name || currentPersona.name}</strong>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-[var(--muted-foreground)]">Assigned Role:</span>
                     <strong className="text-[var(--signal)]">{currentPersona.title}</strong>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[var(--muted-foreground)]">Account Email:</span>
+                    <span className="text-[var(--foreground)] font-semibold">{user?.email || currentPersona.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[var(--muted-foreground)]">Stakeholder Handle:</span>
+                    <strong className="text-[var(--foreground)]">@{currentPersona.handle}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
                     <span className="text-[var(--muted-foreground)]">User ID:</span>
                     <span className="text-[var(--muted-foreground)]">{user?.user_id || 'mr_usr_verified'}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-[var(--muted-foreground)]">Session Security:</span>
-                    <span className="text-emerald-500 font-semibold">Active · Nonce-Signed</span>
+                    <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                      <Lock size={11} /> Active · Nonce-Signed JWT
+                    </span>
                   </div>
                 </div>
 
@@ -113,9 +225,9 @@ export function SettingsWorkspace() {
                   <button
                     type="button"
                     onClick={() => logout()}
-                    className="px-3.5 py-1.5 rounded text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 transition shadow-xs"
+                    className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition shadow-sm cursor-pointer inline-flex items-center gap-1.5"
                   >
-                    Sign Out / Switch Persona
+                    <span>Sign Out</span>
                   </button>
                 </div>
               </div>
@@ -127,18 +239,86 @@ export function SettingsWorkspace() {
                 name={user?.display_name || currentPersona.name}
                 title={currentPersona.title}
                 handle={currentPersona.handle}
+                email={user?.email || currentPersona.email || `${currentPersona.handle}@metaradar.demo`}
                 roleId={role}
                 status="Online & Verified"
-                contactText="Switch Role"
+                contactText="Sign Out"
                 onContactClick={() => logout()}
               />
-              <span className="text-[10px] text-[var(--muted-foreground)] font-mono mt-2 text-center">
+              <span className="text-[11px] text-[var(--muted-foreground)] font-mono mt-3 text-center">
                 Interactive 3D Holographic Card
               </span>
             </div>
           </div>
         </Card>
-        {/* Theme Appearance Management */}
+
+        {/* 2. All Configured Stakeholder Personas & Quick Role Switcher */}
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <Users size={16} style={{ color: 'var(--signal)' }} />
+            <h3 className="text-sm font-semibold text-[var(--foreground)] m-0">
+              Configured Stakeholder Personas & Role Switcher
+            </h3>
+          </div>
+          <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0 mb-4">
+            Switch between authenticated demo stakeholder personas instantly to evaluate distinct RBAC permissions, review workflows, and approval thresholds.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {Object.values(SETTINGS_ROLE_PERSONAS).map((p) => {
+              const isActive = p.id === role
+              const isSwitching = switchingRole === p.id
+              return (
+                <div
+                  key={p.id}
+                  className={`p-3 rounded-lg border transition-all flex flex-col justify-between ${
+                    isActive
+                      ? 'border-[var(--signal)] bg-[var(--surface-hover)] shadow-xs ring-1 ring-[var(--signal)]'
+                      : 'border-[var(--border)] bg-[var(--surface-secondary)] hover:border-[var(--foreground)]/30'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-[var(--foreground)] truncate">{p.name}</span>
+                      {isActive ? (
+                        <Badge tone="low">ACTIVE</Badge>
+                      ) : (
+                        <span className="text-[10px] font-mono text-[var(--muted-foreground)]">{p.id}</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-medium text-[var(--muted-foreground)] line-clamp-1 m-0">
+                      {p.title}
+                    </p>
+                    <div className="text-[10px] font-mono text-[var(--muted-foreground)] truncate">
+                      {p.email}
+                    </div>
+                  </div>
+
+                  <div className="pt-3">
+                    {isActive ? (
+                      <div className="text-[11px] font-semibold text-emerald-500 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>Current Session</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchPersona(p.id)}
+                        disabled={isSwitching}
+                        className="w-full px-2.5 py-1.5 rounded text-[11px] font-semibold border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)] hover:border-[var(--signal)] transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        <span>{isSwitching ? 'Switching...' : 'Switch Persona'}</span>
+                        <ArrowRight size={11} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+
+        {/* 3. Theme Appearance Management */}
         <Card>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -175,7 +355,7 @@ export function SettingsWorkspace() {
           </div>
         </Card>
 
-        {/* Cache Flush Management */}
+        {/* 4. Cache Flush Management */}
         <Card>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -188,7 +368,7 @@ export function SettingsWorkspace() {
             <button
               onClick={handleClearCache}
               disabled={clearing}
-              className="px-4 py-2 rounded text-xs font-semibold text-white transition disabled:opacity-50 shrink-0 inline-flex items-center gap-1.5"
+              className="px-4 py-2 rounded text-xs font-semibold text-white transition disabled:opacity-50 shrink-0 inline-flex items-center gap-1.5 cursor-pointer"
               style={{ background: 'var(--danger)' }}
             >
               <Trash2 size={13} />
@@ -213,54 +393,52 @@ export function SettingsWorkspace() {
           )}
         </Card>
 
-        {/* Connector Credentials & API Key Governance */}
+        {/* 5. All 8 Registered Source Connectors & API Key Configuration */}
         <Card>
           <div className="flex items-center gap-2 mb-2">
             <Key size={16} style={{ color: 'var(--signal)' }} />
             <h3 className="text-sm font-semibold text-[var(--foreground)] m-0">
-              Source Connectors & API Key Configuration
+              Source Connectors & Feed Configuration (All 8 Ingestion Adapters)
             </h3>
           </div>
 
           <p className="text-xs text-[var(--muted-foreground)] leading-relaxed m-0 mb-3">
-            MetaRadar accesses open biomedical endpoints without requiring credentials. Commercial and optional providers can be configured via environment variables.
+            MetaRadar accesses open biomedical endpoints and regulatory syndication without requiring credentials. Commercial and optional providers can be configured via environment variables.
           </p>
 
           <div className="grid gap-2.5">
-            {/* PubMed */}
+            {/* 1. PubMed */}
             <div
-              className="p-3 rounded border border-[var(--border)] flex items-start justify-between gap-3 text-xs"
-              style={{ background: 'var(--surface-secondary)' }}
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
             >
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <strong className="text-[var(--foreground)]">NCBI PubMed (E-Utilities)</strong>
-                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">Public Biomedical Endpoint</span>
+                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">Public Biomedical Literature Endpoint</span>
                   <Badge tone="low">CONFIGURED</Badge>
                 </div>
                 <p className="text-[var(--muted-foreground)] text-[11px] m-0">
-                  Standard public API; no API key required for low-cadence queries.
+                  Standard public E-Utilities API; no API key required for low-cadence queries.
                 </p>
               </div>
               <a
                 href="https://www.ncbi.nlm.nih.gov/home/about/"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-link text-[11px]"
+                className="text-link text-[11px] shrink-0"
               >
                 Docs ↗
               </a>
             </div>
 
-            {/* ClinicalTrials */}
+            {/* 2. ClinicalTrials */}
             <div
-              className="p-3 rounded border border-[var(--border)] flex items-start justify-between gap-3 text-xs"
-              style={{ background: 'var(--surface-secondary)' }}
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
             >
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <strong className="text-[var(--foreground)]">ClinicalTrials.gov (API v2)</strong>
-                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">Public Clinical Registry</span>
+                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">Public Clinical Studies Registry</span>
                   <Badge tone="low">CONFIGURED</Badge>
                 </div>
                 <p className="text-[var(--muted-foreground)] text-[11px] m-0">
@@ -271,16 +449,15 @@ export function SettingsWorkspace() {
                 href="https://clinicaltrials.gov/data-api/about-api"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-link text-[11px]"
+                className="text-link text-[11px] shrink-0"
               >
                 Docs ↗
               </a>
             </div>
 
-            {/* OpenFDA */}
+            {/* 3. OpenFDA */}
             <div
-              className="p-3 rounded border border-[var(--border)] flex items-start justify-between gap-3 text-xs"
-              style={{ background: 'var(--surface-secondary)' }}
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
             >
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -296,21 +473,20 @@ export function SettingsWorkspace() {
                 href="https://open.fda.gov/apis/"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-link text-[11px]"
+                className="text-link text-[11px] shrink-0"
               >
                 Docs ↗
               </a>
             </div>
 
-            {/* EMA RSS */}
+            {/* 4. EMA RSS */}
             <div
-              className="p-3 rounded border border-[var(--border)] flex items-start justify-between gap-3 text-xs"
-              style={{ background: 'var(--surface-secondary)' }}
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
             >
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <strong className="text-[var(--foreground)]">EMA Decision Feeds (RSS)</strong>
-                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">Public Syndication</span>
+                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">European Medicines Agency Syndication</span>
                   <Badge tone="low">CONFIGURED</Badge>
                 </div>
                 <p className="text-[var(--muted-foreground)] text-[11px] m-0">
@@ -321,16 +497,15 @@ export function SettingsWorkspace() {
                 href="https://www.ema.europa.eu/"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-link text-[11px]"
+                className="text-link text-[11px] shrink-0"
               >
                 Docs ↗
               </a>
             </div>
 
-            {/* NewsAPI */}
+            {/* 5. NewsAPI */}
             <div
-              className="p-3 rounded border border-[var(--border)] flex items-start justify-between gap-3 text-xs"
-              style={{ background: 'var(--surface-secondary)' }}
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
             >
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -343,60 +518,164 @@ export function SettingsWorkspace() {
                   )}
                 </div>
                 <p className="text-[var(--muted-foreground)] text-[11px] m-0">
-                  {newsApiConfigErr || 'NEWSAPI_KEY configured in .env. Live news ingestion enabled.'}
+                  {newsApiConfigErr || 'NEWSAPI_KEY configured in environment. Live commercial news ingestion enabled.'}
                 </p>
               </div>
               <a
                 href="https://newsapi.org/register"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-link text-[11px]"
+                className="text-link text-[11px] shrink-0"
               >
                 Get Key ↗
+              </a>
+            </div>
+
+            {/* 6. BioPharma Dive */}
+            <div
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <strong className="text-[var(--foreground)]">BioPharma Dive (RSS Intelligence Feed)</strong>
+                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">Commercial & Pipeline News Feed</span>
+                  <Badge tone="low">CONFIGURED</Badge>
+                </div>
+                <p className="text-[var(--muted-foreground)] text-[11px] m-0">
+                  Real-time pipeline, commercial M&A, and clinical development RSS feed; no authentication required.
+                </p>
+              </div>
+              <a
+                href="https://www.biopharmadive.com/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-link text-[11px] shrink-0"
+              >
+                Feed ↗
+              </a>
+            </div>
+
+            {/* 7. Fierce Pharma */}
+            <div
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <strong className="text-[var(--foreground)]">Fierce Pharma (RSS Global Biopharma Feed)</strong>
+                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">Global Pharma & Regulatory News</span>
+                  <Badge tone="low">CONFIGURED</Badge>
+                </div>
+                <p className="text-[var(--muted-foreground)] text-[11px] m-0">
+                  Industry regulatory filings, market dynamics, and competitive updates RSS syndication; open feed.
+                </p>
+              </div>
+              <a
+                href="https://www.fiercepharma.com/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-link text-[11px] shrink-0"
+              >
+                Feed ↗
+              </a>
+            </div>
+
+            {/* 8. ETHealthworld / ET Pharma */}
+            <div
+              className="p-3 rounded-lg border border-[var(--border)] flex items-start justify-between gap-3 text-xs bg-[var(--surface-secondary)]"
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <strong className="text-[var(--foreground)]">ETHealthworld / ET Pharma (RSS Healthcare Feed)</strong>
+                  <span className="text-[10px] font-mono text-[var(--muted-foreground)]">APAC & Global Regulatory Feed</span>
+                  <Badge tone="low">CONFIGURED</Badge>
+                </div>
+                <p className="text-[var(--muted-foreground)] text-[11px] m-0">
+                  Global and emerging market regulatory and clinical updates RSS syndication; open feed.
+                </p>
+              </div>
+              <a
+                href="https://health.economictimes.indiatimes.com/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-link text-[11px] shrink-0"
+              >
+                Feed ↗
               </a>
             </div>
           </div>
         </Card>
 
-        {/* Environment Diagnostics */}
+        {/* 6. Environment & Architecture Configuration */}
         <Card>
-          <h3 className="text-sm font-semibold text-[var(--foreground)] m-0 mb-3">Architecture Configuration</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-            <div
-              className="p-3 rounded border border-[var(--border)] space-y-1"
-              style={{ background: 'var(--surface-secondary)' }}
-            >
+          <div className="flex items-center gap-2 mb-3">
+            <Layers size={16} style={{ color: 'var(--signal)' }} />
+            <h3 className="text-sm font-semibold text-[var(--foreground)] m-0">
+              Architecture & Reasoning Pipeline Configuration
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs font-mono">
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
               <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
                 <Database size={12} /> Database Stack
               </div>
               <div className="text-[var(--foreground)] font-semibold">PostgreSQL 16 + pgvector (384-dim)</div>
             </div>
-            <div
-              className="p-3 rounded border border-[var(--border)] space-y-1"
-              style={{ background: 'var(--surface-secondary)' }}
-            >
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
               <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
                 <Server size={12} /> Frontend Framework
               </div>
               <div className="text-[var(--foreground)] font-semibold">Next.js 16 (App Router) + React 19</div>
             </div>
-            <div
-              className="p-3 rounded border border-[var(--border)] space-y-1"
-              style={{ background: 'var(--surface-secondary)' }}
-            >
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
               <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
                 <Server size={12} /> Backend Framework
               </div>
               <div className="text-[var(--foreground)] font-semibold">FastAPI 0.110+ (Async / Structlog)</div>
             </div>
-            <div
-              className="p-3 rounded border border-[var(--border)] space-y-1"
-              style={{ background: 'var(--surface-secondary)' }}
-            >
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
               <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
-                <Cpu size={12} /> Local LLM & Embeddings
+                <Cpu size={12} /> Primary LLM Engine
               </div>
-              <div className="text-[var(--foreground)] font-semibold">Gemma 3 4B + all-MiniLM-L6-v2</div>
+              <div className="text-[var(--foreground)] font-semibold">Gemma 3 4B (Ollama / Local)</div>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
+              <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
+                <Cpu size={12} /> Vector Embeddings
+              </div>
+              <div className="text-[var(--foreground)] font-semibold">all-MiniLM-L6-v2 (384-dim)</div>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
+              <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
+                <ShieldCheck size={12} /> Privacy Scrubber Gate
+              </div>
+              <div className="text-emerald-500 font-semibold">PII/PHI Sanitization Active</div>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
+              <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
+                <Radio size={12} /> Caching Layer
+              </div>
+              <div className="text-[var(--foreground)] font-semibold">Redis 7.2 Semantic Cache</div>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
+              <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
+                <Radio size={12} /> Cloud Fallback Gate
+              </div>
+              <div className="text-[var(--foreground)] font-semibold">xAI Grok-2 (Configurable)</div>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[var(--border)] space-y-1 bg-[var(--surface-secondary)]">
+              <div className="text-[var(--muted-foreground)] uppercase text-[10px] font-semibold flex items-center gap-1.5">
+                <Lock size={12} /> RBAC & Governance
+              </div>
+              <div className="text-emerald-500 font-semibold">8 Persona Matrix Active</div>
             </div>
           </div>
         </Card>

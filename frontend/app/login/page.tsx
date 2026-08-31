@@ -106,6 +106,16 @@ const PERSONAS: RolePersona[] = [
     password: 'Comms2026!',
     dotColor: '#a855f7',
   },
+  {
+    id: 'ADMIN',
+    label: 'System Admin',
+    name: 'test-admin',
+    title: 'System Administrator',
+    handle: 'test.admin',
+    email: 'admin@metaradar.internal',
+    password: 'Admin2026!',
+    dotColor: '#94a3b8',
+  },
 ]
 
 export default function LoginPage() {
