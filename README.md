@@ -15,7 +15,7 @@
   [![Problem Statement](https://img.shields.io/badge/Problem%20Statement-%233%20Rare%20Disease%20Radar-purple)](#)
   [![Pilot](https://img.shields.io/badge/Pilot-Haemophilia%20A%20%26%20B-red)](#)
   [![Status](https://img.shields.io/badge/Status-Hackathon%20Evaluation%20Build-blue)](#)
-  [![Tests](https://img.shields.io/badge/Pytest-186%2F186%20Passing-brightgreen)](#)
+  [![Tests](https://img.shields.io/badge/Pytest-186%20Passed%2C%201%20Skipped-brightgreen)](#)
   [![Contract](https://img.shields.io/badge/OpenAPI%203.1-Synchronized-blue)](#)
   [![Data](https://img.shields.io/badge/Data-8%20Monitored%20Sources-green)](#)
   [![Governance](https://img.shields.io/badge/Governance-Database--Enforced%20Audit-orange)](#)
@@ -23,7 +23,7 @@
 
 > **"A conventional AI summarizes documents. MetaRadar builds an evidence story around a development."**
 
-MetaRadar converts fragmented public information across the haemophilia treatment landscape into **evidence-linked developments, multi-source confluence alerts, zero-shot contradiction flags, missing milestone alerts, and role-scoped intelligence briefs**.
+MetaRadar organizes fragmented public information across the haemophilia treatment landscape into **evidence-linked developments, multi-source confluence alerts, zero-shot contradiction flags, missing milestone alerts, and role-scoped intelligence briefs**.
 
 The platform is purpose-built for the **Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 (Rare Disease Competitive Intelligence Radar)**, with **Haemophilia A and Haemophilia B** as the initial clinical pilot.
 
@@ -34,7 +34,7 @@ The platform is purpose-built for the **Novo Nordisk GBS Hackathon 2026 — Prob
 | Submission Deliverable | Location & Description |
 |---|---|
 | **1. Master Presentation Deck** | [`pitch/PITCH.md`](pitch/PITCH.md) — Master 7-Slide presentation deck and Q1–Q10 technical defense guide covering Project Overview, Problem & Innovation, Solution Summary, Technical Implementation, Verification Metrics, Roadmap, and Business Impact. |
-| **2. Interactive Prototype / Demo** | Full-stack application running at `http://localhost:3000` with 13 specialized workspaces, 3D holographic persona switcher, live 8-source ingestion, Athena AI Copilot with streaming citations, and Executive Sign-Off Queue. |
+| **2. Interactive Prototype / Demo** | Full-stack application running at `http://localhost:3000` with 13 specialized workspace views, 3D holographic persona switcher, live 8-source ingestion, Athena AI Copilot with streaming citations, and Executive Sign-Off Queue. |
 | **3. Visual Architecture Diagrams** | Ultra-HD 2800px Vector SVGs & PNGs in [`pitch/`](pitch/): [System Architecture](pitch/architecture.svg), [Data Flow](pitch/dataflow.svg), and [Decision Governance Flow](pitch/responsibility_flow.svg). |
 | **4. Domain Knowledge Layer** | Curated haemophilia ontology covering 12 modalities, canonical competitor assets, and 19 Red-Team evidence checks in [`config/haemophilia.yaml`](config/haemophilia.yaml). |
 | **5. Deep Technical Documentation** | Comprehensive architecture specifications, design documents, and engineering standards in [`docs/`](docs/). |
@@ -44,7 +44,7 @@ The platform is purpose-built for the **Novo Nordisk GBS Hackathon 2026 — Prob
 
 ## Current Status & Verification Record
 
-- **Automated Test Suite:** `pytest tests/` → **186 passed, 1 skipped, 0 failures** across connectors, LangGraph nodes, privacy invariants, failure injection, provenance, and observability.
+- **Automated Test Suite:** `pytest tests/` → **186 automated tests — 186 passed, 1 skipped, 0 failures** across connectors, LangGraph nodes, privacy invariants, failure injection, provenance, and observability.
 - **Frontend Build & Types:** `npm run build` → **Compiled cleanly with 0 errors** in Next.js 16 (Turbopack) with strict TypeScript checking (`tsc --noEmit`).
 - **Contract Synchronization:** `python scripts/export_openapi.py` → **0 contract drift** (Pydantic v2 schemas synchronized with `frontend/types/api.ts`).
 - **Database Migrations:** Alembic revisions applied across 22 PostgreSQL tables with zero schema drift.
@@ -167,7 +167,7 @@ MetaRadar treats external disclosures as **signals belonging to interconnected e
 
 ### 4. Missing-Signal Detection & Silence Tracker
 - **Core Question**: *What should have happened next, and has it failed to occur?*
-- **Mechanism**: 6-state FSM (`WITHIN_WINDOW`, `DUE`, `OVERDUE`, `SATISFIED`, `SUPPRESSED`) tracking milestone deadlines. If an expected trial readout does not appear within the expected window, the absence of data becomes an active intelligence signal.
+- **Mechanism**: 6-state FSM (`WITHIN_WINDOW`, `DUE`, `OVERDUE`, `SATISFIED`, `SUPPRESSED`, `INSUFFICIENT_DATA`) tracking milestone deadlines. If an expected trial readout does not appear within the expected window, the absence of data becomes an active intelligence signal.
 
 ### 5. Stakeholder Calibration (Human-in-the-Loop)
 - **Core Question**: *Does the system's scoring match expert stakeholder judgment?*
@@ -217,7 +217,7 @@ $$\text{Priority Score} = \text{Novelty } [0\text{–}25] + \text{Clinical Signi
  │                                                                           │
  ▼                                                                           ▼
 Frontend (Next.js 16 / React 19)                            Backend (FastAPI 0.115 / Python 3.11+)
-• Turbopack SSR & 13 Specialized Workspaces                 • 11-Node LangGraph Intelligence Pipeline
+• Turbopack SSR & 13 Specialized Workspace Views            • 11-Node LangGraph Intelligence Pipeline
 • 3D Holographic Persona Switcher                           • Autonomous Async SourceScheduler
 • Athena Copilot (Live SSE Streaming + Citations)           • 8 Monitored Connector Adapters
 • Evidence Drawer & Provenance Badges                       • Truthful Source Health Telemetry
@@ -270,7 +270,7 @@ The platform monitors eight biomedical and industry intelligence sources:
 | **Embeddings** | sentence-transformers | `all-MiniLM-L6-v2` (384-dimensional dense vectors) |
 | **Cache & Locking** | Redis 7 | Distributed advisory locking and rate limiting |
 | **Migrations** | Alembic | 14 applied schema migrations (`001_initial` → `014_governance_hardening`) |
-| **Testing** | pytest | 186 automated test cases (100% passing) |
+| **Testing** | pytest | 186 automated tests — 186 passed, 1 skipped |
 
 ---
 
@@ -372,7 +372,7 @@ MetaRadar/
 │       ├── services/    # Scoring math, NLI Red-Team, Confluence, Lifecycle FSM
 │       └── workflows/   # 11-Node LangGraph intelligence pipeline (PipelineRunner)
 ├── frontend/
-│   ├── app/             # Next.js 16 App Router (13 workspaces)
+│   ├── app/             # Next.js 16 App Router (13 workspace views)
 │   ├── components/      # Shared UI tokens, 3D ProfileCard, Evidence Drawer
 │   ├── context/         # Auth & persona state providers
 │   ├── lib/             # API client, SSE streaming reader, utilities
