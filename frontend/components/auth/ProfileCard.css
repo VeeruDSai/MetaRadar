@@ -1,173 +1,443 @@
-.profile-card-wrapper {
-  perspective: 1200px;
-  transform-style: preserve-3d;
-  display: inline-block;
-}
-
-.profile-card {
+:root {
   --pointer-x: 50%;
   --pointer-y: 50%;
+  --pointer-from-center: 0;
+  --pointer-from-top: 0.5;
+  --pointer-from-left: 0.5;
+  --card-opacity: 0;
   --rotate-x: 0deg;
   --rotate-y: 0deg;
-  --role-glow: rgba(82, 208, 194, 0.35);
+  --background-x: 50%;
+  --background-y: 50%;
+  --grain: none;
+  --icon: none;
+  --behind-gradient: none;
+  --behind-glow-color: rgba(37, 99, 235, 0.45);
+  --behind-glow-size: 40%;
+  --inner-gradient: linear-gradient(145deg, #131c33 0%, #0d1527 50%, #070c18 100%);
+  --sunpillar-1: hsl(210, 100%, 75%);
+  --sunpillar-2: hsl(190, 100%, 70%);
+  --sunpillar-3: hsl(230, 100%, 75%);
+  --sunpillar-4: hsl(180, 100%, 75%);
+  --sunpillar-5: hsl(220, 100%, 70%);
+  --sunpillar-6: hsl(260, 100%, 75%);
+  --sunpillar-clr-1: var(--sunpillar-1);
+  --sunpillar-clr-2: var(--sunpillar-2);
+  --sunpillar-clr-3: var(--sunpillar-3);
+  --sunpillar-clr-4: var(--sunpillar-4);
+  --sunpillar-clr-5: var(--sunpillar-5);
+  --sunpillar-clr-6: var(--sunpillar-6);
+  --card-radius: 28px;
+}
 
+.pc-card-wrapper {
+  perspective: 600px;
+  transform: translate3d(0, 0, 0.1px);
   position: relative;
-  width: 310px;
-  border-radius: var(--radius-lg, 0.85rem);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--surface) 96%, transparent) 0%,
-    color-mix(in srgb, var(--surface-elevated) 98%, transparent) 100%
-  );
-  border: 1px solid var(--border);
-  box-shadow: 
-    0 18px 36px -10px rgba(0, 0, 0, 0.5),
-    0 0 24px -5px var(--role-glow);
-  padding: 1.5rem;
-  overflow: hidden;
-  transform: rotateX(var(--rotate-x)) rotateY(var(--rotate-y));
-  transition: transform 0.15s ease-out, box-shadow 0.3s ease, border-color 0.2s ease;
-  transform-style: preserve-3d;
+  touch-action: none;
   user-select: none;
-  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.profile-card:hover {
-  box-shadow: 
-    0 24px 48px -12px rgba(0, 0, 0, 0.65),
-    0 0 35px -2px var(--role-glow);
-}
-
-/* Holographic Glare Specular Layer */
-.profile-card-glare {
+.pc-behind {
   position: absolute;
-  inset: 0;
-  border-radius: var(--radius-lg, 0.85rem);
+  inset: -10px;
+  z-index: 0;
+  pointer-events: none;
   background: radial-gradient(
     circle at var(--pointer-x) var(--pointer-y),
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.03) 40%,
-    transparent 70%
+    var(--behind-glow-color) 0%,
+    transparent var(--behind-glow-size)
   );
-  pointer-events: none;
-  mix-blend-mode: overlay;
-  z-index: 5;
+  filter: blur(45px) saturate(1.2);
+  opacity: calc(0.85 * var(--card-opacity));
+  transition: opacity 200ms ease;
 }
 
-/* Inner 3D Content Container */
-.profile-card-content {
+.pc-card-wrapper:hover,
+.pc-card-wrapper.active {
+  --card-opacity: 1;
+}
+
+.pc-card {
+  height: 75svh;
+  max-height: 490px;
+  width: 325px;
+  display: grid;
+  aspect-ratio: 0.718;
+  border-radius: var(--card-radius);
   position: relative;
+  background-blend-mode: normal;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 
+    rgba(0, 0, 0, 0.85) calc((var(--pointer-from-left) * 10px) - 3px)
+    calc((var(--pointer-from-top) * 20px) - 6px) 28px -5px,
+    0 0 20px -2px rgba(14, 165, 233, 0.15);
+  transition: transform 1s ease;
+  transform: translateZ(0) rotateX(0deg) rotateY(0deg);
+  background: #090e1a;
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+
+.pc-card:hover,
+.pc-card.active {
+  transition: none;
+  transform: translateZ(0) rotateX(var(--rotate-y)) rotateY(var(--rotate-x));
+}
+
+.pc-card-shell.entering .pc-card {
+  transition: transform 180ms ease-out;
+}
+
+.pc-card-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.pc-card * {
+  display: grid;
+  grid-area: 1/-1;
+  border-radius: var(--card-radius);
+}
+
+.pc-inside {
+  inset: 0;
+  position: absolute;
+  background-image: var(--inner-gradient);
+  background-color: #090e1a;
+  transform: none;
+}
+
+/* Subtle Holographic Shine */
+.pc-shine {
+  mask-image: var(--icon);
+  mask-mode: luminance;
+  mask-repeat: repeat;
+  mask-size: 150%;
+  mask-position: top calc(200% - (var(--background-y) * 5)) left calc(100% - var(--background-x));
+  transition: filter 0.8s ease;
+  filter: brightness(0.7) contrast(1.2) saturate(0.4) opacity(0.35);
+  animation: holo-bg 20s linear infinite;
+  animation-play-state: running;
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pc-shine,
+.pc-shine::after {
+  transform: translate3d(0, 0, 1px);
+  overflow: hidden;
+  background: transparent;
+  background-size: cover;
+  background-position: center;
+  background-image:
+    radial-gradient(
+      farthest-corner circle at var(--pointer-x) var(--pointer-y),
+      hsla(200, 100%, 80%, 0.15) 10%,
+      hsla(220, 80%, 50%, 0.08) 40%,
+      transparent 80%
+    );
+  background-repeat: no-repeat;
+}
+
+.pc-card:hover .pc-shine,
+.pc-card.active .pc-shine {
+  filter: brightness(0.85) contrast(1.3) saturate(0.5) opacity(0.5);
+}
+
+/* Specular Glare Layer */
+.pc-glare {
+  transform: translate3d(0, 0, 1.1px);
+  overflow: hidden;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(148, 163, 184, 0.08) 35%,
+    transparent 75%
+  );
+  mix-blend-mode: overlay;
+  filter: brightness(0.9) contrast(1.1);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Foreground Avatar Content */
+.pc-avatar-content {
+  mix-blend-mode: normal;
+  overflow: visible;
+  transform: translateZ(2px);
+  backface-visibility: hidden;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.pc-avatar-content .avatar {
+  width: 72%;
+  max-height: 250px;
+  position: absolute;
+  left: 50%;
+  transform-origin: 50% 100%;
+  transform: translateX(calc(-50% + (var(--pointer-from-left) - 0.5) * 6px)) translateZ(0)
+    scaleY(calc(1 + (var(--pointer-from-top) - 0.5) * 0.02)) scaleX(calc(1 + (var(--pointer-from-left) - 0.5) * 0.01));
+  bottom: 46px;
+  backface-visibility: hidden;
+  will-change: transform;
+  transition: transform 120ms ease-out;
+  pointer-events: none;
+  object-fit: contain;
+  object-position: bottom center;
+}
+
+/* Bottom Glass User Info Pill */
+.pc-user-info {
+  position: absolute;
+  --ui-inset: 12px;
+  --ui-radius-bias: 6px;
+  bottom: var(--ui-inset);
+  left: var(--ui-inset);
+  right: var(--ui-inset);
   z-index: 10;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  transform: translateZ(20px);
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(10, 16, 30, 0.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 
+    0 10px 30px 0 rgba(0, 0, 0, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  border-radius: calc(max(0px, var(--card-radius) - var(--ui-inset) + var(--ui-radius-bias)));
+  padding: 8px 12px;
+  pointer-events: auto !important;
 }
 
-/* Avatar Ring & Glow */
-.profile-avatar-container {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  padding: 2.5px;
-  background: linear-gradient(135deg, var(--role-glow), rgba(255, 255, 255, 0.25));
-  margin-bottom: 0.85rem;
-  box-shadow: 0 0 18px var(--role-glow);
-  transform: translateZ(30px);
+.pc-user-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  pointer-events: auto;
 }
 
-.profile-avatar-inner {
-  width: 100%;
-  height: 100%;
+.pc-mini-avatar {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: var(--background, #0b1220);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  background: #020617;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  font-weight: 800;
-  color: var(--foreground, #f8fafc);
-  font-size: 1.15rem;
-  letter-spacing: 0.05em;
 }
 
-/* Role Badge */
-.profile-role-badge {
+.pc-mini-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.pc-user-text {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.1;
+  min-width: 0;
+  flex: 1;
+}
+
+.pc-handle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 135px;
+}
+
+.pc-status {
+  font-size: 10px;
+  font-weight: 600;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* Fluid Glass Signout Button in Red */
+.pc-contact-btn {
+  background: rgba(225, 29, 72, 0.28);
+  background-image: linear-gradient(135deg, rgba(244, 63, 94, 0.4) 0%, rgba(225, 29, 72, 0.18) 100%);
+  border: 1px solid rgba(251, 113, 133, 0.5);
+  box-shadow: 
+    0 4px 14px -1px rgba(225, 29, 72, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: 0.75rem;
-  background: color-mix(in srgb, var(--signal) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--signal) 30%, var(--border));
-  color: var(--foreground, #f1f5f9);
-  transform: translateZ(25px);
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  pointer-events: auto !important;
+  user-select: none;
 }
 
-.profile-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--signal, #52d0c2);
-  box-shadow: 0 0 8px var(--signal, #52d0c2);
-  animation: pulse-dot 2s infinite ease-in-out;
+.pc-contact-btn:hover {
+  background: rgba(225, 29, 72, 0.48);
+  background-image: linear-gradient(135deg, rgba(244, 63, 94, 0.65) 0%, rgba(225, 29, 72, 0.3) 100%);
+  border-color: rgba(251, 113, 133, 0.8);
+  box-shadow: 
+    0 6px 20px -1px rgba(225, 29, 72, 0.7),
+    0 0 12px rgba(244, 63, 94, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  transform: translateY(-1.5px);
 }
 
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.75); }
+.pc-contact-btn:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 
+    0 2px 8px rgba(225, 29, 72, 0.4),
+    inset 0 1px 1px rgba(0, 0, 0, 0.5);
 }
 
-.profile-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--foreground, #f1f5f9);
-  margin-bottom: 0.2rem;
-  letter-spacing: -0.02em;
-  transform: translateZ(25px);
+/* Top Name & Role Details */
+.pc-content:not(.pc-avatar-content) {
+  max-height: 100%;
+  overflow: hidden;
+  text-align: center;
+  position: relative;
+  transform: translate3d(
+    calc(var(--pointer-from-left) * -6px + 3px),
+    calc(var(--pointer-from-top) * -6px + 3px),
+    0.1px
+  );
+  z-index: 6;
+  pointer-events: none;
 }
 
-.profile-title {
-  font-size: 0.8rem;
-  color: var(--muted-foreground, #94a3b8);
-  margin-bottom: 0.4rem;
-  line-height: 1.3;
-  transform: translateZ(20px);
-}
-
-.profile-handle {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  color: var(--signal, #52d0c2);
-  margin-bottom: 1.1rem;
-  transform: translateZ(20px);
-}
-
-/* Contact / Quick Select Button */
-.profile-select-btn {
+.pc-details {
   width: 100%;
-  padding: 0.55rem 0.9rem;
-  border-radius: var(--radius-md, 0.6rem);
-  font-size: 0.78rem;
-  font-weight: 600;
-  background: color-mix(in srgb, var(--signal) 10%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--signal) 28%, var(--border));
-  color: var(--foreground, #f8fafc);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  transform: translateZ(35px);
+  position: absolute;
+  top: 2.2em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1rem;
 }
 
-.profile-select-btn:hover {
-  background: color-mix(in srgb, var(--signal) 22%, var(--surface));
-  border-color: var(--signal, #52d0c2);
-  box-shadow: 0 0 14px var(--role-glow);
-  transform: translateZ(35px) scale(1.02);
+.pc-details h3 {
+  font-weight: 800;
+  margin: 0;
+  font-size: 1.55rem;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
+}
+
+.pc-details p {
+  font-weight: 600;
+  position: relative;
+  top: 2px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 auto;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
+.pc-email-badge {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: #38bdf8;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  background: rgba(8, 14, 26, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes holo-bg {
+  0% {
+    background-position:
+      0 var(--background-y),
+      0 0,
+      center;
+  }
+
+  100% {
+    background-position:
+      0 var(--background-y),
+      90% 90%,
+      center;
+  }
+}
+
+@media (max-width: 768px) {
+  .pc-card {
+    height: 70svh;
+    max-height: 450px;
+    width: 290px;
+  }
+
+  .pc-details {
+    top: 1.8em;
+  }
+
+  .pc-details h3 {
+    font-size: 1.35rem;
+  }
+
+  .pc-details p {
+    font-size: 12px;
+  }
+
+  .pc-user-info {
+    --ui-inset: 10px;
+    padding: 7px 10px;
+  }
+
+  .pc-mini-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .pc-handle {
+    font-size: 11px;
+    max-width: 110px;
+  }
+
+  .pc-status {
+    font-size: 9px;
+  }
+
+  .pc-contact-btn {
+    padding: 5px 9px;
+    font-size: 10px;
+  }
 }

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Head: Clean rounded portrait head matching user reference icon -->
+  <path
+    d="M 256 260
+       C 316.75 260, 366 206.27, 366 140
+       C 366 73.73, 316.75 20, 256 20
+       C 195.25 20, 146 73.73, 146 140
+       C 146 206.27, 195.25 260, 256 260
+       Z"
+    fill="#000000"
+  />
+
+  <!-- Body / Torso: Rounded shoulders with clean neckline cutout -->
+  <path
+    d="M 256 295
+       C 178.68 295, 106.18 324.5, 59.7 375.4
+       C 38.6 398.5, 28 438, 28 482
+       C 28 496.36, 39.64 508, 54 508
+       L 458 508
+       C 472.36 508, 484 496.36, 484 482
+       C 484 438, 473.4 398.5, 452.3 375.4
+       C 405.82 324.5, 333.32 295, 256 295
+       Z"
+    fill="#000000"
+  />
+</svg>
