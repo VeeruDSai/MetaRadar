@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Security & CORS
+    APP_ENV: str = "development"
     SECRET_KEY: str = "dev-secret-change-in-production"
     SESSION_LIFETIME_SECONDS: int = 28800      # 8 hours absolute
     SESSION_IDLE_TIMEOUT_SECONDS: int = 3600   # 1 hour idle
@@ -50,6 +51,16 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000"
     METARADAR_API_KEY: Optional[str] = None
     MUTATION_RATE_LIMIT_PER_MINUTE: int = 60
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV.lower() in ("production", "prod")
+
+    @property
+    def effective_session_cookie_secure(self) -> bool:
+        if self.SESSION_COOKIE_SECURE:
+            return True
+        return self.is_production
 
     @property
     def cors_origins_list(self) -> List[str]:

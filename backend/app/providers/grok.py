@@ -46,6 +46,12 @@ class GrokProvider(LLMProvider):
         self.model_name = XAI_MODEL
         self._client: Optional[httpx.AsyncClient] = None
 
+    async def aclose(self) -> None:
+        """Gracefully closes the underlying HTTP client."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
     def _ensure_client(self) -> httpx.AsyncClient:
         """Lazily creates the xAI HTTP client (connect=5s, read=60s)."""
         if self._client is None:

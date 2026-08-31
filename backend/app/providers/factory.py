@@ -52,5 +52,12 @@ class ProviderFactory:
         logger.info("Delegating task to BART Degraded Factual Summary provider...")
         return await self.degraded.generate_intelligence(evidence, task, classification)
 
+    async def aclose(self) -> None:
+        """Closes all provider clients."""
+        if hasattr(self.grok, "aclose"):
+            await self.grok.aclose()
+        if hasattr(self.gemma, "aclose"):
+            await self.gemma.aclose()
+
 
 provider_factory = ProviderFactory()

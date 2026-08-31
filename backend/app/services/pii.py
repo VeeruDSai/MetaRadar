@@ -4,10 +4,11 @@ from app.providers.base import DataClassification
 
 PATTERNS = {
     "email": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-    "phone": r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b",
+    "phone": r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b",
     "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
-    "mrn": r"\bMRN[:\s]*#?\d{6,10}\b",
-    "patient_dob": r"\bDOB[:\s]*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"
+    "mrn": r"\b(?:MRN|Medical\s*Record\s*Number|Patient\s*ID|Chart\s*#?)[:\s]*#?[A-Za-z0-9-]{5,12}\b",
+    "patient_dob": r"\b(?:DOB|Date\s*of\s*Birth|Born)[:\s]*\d{1,4}[/-]\d{1,2}[/-]\d{2,4}\b",
+    "national_id": r"\b(?:National\s*ID|NHS\s*#?|CPR\s*#?)[:\s]*\d{6,12}\b",
 }
 
 
@@ -41,6 +42,6 @@ class PIIPHIScrubber:
             return DataClassification.CONFIDENTIAL
         if source_type in ["synthetic", "demo"]:
             return DataClassification.SYNTHETIC
-        if source_type in ["pubmed", "clinical_trials", "fda", "ema", "newsapi", "congress"]:
+        if source_type in ["pubmed", "clinical_trials", "fda", "ema", "newsapi", "congress", "biopharmadive", "fiercepharma"]:
             return DataClassification.PUBLIC
         return DataClassification.UNKNOWN

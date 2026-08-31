@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 MetaRadar Zero-Config Environment Setup Launcher (setup.py)
-Automates dependency checking, backing services bootstrap, migrations, seed data, and model setup.
+Automates dependency checking, .env initialization, backing services bootstrap,
+migrations, seed data, and model setup.
 
 Usage:
     python setup.py [OPTIONS]
@@ -44,17 +45,40 @@ def run_command(cmd: list[str], cwd: Path = BASE_DIR, check: bool = True, env: d
     return subprocess.run(cmd, cwd=str(cwd), check=check, env=merged_env)
 
 
-def check_prerequisites():
-    print_step(1, "Checking Environment Prerequisites")
+def ensure_env_file():
+    """Ensures .env exists; copies from .env.example if missing."""
+    env_file = BASE_DIR / ".env"
+    env_example = BASE_DIR / ".env.example"
+    if not env_file.exists() and env_example.exists():
+        shutil.copy(env_example, env_file)
+        print("  [SUCCESS] Initialized .env configuration from .env.example template.")
+    elif env_file.exists():
+        print("  .env configuration file detected.")
+    else:
+        print("  [WARNING] Neither .env nor .env.example found.", file=sys.stderr)
 
-    # 1. Python version check
+
+def check_prerequisites():
+    print_step(1, "Checking Environment Prerequisites & Configuration")
+
+    # 1. Ensure .env exists
+    ensure_env_file()
+
+    # 2. Python version check
     py_version = sys.version_info
     print(f"  Python version: {py_version.major}.{py_version.minor}.{py_version.micro}")
     if py_version < (3, 11):
         print("  [ERROR] Python 3.11 or higher is required.", file=sys.stderr)
         sys.exit(1)
 
-    # 2. Node & Package Manager check
+    # 3. Virtual environment check & recommendation
+    in_venv = sys.prefix != sys.base_prefix or "VIRTUAL_ENV" in os.environ
+    if in_venv:
+        print("  Python virtual environment active.")
+    else:
+        print("  [TIP] Recommended: Run setup inside a Python virtual environment (e.g. python -m venv .venv).")
+
+    # 4. Node & Package Manager check
     node_cmd = shutil.which("node")
     pnpm_cmd = shutil.which("pnpm")
     npm_cmd = shutil.which("npm")
@@ -74,14 +98,14 @@ def check_prerequisites():
     else:
         print("  [WARNING] Neither pnpm nor npm found in PATH.", file=sys.stderr)
 
-    # 3. Docker check
+    # 5. Docker check
     docker_cmd = shutil.which("docker")
     if docker_cmd:
         print("  Docker detected.")
     else:
         print("  [WARNING] Docker not found in PATH. Backing services (Postgres, Redis) must be managed manually.", file=sys.stderr)
 
-    # 4. CUDA / NVIDIA check
+    # 6. CUDA / NVIDIA check
     nvidia_smi = shutil.which("nvidia-smi")
     if nvidia_smi:
         try:
@@ -140,7 +164,6 @@ def setup_llama_cpp(skip_cuda: bool, has_gpu: bool):
         return
 
     # --- CUDA path ---
-    # Use prebuilt CUDA 12.4 wheel from community index for Windows (no compile needed)
     cuda_index = "https://jllllll.github.io/llama-cpp-python-cuBLAS-wheels/AVX2/cu124"
     print(f"  Installing CUDA-accelerated llama-cpp-python for RTX GPU (CUDA 12.4)...")
     print(f"  Source: {cuda_index}")

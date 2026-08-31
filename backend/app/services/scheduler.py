@@ -16,6 +16,8 @@ from app.workflows.runner import PipelineRunner
 
 logger = logging.getLogger("metaradar.scheduler")
 
+_global_connector_semaphore = asyncio.Semaphore(4)
+
 
 def _get_lock_id_for_source(source_id: str) -> int:
     """Generates a stable 31-bit positive integer for PostgreSQL advisory locks."""
@@ -128,8 +130,10 @@ class SourceScheduler:
             new_records_discovered = 0
 
             try:
-                # 1. Acquire DB session & distributed PostgreSQL advisory lock
-                async with async_session_factory() as session:
+                # 1. Acquire global concurrency slot, DB session & distributed PostgreSQL advisory lock
+            async with _global_connector_semaphore:
+                try:
+                    async with async_session_factory() as session:
                     locked = await try_advisory_lock(session, lock_id)
                     if not locked:
                         logger.info(f"Connector '{connector.source_id}' lock is held by another instance. Skipping cycle.")

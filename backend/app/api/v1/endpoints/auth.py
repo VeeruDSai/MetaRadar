@@ -49,7 +49,7 @@ def _set_auth_cookies(response: Response, session_token: str, csrf_token: str) -
         value=session_token,
         max_age=settings.SESSION_LIFETIME_SECONDS,
         httponly=True,
-        secure=settings.SESSION_COOKIE_SECURE,
+        secure=settings.effective_session_cookie_secure,
         samesite="lax",
         path="/",
     )
@@ -58,7 +58,7 @@ def _set_auth_cookies(response: Response, session_token: str, csrf_token: str) -
         value=csrf_token,
         max_age=settings.SESSION_LIFETIME_SECONDS,
         httponly=False,  # Accessible to JavaScript for X-CSRF-Token header attachment
-        secure=settings.SESSION_COOKIE_SECURE,
+        secure=settings.effective_session_cookie_secure,
         samesite="lax",
         path="/",
     )
@@ -270,7 +270,7 @@ async def get_csrf_token(
                 value=csrf_token,
                 max_age=settings.SESSION_LIFETIME_SECONDS,
                 httponly=False,
-                secure=settings.SESSION_COOKIE_SECURE,
+                secure=settings.effective_session_cookie_secure,
                 samesite="lax",
                 path="/",
             )
@@ -283,7 +283,7 @@ async def get_csrf_token(
         value=anon_csrf,
         max_age=3600,
         httponly=False,
-        secure=settings.SESSION_COOKIE_SECURE,
+        secure=settings.effective_session_cookie_secure,
         samesite="lax",
         path="/",
     )
