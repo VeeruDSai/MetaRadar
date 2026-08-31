@@ -31,25 +31,15 @@ The platform is purpose-built for the **Novo Nordisk GBS Hackathon 2026 — Prob
 
 ## 🏆 Hackathon Final Submission Package
 
-This repository represents the complete, production-ready final readout package for the **Novo Nordisk GBS Hackathon 2026**:
+This repository contains the complete final project readout package for the **Novo Nordisk GBS Hackathon 2026**:
 
 | Submission Deliverable | Location & Description |
 |---|---|
-| **1. Final Presentation Deck** | [`pitch/PITCH.md`](pitch/PITCH.md) — Master 7-Slide presentation deck structured according to the organizing committee's required flow, covering Problem, Solution, Technical Implementation, Results/Metrics, Roadmap, and Business Impact. |
-| **2. Interactive Prototype / Demo** | Web application at `http://localhost:3000` with 13 specialized workspaces, 3D holographic persona switcher, live 8-source ingestion, Athena AI Copilot with streaming citations, and Executive Sign-Off Queue. |
-| **3. Supporting Documentation** | Comprehensive architecture rules, domain ontology YAMLs, and development standards in [`docs/`](docs/) and [`config/haemophilia.yaml`](config/haemophilia.yaml). |
-| **4. Additional Visual Materials** | Ultra-HD 2800px Vector & PNG diagrams in [`pitch/`](pitch/): [System Architecture](pitch/architecture.svg), [Data Flow](pitch/dataflow.svg), and [Decision Governance Flow](pitch/responsibility_flow.svg). |
+| **1. Final Presentation Deck** | [`pitch/PITCH.md`](pitch/PITCH.md) — Master 7-Slide presentation deck structured according to the organizing committee's requested flow, covering Project Overview, Problem & Innovation, Solution Summary, Technical Implementation, Results/Metrics, Roadmap, and Business Impact. |
+| **2. Interactive Prototype / Demo** | Full-stack application running at `http://localhost:3000` with 13 specialized workspaces, 3D holographic persona switcher, live 8-source ingestion, Athena AI Copilot with streaming citations, and Executive Sign-Off Queue. |
+| **3. Supporting Documentation** | Comprehensive architecture specifications, domain ontology YAMLs, and engineering standards in [`docs/`](docs/) and [`config/haemophilia.yaml`](config/haemophilia.yaml). |
+| **4. Visual Materials & Diagrams** | Ultra-HD 2800px Vector & PNG diagrams in [`pitch/`](pitch/): [System Architecture](pitch/architecture.svg), [Data Flow](pitch/dataflow.svg), and [Decision Governance Flow](pitch/responsibility_flow.svg). |
 | **5. 20-Session Engineering Odyssey** | Complete history of all 20 debugging and hardening sessions documented in Section 8 of [`pitch/PITCH.md`](pitch/PITCH.md). |
-
-### Hackathon Evaluation Criteria Alignment
-
-| Evaluation Pillar | Weight | How MetaRadar Delivers |
-|---|:---:|---|
-| **Innovation** | **25%** | • **Autonomous 48h Confluence Detector**: Clusters scattered multi-source reports into unified developments.<br>• **Missing Signal FSM Tracker**: Turns absent trial milestones into active alerts (silence becomes a signal).<br>• **Zero-Shot NLI Red-Team Contradiction Engine**: Uses BART-Large-MNLI to challenge claims against clinical baselines.<br>• **Epistemic Honesty**: Every claim tagged `[FACT]`, `[INTERPRETATION]`, or `[SPECULATION]`. |
-| **Technical Implementation** | **25%** | • **Full-Stack Medallion Architecture**: Bronze (WORM Ingestion) → Silver (pgvector 384-dim HNSW) → Gold (Synthesized Decision Briefs).<br>• **10-Node LangGraph DAG**: Stateful reasoning engine.<br>• **Local Gemma-3 4B GGUF**: 100% air-gapped private reasoning on CPU/CUDA.<br>• **Verification Gate**: 186/186 pytest tests passing, strict TypeScript (`tsc --noEmit`), ESLint clean, and Next.js 16 build clean. |
-| **Business Impact** | **20%** | • **15+ Hours → Seconds**: Reduces manual competitive surveillance by ~75%.<br>• **Zero Missed Deadlines**: Proactive alerts on PDUFA dates, CHMP opinions, and trial readout delays.<br>• **Role-Scoped Decision Routing**: 6 enterprise biopharma personas with tailored queues and executive sign-off directives. |
-| **Feasibility & Readiness** | **15%** | • **Zero-Config Setup**: `python setup.py` automates dependencies, docker backing services, database migrations, and model setup.<br>• **Production-Ready**: 22 PostgreSQL tables, connection pooling, advisory lock circuit breakers, and 4-milestone roadmap (SSO, SCD/Thalassemia expansion, CTMS bridge, predictive timeline modeling). |
-| **Presentation Quality** | **15%** | • **Master 7-Slide Deck**: Tailored slidewise flow in [`pitch/PITCH.md`](pitch/PITCH.md).<br>• **3D Holographic Persona Profiles**: Fluid glass cards with gyroscope-driven tilt and red sign-out buttons.<br>• **Live Provenance Drawers**: Clickable primary source badges with verbatim evidence excerpts. |
 
 ---
 
