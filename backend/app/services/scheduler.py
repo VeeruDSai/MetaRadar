@@ -131,53 +131,52 @@ class SourceScheduler:
 
             try:
                 # 1. Acquire global concurrency slot, DB session & distributed PostgreSQL advisory lock
-            async with _global_connector_semaphore:
-                try:
+                async with _global_connector_semaphore:
                     async with async_session_factory() as session:
-                    locked = await try_advisory_lock(session, lock_id)
-                    if not locked:
-                        logger.info(f"Connector '{connector.source_id}' lock is held by another instance. Skipping cycle.")
-                        job.last_status = "SKIPPED_LOCKED"
-                    else:
-                        try:
-                            # 2. NewsAPI Quota-Awareness Governor (REQ-P10-03)
-                            quota_rem = getattr(connector, "quota_remaining", None)
-                            if connector.source_id == "newsapi" and quota_rem is not None and quota_rem < 15:
-                                logger.info("NewsAPI quota preserved (%s remaining < 15). Skipping automatic cycle to prevent demo exhaustion.", quota_rem)
-                                job.last_status = "HEALTHY (QUOTA_PRESERVED)"
-                                job.last_error = f"Quota low ({quota_rem}/100) — automatic polling paused until rollover."
-                                job.records_fetched_last_run = 0
-                                job.records_new_last_run = 0
-                                # Force backoff to preserve quota
-                                job.current_backoff_minutes = 90
-                                continue
+                        locked = await try_advisory_lock(session, lock_id)
+                        if not locked:
+                            logger.info(f"Connector '{connector.source_id}' lock is held by another instance. Skipping cycle.")
+                            job.last_status = "SKIPPED_LOCKED"
+                        else:
+                            try:
+                                # 2. NewsAPI Quota-Awareness Governor (REQ-P10-03)
+                                quota_rem = getattr(connector, "quota_remaining", None)
+                                if connector.source_id == "newsapi" and quota_rem is not None and quota_rem < 15:
+                                    logger.info("NewsAPI quota preserved (%s remaining < 15). Skipping automatic cycle to prevent demo exhaustion.", quota_rem)
+                                    job.last_status = "HEALTHY (QUOTA_PRESERVED)"
+                                    job.last_error = f"Quota low ({quota_rem}/100) — automatic polling paused until rollover."
+                                    job.records_fetched_last_run = 0
+                                    job.records_new_last_run = 0
+                                    # Force backoff to preserve quota
+                                    job.current_backoff_minutes = 90
+                                    continue
 
-                            # Execute connector profiles via IngestionService
-                            ingest_service = IngestionService(session)
-                            result = await ingest_service.run_connectors(connector_ids=[connector.source_id])
-                            
-                            src_res = result.get("results", {}).get(connector.source_id, {})
-                            conn_status = src_res.get("status", "HEALTHY")
-                            job.last_status = conn_status
-                            job.records_fetched_last_run = src_res.get("fetched", 0)
-                            job.records_new_last_run = src_res.get("new_rows", 0)
-                            new_records_discovered = job.records_new_last_run
-                            job.last_error = src_res.get("error_detail")
+                                # Execute connector profiles via IngestionService
+                                ingest_service = IngestionService(session)
+                                result = await ingest_service.run_connectors(connector_ids=[connector.source_id])
+                                
+                                src_res = result.get("results", {}).get(connector.source_id, {})
+                                conn_status = src_res.get("status", "HEALTHY")
+                                job.last_status = conn_status
+                                job.records_fetched_last_run = src_res.get("fetched", 0)
+                                job.records_new_last_run = src_res.get("new_rows", 0)
+                                new_records_discovered = job.records_new_last_run
+                                job.last_error = src_res.get("error_detail")
 
-                            # 3. Handle backoff / recovery
-                            if conn_status in ("HEALTHY", "NO_NEW_DATA", "CONNECTED"):
-                                job.consecutive_failures = 0
-                                job.current_backoff_minutes = 0
-                            elif conn_status in ("DEGRADED", "FAILED", "UNHEALTHY"):
-                                job.consecutive_failures += 1
-                                backoff_step = min(
-                                    job.base_interval_minutes * (2 ** min(job.consecutive_failures, 4)),
-                                    settings.SCHEDULER_MAX_BACKOFF_MINUTES
-                                )
-                                job.current_backoff_minutes = backoff_step
+                                # 3. Handle backoff / recovery
+                                if conn_status in ("HEALTHY", "NO_NEW_DATA", "CONNECTED"):
+                                    job.consecutive_failures = 0
+                                    job.current_backoff_minutes = 0
+                                elif conn_status in ("DEGRADED", "FAILED", "UNHEALTHY"):
+                                    job.consecutive_failures += 1
+                                    backoff_step = min(
+                                        job.base_interval_minutes * (2 ** min(job.consecutive_failures, 4)),
+                                        settings.SCHEDULER_MAX_BACKOFF_MINUTES
+                                    )
+                                    job.current_backoff_minutes = backoff_step
 
-                        finally:
-                            await release_advisory_lock(session, lock_id)
+                            finally:
+                                await release_advisory_lock(session, lock_id)
 
                 # 4. Ingestion & Intelligence Separation:
                 # Only trigger LangGraph intelligence pipeline if new/changed records were discovered!
