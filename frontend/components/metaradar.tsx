@@ -603,7 +603,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               email={user?.email || currentPersona.email || `${currentPersona.handle}@metaradar.demo`}
               roleId={role}
               status="Online & Verified"
-              contactText="Sign Out / Switch"
+              contactText="Sign Out"
               onContactClick={() => {
                 setProfileModalOpen(false)
                 logout()
