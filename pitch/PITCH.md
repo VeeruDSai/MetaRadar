@@ -106,7 +106,7 @@ MetaRadar connects to **8 verified public and regulatory data sources** governed
 5. **Fierce Pharma / Fierce Biotech**: Industry RSS feeds — commercial pipeline updates and executive announcements.
 6. **BioPharma Dive**: Dedicated biotech journalism RSS — clinical readouts and corporate strategy.
 7. **Global Medical News (NewsAPI)**: Quota-governed healthcare API — international healthcare headlines.
-8. **DailyMed / ET Healthworld**: Drug labeling data and global regional market access updates.
+8. **DailyMed**: NLM structured U.S. drug labeling data, prescribing information, and label updates.
 
 ---
 
@@ -388,7 +388,7 @@ Layer 4 — Delivery (UI):
 5. BioPharma Dive RSS
 6. Fierce Pharma / Fierce Biotech RSS
 7. Global Medical News (NewsAPI)
-8. DailyMed / ET Healthworld
+8. DailyMed (NLM Drug Labeling REST)
 
 **Evaluation Approach**:
 - *Automated Gates*: 186 pytest tests (100% pass) + TypeScript `tsc --noEmit` (0 errors) + ESLint (0 warnings) + Next.js production build (✓).

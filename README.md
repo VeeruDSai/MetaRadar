@@ -126,9 +126,9 @@ MetaRadar treats external disclosures as **signals belonging to interconnected e
                         DETERMINISTIC 4-FACTOR SCORING
                            (Score 0–100 · Math Model)
                                        │
-                         FOUR-QUESTION DECISION BRIEF
-                   ([FACT] · [INTERPRETATION] · [SPECULATION])
-                                       │
+                          FOUR-QUESTION DECISION BRIEF
+                    ([FACT] · [INTERPRETATION] · [ACTION])
+                                        │
                          ROLE-SCOPED DECISION WORKSPACES
    (Medical Affairs · Regulatory · Safety/PV · Market Access · Comms · Executive Queue)
                                        │
@@ -239,16 +239,16 @@ Frontend (Next.js 16 / React 19)                            Backend (FastAPI 0.1
 The platform monitors eight biomedical and industry intelligence sources:
 
 ### Primary / Regulatory & Literature Sources
-| Source | Connector Type | Cadence | Data Retrieved |
+| Source | Connector Type | Polling Interval | Data Retrieved |
 |---|---|---|---|
 | **ClinicalTrials.gov** | REST API v2 | 60 min | Trial protocols, status transitions, milestone completion dates |
 | **NCBI PubMed** | E-utilities REST (Medline XML) | 60 min | Peer-reviewed biomedical research, clinical abstracts, PMIDs |
 | **OpenFDA** | Drugs@FDA + FAERS REST | 30 min | Drug approvals, safety communications, MedWatch adverse events |
 | **EMA EPAR** | RSS & Document Portal | 30 min | CHMP opinions, marketing authorizations, European safety dossiers |
-| **DailyMed / Regional** | Drug Labeling REST | 30 min | Structured product labels, regional market access, packaging updates |
+| **DailyMed** | Drug Labeling REST | 30 min | Structured U.S. drug labeling, prescribing information, and label updates |
 
 ### Secondary / Industry Intelligence Sources
-| Source | Connector Type | Cadence | Data Retrieved |
+| Source | Connector Type | Polling Interval | Data Retrieved |
 |---|---|---|---|
 | **BioPharma Dive** | Industry RSS | 15 min | Clinical trial readouts, biopharma strategy, pipeline updates |
 | **Fierce Pharma / Biotech** | Industry RSS | 15 min | Commercial announcements, licensing deals, corporate M&A |
