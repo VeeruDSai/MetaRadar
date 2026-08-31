@@ -1,347 +1,491 @@
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/icon.svg">
-    <source media="(prefers-color-scheme: light)" srcset="frontend/public/icon-light.svg">
-    <img src="frontend/public/icon.svg" alt="MetaRadar Logo" width="120" height="120" />
-  </picture>
 
-  # MetaRadar
+<img src="frontend/public/icon.svg" alt="MetaRadar" width="96">
 
-  ### From Inbox Noise to Strategic Signal
+# MetaRadar
 
-  **Autonomous, Evidence-Grounded Competitive Intelligence Radar for Rare Diseases (Haemophilia A & B)**
+### From Inbox Noise to Strategic Signal
 
-  [![Hackathon](https://img.shields.io/badge/Novo%20Nordisk%20GBS%20Hackathon-2026-blue)](#)
-  [![Problem Statement](https://img.shields.io/badge/Problem%20Statement-%233%20Rare%20Disease%20Radar-purple)](#)
-  [![Pilot](https://img.shields.io/badge/Pilot-Haemophilia%20A%20%26%20B-red)](#)
-  [![Status](https://img.shields.io/badge/Status-Production%20Ready%20(100%25)-success)](#)
-  [![Tests](https://img.shields.io/badge/Pytest-186%2F186%20Passing-brightgreen)](#)
-  [![Contract](https://img.shields.io/badge/OpenAPI%203.1-Synchronized-blue)](#)
-  [![Data](https://img.shields.io/badge/Data-8%20Autonomous%20Connectors-green)](#)
-  [![Audit](https://img.shields.io/badge/Governance-WORM%20Immutable-orange)](#)
+**Evidence-grounded competitive intelligence for haemophilia A & B**
+
+Built for the **Novo Nordisk GBS Hackathon 2026 — Problem Statement #3: Rare Disease Competitive Intelligence Radar**
+
 </div>
 
-> **"A conventional AI summarizes documents. MetaRadar builds an evidence story around a development."**
+---
 
-MetaRadar converts fragmented public information about the haemophilia treatment landscape into **evidence-backed developments, real-time confluence alerts, zero-shot contradiction warnings, missing milestone alerts, and role-scoped intelligence briefs**.
+## Why MetaRadar
 
-The platform is purpose-built for the **Novo Nordisk GBS Hackathon 2026 — Problem Statement #3 (Rare Disease Competitive Intelligence Radar)**, with **Haemophilia A and Haemophilia B** as the initial clinical pilot.
+Pharmaceutical teams do not have an information shortage. They have a **decision latency problem**.
+
+Clinical-trial updates, regulatory actions, publications, safety information, and industry news arrive through separate sources. The difficult task is determining:
+
+1. **What changed?**
+2. **Why does it matter?**
+3. **Who needs to review it?**
+4. **What action may be required?**
+
+MetaRadar turns those fragmented public signals into **evidence-linked, prioritized, role-scoped decision intelligence** for cross-functional haemophilia teams.
+
+> **A conventional AI summarizes documents. MetaRadar builds an evidence story around a development.**
 
 ---
 
-## 🏆 Hackathon Final Submission Package
+## What the Prototype Does
 
-This repository contains the complete final project readout package for the **Novo Nordisk GBS Hackathon 2026**:
+MetaRadar continuously ingests public biomedical and biopharma information, processes it through an 11-node intelligence pipeline, and presents the resulting signals through stakeholder-specific workspaces.
 
-| Submission Deliverable | Location & Description |
+### Core capabilities
+
+| Capability | What it does |
 |---|---|
-| **1. Final Presentation Deck** | [`pitch/PITCH.md`](pitch/PITCH.md) — Master 7-Slide presentation deck structured according to the organizing committee's requested flow, covering Project Overview, Problem & Innovation, Solution Summary, Technical Implementation, Results/Metrics, Roadmap, and Business Impact. |
-| **2. Interactive Prototype / Demo** | Full-stack application running at `http://localhost:3000` with 13 specialized workspaces, 3D holographic persona switcher, live 8-source ingestion, Athena AI Copilot with streaming citations, and Executive Sign-Off Queue. |
-| **3. Supporting Documentation** | Comprehensive architecture specifications, domain ontology YAMLs, and engineering standards in [`docs/`](docs/) and [`config/haemophilia.yaml`](config/haemophilia.yaml). |
-| **4. Visual Materials & Diagrams** | Ultra-HD 2800px Vector & PNG diagrams in [`pitch/`](pitch/): [System Architecture](pitch/architecture.svg), [Data Flow](pitch/dataflow.svg), and [Decision Governance Flow](pitch/responsibility_flow.svg). |
-| **5. 20-Session Engineering Odyssey** | Complete history of all 20 debugging and hardening sessions documented in Section 8 of [`pitch/PITCH.md`](pitch/PITCH.md). |
+| **Multi-source ingestion** | Connects to PubMed, ClinicalTrials.gov, FDA, EMA, NewsAPI, BioPharma Dive, FiercePharma, and ET Pharma |
+| **Evidence linkage** | Connects related signals across independent sources using semantic similarity and entity relationships |
+| **Lifecycle tracking** | Tracks assets across clinical and regulatory development stages |
+| **Contradiction analysis** | Uses NLI-based analysis to surface evidence that challenges or qualifies claims |
+| **Missing-signal detection** | Tracks expected milestones and flags overdue or absent events |
+| **Priority scoring** | Produces an explainable 0–100 signal priority score |
+| **Stakeholder routing** | Routes signals to Medical, Regulatory, Safety, Market Access, Communications, and Leadership functions |
+| **Human-in-the-loop calibration** | Uses structured stakeholder feedback to refine scoring and routing |
+| **Decision governance** | Supports review, action, escalation, leadership resolution, and audit history |
+| **Athena Copilot** | Provides evidence-grounded intelligence assistance with source provenance |
 
 ---
 
-## Current Status & Verification Matrix
-
-> **All development milestones through Phase 12 (Autonomous Ingestion, Source Health Telemetry, Provenance Traceability, NLI Contradictions, and Security Hardening) are fully active and verified.**
-
-- **Executable Verification Matrix:**
-  - `pytest tests/` → **186/186 Passed (100%)** clean suite across connectors, LangGraph nodes, truthfulness invariants, failure injection, provenance, and observability.
-  - `npm run build` → **Compiled Cleanly (0 Errors)** in Next.js 16 (Turbopack) with strict TypeScript checking.
-  - `python scripts/export_openapi.py` → **0 Contract Drift** (Synchronized at `frontend/types/api.ts`).
-  - `Alembic Migrations` → **11/11 Applied (`001_initial` through `011_widen_fingerprint`)** across 22 PostgreSQL tables with zero schema drift.
-  - `Security & Governance` → **PostgreSQL WORM physical trigger** prevents unauthorized mutation of audit logs; session cookies auto-secured in production.
-
----
-
-## Table of Contents
-
-- [Problem & Context](#problem--context)
-- [Solution Overview](#solution-overview)
-- [How MetaRadar Is Different](#how-metaradar-is-different)
-- [Five Core Intelligence Mechanisms](#five-core-intelligence-mechanisms)
-- [Four-Question Decision Framework](#four-question-decision-framework)
-- [Deterministic Mathematical Priority Model](#deterministic-mathematical-priority-model)
-- [Platform Architecture](#platform-architecture)
-- [Technology Stack](#technology-stack)
-- [8 Authoritative Data Sources](#8-authoritative-data-sources)
-- [Haemophilia Knowledge Layer](#haemophilia-knowledge-layer)
-- [Safety, Responsible AI & GxP Compliance](#safety-responsible-ai--gxp-compliance)
-- [Project Structure](#project-structure)
-- [Getting Started & Quickstart](#getting-started--quickstart)
-- [Role Personas & Demo Credentials](#role-personas--demo-credentials)
-- [Running the Platform](#running-the-platform)
-- [Team](#team)
-
----
-
-# Problem & Context
-
-The haemophilia treatment landscape is rapidly transitioning across:
-- **Recombinant & Plasma-Derived Factors** (Factor VIII & Factor IX)
-- **Extended Half-Life (EHL) Factors** (Altuviiio, Esperoct, Idelvion)
-- **Non-Factor Bispecific Antibodies** (emicizumab/Hemlibra, Mim8)
-- **Anti-TFPI Rebalancing Agents** (concizumab/Alhemo, marstacimab/Hympavzi)
-- **RNAi Therapeutics** (fitusiran)
-- **AAV Gene Therapies** (etranacogene dezaparvovec/Hemgenix, valoctocogene roxaparvovec/Roctavian, fidanacogene elaparvovec/Beqvez)
-
-Pharmaceutical cross-functional teams face three systemic challenges:
-1. **Information Silos**: Trial readouts, FDA/EMA filings, safety signals, and market access shifts live in separate repositories.
-2. **AI Hallucination Risk**: Generic LLMs invent trial identifiers and PMIDs, creating unacceptable risk for biopharma decisions.
-3. **No Cross-Functional Governance**: Critical signals arrive without structured accountability, ownership routing, or auditable sign-off records.
-
----
-
-# Solution Overview
-
-MetaRadar treats external disclosures as **signals belonging to interconnected evidence stories**:
+## The Decision Loop
 
 ```text
-                      8 AUTHORITATIVE BIOMEDICAL SOURCES
-     ClinicalTrials.gov · NCBI PubMed · FDA · EMA · BioPharma Dive · FiercePharma · DailyMed · NewsAPI
-                                       │
-                      AUTONOMOUS INGESTION / MANUAL SYNC
-           (PostgreSQL Advisory Locks · Exponential Backoff · SHA-256 Deduplication)
-                                       │
-                         BRONZE WORM IMMUTABLE STORE
-                                       │
-                      PII/PHI SCRUBBER & EMBEDDING ENGINE
-                         (pgvector 384-dim HNSW Index)
-                                       │
-                          10-NODE LANGGRAPH DAG
-         ┌─────────────────────────────┼─────────────────────────────┐
-         ▼                             ▼                             ▼
-    CONFLUENCE                     LIFECYCLES                    RED-TEAM
- (48h Multi-Source              (7-Stage Asset               (Zero-Shot NLI
- Evidence Linkage)             State Progression)            Contradictions)
-         │                             │                             │
-         └─────────────────────────────┼─────────────────────────────┘
-                                       │
-                          MISSING SIGNAL & WATCH FSM
-                   (Expected Milestone Silence Lag Detection)
-                                       │
-                        DETERMINISTIC 4-FACTOR SCORING
-                           (Score 0–100 · Math Model)
-                                       │
-                         FOUR-QUESTION DECISION BRIEF
-                   ([FACT] · [INTERPRETATION] · [SPECULATION])
-                                       │
-                         ROLE-SCOPED DECISION WORKSPACES
-   (Medical Affairs · Regulatory · Safety/PV · Market Access · Comms · Executive Queue)
+PUBLIC INFORMATION
+        │
+        ▼
+8 SOURCE CONNECTORS
+        │
+        ▼
+BRONZE INGESTION
+        │
+        ▼
+PII/PHI SCRUBBING
+        │
+        ▼
+EMBEDDING + NLP EXTRACTION
+        │
+        ▼
+11-NODE INTELLIGENCE PIPELINE
+        │
+        ├── Confluence
+        ├── Lifecycle
+        ├── Red-Team Contradictions
+        ├── Missing Signals
+        └── Synthesis
+        │
+        ▼
+EXPLAINABLE PRIORITY SCORE
+        │
+        ▼
+FOUR-QUESTION DECISION BRIEF
+        │
+        ▼
+ROLE-SCOPED REVIEW QUEUE
+        │
+        ▼
+DECISION → ESCALATION → LEADERSHIP RESOLUTION
+        │
+        ▼
+AUDIT TRAIL
 ```
 
 ---
 
-# How MetaRadar Is Different
+## What Makes It Different
 
-| Dimension | Generic LLM / ChatGPT | Commercial News Feed | **MetaRadar** |
-|---|---|---|---|
-| **Evidence Grounding** | High hallucination risk; fabricated citations. | Raw text snippets with no clinical synthesis. | **100% Verifiable Citations** linked directly to ClinicalTrials.gov, PubMed, and FDA dossiers. |
-| **Decision Framework** | Generic bulleted summaries. | Keyword alert emails. | **Four-Question Brief** (`What Changed`, `Why It Matters`, `Who Should Act`, `Suggested Action`). |
-| **Cross-Source Linkage** | Disconnected document queries. | Siloed feeds. | **Autonomous Confluence Detector** linking multi-source signals within 48h. |
-| **Scientific Validation** | Accepts premise blindly. | No contradiction detection. | **Red-Team Contradiction Engine** with BART-Large-MNLI zero-shot NLI. |
-| **Missing Milestones** | Only reports what happened. | Only reports what happened. | **Missing Signal FSM Tracker** flags absent trial readouts (silence becomes alert). |
-| **Cross-Functional Steer**| No role scoping. | Static distribution list. | **7-Persona Scoped RBAC + Executive Leadership Approval Workflow**. |
-| **Deployment Privacy** | Cloud API lock-in. | Cloud vendor lock-in. | **100% Air-Gapped Local Gemma-3 4B GGUF** (CUDA/CPU) or Hybrid Grok API. |
+| Traditional approach | MetaRadar |
+|---|---|
+| Search individual sources | **Ingests multiple source classes into one intelligence layer** |
+| Summarize documents | **Builds evidence stories around developments** |
+| Alert on keywords | **Prioritizes signals using an explainable scoring model** |
+| Report only what happened | **Tracks expected milestones and missing signals** |
+| Accept claims at face value | **Surfaces contradictory or qualifying evidence** |
+| Send information to everyone | **Routes intelligence by stakeholder function** |
+| Human decisions outside the system | **Review, action, escalation, and audit are part of the workflow** |
+| Cloud-only reasoning | **Local Gemma inference is available; hosted reasoning is privacy-gated** |
 
 ---
 
-# Five Core Intelligence Mechanisms
+# Five Intelligence Mechanisms
 
 ### 1. Confluence Detection
-- **Core Question**: *Are multiple independent evidence streams pointing to the same underlying development?*
-- **Mechanism**: Evaluates signals across distinct source types within a 48h rolling window using cosine embedding similarity and shared entity identifiers. Scores confluence based on source diversity, velocity, and semantic coherence.
 
-### 2. Signal Lifecycle Tracking
-- **Core Question**: *Where is this asset in its overall clinical-to-market journey?*
-- **Mechanism**: Tracks candidate molecules across a 7-stage finite state progression: `PRECLINICAL` → `PHASE_1` → `PHASE_2` → `PHASE_3` → `REGULATORY_REVIEW` → `APPROVED` → `POST_MARKET`.
+Identifies when independent evidence streams point toward the same underlying development using semantic similarity, shared entities, source diversity, and temporal proximity.
+
+### 2. Asset Lifecycle Tracking
+
+Maps assets through a defined clinical-to-market lifecycle so an isolated event is interpreted in development context.
 
 ### 3. Red-Team Contradiction Analysis
-- **Core Question**: *What evidence challenges or qualifies the competitor's claim?*
-- **Mechanism**: Uses BART-Large-MNLI zero-shot NLI to evaluate pairs of claims against baseline clinical endpoints (e.g., comparing clinical trial ABR 0.0 against real-world Phase 4 ABR 0.8).
 
-### 4. Missing-Signal Detection & Silence Tracker
-- **Core Question**: *What should have happened next, and has it failed to occur?*
-- **Mechanism**: 6-state FSM (`WITHIN_WINDOW`, `DUE`, `OVERDUE`, `SATISFIED`, `SUPPRESSED`) tracking milestone deadlines. If a promised trial readout does not appear within the expected window, the absence of data becomes an active intelligence signal.
+Uses natural-language inference to identify evidence that challenges, contradicts, or qualifies an important claim.
 
-### 5. Stakeholder Calibration (Human-in-the-Loop)
-- **Core Question**: *Does the system's scoring match expert stakeholder judgement?*
-- **Mechanism**: Stakeholders rate relevance (1–5 stars) and submit structured feedback. The HITL Calibration Engine dynamically adjusts 4-factor scoring weights and persona routing matrices without code redeployment.
+### 4. Missing-Signal Detection
+
+Turns silence into a structured signal by tracking expected milestones and identifying events that become overdue.
+
+### 5. Stakeholder Calibration
+
+Uses human feedback to improve the relationship between system scoring and stakeholder judgment.
 
 ---
 
 # Four-Question Decision Framework
 
-Every ingested signal synthesizes into an epistemically tagged Four-Question Decision Brief:
+Every decision-oriented signal is organized around:
 
-- **Q1 — What changed?** Concise description of the event tagged with strict epistemic classification (`[FACT]`).
-- **Q2 — Why does it matter?** Clinical, competitive, and therapeutic context supported by citations (`[INTERPRETATION]`).
-- **Q3 — Which Novo Nordisk function should review it?** Relevance-based routing to 6 core functions (Medical Affairs, Regulatory, Safety, Market Access, Comms, Leadership).
-- **Q4 — What internal action may be required?** Concrete next step chosen from a controlled action vocabulary (`[ACTION]`).
+**Q1 — What changed?**  
+A concise description of the observed event, grounded in source evidence.
 
----
+**Q2 — Why does it matter?**  
+Clinical, competitive, regulatory, or therapeutic context.
 
-# Deterministic Mathematical Priority Model
+**Q3 — Who should review it?**  
+Routing to the stakeholder function most relevant to the signal.
 
-Every signal is scored on a **transparent 4-factor mathematical formula** ($0\text{--}100$):
-
-$$\text{Priority Score} = \text{Novelty } [0\text{–}25] + \text{Clinical Significance } [0\text{–}30] + \text{Regulatory Relevance } [0\text{–}25] + \text{Recency } [0\text{–}20]$$
-
-| Factor | Max Points | Calculation Method |
-|---|:---:|---|
-| **Novelty** | 25 | Cosine distance from signal embedding to nearest existing signal in pgvector. |
-| **Clinical Significance** | 30 | Regex matching against 12 clinical patterns (ABR, prophylaxis, inhibitors, Factor VIII/IX). 3 pts per match (max 30). |
-| **Regulatory Relevance** | 25 | Regex matching against 14 regulatory patterns (FDA, EMA, CHMP, PDUFA, BLA, NDA). 5 pts per match (max 25). |
-| **Recency** | 20 | Exponential decay with 72-hour half-life: $20 \times e^{-0.693 \times \frac{\text{hours}}{72}}$. |
-
-| Score Range | Priority Level | Badge Color | Expected Action |
-|---|---|---|---|
-| ≥ 75 | **CRITICAL** | Red | Immediate cross-functional alert; executive review required |
-| ≥ 50 | **HIGH** | Orange | Functional queue review required within 24–48 hours |
-| ≥ 25 | **MEDIUM** | Blue | Standard surveillance feed; weekly review |
-| < 25 | **LOW** | Slate | Background archive; historical trend correlation |
+**Q4 — What action may be required?**  
+A controlled, auditable next step rather than an unconstrained AI instruction.
 
 ---
 
-# Platform Architecture
+# Explainable Priority Model
+
+MetaRadar uses a deterministic four-factor score:
 
 ```text
-                                  METARADAR
-                                      │
- ┌────────────────────────────────────┴────────────────────────────────────┐
- │                                                                         │
- ▼                                                                         ▼
-Frontend (Next.js 16 / React 19)                           Backend (FastAPI 0.115 / Python 3.11+)
-• Turbopack SSR & 13 Workspaces                            • 10-Node LangGraph Execution Graph
-• 3D Holographic Persona Switcher                          • Autonomous Async SourceScheduler
-• Athena Copilot (Live SSE Stream)                         • 8 Public Connector Adapters
-• Evidence Drawer & Provenance Badges                      • Truthful Source Health Telemetry
-• Global 'Ingest Data' & Search (⌘K)                       • PII/PHI De-identification Layer
-                                                           • REST API (OpenAPI 3.1 Synchronized)
-                                                                         │
-                                                                         ▼
-                                                           Persistence (PostgreSQL 16 + Redis 7)
-                                                           • 22 Relational Tables (Alembic Managed)
-                                                           • pgvector (384-dim HNSW Vector Index)
-                                                           • Immutable Bronze Ingestion Layer (WORM)
-                                                           • Physical PostgreSQL Audit Trigger
+Priority Score =
+    Novelty              0–25
+  + Clinical Significance 0–30
+  + Regulatory Relevance  0–25
+  + Recency               0–20
+
+Total: 0–100
 ```
+
+The model is deliberately inspectable. The system does not hide prioritization behind an opaque single model score.
+
+Priority bands:
+
+| Score | Priority | Intended handling |
+|---:|---|---|
+| ≥ 75 | Critical | Immediate cross-functional attention |
+| ≥ 50 | High | Functional review |
+| ≥ 25 | Medium | Routine surveillance |
+| < 25 | Low | Background intelligence |
+
+---
+
+# Technical Architecture
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                     NEXT.JS + REACT                          │
+│  Dashboard · Signals · Athena · Functions · Calibration      │
+└─────────────────────────────┬────────────────────────────────┘
+                              │ REST / SSE
+┌─────────────────────────────▼────────────────────────────────┐
+│                         FASTAPI                              │
+│ Auth · Signals · Search · Intelligence · Ingestion · Audit  │
+└─────────────────────────────┬────────────────────────────────┘
+                              │
+┌─────────────────────────────▼────────────────────────────────┐
+│                    LANGGRAPH PIPELINE                        │
+│ Ingest → Validate → Embed → NLP → Ontology → Confluence     │
+│ → Lifecycle → Red-Team → Missing Signal → Synthesize        │
+│ → Calibrate                                                  │
+└─────────────────────────────┬────────────────────────────────┘
+                              │
+┌─────────────────────────────▼────────────────────────────────┐
+│                       DATA LAYER                             │
+│ PostgreSQL 16 · pgvector · Redis 7 · Alembic                │
+│ Bronze → Silver → Gold signal architecture                  │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                 ┌────────────┴────────────┐
+                 ▼                         ▼
+          Local Gemma / Ollama        Optional xAI Grok
+          privacy-preserving path     PUBLIC/SYNTHETIC only
+```
+
+### Data architecture
+
+- **Bronze:** raw source payloads and connector metadata
+- **Silver:** validated evidence and development relationships
+- **Gold:** enriched signals, embeddings, scores, routing, review state, and provenance
+
+The architecture is designed so that provenance survives the transformation from raw source material to decision-facing intelligence.
 
 ---
 
 # Technology Stack
 
-| Layer | Technology | Key Details |
-|---|---|---|
-| **Frontend** | Next.js 16.3.0 / React 19 | TypeScript, Turbopack, Vanilla CSS Design Tokens, 3D Tilt ProfileCard |
-| **Backend** | FastAPI 0.115.8 | Python 3.11/3.12/3.13, Pydantic v2, Structlog JSON logging |
-| **AI Orchestration** | LangGraph | 10-node stateful workflow execution DAG (`PipelineRunner`) |
-| **Database** | PostgreSQL 16 + pgvector | 22 tables, 384-dim HNSW cosine vector index, WORM audit triggers |
-| **Local LLM** | Gemma-3 4B GGUF | `google/gemma-3-4b-it` (llama-cpp-python / CUDA RTX offload / CPU) |
-| **NLI Red-Team** | BART-Large-MNLI | Facebook MNLI zero-shot natural language inference |
-| **Embeddings** | sentence-transformers | `all-MiniLM-L6-v2` (384-dimensional dense vectors) |
-| **Cache & Locking** | Redis 7 | Distributed advisory locking and rate limiting |
-| **Migrations** | Alembic | 11 applied migrations (`001_initial` → `011_widen_fingerprint`) |
-| **Testing** | pytest | 186 automated test cases (100% passing) |
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16, React 19, TypeScript 5.7 |
+| Styling | Tailwind CSS 4, custom design tokens |
+| UI | Base UI / shadcn, Lucide React, Framer Motion |
+| Backend | Python 3.11+, FastAPI, Pydantic v2 |
+| Orchestration | LangGraph |
+| Database | PostgreSQL 16 + pgvector |
+| Cache / coordination | Redis 7 |
+| Local AI | Gemma 3 4B GGUF via llama-cpp-python / Ollama |
+| Hosted AI fallback | xAI Grok, privacy-gated |
+| Embeddings | FastEmbed / all-MiniLM-L6-v2, 384 dimensions |
+| Testing | pytest, pytest-asyncio, pytest-httpx |
+| Infrastructure | Docker Compose |
+
+The codebase follows a typed React/TypeScript frontend and async Python backend architecture. fileciteturn12file2L31-L51
 
 ---
 
-# 8 Authoritative Data Sources
+# Data Sources
 
-| Source | Connector Type | Cadence | Data Retrieved |
-|---|---|---|---|
-| **NCBI PubMed** | E-utilities REST (Medline XML) | 60 min | Peer-reviewed biomedical research, abstracts, PMIDs |
-| **ClinicalTrials.gov** | REST API v2 | 60 min | Trial protocols, status transitions, milestone completion dates |
-| **OpenFDA** | Drugs@FDA + FAERS REST | 30 min | Drug approvals, safety communications, MedWatch adverse events |
-| **EMA EPAR** | RSS & Document Portal | 30 min | CHMP opinions, marketing authorizations, European safety dossiers |
-| **BioPharma Dive** | Industry RSS | 15 min | Clinical trial readouts, biopharma strategy, pipeline updates |
-| **Fierce Pharma / Biotech** | Industry RSS | 15 min | Commercial announcements, licensing deals, regulatory updates |
-| **DailyMed / Regional** | Drug Labeling REST | 30 min | Label updates, regional market access, packaging changes |
-| **Global Medical News (NewsAPI)** | REST API | 15 min | International healthcare headlines (quota-governed with backoff) |
+The current connector layer contains eight source adapters:
 
----
+1. **NCBI PubMed**
+2. **ClinicalTrials.gov**
+3. **OpenFDA**
+4. **EMA**
+5. **NewsAPI**
+6. **BioPharma Dive**
+7. **FiercePharma**
+8. **ET Pharma**
 
-# Haemophilia Knowledge Layer
-
-Curated by the pharmacy domain team at MSRIT covering:
-- **Diseases**: Haemophilia A (Factor VIII deficiency) and Haemophilia B (Factor IX deficiency).
-- **Inhibitor Cohorts**: With inhibitors (high/low titer), without inhibitors, previously untreated patients (PUPs).
-- **Therapeutic Modalities**: Recombinant Factor, Extended Half-Life (EHL) Factors, Non-Factor Bispecifics, Anti-TFPI, RNAi, AAV Gene Therapies.
-- **Canonical Assets**: `concizumab` (Alhemo), `mim8`, `emicizumab` (Hemlibra), `etranacogene dezaparvovec` (Hemgenix), `valoctocogene roxaparvovec` (Roctavian), `fidanacogene elaparvovec` (Beqvez), `fitusiran`, `marstacimab` (Hympavzi), `efanesoctocog alfa` (Altuviiio).
+The connectors use asynchronous HTTP clients, source-specific parsing, freshness handling, retries, and quota controls where applicable. fileciteturn12file1L7-L34
 
 ---
 
-# Safety, Responsible AI & GxP Compliance
+# Responsible AI & Security
 
-- **Zero Hallucinated Citations**: Every claim in Athena Copilot and Decision Briefs links directly to primary records (PMID, NCT ID, FDA URL).
-- **WORM Immutability**: PostgreSQL physical trigger (`block_audit_log_mutation`) strictly forbids `UPDATE` or `DELETE` on the `audit_logs` table.
-- **PII/PHI De-identification**: Pre-persistence regex scrubber sanitizing patient identifiers, MRNs, phone numbers, and dates of birth.
-- **Air-Gapped Private Execution**: Local Gemma-3 4B GGUF ensures zero patient or proprietary data leaves the local machine.
+MetaRadar is designed around evidence provenance and controlled data boundaries.
+
+### Evidence grounding
+
+Decision-facing intelligence is tied back to source records and provenance rather than treating generated text as authoritative.
+
+### Privacy boundary
+
+The local Gemma path supports local inference. When hosted Grok reasoning is enabled, the privacy gate permits only `PUBLIC` or `SYNTHETIC` data to leave the environment. fileciteturn13file8L559-L569
+
+### PII / PHI protection
+
+The platform includes a dedicated scrubber for identifiers including emails, phone numbers, SSNs, MRNs, dates of birth, and national IDs. fileciteturn13file9L631-L635
+
+### Authentication
+
+Session-based authentication uses bcrypt password hashing, signed session tokens, HttpOnly cookies, SameSite protection, and session-bound CSRF tokens. fileciteturn12file1L78-L88
+
+### Auditability
+
+Decision workflows record audit events, and the project includes database-level controls intended to prevent unauthorized audit-log mutation. fileciteturn12file6L60-L75
+
+> **Important:** This is a hackathon prototype and should not be represented as a validated GxP production system or as regulatory/compliance certification.
 
 ---
 
-# Role Personas & Demo Credentials
+# Verification
 
-MetaRadar provides 7 purpose-built stakeholder personas with scoped RBAC permissions and cross-functional governance workflows:
+The repository contains a broad automated test suite covering authentication, RBAC, connectors, intelligence nodes, privacy boundaries, provenance, red-team behavior, review-state transitions, retrieval, and end-to-end workflows.
 
-| Role Persona | Stakeholder Domain | Demo Email | Fixed Password | Primary Responsibilities |
-|---|---|---|---|---|
-| **Dr. Elena Vance** | **Medical Affairs** | `medical.affairs@metaradar.internal` | `MedAffairs2026!` | Clinical trial readouts, ABR efficacy benchmarks, publication surveillance, and leadership approval escalation. |
-| **Marcus Vance** | **Regulatory Affairs** | `regulatory@metaradar.internal` | `Regulatory2026!` | FDA/EMA dossier filings, label changes, CHMP opinions, breakthrough designations, and milestone tracking. |
-| **Dr. Sarah Chen** | **Safety & Pharmacovigilance** | `safety@metaradar.internal` | `Safety2026!` | Adverse events (thrombosis, microangiopathy), black box warnings, DSMB reviews, and risk minimization. |
-| **David Ross** | **Market Access & Pricing** | `market.access@metaradar.internal` | `Access2026!` | ICER/NICE value assessments, formulary placement, reimbursement barriers, and competitor price tracking. |
-| **Rachel Green** | **Communications & IR** | `comms@metaradar.internal` | `Comms2026!` | Press releases, congress abstracts (ASH, EHA, WFH), media coverage, and competitive positioning. |
-| **Alex Mercer** | **Executive Leadership** | `leadership@metaradar.internal` | `Leader2026!` | Portfolio steer, cross-functional approval queue sign-offs (`/functions`), high-impact escalations, and executive briefing. |
-| **System Administrator** | **Platform Admin** | `admin@metaradar.internal` | `Admin2026!` | Ingestion health, source connector telemetry, model parameters, cache eviction, and audit log inspection. |
+The current project verification record reports **186 automated tests with 100% passing**. fileciteturn13file0L35-L47
 
-> **Login Page**: Navigate to `http://localhost:3000/login` to interact with the 3D-tilt **ProfileCard** interface and one-click quick-fill persona buttons.
+Core verification commands include:
+
+```bash
+pytest
+python scripts/export_openapi.py
+cd frontend && npx tsc --noEmit
+npm --prefix frontend run build
+node scripts/check-banned-classes.mjs
+```
+
+The testing configuration uses pytest with async support and ASGI-based FastAPI endpoint testing. fileciteturn13file1L63-L81
 
 ---
 
-# Getting Started & Quickstart
+# Quick Start
 
-### Prerequisites
-- **Git**
-- **Docker Desktop** (for PostgreSQL + Redis)
-- **Python 3.11+**
-- **Node.js 20+** & **npm** or **pnpm**
+## Prerequisites
 
-### 1. Zero-Config Environment & Model Setup
-Run the automated environment setup wizard:
+- Git
+- Docker Desktop / Docker Engine
+- Python 3.11+
+- Node.js 20+
+- npm or pnpm
+
+The repository's stack specifies Python 3.11+, Node.js ≥20.9, Docker Compose, and pnpm 9.15.5 as the preferred frontend package manager. fileciteturn12file2L18-L26
+
+## 1. Initialize the environment
 
 ```bash
 python setup.py
 ```
 
-Options:
-```bash
-python setup.py --download-model    # Automatically download local Gemma 3 4B GGUF model (~2.48 GB)
-python setup.py --api-key <KEY>     # Configure xAI Grok API key for hosted reasoning
-```
+The setup script initializes the environment and prepares the backing services and model configuration. fileciteturn13file4L276-L284
 
-### 2. Start All Services
-Launch Docker backing services, apply database migrations, and start both backend (port 8000) and frontend (port 3000) with a single command:
+## 2. Start MetaRadar
 
 ```bash
 python start.py
 ```
 
-- Open the web application: **`http://localhost:3000`**
-- Interactive Swagger API docs: **`http://localhost:8000/docs`**
+Then open:
+
+```text
+http://localhost:3000
+```
+
+API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+# Demo Flow
+
+For an evaluation or live presentation, the strongest path is:
+
+```text
+Login
+  ↓
+Select stakeholder persona
+  ↓
+Open prioritized signal
+  ↓
+Inspect evidence + provenance
+  ↓
+Review decision brief
+  ↓
+Take authorized action
+  ↓
+Escalate when required
+  ↓
+Leadership resolves escalation
+  ↓
+Inspect audit trail
+```
+
+The productionization work explicitly defines this cross-functional vertical slice across Medical Affairs, Regulatory, Safety, Market Access, Communications, and Leadership. fileciteturn14file5L310-L335
+
+---
+
+# Repository Structure
+
+```text
+MetaRadar/
+├── backend/
+│   └── app/
+│       ├── api/
+│       ├── connectors/
+│       ├── core/
+│       ├── db/
+│       ├── models/
+│       ├── providers/
+│       ├── schemas/
+│       ├── services/
+│       └── workflows/
+├── frontend/
+│   ├── app/
+│   ├── components/
+│   ├── context/
+│   ├── lib/
+│   └── types/
+├── config/
+├── models/
+├── scripts/
+├── tests/
+├── pitch/
+├── .planning/
+├── docker-compose.yml
+├── setup.py
+└── start.py
+```
+
+The codebase map identifies the frontend, backend, connectors, intelligence workflows, services, tests, configuration, and planning layers shown above. fileciteturn12file3L8-L55
+
+---
+
+# Hackathon Deliverables
+
+| Deliverable | Location |
+|---|---|
+| Presentation | `pitch/PITCH.md` |
+| Architecture diagram | `pitch/architecture.svg` |
+| Data-flow diagram | `pitch/dataflow.svg` |
+| Governance flow | `pitch/responsibility_flow.svg` |
+| Domain configuration | `config/haemophilia.yaml` |
+| Engineering documentation | `docs/` |
+| Automated tests | `tests/` |
+
+---
+
+# Business Impact
+
+MetaRadar is designed to improve the decision layer between **information arrival and cross-functional action**.
+
+Potential value areas:
+
+- Reduce time spent manually monitoring fragmented sources
+- Surface important developments earlier
+- Make the evidence behind a signal inspectable
+- Reduce unnecessary information distribution through role-based routing
+- Create a common decision workflow across functions
+- Preserve an auditable history of review and escalation
+- Provide a path toward scalable rare-disease intelligence beyond haemophilia
+
+These are **intended business outcomes**, not measured production results. Any quantitative business-impact claim should be supported by a pilot measurement rather than presented as an achieved KPI.
+
+---
+
+# Feasibility & Next Steps
+
+The prototype is deliberately built around technologies that can run locally or in a conventional containerized environment:
+
+- FastAPI + PostgreSQL + Redis
+- Docker Compose
+- Local Gemma inference
+- Public biomedical APIs and RSS sources
+- Typed REST contracts
+- Automated testing
+- Role-based authentication and authorization
+
+A practical next stage would be a controlled pilot with:
+
+1. A defined stakeholder group
+2. A limited set of validated data sources
+3. Human evaluation of signal precision and usefulness
+4. Measurement of review latency and decision throughput
+5. Model and scoring calibration against expert judgments
+6. Formal security, privacy, validation, and governance review before any regulated deployment
 
 ---
 
 # Team
 
-**MS Ramaiah Institute of Technology (MSRIT), Bangalore, Karnataka, India**  
-*Novo Nordisk GBS Hackathon 2026 — Problem Statement #3: Rare Disease Competitive Intelligence Radar*
+**MS Ramaiah Institute of Technology (MSRIT), Bangalore, Karnataka, India**
 
-- **Sanjana Rathore B.** (Team Lead) — B.Pharm (Domain Owner, Medical Affairs Strategy, Clinical Endpoints)
-- **Ishaaq Ahmed Khan** — B.Pharm (Haemophilia Treatment Map, Asset Lifecycles, Expected Events FSM)
-- **Usha Rathore** — B.Pharm (Evidence Quality, Red-Team Contradictions, Safety & Access Context)
-- **Omprakash Panda** — ISE/CSE (System Architecture, Data Ingestion, LangGraph Orchestration, Full-Stack Engine)
-- **Veerendra Desai** — ISE/CSE (Vector Search, Database, Telemetry, Performance & Deployment)
+**Novo Nordisk GBS Hackathon 2026 — Problem Statement #3**
 
-*Faculty Sponsor: Faculty Advisory Board, Dept. of Pharmacy Practice & Dept. of Computer Science and Engineering, MSRIT*
+- **Sanjana Rathore B.** — Team Lead, Medical Affairs Strategy & Clinical Endpoints
+- **Ishaaq Ahmed Khan** — Haemophilia Treatment Map, Asset Lifecycles & Expected Events
+- **Usha Rathore** — Evidence Quality, Red-Team Contradictions, Safety & Access Context
+- **Omprakash Panda** — System Architecture, Data Ingestion, LangGraph & Full-Stack Engineering
+- **Veerendra Desai** — Vector Search, Database, Telemetry, Performance & Deployment
+
+---
+
+# Project Status
+
+**Hackathon-ready prototype — evaluation build**
+
+The project has been hardened across authentication, privacy boundaries, connector reliability, pipeline concurrency, resource lifecycle, contract synchronization, and automated testing. fileciteturn13file4L270-L284
+
+This repository is intended to demonstrate the **innovation, technical implementation, business value, and feasibility** of the MetaRadar approach. It is not a claim of production validation, regulatory approval, or clinical decision-making authority.
+
